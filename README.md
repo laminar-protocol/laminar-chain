@@ -1,4 +1,4 @@
-![](https://github.com/laminar-protocol/flowchain/workflows/Test/badge.svg)
+[![Status badge](https://github.com/laminar-protocol/flowchain/workflows/Test/badge.svg)](https://github.com/laminar-protocol/flowchain/actions?workflow=Test)
 
 # flowchain
 
