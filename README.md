@@ -1,3 +1,5 @@
+![](https://github.com/laminar-protocol/flowchain/workflows/Test/badge.svg)
+
 # flowchain
 
 A new SRML-based Substrate node, ready for hacking.
