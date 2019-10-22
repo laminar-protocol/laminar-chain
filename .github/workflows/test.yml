@@ -1,11 +1,11 @@
-name: Rust
+name: Test
 
 on:
   pull_request:
     branches:
     - master
   push:
-    branches: 
+    branches:
     - master
 
 jobs:
@@ -20,6 +20,7 @@ jobs:
         toolchain: nightly-2019-10-20
         components: rustfmt
         target: wasm32-unknown-unknown
+        default: true
     - name: Check format
       run: cargo fmt --all -- --check
     - name: Build
