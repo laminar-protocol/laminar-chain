@@ -17,13 +17,13 @@ jobs:
       uses: actions-rs/toolchain@v1
       with:
         profile: minimal
-        toolchain: nightly-2019-10-20
+        toolchain: nightly-2019-08-19
         components: rustfmt
         target: wasm32-unknown-unknown
         default: true
     - name: Check format
       run: cargo fmt --all -- --check
     - name: Build
-      run: cargo build --verbose
+      run: cargo build
     - name: Run tests
-      run: cargo test --verbose --all
+      run: cargo test --all
