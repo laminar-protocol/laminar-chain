@@ -235,6 +235,10 @@ impl flow::Trait for Runtime {
 	type Currency = Balances;
 }
 
+impl oracle::Trait for Runtime {
+	type Event = Event;
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -251,6 +255,7 @@ construct_runtime!(
 		Sudo: sudo,
 		RandomnessCollectiveFlip: randomness_collective_flip::{Module, Call, Storage},
 		Flow: flow::{Module, Storage, Call, Event<T>},
+		Oracle: oracle::{Module, Storage, Call, Event<T>},
 	}
 );
 

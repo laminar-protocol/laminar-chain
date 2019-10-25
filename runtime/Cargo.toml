@@ -29,6 +29,7 @@ sr-primitives = { git = "https://github.com/paritytech/substrate.git", default-f
 client = { package = "substrate-client", git = "https://github.com/paritytech/substrate.git", default-features = false }
 offchain-primitives = { package = "substrate-offchain-primitives", git = "https://github.com/paritytech/substrate.git", default-features = false }
 flow = { package = "module-flow", path = "../modules/flow", default-features = false }
+oracle = { package = "module-oracle", path = "../modules/oracle", default-features = false }
 
 [build-dependencies]
 wasm-builder-runner = { package = "substrate-wasm-builder-runner", version = "1.0.2" }
@@ -61,4 +62,5 @@ std = [
 	"offchain-primitives/std",
 	"substrate-session/std",
     "flow/std",
+	"oracle/std",
 ]
