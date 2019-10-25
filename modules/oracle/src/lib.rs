@@ -6,7 +6,6 @@ pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
-
 decl_storage! {
 	trait Store for Module<T: Trait> as Flow {
 
