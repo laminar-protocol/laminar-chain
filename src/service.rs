@@ -1,11 +1,11 @@
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
 use aura_primitives::sr25519::AuthorityPair as AuraPair;
-use runtime::{self, opaque::Block, GenesisConfig, RuntimeApi};
 use futures::prelude::*;
 use grandpa::{self, FinalityProofProvider as GrandpaFinalityProofProvider};
 use inherents::InherentDataProviders;
 use network::construct_simple_protocol;
+use runtime::{self, opaque::Block, GenesisConfig, RuntimeApi};
 use std::sync::Arc;
 use std::time::Duration;
 use substrate_client::LongestChain;
@@ -54,11 +54,7 @@ macro_rules! new_full_start {
 				.ok_or_else(|| substrate_service::Error::SelectChainRequired)?;
 
 			let (grandpa_block_import, grandpa_link) =
-				grandpa::block_import::<_, _, _, runtime::RuntimeApi, _, _>(
-					client.clone(),
-					&*client,
-					select_chain,
-				)?;
+				grandpa::block_import::<_, _, _, runtime::RuntimeApi, _, _>(client.clone(), &*client, select_chain)?;
 
 			let import_queue = aura::import_queue::<_, _, AuraPair, _>(
 				aura::SlotDuration::get_or_compute(&*client)?,
