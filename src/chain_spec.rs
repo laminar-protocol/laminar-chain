@@ -132,5 +132,7 @@ fn testnet_genesis(
 		grandpa: Some(GrandpaConfig {
 			authorities: initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
 		}),
+		collective_Instance1: Some(Default::default()),
+		membership_Instance1: Some(Default::default()),
 	}
 }

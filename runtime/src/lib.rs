@@ -8,6 +8,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+use primitives::u32_trait::{_1, _2};
 use aura_primitives::sr25519::AuthorityId as AuraId;
 use client::{
 	block_builder::api::{self as block_builder_api, CheckInherentsResult, InherentData},
@@ -230,6 +231,24 @@ impl sudo::Trait for Runtime {
 	type Proposal = Call;
 }
 
+type OperatorCollectiveInstance = collective::Instance1;
+impl collective::Trait<OperatorCollectiveInstance> for Runtime {
+	type Origin = Origin;
+	type Proposal = Call;
+	type Event = Event;
+}
+
+type OperatorMembershipInstance = membership::Instance1;
+impl membership::Trait<OperatorMembershipInstance> for Runtime {
+	type Event = Event;
+	type AddOrigin = collective::EnsureProportionMoreThan<_1, _2, AccountId, OperatorCollectiveInstance>;
+	type RemoveOrigin = collective::EnsureProportionMoreThan<_1, _2, AccountId, OperatorCollectiveInstance>;
+	type SwapOrigin = collective::EnsureProportionMoreThan<_1, _2, AccountId, OperatorCollectiveInstance>;
+	type ResetOrigin = collective::EnsureProportionMoreThan<_1, _2, AccountId, OperatorCollectiveInstance>;
+	type MembershipInitialized = OperatorCollective;
+	type MembershipChanged = OperatorCollective;
+}
+
 impl flow::Trait for Runtime {
 	type Event = Event;
 	type Currency = Balances;
@@ -254,6 +273,8 @@ construct_runtime!(
 		TransactionPayment: transaction_payment::{Module, Storage},
 		Sudo: sudo,
 		RandomnessCollectiveFlip: randomness_collective_flip::{Module, Call, Storage},
+		OperatorCollective: collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
+		OperatorMembership: membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
 		Flow: flow::{Module, Storage, Call, Event<T>},
 		Oracle: oracle::{Module, Storage, Call, Event<T>},
 	}
