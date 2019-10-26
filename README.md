@@ -12,7 +12,7 @@ Install Rust:
 curl https://sh.rustup.rs -sSf | sh
 ```
 
-Install required tools:
+Install required tools and install git hooks:
 
 ```bash
 make init
