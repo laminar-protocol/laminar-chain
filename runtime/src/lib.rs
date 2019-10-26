@@ -8,7 +8,6 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use primitives::u32_trait::{_1, _2};
 use aura_primitives::sr25519::AuthorityId as AuraId;
 use client::{
 	block_builder::api::{self as block_builder_api, CheckInherentsResult, InherentData},
@@ -16,6 +15,7 @@ use client::{
 };
 use grandpa::fg_primitives;
 use grandpa::{AuthorityId as GrandpaId, AuthorityWeight as GrandpaWeight};
+use primitives::u32_trait::{_1, _2};
 use primitives::{crypto::key_types, OpaqueMetadata};
 use rstd::prelude::*;
 use sr_primitives::traits::{BlakeTwo256, Block as BlockT, ConvertInto, NumberFor, StaticLookup, Verify};
