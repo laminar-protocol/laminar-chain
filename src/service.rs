@@ -18,7 +18,7 @@ use transaction_pool::{self, txpool::Pool as TransactionPool};
 native_executor_instance!(
 	pub Executor,
 	runtime::api::dispatch,
-	runtime::native_version,
+     	runtime::native_version,
 );
 
 construct_simple_protocol! {
