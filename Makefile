@@ -15,7 +15,9 @@ check:
 build:
 	SKIP_WASM_BUILD= cargo build
 
-purge:
-	SKIP_WASM_BUILD= cargo run -- purge-chain --dev -y
+purge: target/debug/flowchain
+	target/debug/flowchain purge-chain --dev -y
 
 restart: purge run
+
+target/debug/flowchain: build
