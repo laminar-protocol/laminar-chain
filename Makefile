@@ -1,3 +1,6 @@
+run:
+	SKIP_WASM_BUILD= cargo run -- --dev --execution native
+
 toolchain:
 	./scripts/init.sh
 
@@ -12,12 +15,9 @@ check:
 build:
 	SKIP_WASM_BUILD= cargo build
 
-purge:
-	SKIP_WASM_BUILD= cargo run -- purge-chain --dev -y
-
-run:
-	SKIP_WASM_BUILD= cargo run -- --dev --execution native
+purge: target/debug/flowchain
+	target/debug/flowchain purge-chain --dev -y
 
 restart: purge run
 
-all: run
+target/debug/flowchain: build

@@ -28,6 +28,8 @@ transaction-payment = { package = "srml-transaction-payment", git = "https://git
 sr-primitives = { git = "https://github.com/paritytech/substrate.git", default-features = false }
 client = { package = "substrate-client", git = "https://github.com/paritytech/substrate.git", default-features = false }
 offchain-primitives = { package = "substrate-offchain-primitives", git = "https://github.com/paritytech/substrate.git", default-features = false }
+collective = { package = "srml-collective", git = "https://github.com/paritytech/substrate.git", default-features = false }
+membership = { package = "srml-membership", git = "https://github.com/paritytech/substrate.git", default-features = false }
 flow = { package = "module-flow", path = "../modules/flow", default-features = false }
 oracle = { package = "module-oracle", path = "../modules/oracle", default-features = false }
 
@@ -61,6 +63,8 @@ std = [
 	"safe-mix/std",
 	"offchain-primitives/std",
 	"substrate-session/std",
+	"collective/std",
+	"membership/std",
     "flow/std",
 	"oracle/std",
 ]
