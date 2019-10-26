@@ -35,8 +35,9 @@ grandpa = { package = "substrate-finality-grandpa", git = "https://github.com/pa
 grandpa-primitives = { package = "substrate-finality-grandpa-primitives", git = "https://github.com/paritytech/substrate.git" }
 substrate-client = {  git = "https://github.com/paritytech/substrate.git" }
 basic-authorship = { package = "substrate-basic-authorship", git = "https://github.com/paritytech/substrate.git" }
+sr-primitives = { git = "https://github.com/paritytech/substrate.git" }
 
-flowchain-runtime = { path = "runtime" }
+runtime = { package = "flowchain-runtime", path = "runtime" }
 
 [build-dependencies]
 vergen = "3.0.4"

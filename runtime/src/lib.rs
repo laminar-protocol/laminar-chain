@@ -18,11 +18,10 @@ use grandpa::{AuthorityId as GrandpaId, AuthorityWeight as GrandpaWeight};
 use primitives::u32_trait::{_1, _2};
 use primitives::{crypto::key_types, OpaqueMetadata};
 use rstd::prelude::*;
-use sr_primitives::traits::{BlakeTwo256, Block as BlockT, ConvertInto, NumberFor, StaticLookup, Verify};
+use sr_primitives::traits::{BlakeTwo256, Block as BlockT, ConvertInto, NumberFor, StaticLookup, Verify, IdentifyAccount};
 use sr_primitives::weights::Weight;
 use sr_primitives::{
-	create_runtime_str, generic, impl_opaque_keys, transaction_validity::TransactionValidity, ApplyResult,
-	IdentifyAccount, MultiSignature,
+	create_runtime_str, generic, impl_opaque_keys, transaction_validity::TransactionValidity, ApplyResult, MultiSignature,
 };
 #[cfg(feature = "std")]
 use version::NativeVersion;

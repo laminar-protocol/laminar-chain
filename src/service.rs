@@ -1,7 +1,7 @@
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
 use aura_primitives::sr25519::AuthorityPair as AuraPair;
-use flowchain_runtime::{self, opaque::Block, GenesisConfig, RuntimeApi};
+use runtime::{self, opaque::Block, GenesisConfig, RuntimeApi};
 use futures::prelude::*;
 use grandpa::{self, FinalityProofProvider as GrandpaFinalityProofProvider};
 use inherents::InherentDataProviders;
@@ -17,8 +17,8 @@ use transaction_pool::{self, txpool::Pool as TransactionPool};
 // Our native executor instance.
 native_executor_instance!(
 	pub Executor,
-	flowchain_runtime::api::dispatch,
-	flowchain_runtime::native_version,
+	runtime::api::dispatch,
+	runtime::native_version,
 );
 
 construct_simple_protocol! {
@@ -37,8 +37,8 @@ macro_rules! new_full_start {
 		let inherent_data_providers = inherents::InherentDataProviders::new();
 
 		let builder = substrate_service::ServiceBuilder::new_full::<
-			flowchain_runtime::opaque::Block,
-			flowchain_runtime::RuntimeApi,
+			runtime::opaque::Block,
+			runtime::RuntimeApi,
 			crate::service::Executor,
 		>($config)?
 		.with_select_chain(|_config, backend| Ok(substrate_client::LongestChain::new(backend.clone())))?
@@ -54,7 +54,7 @@ macro_rules! new_full_start {
 				.ok_or_else(|| substrate_service::Error::SelectChainRequired)?;
 
 			let (grandpa_block_import, grandpa_link) =
-				grandpa::block_import::<_, _, _, flowchain_runtime::RuntimeApi, _, _>(
+				grandpa::block_import::<_, _, _, runtime::RuntimeApi, _, _>(
 					client.clone(),
 					&*client,
 					select_chain,
