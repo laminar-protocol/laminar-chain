@@ -65,9 +65,7 @@ impl<T: Trait> Module<T> {
 	pub fn read_raw_values(key: &T::Key) -> Vec<TimestampedValue<T::Value, MomentOf<T>>> {
 		<Operators<T>>::get()
 			.iter()
-			.map(|x| <RawValues<T>>::get((x, *key)))
-			.filter(|x| x.is_some())
-			.map(|x| x.unwrap())
+			.filter_map(|x| <RawValues<T>>::get((x, *key)))
 			.collect()
 	}
 }
