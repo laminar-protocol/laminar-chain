@@ -49,10 +49,12 @@ fn should_feed_data() {
 }
 
 #[test]
-#[should_panic]
 fn should_panic_if_not_operator() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(ModuleOracle::feed_data(Origin::signed(1), 1, 1000));
+		assert_eq!(
+			ModuleOracle::feed_data(Origin::signed(1), 1, 1000),
+			Err("Only operators can feed data")
+		);
 	});
 }
 
