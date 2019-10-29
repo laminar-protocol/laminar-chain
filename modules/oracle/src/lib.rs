@@ -23,7 +23,7 @@ decl_storage! {
 		pub Operators get(operators): Vec<T::AccountId>;
 		pub RawValues get(raw_values): map (T::AccountId, T::Key) => Option<TimestampedValue<T::Value, MomentOf<T>>>;
 		pub HasUpdate get(has_update): map T::Key => bool;
-		pub Values get(values): map system::Key => Option<T::Value>;
+		pub Values get(values): map T::Key => Option<T::Value>;
 	}
 }
 
