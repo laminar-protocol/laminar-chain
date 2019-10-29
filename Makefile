@@ -10,6 +10,9 @@ build-wasm: githooks
 check: githooks
 	SKIP_WASM_BUILD= cargo check
 
+check-dummy:
+	BUILD_DUMMY_WASM_BINARY= cargo check
+
 build: githooks
 	SKIP_WASM_BUILD= cargo build
 

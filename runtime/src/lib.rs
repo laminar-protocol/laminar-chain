@@ -16,7 +16,7 @@ use client::{
 use grandpa::fg_primitives;
 use grandpa::{AuthorityId as GrandpaId, AuthorityWeight as GrandpaWeight};
 use primitives::u32_trait::{_1, _2};
-use primitives::{crypto::key_types, OpaqueMetadata};
+use primitives::OpaqueMetadata;
 use rstd::prelude::*;
 use sr_primitives::traits::{
 	BlakeTwo256, Block as BlockT, ConvertInto, IdentifyAccount, NumberFor, StaticLookup, Verify,
@@ -80,10 +80,8 @@ pub mod opaque {
 
 	impl_opaque_keys! {
 		pub struct SessionKeys {
-			#[id(key_types::AURA)]
-			pub aura: AuraId,
-			#[id(key_types::GRANDPA)]
-			pub grandpa: GrandpaId,
+			pub aura: Aura,
+			pub grandpa: Grandpa,
 		}
 	}
 }
