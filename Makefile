@@ -23,7 +23,6 @@ restart: purge run
 
 target/debug/flowchain: build
 
-GITHOOKS = $(wildcard githooks/*)
 GITHOOKS_SRC = $(wildcard githooks/*)
 GITHOOKS_DEST = $(patsubst githooks/%, .git/hooks/%, $(GITHOOKS_SRC))
 
@@ -35,4 +34,11 @@ GITHOOKS_DEST = $(patsubst githooks/%, .git/hooks/%, $(GITHOOKS_SRC))
 
 githooks: .git/hooks $(GITHOOKS_DEST)
 
-init: toolchain build-wasm
+init: toolchain submodule build-wasm
+
+submodule:
+	git submodule update --init --recursive
+
+update-orml:
+	cd orml && git checkout master && git pull
+	git add orml

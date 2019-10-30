@@ -30,8 +30,10 @@ client = { package = "substrate-client", git = "https://github.com/paritytech/su
 offchain-primitives = { package = "substrate-offchain-primitives", git = "https://github.com/paritytech/substrate.git", default-features = false }
 collective = { package = "srml-collective", git = "https://github.com/paritytech/substrate.git", default-features = false }
 membership = { package = "srml-membership", git = "https://github.com/paritytech/substrate.git", default-features = false }
+
 flow = { package = "module-flow", path = "../modules/flow", default-features = false }
-oracle = { package = "module-oracle", path = "../modules/oracle", default-features = false }
+oracle = { package = "orml-oracle", path = "../orml/oracle", default-features = false }
+tokens = { package = "orml-tokens", path = "../orml/tokens", default-features = false }
 
 [build-dependencies]
 wasm-builder-runner = { package = "substrate-wasm-builder-runner", version = "1.0.2" }
