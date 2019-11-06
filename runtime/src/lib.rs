@@ -254,6 +254,12 @@ impl oracle::Trait for Runtime {
 	type Event = Event;
 }
 
+impl tokens::Trait for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type CurrencyId = u32;
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -273,6 +279,7 @@ construct_runtime!(
 		OperatorMembership: membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
 		Flow: flow::{Module, Storage, Call, Event<T>},
 		Oracle: oracle::{Module, Storage, Call, Event<T>},
+		Tokens: tokens::{Module, Storage, Call, Event<T>, Config<T>},
 	}
 );
 

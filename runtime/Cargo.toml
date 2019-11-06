@@ -69,4 +69,5 @@ std = [
 	"membership/std",
     "flow/std",
 	"oracle/std",
+	"tokens/std",
 ]
