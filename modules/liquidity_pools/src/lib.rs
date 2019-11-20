@@ -52,6 +52,13 @@ decl_error! {
 }
 
 impl<T: Trait> Module<T> {
+	pub fn is_owner(pool: T::LiquidityPoolId, who: T::AccountId) -> bool {
+		<Owners<T>>::get(pool) == who
+	}
+}
+
+// Private methods
+impl<T: Trait> Module<T> {
 	fn _create_pool(who: T::AccountId) -> result::Result<(), Error> {
 		let liquidity_pool = LiquidityPool::default();
 

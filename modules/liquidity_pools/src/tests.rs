@@ -25,3 +25,13 @@ fn should_create_pool() {
 		assert_eq!(ModuleLiquidityPools::next_pool_id(), 3);
 	});
 }
+
+#[test]
+fn is_owner_should_work() {
+	new_test_ext().execute_with(|| {
+		let alice = 1;
+		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(alice)));
+		assert_eq!(ModuleLiquidityPools::is_owner(1, alice), true);
+		assert_eq!(ModuleLiquidityPools::is_owner(2, alice), false);
+	});
+}
