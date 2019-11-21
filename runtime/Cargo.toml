@@ -36,8 +36,11 @@ sr-api = { git = "https://github.com/paritytech/substrate.git", default-features
 inherents = { package = "substrate-inherents", git = "https://github.com/paritytech/substrate.git", default-features = false }
 
 flow = { package = "module-flow", path = "../modules/flow", default-features = false }
+module-primitives = { path = "../modules/primitives", default-features = false }
+
 oracle = { package = "orml-oracle", path = "../orml/oracle", default-features = false }
 tokens = { package = "orml-tokens", path = "../orml/tokens", default-features = false }
+orml-currencies = { path = "../orml/currencies", default-features = false }
 
 [build-dependencies]
 wasm-builder-runner = { package = "substrate-wasm-builder-runner", version = "1.0.4" }
@@ -77,4 +80,5 @@ std = [
     "flow/std",
 	"oracle/std",
 	"tokens/std",
+	"orml-currencies/std",
 ]
