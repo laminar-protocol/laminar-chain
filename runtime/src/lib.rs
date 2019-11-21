@@ -9,8 +9,8 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use aura_primitives::sr25519::AuthorityId as AuraId;
-use grandpa::fg_primitives;
-use grandpa::AuthorityList as GrandpaAuthorityList;
+use pallet_grandpa::fg_primitives;
+use pallet_grandpa::AuthorityList as GrandpaAuthorityList;
 use primitives::u32_trait::{_1, _2};
 use primitives::OpaqueMetadata;
 use rstd::prelude::*;
@@ -31,10 +31,10 @@ use module_primitives::CurrencyId;
 use orml_currencies::BasicCurrencyAdapter;
 
 // A few exports that help ease life for downstream crates.
+pub use palette_support::{construct_runtime, parameter_types, traits::Randomness, StorageValue};
 #[cfg(any(feature = "std", test))]
 pub use sr_primitives::BuildStorage;
 pub use sr_primitives::{Perbill, Permill};
-pub use support::{construct_runtime, parameter_types, traits::Randomness, StorageValue};
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -158,20 +158,20 @@ impl system::Trait for Runtime {
 	type Version = Version;
 }
 
-impl aura::Trait for Runtime {
+impl pallet_aura::Trait for Runtime {
 	type AuthorityId = AuraId;
 }
 
-impl grandpa::Trait for Runtime {
+impl pallet_grandpa::Trait for Runtime {
 	type Event = Event;
 }
 
-impl indices::Trait for Runtime {
+impl pallet_indices::Trait for Runtime {
 	/// The type for recording indexing into the account enumeration. If this ever overflows, there
 	/// will be problems!
 	type AccountIndex = AccountIndex;
 	/// Use the standard means of resolving an index hint from an id.
-	type ResolveHint = indices::SimpleResolveHint<Self::AccountId, Self::AccountIndex>;
+	type ResolveHint = pallet_indices::SimpleResolveHint<Self::AccountId, Self::AccountIndex>;
 	/// Determine whether an account is dead.
 	type IsDeadAccount = Balances;
 	/// The ubiquitous event type.
@@ -182,7 +182,7 @@ parameter_types! {
 	pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
 }
 
-impl timestamp::Trait for Runtime {
+impl pallet_timestamp::Trait for Runtime {
 	/// A timestamp: milliseconds since the unix epoch.
 	type Moment = u64;
 	type OnTimestampSet = Aura;
@@ -195,7 +195,7 @@ parameter_types! {
 	pub const CreationFee: u128 = 0;
 }
 
-impl balances::Trait for Runtime {
+impl pallet_balances::Trait for Runtime {
 	/// The type for recording an account's balance.
 	type Balance = Balance;
 	/// What to do if an account's free balance gets zeroed.
@@ -216,8 +216,8 @@ parameter_types! {
 	pub const TransactionByteFee: Balance = 1;
 }
 
-impl transaction_payment::Trait for Runtime {
-	type Currency = balances::Module<Runtime>;
+impl pallet_transaction_payment::Trait for Runtime {
+	type Currency = pallet_balances::Module<Runtime>;
 	type OnTransactionPayment = ();
 	type TransactionBaseFee = TransactionBaseFee;
 	type TransactionByteFee = TransactionByteFee;
@@ -225,25 +225,25 @@ impl transaction_payment::Trait for Runtime {
 	type FeeMultiplierUpdate = ();
 }
 
-impl sudo::Trait for Runtime {
+impl pallet_sudo::Trait for Runtime {
 	type Event = Event;
 	type Proposal = Call;
 }
 
-type OperatorCollectiveInstance = collective::Instance1;
-impl collective::Trait<OperatorCollectiveInstance> for Runtime {
+type OperatorCollectiveInstance = pallet_collective::Instance1;
+impl pallet_collective::Trait<OperatorCollectiveInstance> for Runtime {
 	type Origin = Origin;
 	type Proposal = Call;
 	type Event = Event;
 }
 
-type OperatorMembershipInstance = membership::Instance1;
-impl membership::Trait<OperatorMembershipInstance> for Runtime {
+type OperatorMembershipInstance = pallet_membership::Instance1;
+impl pallet_membership::Trait<OperatorMembershipInstance> for Runtime {
 	type Event = Event;
-	type AddOrigin = collective::EnsureProportionMoreThan<_1, _2, AccountId, OperatorCollectiveInstance>;
-	type RemoveOrigin = collective::EnsureProportionMoreThan<_1, _2, AccountId, OperatorCollectiveInstance>;
-	type SwapOrigin = collective::EnsureProportionMoreThan<_1, _2, AccountId, OperatorCollectiveInstance>;
-	type ResetOrigin = collective::EnsureProportionMoreThan<_1, _2, AccountId, OperatorCollectiveInstance>;
+	type AddOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, OperatorCollectiveInstance>;
+	type RemoveOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, OperatorCollectiveInstance>;
+	type SwapOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, OperatorCollectiveInstance>;
+	type ResetOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, OperatorCollectiveInstance>;
 	type MembershipInitialized = OperatorCollective;
 	type MembershipChanged = OperatorCollective;
 }
@@ -253,17 +253,17 @@ impl flow::Trait for Runtime {
 	type Currency = Balances;
 }
 
-impl oracle::Trait for Runtime {
+impl orml_oracle::Trait for Runtime {
 	type Event = Event;
 	type OnNewData = (); // TODO: update this
 	type OperatorProvider = (); // TODO: update this
-	type CombineData = oracle::DefaultCombineData<Runtime>;
+	type CombineData = orml_oracle::DefaultCombineData<Runtime>;
 	type Time = Timestamp;
 	type Key = u32; // TODO: update this
 	type Value = Balance;
 }
 
-impl tokens::Trait for Runtime {
+impl orml_tokens::Trait for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type Amount = Amount;
@@ -276,8 +276,8 @@ parameter_types! {
 
 impl orml_currencies::Trait for Runtime {
 	type Event = Event;
-	type MultiCurrency = tokens::Module<Runtime>;
-	type NativeCurrency = BasicCurrencyAdapter<Runtime, balances::Module<Runtime>, Balance, tokens::Error>;
+	type MultiCurrency = orml_tokens::Module<Runtime>;
+	type NativeCurrency = BasicCurrencyAdapter<Runtime, pallet_balances::Module<Runtime>, Balance, orml_tokens::Error>;
 	type GetNativeCurrencyId = GetNativeCurrencyId;
 }
 
@@ -288,20 +288,20 @@ construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
 		System: system::{Module, Call, Storage, Config, Event},
-		Timestamp: timestamp::{Module, Call, Storage, Inherent},
-		Aura: aura::{Module, Config<T>, Inherent(Timestamp)},
-		Grandpa: grandpa::{Module, Call, Storage, Config, Event},
-		Indices: indices::{default, Config<T>},
-		Balances: balances,
-		TransactionPayment: transaction_payment::{Module, Storage},
-		Sudo: sudo,
-		RandomnessCollectiveFlip: randomness_collective_flip::{Module, Call, Storage},
-		OperatorCollective: collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
-		OperatorMembership: membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
-		Flow: flow::{Module, Storage, Call, Event<T>},
-		Oracle: oracle::{Module, Storage, Call, Event<T>},
-		Tokens: tokens::{Module, Storage, Call, Event<T>, Config<T>},
+		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
+		Aura: pallet_aura::{Module, Config<T>, Inherent(Timestamp)},
+		Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
+		Indices: pallet_indices::{default, Config<T>},
+		Balances: pallet_balances,
+		TransactionPayment: pallet_transaction_payment::{Module, Storage},
+		Sudo: pallet_sudo,
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
+		OperatorCollective: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
+		OperatorMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
+		Oracle: orml_oracle::{Module, Storage, Call, Event<T>},
+		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
+		Flow: flow::{Module, Storage, Call, Event<T>},
 	}
 );
 
@@ -322,14 +322,14 @@ pub type SignedExtra = (
 	system::CheckEra<Runtime>,
 	system::CheckNonce<Runtime>,
 	system::CheckWeight<Runtime>,
-	transaction_payment::ChargeTransactionPayment<Runtime>,
+	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 );
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Call, SignedExtra>;
 /// Executive: handles dispatch to the various modules.
-pub type Executive = executive::Executive<Runtime, Block, system::ChainContext<Runtime>, Runtime, AllModules>;
+pub type Executive = palette_executive::Executive<Runtime, Block, system::ChainContext<Runtime>, Runtime, AllModules>;
 
 impl_runtime_apis! {
 	impl sr_api::Core<Block> for Runtime {
