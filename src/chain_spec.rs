@@ -145,6 +145,6 @@ fn testnet_genesis(
 		}),
 		pallet_collective_Instance1: Some(Default::default()),
 		pallet_membership_Instance1: Some(Default::default()),
-		tokens: Some(Default::default()),
+		orml_tokens: Some(Default::default()),
 	}
 }

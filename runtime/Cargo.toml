@@ -16,32 +16,31 @@ substrate-session = { git = "https://github.com/paritytech/substrate.git", defau
 aura-primitives = { package = "substrate-consensus-aura-primitives", git = "https://github.com/paritytech/substrate.git", default-features = false }
 sr-primitives = { git = "https://github.com/paritytech/substrate.git", default-features = false }
 offchain-primitives = { package = "substrate-offchain-primitives", git = "https://github.com/paritytech/substrate.git", default-features = false }
-
-system = { package = "palette-system", git = "https://github.com/paritytech/substrate.git", default-features = false }
-palette-support = { package = "palette-support", git = "https://github.com/paritytech/substrate.git", default-features = false }
-palette-executive = { package = "palette-executive", git = "https://github.com/paritytech/substrate.git", default-features = false }
-pallet-balances = { package = "pallet-balances", git = "https://github.com/paritytech/substrate.git", default-features = false }
-pallet-aura = { package = "pallet-aura", git = "https://github.com/paritytech/substrate.git", default-features = false }
-pallet-grandpa = { package = "pallet-grandpa", git = "https://github.com/paritytech/substrate.git", default-features = false }
-pallet-indices = { package = "pallet-indices", git = "https://github.com/paritytech/substrate.git", default-features = false }
-pallet-randomness-collective-flip = { package = "pallet-randomness-collective-flip", git = "https://github.com/paritytech/substrate.git", default-features = false }
-pallet-timestamp = { package = "pallet-timestamp", git = "https://github.com/paritytech/substrate.git", default-features = false }
-pallet-sudo = { package = "pallet-sudo", git = "https://github.com/paritytech/substrate.git", default-features = false }
-pallet-transaction-payment = { package = "pallet-transaction-payment", git = "https://github.com/paritytech/substrate.git", default-features = false }
-pallet-collective = { package = "pallet-collective", git = "https://github.com/paritytech/substrate.git", default-features = false }
-pallet-membership = { package = "pallet-membership", git = "https://github.com/paritytech/substrate.git", default-features = false }
-
 tx-pool-api = { package = "substrate-transaction-pool-runtime-api", git = "https://github.com/paritytech/substrate.git", default-features = false }
 block-builder-api = { package = "substrate-block-builder-runtime-api", git = "https://github.com/paritytech/substrate.git", default-features = false }
 sr-api = { git = "https://github.com/paritytech/substrate.git", default-features = false }
 inherents = { package = "substrate-inherents", git = "https://github.com/paritytech/substrate.git", default-features = false }
 
+system = { package = "palette-system", git = "https://github.com/paritytech/substrate.git", default-features = false }
+palette-support = { git = "https://github.com/paritytech/substrate.git", default-features = false }
+palette-executive = { git = "https://github.com/paritytech/substrate.git", default-features = false }
+pallet-balances = { git = "https://github.com/paritytech/substrate.git", default-features = false }
+pallet-aura = { git = "https://github.com/paritytech/substrate.git", default-features = false }
+pallet-grandpa = { git = "https://github.com/paritytech/substrate.git", default-features = false }
+pallet-indices = { git = "https://github.com/paritytech/substrate.git", default-features = false }
+pallet-transaction-payment = { git = "https://github.com/paritytech/substrate.git", default-features = false }
+pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate.git", default-features = false }
+pallet-timestamp = { git = "https://github.com/paritytech/substrate.git", default-features = false }
+pallet-sudo = { git = "https://github.com/paritytech/substrate.git", default-features = false }
+pallet-collective = { git = "https://github.com/paritytech/substrate.git", default-features = false }
+pallet-membership = { git = "https://github.com/paritytech/substrate.git", default-features = false }
+
+orml-oracle = { path = "../orml/oracle", default-features = false }
+orml-tokens = { path = "../orml/tokens", default-features = false }
+orml-currencies = { path = "../orml/currencies", default-features = false }
+
 flow = { package = "module-flow", path = "../modules/flow", default-features = false }
 module-primitives = { path = "../modules/primitives", default-features = false }
-
-oracle = { package = "orml-oracle", path = "../orml/oracle", default-features = false }
-tokens = { package = "orml-tokens", path = "../orml/tokens", default-features = false }
-orml-currencies = { path = "../orml/currencies", default-features = false }
 
 [build-dependencies]
 wasm-builder-runner = { package = "substrate-wasm-builder-runner", version = "1.0.4" }
@@ -78,9 +77,9 @@ std = [
 	"pallet-transaction-payment/std",
 	"pallet-collective/std",
 	"pallet-membership/std",
-    "flow/std",
-	"oracle/std",
-	"tokens/std",
+	"orml-oracle/std",
+	"orml-tokens/std",
 	"orml-currencies/std",
+    "flow/std",
 	"module-primitives/std",
 ]

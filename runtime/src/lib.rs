@@ -31,10 +31,10 @@ use module_primitives::CurrencyId;
 use orml_currencies::BasicCurrencyAdapter;
 
 // A few exports that help ease life for downstream crates.
+pub use palette_support::{construct_runtime, parameter_types, traits::Randomness, StorageValue};
 #[cfg(any(feature = "std", test))]
 pub use sr_primitives::BuildStorage;
 pub use sr_primitives::{Perbill, Permill};
-pub use palette_support::{construct_runtime, parameter_types, traits::Randomness, StorageValue};
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -253,17 +253,17 @@ impl flow::Trait for Runtime {
 	type Currency = Balances;
 }
 
-impl oracle::Trait for Runtime {
+impl orml_oracle::Trait for Runtime {
 	type Event = Event;
 	type OnNewData = (); // TODO: update this
 	type OperatorProvider = (); // TODO: update this
-	type CombineData = oracle::DefaultCombineData<Runtime>;
+	type CombineData = orml_oracle::DefaultCombineData<Runtime>;
 	type Time = Timestamp;
 	type Key = u32; // TODO: update this
 	type Value = Balance;
 }
 
-impl tokens::Trait for Runtime {
+impl orml_tokens::Trait for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type Amount = Amount;
@@ -276,8 +276,8 @@ parameter_types! {
 
 impl orml_currencies::Trait for Runtime {
 	type Event = Event;
-	type MultiCurrency = tokens::Module<Runtime>;
-	type NativeCurrency = BasicCurrencyAdapter<Runtime, pallet_balances::Module<Runtime>, Balance, tokens::Error>;
+	type MultiCurrency = orml_tokens::Module<Runtime>;
+	type NativeCurrency = BasicCurrencyAdapter<Runtime, pallet_balances::Module<Runtime>, Balance, orml_tokens::Error>;
 	type GetNativeCurrencyId = GetNativeCurrencyId;
 }
 
@@ -298,10 +298,10 @@ construct_runtime!(
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
 		OperatorCollective: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		OperatorMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
-		Flow: flow::{Module, Storage, Call, Event<T>},
-		Oracle: oracle::{Module, Storage, Call, Event<T>},
-		Tokens: tokens::{Module, Storage, Call, Event<T>, Config<T>},
+		Oracle: orml_oracle::{Module, Storage, Call, Event<T>},
+		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
+		Flow: flow::{Module, Storage, Call, Event<T>},
 	}
 );
 
