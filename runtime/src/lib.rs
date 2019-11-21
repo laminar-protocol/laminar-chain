@@ -27,6 +27,9 @@ use sr_primitives::{
 use version::NativeVersion;
 use version::RuntimeVersion;
 
+use module_primitives::CurrencyId;
+use orml_currencies::BasicCurrencyAdapter;
+
 // A few exports that help ease life for downstream crates.
 #[cfg(any(feature = "std", test))]
 pub use sr_primitives::BuildStorage;
@@ -264,7 +267,18 @@ impl tokens::Trait for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type Amount = Amount;
-	type CurrencyId = u32;
+	type CurrencyId = CurrencyId;
+}
+
+parameter_types! {
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::FLOW;
+}
+
+impl orml_currencies::Trait for Runtime {
+	type Event = Event;
+	type MultiCurrency = tokens::Module<Runtime>;
+	type NativeCurrency = BasicCurrencyAdapter<Runtime, balances::Module<Runtime>, Balance, tokens::Error>;
+	type GetNativeCurrencyId = GetNativeCurrencyId;
 }
 
 construct_runtime!(
@@ -287,6 +301,7 @@ construct_runtime!(
 		Flow: flow::{Module, Storage, Call, Event<T>},
 		Oracle: oracle::{Module, Storage, Call, Event<T>},
 		Tokens: tokens::{Module, Storage, Call, Event<T>, Config<T>},
+		Currencies: orml_currencies::{Module, Call, Event<T>},
 	}
 );
 
