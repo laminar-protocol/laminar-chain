@@ -2,7 +2,7 @@
 
 use palette_support::{decl_error, decl_event, decl_module, decl_storage, Parameter};
 use sr_primitives::{
-	traits::{Member, SimpleArithmetic},
+	traits::{Member, SimpleArithmetic, MaybeSerializeDeserialize},
 	Permill,
 };
 // FIXME: `pallet/palette-` prefix should be used for all pallet modules, but currently `palette_system`
@@ -12,15 +12,17 @@ use palette_system as system;
 
 use orml_traits::PriceProvider;
 
-use module_primitives::CurrencyId;
+use module_primitives::LiquidityPoolId;
 
 pub trait Trait: palette_system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as palette_system::Trait>::Event>;
 	type CurrencyId: Parameter + Member + Copy + MaybeSerializeDeserialize;
 	type Balance: Parameter + Member + SimpleArithmetic + Default + Copy + MaybeSerializeDeserialize;
-	type Price: From<Balance> + Into<Balance>;
+	type Price: From<Self::Balance> + Into<Self::Balance>;
 	type PriceProvider: PriceProvider<Self::CurrencyId, Self::Price>;
 }
+
+const MAX_SPREAD: Permill = Permill::from_percent(3); // TODO: set this
 
 decl_storage! {
 	trait Store for Module<T: Trait> as SyntheticProtocol {}
@@ -29,13 +31,19 @@ decl_storage! {
 decl_event! {
 	pub enum Event<T> where
 		<T as palette_system::Trait>::AccountId,
+		CurrencyId = <T as Trait>::CurrencyId,
+		Balance = <T as Trait>::Balance,
 	{
-		Dummy(AccountId),
+		/// Synthetic token minted.
+		/// (who, synthetic_token_id, liquidity_pool_id, collateral_amount, minted_amount)
+		Minted(AccountId, CurrencyId, LiquidityPoolId, Balance, Balance),
+		/// Synthetic token redeemed.
+		/// (who, synthetic_token_id, liquidity_pool_id, collateral_amount, redeemed_amount)
+		Redeemed(AccountId, CurrencyId, LiquidityPoolId, Balance, Balance),
+		/// Synthetic token liquidated.
+		/// (who, synthetic_token_id, liquidity_pool_id, collateral_amount, synthetic_token_amount)
+		Liquidated(AccountId, CurrencyId, LiquidityPoolId, Balance, Balance),
 	}
-}
-
-decl_error! {
-	pub enum Error {}
 }
 
 decl_module! {
@@ -44,4 +52,37 @@ decl_module! {
 	}
 }
 
-impl<T: Trait> Module<T> {}
+decl_error! {
+	pub enum Error {}
+}
+
+impl<T: Trait> Module<T> {
+	fn _mint(
+		who: T::AccountId,
+		currency_id: T::CurrencyId,
+		pool_id: LiquidityPoolId,
+		collateral_amount: T::Balance,
+		max_slippage: Permill,
+	) {
+		unimplemented!()
+	}
+
+	fn _redeem(
+		who: T::AccountId,
+		currency_id: T::CurrencyId,
+		pool_id: LiquidityPoolId,
+		synthetic_token_amount: T::Balance,
+		max_slippage: Permill,
+	) {
+		unimplemented!()
+	}
+
+	fn _liquidate(
+		who: T::AccountId,
+		currency_id: T::CurrencyId,
+		pool_id: LiquidityPoolId,
+		synthetic_token_amount: T::Balance,
+	) {
+		unimplemented!()
+	}
+}
