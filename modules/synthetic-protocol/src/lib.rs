@@ -1,6 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use palette_support::{decl_event, decl_module, decl_storage, decl_error};
+use palette_support::{decl_error, decl_event, decl_module, decl_storage};
 // FIXME: `pallet/palette-` prefix should be used for all pallet modules, but currently `palette_system`
 // would cause compiling error in `decl_module!` and `construct_runtime!`
 // #3295 https://github.com/paritytech/substrate/issues/3295

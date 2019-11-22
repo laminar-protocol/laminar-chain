@@ -11,8 +11,8 @@ sr-primitives = { git = "https://github.com/paritytech/substrate.git", default-f
 runtime_io = { package = "sr-io", git = "https://github.com/paritytech/substrate.git", default-features = false }
 rstd = { package = "sr-std", git = "https://github.com/paritytech/substrate.git", default-features = false }
 
-palette-support = { package = "palette-support", git = "https://github.com/paritytech/substrate.git", default-features = false }
-palette-system = { package = "palette-system", git = "https://github.com/paritytech/substrate.git", default-features = false }
+palette-support = { git = "https://github.com/paritytech/substrate.git", default-features = false }
+palette-system = { git = "https://github.com/paritytech/substrate.git", default-features = false }
 
 [features]
 default = ["std"]
