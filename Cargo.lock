@@ -2174,7 +2174,6 @@ dependencies = [
 name = "module-synthetic-tokens"
 version = "0.0.1"
 dependencies = [
- "module-primitives 0.0.1",
  "orml-traits 0.0.1",
  "palette-support 2.0.0 (git+https://github.com/paritytech/substrate.git)",
  "palette-system 2.0.0 (git+https://github.com/paritytech/substrate.git)",

@@ -1,17 +1,20 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use palette_support::{decl_error, decl_module, decl_storage};
-use sr_primitives::{traits::Zero, Permill};
+use palette_support::{decl_error, decl_module, decl_storage, Parameter};
+use sr_primitives::{
+	traits::{MaybeSerializeDeserialize, Member, Zero},
+	Permill,
+};
 
 use orml_traits::MultiCurrency;
 
-use module_primitives::{CurrencyId, LiquidityPoolId};
-
 type BalanceOf<T> = <<T as Trait>::Currency as MultiCurrency<<T as palette_system::Trait>::AccountId>>::Balance;
+type CurrencyIdOf<T> = <<T as Trait>::Currency as MultiCurrency<<T as palette_system::Trait>::AccountId>>::CurrencyId;
 
 pub trait Trait: palette_system::Trait {
 	type Currency: MultiCurrency<Self::AccountId>;
+	type LiquidityPoolId: Parameter + Member + Copy + MaybeSerializeDeserialize;
 }
 
 #[derive(Encode, Decode)]
@@ -35,10 +38,10 @@ const COLLATERAL_RATIO_DEFAULT: Permill = Permill::from_percent(10); // TODO: se
 
 decl_storage! {
 	trait Store for Module<T: Trait> as SyntheticTokens {
-		ExtremeRatio get(extreme_ratio): map CurrencyId => Option<Permill>;
-		LiquidationRatio get(liquidation_ratio): map CurrencyId => Option<Permill>;
-		CollateralRatio get(collateral_ratio): map CurrencyId => Option<Permill>;
-		Positions get(positions): map (LiquidityPoolId, CurrencyId) => Position<T>;
+		ExtremeRatio get(extreme_ratio): map CurrencyIdOf<T> => Option<Permill>;
+		LiquidationRatio get(liquidation_ratio): map CurrencyIdOf<T> => Option<Permill>;
+		CollateralRatio get(collateral_ratio): map CurrencyIdOf<T> => Option<Permill>;
+		Positions get(positions): map (T::LiquidityPoolId, CurrencyIdOf<T>) => Position<T>;
 	}
 }
 
@@ -53,7 +56,7 @@ decl_module! {
 impl<T: Trait> Module<T> {
 	pub fn add_position(
 		who: T::AccountId,
-		pool_id: LiquidityPoolId,
+		pool_id: T::LiquidityPoolId,
 		collateral_amount: BalanceOf<T>,
 		minted_amount: BalanceOf<T>,
 	) {
@@ -62,7 +65,7 @@ impl<T: Trait> Module<T> {
 
 	pub fn remove_position(
 		who: T::AccountId,
-		pool_id: LiquidityPoolId,
+		pool_id: T::LiquidityPoolId,
 		collateral_amount: BalanceOf<T>,
 		minted_amount: BalanceOf<T>,
 	) {

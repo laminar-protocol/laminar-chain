@@ -2,7 +2,7 @@
 
 use palette_support::{decl_error, decl_event, decl_module, decl_storage, Parameter};
 use sr_primitives::{
-	traits::{Member, SimpleArithmetic, MaybeSerializeDeserialize},
+	traits::{MaybeSerializeDeserialize, Member, SimpleArithmetic},
 	Permill,
 };
 // FIXME: `pallet/palette-` prefix should be used for all pallet modules, but currently `palette_system`
@@ -12,14 +12,13 @@ use palette_system as system;
 
 use orml_traits::PriceProvider;
 
-use module_primitives::LiquidityPoolId;
-
 pub trait Trait: palette_system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as palette_system::Trait>::Event>;
 	type CurrencyId: Parameter + Member + Copy + MaybeSerializeDeserialize;
 	type Balance: Parameter + Member + SimpleArithmetic + Default + Copy + MaybeSerializeDeserialize;
 	type Price: From<Self::Balance> + Into<Self::Balance>;
 	type PriceProvider: PriceProvider<Self::CurrencyId, Self::Price>;
+	type LiquidityPoolId: Parameter + Member + Copy + MaybeSerializeDeserialize;
 }
 
 const MAX_SPREAD: Permill = Permill::from_percent(3); // TODO: set this
@@ -33,6 +32,7 @@ decl_event! {
 		<T as palette_system::Trait>::AccountId,
 		CurrencyId = <T as Trait>::CurrencyId,
 		Balance = <T as Trait>::Balance,
+		LiquidityPoolId = <T as Trait>::LiquidityPoolId,
 	{
 		/// Synthetic token minted.
 		/// (who, synthetic_token_id, liquidity_pool_id, collateral_amount, minted_amount)
@@ -60,7 +60,7 @@ impl<T: Trait> Module<T> {
 	fn _mint(
 		who: T::AccountId,
 		currency_id: T::CurrencyId,
-		pool_id: LiquidityPoolId,
+		pool_id: T::LiquidityPoolId,
 		collateral_amount: T::Balance,
 		max_slippage: Permill,
 	) {
@@ -70,7 +70,7 @@ impl<T: Trait> Module<T> {
 	fn _redeem(
 		who: T::AccountId,
 		currency_id: T::CurrencyId,
-		pool_id: LiquidityPoolId,
+		pool_id: T::LiquidityPoolId,
 		synthetic_token_amount: T::Balance,
 		max_slippage: Permill,
 	) {
@@ -80,7 +80,7 @@ impl<T: Trait> Module<T> {
 	fn _liquidate(
 		who: T::AccountId,
 		currency_id: T::CurrencyId,
-		pool_id: LiquidityPoolId,
+		pool_id: T::LiquidityPoolId,
 		synthetic_token_amount: T::Balance,
 	) {
 		unimplemented!()
