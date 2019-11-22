@@ -2159,6 +2159,8 @@ dependencies = [
 name = "module-synthetic-protocol"
 version = "0.0.1"
 dependencies = [
+ "module-primitives 0.0.1",
+ "orml-traits 0.0.1",
  "palette-support 2.0.0 (git+https://github.com/paritytech/substrate.git)",
  "palette-system 2.0.0 (git+https://github.com/paritytech/substrate.git)",
  "parity-scale-codec 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -16,15 +16,15 @@ pub trait Trait: palette_system::Trait {
 
 #[derive(Encode, Decode)]
 pub struct Position<T: Trait> {
-	collateral: BalanceOf<T>,
-	minted: BalanceOf<T>,
+	collateral_amount: BalanceOf<T>,
+	minted_amount: BalanceOf<T>,
 }
 
 impl<T: Trait> Default for Position<T> {
 	fn default() -> Self {
 		Position {
-			collateral: Zero::zero(),
-			minted: Zero::zero(),
+			collateral_amount: Zero::zero(),
+			minted_amount: Zero::zero(),
 		}
 	}
 }
@@ -51,15 +51,20 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
-	pub fn add_position(who: T::AccountId, pool_id: LiquidityPoolId, collateral: BalanceOf<T>, minted: BalanceOf<T>) {
+	pub fn add_position(
+		who: T::AccountId,
+		pool_id: LiquidityPoolId,
+		collateral_amount: BalanceOf<T>,
+		minted_amount: BalanceOf<T>,
+	) {
 		unimplemented!()
 	}
 
 	pub fn remove_position(
 		who: T::AccountId,
 		pool_id: LiquidityPoolId,
-		collateral: BalanceOf<T>,
-		minted: BalanceOf<T>,
+		collateral_amount: BalanceOf<T>,
+		minted_amount: BalanceOf<T>,
 	) {
 		unimplemented!()
 	}
