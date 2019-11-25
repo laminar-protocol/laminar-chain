@@ -27,8 +27,9 @@ use sr_primitives::{
 use version::NativeVersion;
 use version::RuntimeVersion;
 
-use module_primitives::CurrencyId;
+use module_primitives::{CurrencyId, LiquidityPoolId};
 use orml_currencies::BasicCurrencyAdapter;
+use orml_traits::DataProvider;
 
 // A few exports that help ease life for downstream crates.
 pub use palette_support::{construct_runtime, parameter_types, traits::Randomness, StorageValue};
@@ -248,11 +249,6 @@ impl pallet_membership::Trait<OperatorMembershipInstance> for Runtime {
 	type MembershipChanged = OperatorCollective;
 }
 
-impl flow::Trait for Runtime {
-	type Event = Event;
-	type Currency = Balances;
-}
-
 impl orml_oracle::Trait for Runtime {
 	type Event = Event;
 	type OnNewData = (); // TODO: update this
@@ -281,6 +277,30 @@ impl orml_currencies::Trait for Runtime {
 	type GetNativeCurrencyId = GetNativeCurrencyId;
 }
 
+pub struct DummySource;
+impl DataProvider<CurrencyId, Balance> for DummySource {
+	fn get(currency: &CurrencyId) -> Option<Balance> { None }
+}
+impl orml_prices::Trait for Runtime {
+	type CurrencyId = CurrencyId;
+	type Price = Balance; // TODO: use Fix128
+	type Source = DummySource;
+}
+
+impl synthetic_tokens::Trait for Runtime {
+	type Currency = orml_currencies::Module<Runtime>;
+	type LiquidityPoolId = LiquidityPoolId;
+}
+
+impl synthetic_protocol::Trait for Runtime {
+	type Event = Event;
+	type CurrencyId = CurrencyId;
+	type Balance = Balance;
+	type Price = Balance; // TODO: use Fix128
+	type PriceProvider = orml_prices::Module<Runtime>; // TODO: update this
+	type LiquidityPoolId = LiquidityPoolId;
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -301,7 +321,9 @@ construct_runtime!(
 		Oracle: orml_oracle::{Module, Storage, Call, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
-		Flow: flow::{Module, Storage, Call, Event<T>},
+		Prices: orml_prices::{Module, Storage},
+		SyntheticTokens: synthetic_tokens::{Module, Storage},
+		SyntheticProtocol: synthetic_protocol::{Module, Call, Event<T>},
 	}
 );
 

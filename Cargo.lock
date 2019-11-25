@@ -767,11 +767,14 @@ dependencies = [
 name = "flowchain-runtime"
 version = "0.0.1"
 dependencies = [
- "module-flow 0.0.1",
  "module-primitives 0.0.1",
+ "module-synthetic-protocol 0.0.1",
+ "module-synthetic-tokens 0.0.1",
  "orml-currencies 0.0.1",
  "orml-oracle 0.0.1",
+ "orml-prices 0.1.0",
  "orml-tokens 0.0.1",
+ "orml-traits 0.0.1",
  "palette-executive 2.0.0 (git+https://github.com/paritytech/substrate.git)",
  "palette-support 2.0.0 (git+https://github.com/paritytech/substrate.git)",
  "palette-system 2.0.0 (git+https://github.com/paritytech/substrate.git)",
@@ -2120,19 +2123,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "module-flow"
-version = "0.0.1"
-dependencies = [
- "palette-support 2.0.0 (git+https://github.com/paritytech/substrate.git)",
- "palette-system 2.0.0 (git+https://github.com/paritytech/substrate.git)",
- "parity-scale-codec 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.102 (registry+https://github.com/rust-lang/crates.io-index)",
- "sr-io 2.0.0 (git+https://github.com/paritytech/substrate.git)",
- "sr-primitives 2.0.0 (git+https://github.com/paritytech/substrate.git)",
- "sr-std 2.0.0 (git+https://github.com/paritytech/substrate.git)",
-]
-
-[[package]]
 name = "module-margin-protocol"
 version = "0.0.1"
 dependencies = [
@@ -2324,6 +2314,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "orml-auction"
 version = "0.0.1"
 dependencies = [
+ "clear_on_drop 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "orml-traits 0.0.1",
  "orml-utilities 0.0.1",
  "palette-support 2.0.0 (git+https://github.com/paritytech/substrate.git)",
@@ -2340,6 +2331,7 @@ dependencies = [
 name = "orml-currencies"
 version = "0.0.1"
 dependencies = [
+ "clear_on_drop 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "orml-tokens 0.0.1",
  "orml-traits 0.0.1",
  "palette-support 2.0.0 (git+https://github.com/paritytech/substrate.git)",
@@ -2357,6 +2349,7 @@ dependencies = [
 name = "orml-oracle"
 version = "0.0.1"
 dependencies = [
+ "clear_on_drop 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "orml-traits 0.0.1",
  "orml-utilities 0.0.1",
  "palette-support 2.0.0 (git+https://github.com/paritytech/substrate.git)",
@@ -2374,6 +2367,7 @@ dependencies = [
 name = "orml-prices"
 version = "0.1.0"
 dependencies = [
+ "clear_on_drop 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "orml-traits 0.0.1",
  "orml-utilities 0.0.1",
  "palette-support 2.0.0 (git+https://github.com/paritytech/substrate.git)",
@@ -2389,6 +2383,7 @@ dependencies = [
 name = "orml-tokens"
 version = "0.0.1"
 dependencies = [
+ "clear_on_drop 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "orml-traits 0.0.1",
  "orml-utilities 0.0.1",
  "palette-support 2.0.0 (git+https://github.com/paritytech/substrate.git)",
@@ -2405,6 +2400,7 @@ dependencies = [
 name = "orml-traits"
 version = "0.0.1"
 dependencies = [
+ "clear_on_drop 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "impl-trait-for-tuples 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "palette-support 2.0.0 (git+https://github.com/paritytech/substrate.git)",
@@ -2420,6 +2416,7 @@ dependencies = [
 name = "orml-utilities"
 version = "0.0.1"
 dependencies = [
+ "clear_on_drop 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "palette-support 2.0.0 (git+https://github.com/paritytech/substrate.git)",
  "palette-system 2.0.0 (git+https://github.com/paritytech/substrate.git)",
  "parity-scale-codec 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
