@@ -31,7 +31,7 @@ use module_primitives::CurrencyId;
 use orml_currencies::BasicCurrencyAdapter;
 
 // A few exports that help ease life for downstream crates.
-pub use palette_support::{construct_runtime, parameter_types, traits::Randomness, StorageValue};
+pub use frame_support::{construct_runtime, parameter_types, traits::Randomness, StorageValue};
 #[cfg(any(feature = "std", test))]
 pub use sr_primitives::BuildStorage;
 pub use sr_primitives::{Perbill, Permill};
@@ -329,7 +329,7 @@ pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signatu
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Call, SignedExtra>;
 /// Executive: handles dispatch to the various modules.
-pub type Executive = palette_executive::Executive<Runtime, Block, system::ChainContext<Runtime>, Runtime, AllModules>;
+pub type Executive = frame_executive::Executive<Runtime, Block, system::ChainContext<Runtime>, Runtime, AllModules>;
 
 impl_runtime_apis! {
 	impl sr_api::Core<Block> for Runtime {
