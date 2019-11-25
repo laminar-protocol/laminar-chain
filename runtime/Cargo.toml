@@ -21,9 +21,9 @@ block-builder-api = { package = "substrate-block-builder-runtime-api", git = "ht
 sr-api = { git = "https://github.com/paritytech/substrate.git", default-features = false }
 inherents = { package = "substrate-inherents", git = "https://github.com/paritytech/substrate.git", default-features = false }
 
-system = { package = "palette-system", git = "https://github.com/paritytech/substrate.git", default-features = false }
-palette-support = { git = "https://github.com/paritytech/substrate.git", default-features = false }
-palette-executive = { git = "https://github.com/paritytech/substrate.git", default-features = false }
+system = { package = "frame-system", git = "https://github.com/paritytech/substrate.git", default-features = false }
+frame-support = { git = "https://github.com/paritytech/substrate.git", default-features = false }
+frame-executive = { git = "https://github.com/paritytech/substrate.git", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/substrate.git", default-features = false }
 pallet-aura = { git = "https://github.com/paritytech/substrate.git", default-features = false }
 pallet-grandpa = { git = "https://github.com/paritytech/substrate.git", default-features = false }
@@ -68,8 +68,8 @@ std = [
 	"inherents/std",
 	"aura-primitives/std",
 	"system/std",
-	"palette-support/std",
-	"palette-executive/std",
+	"frame-support/std",
+	"frame-executive/std",
 	"pallet-balances/std",
 	"pallet-aura/std",
 	"pallet-grandpa/std",

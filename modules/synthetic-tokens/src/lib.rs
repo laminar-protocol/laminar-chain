@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use palette_support::{decl_error, decl_module, decl_storage, Parameter};
+use frame_support::{decl_error, decl_module, decl_storage, Parameter};
 use sr_primitives::{
 	traits::{MaybeSerializeDeserialize, Member, Zero},
 	Permill,
@@ -9,10 +9,10 @@ use sr_primitives::{
 
 use orml_traits::MultiCurrency;
 
-type BalanceOf<T> = <<T as Trait>::Currency as MultiCurrency<<T as palette_system::Trait>::AccountId>>::Balance;
-type CurrencyIdOf<T> = <<T as Trait>::Currency as MultiCurrency<<T as palette_system::Trait>::AccountId>>::CurrencyId;
+type BalanceOf<T> = <<T as Trait>::Currency as MultiCurrency<<T as frame_system::Trait>::AccountId>>::Balance;
+type CurrencyIdOf<T> = <<T as Trait>::Currency as MultiCurrency<<T as frame_system::Trait>::AccountId>>::CurrencyId;
 
-pub trait Trait: palette_system::Trait {
+pub trait Trait: frame_system::Trait {
 	type Currency: MultiCurrency<Self::AccountId>;
 	type LiquidityPoolId: Parameter + Member + Copy + MaybeSerializeDeserialize;
 }

@@ -1,19 +1,19 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use palette_support::{decl_error, decl_event, decl_module, decl_storage, Parameter};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, Parameter};
 use sr_primitives::{
 	traits::{MaybeSerializeDeserialize, Member, SimpleArithmetic},
 	Permill,
 };
-// FIXME: `pallet/palette-` prefix should be used for all pallet modules, but currently `palette_system`
+// FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
 // would cause compiling error in `decl_module!` and `construct_runtime!`
 // #3295 https://github.com/paritytech/substrate/issues/3295
-use palette_system as system;
+use frame_system as system;
 
 use orml_traits::PriceProvider;
 
-pub trait Trait: palette_system::Trait {
-	type Event: From<Event<Self>> + Into<<Self as palette_system::Trait>::Event>;
+pub trait Trait: frame_system::Trait {
+	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 	type CurrencyId: Parameter + Member + Copy + MaybeSerializeDeserialize;
 	type Balance: Parameter + Member + SimpleArithmetic + Default + Copy + MaybeSerializeDeserialize;
 	type Price: From<Self::Balance> + Into<Self::Balance>;
@@ -29,7 +29,7 @@ decl_storage! {
 
 decl_event! {
 	pub enum Event<T> where
-		<T as palette_system::Trait>::AccountId,
+		<T as frame_system::Trait>::AccountId,
 		CurrencyId = <T as Trait>::CurrencyId,
 		Balance = <T as Trait>::Balance,
 		LiquidityPoolId = <T as Trait>::LiquidityPoolId,
