@@ -102,11 +102,15 @@ impl IntoExit for Exit {
 
 		let exit_send_cell = RefCell::new(Some(exit_send));
 		ctrlc::set_handler(move || {
-			let exit_send = exit_send_cell.try_borrow_mut().expect("signal handler not reentrant; qed").take();
+			let exit_send = exit_send_cell
+				.try_borrow_mut()
+				.expect("signal handler not reentrant; qed")
+				.take();
 			if let Some(exit_send) = exit_send {
 				exit_send.send(()).expect("Error sending exit notification");
 			}
-		}).expect("Error setting Ctrl-C handler");
+		})
+		.expect("Error setting Ctrl-C handler");
 
 		exit.map(drop)
 	}

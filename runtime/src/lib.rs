@@ -30,7 +30,7 @@ use module_primitives::CurrencyId;
 use orml_currencies::BasicCurrencyAdapter;
 
 // A few exports that help ease life for downstream crates.
-pub use frame_support::{construct_runtime, parameter_types, traits::Randomness, StorageValue, weights::Weight};
+pub use frame_support::{construct_runtime, parameter_types, traits::Randomness, weights::Weight, StorageValue};
 #[cfg(any(feature = "std", test))]
 pub use sr_primitives::BuildStorage;
 pub use sr_primitives::{Perbill, Permill};
