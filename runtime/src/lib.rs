@@ -278,7 +278,9 @@ impl orml_currencies::Trait for Runtime {
 
 pub struct DummySource;
 impl DataProvider<CurrencyId, Balance> for DummySource {
-	fn get(currency: &CurrencyId) -> Option<Balance> { None }
+	fn get(currency: &CurrencyId) -> Option<Balance> {
+		None
+	}
 }
 impl orml_prices::Trait for Runtime {
 	type CurrencyId = CurrencyId;

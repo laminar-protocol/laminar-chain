@@ -3,7 +3,7 @@
 use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_module, decl_storage, Parameter};
 use sr_primitives::{
-	traits::{MaybeSerializeDeserialize, Member, Zero},
+	traits::{MaybeSerializeDeserialize, Member, Saturating, Zero},
 	Permill,
 };
 
@@ -19,15 +19,21 @@ pub trait Trait: frame_system::Trait {
 
 #[derive(Encode, Decode)]
 pub struct Position<T: Trait> {
-	collateral_amount: BalanceOf<T>,
-	minted_amount: BalanceOf<T>,
+	collateral: BalanceOf<T>,
+	minted: BalanceOf<T>,
+}
+
+impl<T: Trait> Position<T> {
+	fn new(collateral: BalanceOf<T>, minted: BalanceOf<T>) -> Self {
+		Position { collateral, minted }
+	}
 }
 
 impl<T: Trait> Default for Position<T> {
 	fn default() -> Self {
 		Position {
-			collateral_amount: Zero::zero(),
-			minted_amount: Zero::zero(),
+			collateral: Zero::zero(),
+			minted: Zero::zero(),
 		}
 	}
 }
@@ -57,18 +63,26 @@ impl<T: Trait> Module<T> {
 	pub fn add_position(
 		who: T::AccountId,
 		pool_id: T::LiquidityPoolId,
-		collateral_amount: BalanceOf<T>,
-		minted_amount: BalanceOf<T>,
+		currency_id: CurrencyIdOf<T>,
+		collateral: BalanceOf<T>,
+		minted: BalanceOf<T>,
 	) {
-		unimplemented!()
+		<Positions<T>>::mutate((pool_id, currency_id), |p| {
+			p.collateral = p.collateral.saturating_add(collateral);
+			p.minted = p.minted.saturating_add(minted)
+		});
 	}
 
 	pub fn remove_position(
 		who: T::AccountId,
 		pool_id: T::LiquidityPoolId,
-		collateral_amount: BalanceOf<T>,
-		minted_amount: BalanceOf<T>,
+		currency_id: CurrencyIdOf<T>,
+		collateral: BalanceOf<T>,
+		minted: BalanceOf<T>,
 	) {
-		unimplemented!()
+		<Positions<T>>::mutate((pool_id, currency_id), |p| {
+			p.collateral = p.collateral.saturating_sub(collateral);
+			p.minted = p.minted.saturating_sub(minted)
+		});
 	}
 }
