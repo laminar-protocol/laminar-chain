@@ -18,9 +18,8 @@ use sr_api::impl_runtime_apis;
 use sr_primitives::traits::{
 	BlakeTwo256, Block as BlockT, ConvertInto, IdentifyAccount, NumberFor, StaticLookup, Verify,
 };
-use sr_primitives::weights::Weight;
 use sr_primitives::{
-	create_runtime_str, generic, impl_opaque_keys, transaction_validity::TransactionValidity, ApplyResult,
+	create_runtime_str, generic, impl_opaque_keys, transaction_validity::TransactionValidity, ApplyExtrinsicResult,
 	MultiSignature,
 };
 #[cfg(feature = "std")]
@@ -31,7 +30,7 @@ use module_primitives::CurrencyId;
 use orml_currencies::BasicCurrencyAdapter;
 
 // A few exports that help ease life for downstream crates.
-pub use palette_support::{construct_runtime, parameter_types, traits::Randomness, StorageValue};
+pub use frame_support::{construct_runtime, parameter_types, traits::Randomness, weights::Weight, StorageValue};
 #[cfg(any(feature = "std", test))]
 pub use sr_primitives::BuildStorage;
 pub use sr_primitives::{Perbill, Permill};
@@ -329,7 +328,7 @@ pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signatu
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Call, SignedExtra>;
 /// Executive: handles dispatch to the various modules.
-pub type Executive = palette_executive::Executive<Runtime, Block, system::ChainContext<Runtime>, Runtime, AllModules>;
+pub type Executive = frame_executive::Executive<Runtime, Block, system::ChainContext<Runtime>, Runtime, AllModules>;
 
 impl_runtime_apis! {
 	impl sr_api::Core<Block> for Runtime {
@@ -353,7 +352,7 @@ impl_runtime_apis! {
 	}
 
 	impl block_builder_api::BlockBuilder<Block> for Runtime {
-		fn apply_extrinsic(extrinsic: <Block as BlockT>::Extrinsic) -> ApplyResult {
+		fn apply_extrinsic(extrinsic: <Block as BlockT>::Extrinsic) -> ApplyExtrinsicResult {
 			Executive::apply_extrinsic(extrinsic)
 		}
 
