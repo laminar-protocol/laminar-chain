@@ -312,9 +312,18 @@ The Ethereum implementation will be the value gateway and will leverage the DeFi
 See more details [here](https://github.com/laminar-protocol/flow-protocol-ethereum).
 
 ## Substrate Implementation - Flowchain
+The Flowchain contains the following modules 
+- `liquidity_pools`: assets in the liquidity pool are used as collaterals in synthetic asset and margin trading. Anyone can `create_pool` and `deposit_liquidity`, only owner can `remove_pool` and `disable_pool`, owner can set `bid_spread` and `additional_collateral_ratio`, and specify which trades are supported by this pool
+- `synthetic_tokens`: represents synthetic assets like fEUR. It is an implementation of MultiCurrency from our [Open Runtime Module Library](https://github.com/laminar-protocol/open-runtime-module-library)
+- `synthetic_protocol`: it is the entry/proxy module for people to trade 1:1 with synthetic assets. You can `mint` and `redeem` a particular synthetic asset, `liquidate` a position that's below required collateral ratio. Later version we will use off-chain worker to implement liquidation process to improve responsiveness to risks.
+- `margin_protocol`: people can use this module to `openPosition` and `closePosition` for leveraged long or short trades
+- `primitives`: constants for supported leverages, currencies etc
+
+Our margin trading protocol is currently under review by financial advisors. While the MVP testnet will implement the current version of margin trading protocol, it is expected that the next version will be upgraded to a more elaborated margin trading mechanisms. More details on the upgrade will be disclosed as we progress.
+
 See more details [here](https://github.com/laminar-protocol/flowchain/issues/7)
 
-[![Status badge](https://github.com/laminar-protocol/flowchain/workflows/Test/badge.svg)](https://github.com/laminar-protocol/flowchain/actions?workflow=Test)
+![[Status badge](https://github.com/laminar-protocol/flowchain/workflows/Test/badge.svg)](https://github.com/laminar-protocol/flowchain/actions?workflow=Test)
 
 # Building & Running Flowchain 
 
