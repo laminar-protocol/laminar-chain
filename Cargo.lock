@@ -2410,6 +2410,12 @@ dependencies = [
 [[package]]
 name = "module-traits"
 version = "0.0.1"
+dependencies = [
+ "num-traits 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-scale-codec 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-primitives 2.0.0 (git+https://github.com/paritytech/substrate.git)",
+ "sr-std 2.0.0 (git+https://github.com/paritytech/substrate.git)",
+]
 
 [[package]]
 name = "multistream-select"
