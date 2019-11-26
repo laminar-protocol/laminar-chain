@@ -1,9 +1,16 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::FullCodec;
-use num_traits::Signed;
 use rstd::fmt::Debug;
 use sr_primitives::{traits::MaybeSerializeDeserialize, Permill};
+
+pub trait Leverage {
+	fn get_value() -> u8;
+	fn is_long(&self) -> bool;
+	fn is_short(&self) -> bool {
+		!self.is_long()
+	}
+}
 
 pub trait LiquidityPoolBaseTypes {
 	type LiquidityPoolId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug;
@@ -17,8 +24,7 @@ pub trait LiquidityPoolsConfig: LiquidityPoolBaseTypes {
 }
 
 pub trait LiquidityPoolsPosition: LiquidityPoolBaseTypes {
-	/// Signed leverage type: positive means long and negative means short.
-	type Leverage: Signed + FullCodec + Eq + PartialEq + PartialOrd + Ord + Copy + MaybeSerializeDeserialize + Debug;
+	type Leverage: Leverage;
 
 	fn is_allowed_position(
 		pool_id: Self::LiquidityPoolId,
