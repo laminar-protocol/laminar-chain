@@ -1,0 +1,18 @@
+[package]
+name = "module-traits"
+version = "0.0.1"
+authors = ["Laminar Developers <hello@laminar.one>"]
+edition = "2018"
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false }
+sr-primitives = { git = "https://github.com/paritytech/substrate.git", default-features = false }
+rstd = { package = "sr-std", git = "https://github.com/paritytech/substrate.git", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+	"codec/std",
+	"sr-primitives/std",
+	"rstd/std",
+]
