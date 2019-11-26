@@ -1,8 +1,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, Parameter};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get, Parameter};
+use rstd::result;
 use sr_primitives::{
-	traits::{MaybeSerializeDeserialize, Member, SimpleArithmetic},
+	traits::{MaybeSerializeDeserialize, Member},
 	Permill,
 };
 // FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
@@ -10,14 +11,18 @@ use sr_primitives::{
 // #3295 https://github.com/paritytech/substrate/issues/3295
 use frame_system as system;
 
-use orml_traits::PriceProvider;
+use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
+
+type BalanceOf<T> = <<T as Trait>::MultiCurrency as MultiCurrency<<T as frame_system::Trait>::AccountId>>::Balance;
+type CurrencyIdOf<T> =
+	<<T as Trait>::MultiCurrency as MultiCurrency<<T as frame_system::Trait>::AccountId>>::CurrencyId;
 
 pub trait Trait: frame_system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
-	type CurrencyId: Parameter + Member + Copy + MaybeSerializeDeserialize;
-	type Balance: Parameter + Member + SimpleArithmetic + Default + Copy + MaybeSerializeDeserialize;
-	type Price: From<Self::Balance> + Into<Self::Balance>;
-	type PriceProvider: PriceProvider<Self::CurrencyId, Self::Price>;
+	type MultiCurrency: MultiCurrency<Self::AccountId>;
+	type GetBaseCurrencyId: Get<CurrencyIdOf<Self>>;
+	type Price: From<BalanceOf<Self>> + Into<BalanceOf<Self>>;
+	type PriceProvider: PriceProvider<CurrencyIdOf<Self>, Self::Price>;
 	type LiquidityPoolId: Parameter + Member + Copy + MaybeSerializeDeserialize;
 }
 
@@ -30,8 +35,8 @@ decl_storage! {
 decl_event! {
 	pub enum Event<T> where
 		<T as frame_system::Trait>::AccountId,
-		CurrencyId = <T as Trait>::CurrencyId,
-		Balance = <T as Trait>::Balance,
+		CurrencyId = CurrencyIdOf<T>,
+		Balance = BalanceOf<T>,
 		LiquidityPoolId = <T as Trait>::LiquidityPoolId,
 	{
 		/// Synthetic token minted.
@@ -53,36 +58,47 @@ decl_module! {
 }
 
 decl_error! {
-	pub enum Error {}
+	pub enum Error
+	{
+		BalanceTooLow,
+	}
 }
+
+type SynthesisResult<T> = result::Result<BalanceOf<T>, Error>;
 
 impl<T: Trait> Module<T> {
 	fn _mint(
 		who: T::AccountId,
-		currency_id: T::CurrencyId,
+		currency_id: CurrencyIdOf<T>,
 		pool_id: T::LiquidityPoolId,
-		collateral_amount: T::Balance,
+		collateral_amount: BalanceOf<T>,
 		max_slippage: Permill,
-	) {
+	) -> SynthesisResult<T> {
+		//		ensure!(T::BaseCurrency::balance(who) >= collateral_amount, Error::BalanceTooLow);
+		//		// TODO: Token white list? maybe not needed as we use enum as currency id.
+		//
+		//		let price = T::PriceProvider::get_price(T::GetBaseCurrencyId::get(), currency_id);
+		//
+		//		Ok(())
 		unimplemented!()
 	}
 
 	fn _redeem(
 		who: T::AccountId,
-		currency_id: T::CurrencyId,
+		currency_id: CurrencyIdOf<T>,
 		pool_id: T::LiquidityPoolId,
-		synthetic_token_amount: T::Balance,
+		synthetic_token_amount: BalanceOf<T>,
 		max_slippage: Permill,
-	) {
+	) -> SynthesisResult<T> {
 		unimplemented!()
 	}
 
 	fn _liquidate(
 		who: T::AccountId,
-		currency_id: T::CurrencyId,
+		currency_id: CurrencyIdOf<T>,
 		pool_id: T::LiquidityPoolId,
-		synthetic_token_amount: T::Balance,
-	) {
+		synthetic_token_amount: BalanceOf<T>,
+	) -> SynthesisResult<T> {
 		unimplemented!()
 	}
 }

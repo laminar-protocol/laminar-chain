@@ -266,14 +266,16 @@ impl orml_tokens::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::FLOW;
+	pub const GetFlowTokenId: CurrencyId = CurrencyId::FLOW;
 }
+
+pub type FlowToken = BasicCurrencyAdapter<Runtime, pallet_balances::Module<Runtime>, Balance, orml_tokens::Error>;
 
 impl orml_currencies::Trait for Runtime {
 	type Event = Event;
 	type MultiCurrency = orml_tokens::Module<Runtime>;
-	type NativeCurrency = BasicCurrencyAdapter<Runtime, pallet_balances::Module<Runtime>, Balance, orml_tokens::Error>;
-	type GetNativeCurrencyId = GetNativeCurrencyId;
+	type NativeCurrency = FlowToken;
+	type GetNativeCurrencyId = GetFlowTokenId;
 }
 
 pub struct DummySource;
@@ -289,14 +291,15 @@ impl orml_prices::Trait for Runtime {
 }
 
 impl synthetic_tokens::Trait for Runtime {
-	type Currency = orml_currencies::Module<Runtime>;
+	type CurrencyId = CurrencyId;
+	type Balance = Balance;
 	type LiquidityPoolId = LiquidityPoolId;
 }
 
 impl synthetic_protocol::Trait for Runtime {
 	type Event = Event;
-	type CurrencyId = CurrencyId;
-	type Balance = Balance;
+	type MultiCurrency = orml_currencies::Module<Runtime>;
+	type GetBaseCurrencyId = GetFlowTokenId;
 	type Price = Balance; // TODO: use Fix128
 	type PriceProvider = orml_prices::Module<Runtime>; // TODO: update this
 	type LiquidityPoolId = LiquidityPoolId;

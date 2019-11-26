@@ -3,28 +3,24 @@
 use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_module, decl_storage, Parameter};
 use sr_primitives::{
-	traits::{MaybeSerializeDeserialize, Member, Saturating, Zero},
+	traits::{MaybeSerializeDeserialize, Member, Saturating, SimpleArithmetic, Zero},
 	Permill,
 };
 
-use orml_traits::MultiCurrency;
-
-type BalanceOf<T> = <<T as Trait>::Currency as MultiCurrency<<T as frame_system::Trait>::AccountId>>::Balance;
-type CurrencyIdOf<T> = <<T as Trait>::Currency as MultiCurrency<<T as frame_system::Trait>::AccountId>>::CurrencyId;
-
 pub trait Trait: frame_system::Trait {
-	type Currency: MultiCurrency<Self::AccountId>;
+	type CurrencyId: Parameter + Member + Copy + MaybeSerializeDeserialize;
+	type Balance: Parameter + Member + SimpleArithmetic + Default + Copy + MaybeSerializeDeserialize;
 	type LiquidityPoolId: Parameter + Member + Copy + MaybeSerializeDeserialize;
 }
 
 #[derive(Encode, Decode)]
 pub struct Position<T: Trait> {
-	collateral: BalanceOf<T>,
-	minted: BalanceOf<T>,
+	collateral: T::Balance,
+	minted: T::Balance,
 }
 
 impl<T: Trait> Position<T> {
-	fn new(collateral: BalanceOf<T>, minted: BalanceOf<T>) -> Self {
+	fn new(collateral: T::Balance, minted: T::Balance) -> Self {
 		Position { collateral, minted }
 	}
 }
@@ -44,10 +40,10 @@ const COLLATERAL_RATIO_DEFAULT: Permill = Permill::from_percent(10); // TODO: se
 
 decl_storage! {
 	trait Store for Module<T: Trait> as SyntheticTokens {
-		ExtremeRatio get(extreme_ratio): map CurrencyIdOf<T> => Option<Permill>;
-		LiquidationRatio get(liquidation_ratio): map CurrencyIdOf<T> => Option<Permill>;
-		CollateralRatio get(collateral_ratio): map CurrencyIdOf<T> => Option<Permill>;
-		Positions get(positions): map (T::LiquidityPoolId, CurrencyIdOf<T>) => Position<T>;
+		ExtremeRatio get(extreme_ratio): map T::CurrencyId => Option<Permill>;
+		LiquidationRatio get(liquidation_ratio): map T::CurrencyId => Option<Permill>;
+		CollateralRatio get(collateral_ratio): map T::CurrencyId => Option<Permill>;
+		Positions get(positions): map (T::LiquidityPoolId, T::CurrencyId) => Position<T>;
 	}
 }
 
@@ -63,9 +59,9 @@ impl<T: Trait> Module<T> {
 	pub fn add_position(
 		who: T::AccountId,
 		pool_id: T::LiquidityPoolId,
-		currency_id: CurrencyIdOf<T>,
-		collateral: BalanceOf<T>,
-		minted: BalanceOf<T>,
+		currency_id: T::CurrencyId,
+		collateral: T::Balance,
+		minted: T::Balance,
 	) {
 		<Positions<T>>::mutate((pool_id, currency_id), |p| {
 			p.collateral = p.collateral.saturating_add(collateral);
@@ -76,9 +72,9 @@ impl<T: Trait> Module<T> {
 	pub fn remove_position(
 		who: T::AccountId,
 		pool_id: T::LiquidityPoolId,
-		currency_id: CurrencyIdOf<T>,
-		collateral: BalanceOf<T>,
-		minted: BalanceOf<T>,
+		currency_id: T::CurrencyId,
+		collateral: T::Balance,
+		minted: T::Balance,
 	) {
 		<Positions<T>>::mutate((pool_id, currency_id), |p| {
 			p.collateral = p.collateral.saturating_sub(collateral);
