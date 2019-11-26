@@ -323,9 +323,9 @@ Our margin trading protocol is currently under review by financial advisors. Whi
 
 See more details [here](https://github.com/laminar-protocol/flowchain/issues/7)
 
-[![Status badge](https://github.com/laminar-protocol/flowchain/workflows/Test/badge.svg)](https://github.com/laminar-protocol/flowchain/actions?workflow=Test)
-
 # Building & Running Flowchain 
+
+[![Status badge](https://github.com/laminar-protocol/flowchain/workflows/Test/badge.svg)](https://github.com/laminar-protocol/flowchain/actions?workflow=Test)
 
 ## Building
 
