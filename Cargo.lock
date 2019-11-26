@@ -2408,6 +2408,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "module-traits"
+version = "0.0.1"
+
+[[package]]
 name = "multistream-select"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
