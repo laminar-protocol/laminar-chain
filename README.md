@@ -102,7 +102,7 @@ Pseudo formula when collateral ratio is between **`liquidation ratio`** and **`e
 reward = (liquidationRatio - currentLiquidityProviderCollateralRatio) / (liquidationRatio - extremeLiquidationRatio) * collateralFreed
 ```
 There is a theoretical liquidation price point for making optimal profit. 
-[!optimal](./doc/optimal.png)
+![optimal](./doc/optimal.png)
 - θ: Market fluctuation 
 - α: `additional collateral ratio`
 - γ: `extreme liquidation ratio`
@@ -323,7 +323,7 @@ Our margin trading protocol is currently under review by financial advisors. Whi
 
 See more details [here](https://github.com/laminar-protocol/flowchain/issues/7)
 
-![[Status badge](https://github.com/laminar-protocol/flowchain/workflows/Test/badge.svg)](https://github.com/laminar-protocol/flowchain/actions?workflow=Test)
+[![Status badge](https://github.com/laminar-protocol/flowchain/workflows/Test/badge.svg)](https://github.com/laminar-protocol/flowchain/actions?workflow=Test)
 
 # Building & Running Flowchain 
 
