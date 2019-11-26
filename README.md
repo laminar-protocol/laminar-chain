@@ -1,27 +1,36 @@
 Table of Contents
 
-<!-- TOC -->
-
-- [Introduction](#introduction)
-- [Overview](#overview)
-- [The Collateralized Synthetic Asset Protocol](#the-collateralized-synthetic-asset-protocol)
-    - [Liquidity Pool](#liquidity-pool)
-    - [Collateral](#collateral)
-    - [Liquidation Incentive](#liquidation-incentive)
-    - [fToken](#ftoken)
-        - [Deposit/Mint](#depositmint)
-        - [Withdraw](#withdraw)
-        - [Liquidation](#liquidation)
-        - [Exchange Rate](#exchange-rate)
-- [The Collateralized Margin Trading Protocol](#the-collateralized-margin-trading-protocol)
-    - [Liquidity Pool](#liquidity-pool)
-    - [Margin Protocol](#margin-protocol)
-        - [Collateralized Position](#collateralized-position)
-    - [Trading Pair](#trading-pair)
-        - [Status of a Position](#status-of-a-position)
-        - [Profit & Loss](#profit--loss)
-
-<!-- /TOC -->
+- [1. Introduction](#1-introduction)
+- [2. Overview](#2-overview)
+- [3. The Collateralized Synthetic Asset Protocol](#3-the-collateralized-synthetic-asset-protocol)
+  - [3.1. Liquidity Pool](#31-liquidity-pool)
+  - [3.2. Collateral](#32-collateral)
+  - [3.3. Liquidation Incentive](#33-liquidation-incentive)
+  - [3.4. fToken](#34-ftoken)
+    - [3.4.1. Deposit/Mint](#341-depositmint)
+    - [3.4.2. Withdraw](#342-withdraw)
+    - [3.4.3. Liquidation](#343-liquidation)
+    - [3.4.4. Exchange Rate](#344-exchange-rate)
+- [4. The Collateralized Margin Trading Protocol](#4-the-collateralized-margin-trading-protocol)
+  - [4.1. Liquidity Pool](#41-liquidity-pool)
+  - [4.2. Margin Protocol](#42-margin-protocol)
+    - [4.2.1. Collateralized Position](#421-collateralized-position)
+  - [4.3. Trading Pair](#43-trading-pair)
+    - [4.3.1. Status of a Position](#431-status-of-a-position)
+    - [4.3.2. Profit & Loss](#432-profit--loss)
+- [5. The Money Market Protocol](#5-the-money-market-protocol)
+  - [5.1 iToken](#51-itoken)
+  - [5.2 Interest Allocation](#52-interest-allocation)
+    - [5.2.1 Interest Share](#521-interest-share)
+      - [5.2.1.1 Allocation to Liquidity Provider](#5211-allocation-to-liquidity-provider)
+      - [5.2.1.2 Allocation to fToken depositor](#5212-allocation-to-ftoken-depositor)
+- [6. Implementation](#6-implementation)
+  - [6.1 Ethereum Implementation](#61-ethereum-implementation)
+  - [6.2 Substrate Implementation - Flowchain](#62-substrate-implementation---flowchain)
+- [7. Building & Running Flowchain](#7-building--running-flowchain)
+  - [Building](#building)
+  - [Run](#run)
+  - [Development](#development)
 
 # 1. Introduction
 Laminar aims to create an open finance platform along with financial assets to serve traders from both the crypto and mainstream finance worlds. Forex market alone has an average daily trading volume of $5 trillion, while the most active DeFi projects (mostly on Ethereum) have about $500 million of funds locked in smart contracts. 
@@ -112,7 +121,7 @@ There is a theoretical liquidation price point for making optimal profit.
 fToken (Flow Token) is non-USD stable-coin backed by selected trusted USD stable-coin.
 
 ### 3.4.1. Deposit/Mint
-Deposit USD stable-coin will mint and return fToken e.g. fEUR. The number of flow tokens minted is the amount of underlying asset being provided divided by the ask price from selected liquidity pool. For liquidity provider, the additional collateral required for a mint action is total collateral required subtract what deposited amount. For more details see the [Collateral Section](###collateral).
+Deposit USD stable-coin will mint and return fToken e.g. fEUR. The number of flow tokens minted is the amount of underlying asset being provided divided by the ask price from selected liquidity pool. For liquidity provider, the additional collateral required for a mint action is total collateral required subtract what deposited amount. For more details see the [3.2. Collateral](#32-collateral).
 
 Pseudo Deposit function:
 ```
@@ -139,7 +148,7 @@ function withdraw(FlowToken token, LiquidityPoolInterface pool, uint flowTokenAm
 ```
 
 ### 3.4.3. Liquidation
-If a liquidity pool has negative liquidity i.e. current collateral is below **`liquidation threshold`**, then it is subject to liquidation by anyone to bring the collateral back to required level. When a liquidation happens, a liquidator deposits some or all minted fToken on behalf of the liquidity provider, and in return receive a reward from the outstanding collateral. If the collateral is below the **`extreme liquidation threshold`**, then additional reward is given to liquidator. For more details refer to the [Liquidation Incentive Section](###liquidation-incentive).
+If a liquidity pool has negative liquidity i.e. current collateral is below **`liquidation threshold`**, then it is subject to liquidation by anyone to bring the collateral back to required level. When a liquidation happens, a liquidator deposits some or all minted fToken on behalf of the liquidity provider, and in return receive a reward from the outstanding collateral. If the collateral is below the **`extreme liquidation threshold`**, then additional reward is given to liquidator. For more details refer to the [3.3. Liquidation Incentive](#33-liquidation-incentive).
 
 Pseudo Liquidation function:
 ```
@@ -170,7 +179,7 @@ The margin trading protocol can use the same liquidity pool as the synthetic ass
 function openPosition(address tradingPair, uint positionId, address quoteToken, int leverage, uint baseTokenAmount) returns (bool);
 ```
 
-For other details of a liquidity pool, please refer to [Liquidity Pool in Synthetic Asset](#liquidity-pool).
+For other details of a liquidity pool, please refer to [3.1. Liquidity Pool](#31-liquidity-pool).
 
 ## 4.2. Margin Protocol
 The `Margin Protocol` sets up the flow margin trading platform, supported trading pairs and leverages. It provides public methods for users and others programs to do margin trading such as `openPosition`, and `closePosition`.
