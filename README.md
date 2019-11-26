@@ -236,10 +236,10 @@ Here we work through a simple example to demonstrate how profit and loss is calc
     profit = 100 * 0.7438 = 74.38 //wow
 ```
 
-# The Money Market Protocol 
+# 5. The Money Market Protocol 
 The money market protocol serves the synthetic asset and margin trading protocols to further increase liquidity on chain. It connects to chosen money markets e.g. Compound.Finance to maximize return while guaranteeing liquidity of the asset and trading protocols. Liquidity provider would earn interest on funds in liquidity pools and collaterals. Users would earn interest on deposited fTokens. Not all the funds managed by the Money Market would earn interest, as a certain amount of cash is required to ensure liquidity for trading.
 
-## iToken
+## 5.1 iToken
 iToken e.g. iUSD similar to the concept of cToken in Compound.Finance, is a way to account for interest earned for the funds managed by the money market. The value of iToken increases overtime. 
 
 A liquidity pool would accept iToken as locked funds to serve as collateral. A liquidity provider would deposit USD stable-coin into the Money Market to mint iUSD and transfer the iUSDs into the liquidity pool.
@@ -285,33 +285,33 @@ withdrawable_proportion_1 = (TS_1 + amount_invested_1 - TB_1) / (TS_1 + amount_i
 ```  
 For more details, please refer to the white-paper.
 
-## Interest Allocation
+## 5.2 Interest Allocation
 Interest earned from funds in the liquidity pool belongs to the liquidity provider who puts up that capital investment. This is accounted in iToken when liquidity provider withdrawing say USD from a liquidity pool. 
 
-### Interest Share
+### 5.2.1 Interest Share
 Interest earned from funds in the collateral is shared between liquidity provider and those who deposited fToken into the Money Market. **Interest share** is a way to account for capital contribution and distribution of returns. 
 
-#### Allocation to Liquidity Provider
+#### 5.2.1.1 Allocation to Liquidity Provider
 When a new position is added, the over-collateral amount would be transferred from liquidity pool to the collateral, and an equivalent amount of interest share is minted to account for return to the liquidity provider. When the position is closed, the interest share would be burnt.
 
 For example, if a new position of 100 USD to 99 fEUR is added, (for simplicity sake, spread is ignored in calculation), the additional collateral ratio is 10%, then $10 is required from the liquidity pool as additional collateral. Consequently 10 interest shares are minted to account for the contribution. 
 
 If this is the only fEUR position, and there's only 10 interest share issued, then liquidity provider will receive 100% (10/10) of total interest earned.
 
-#### Allocation to fToken depositor 
+#### 5.2.1.2 Allocation to fToken depositor 
 When a fToken holder deposits fToken to the Money Market, then an equivalent amount of interest share accounted in the underlying USD would be minted. The interest share would be burnt when fToken is withdrawn.
 
 Following on the previous example, if a user deposits 9 fEUR (=10 USD), then 10 interest shares would be minted and accounted as the contribution of this user. At this point, liquidity provider will receive 50% (10/20 interest shares) of total interest earned, while the user will receive 50% of total interest earned.
 
-# Implementation 
+# 6. Implementation 
 We have been R&D our protocol on Ethereum, where the network is highly secure with valuable assets as basis for trading. There are also existing DeFi community and DeFi building blocks such as stablecoin. However for our target protocol participants - traders and liquidity providers, a high performance and low cost specialized trading blockchain is required to deliver the intended experience. For instance, the platform needs to be capable of handling large trading volume and frequent price fluctuations. Hence we extend our R&D to Polkadot and substrate, to develop the Flowchain parachain.
 
 The Ethereum implementation will be the value gateway and will leverage the DeFi ecosystem there, for example leveraging stablecoin like DAI and money markets like Compound. Meanwhile Flowchain based on Substrate and later launched as parachain in the Polkadot ecosystem will serve as the high performance financial service and trading chain. Later the two will be integrated using Polkadot Ethereum Bridge to provide the full benefits of both worlds. 
 
-## Ethereum Implementation
+## 6.1 Ethereum Implementation
 See more details [here](https://github.com/laminar-protocol/flow-protocol-ethereum).
 
-## Substrate Implementation - Flowchain
+## 6.2 Substrate Implementation - Flowchain
 The Flowchain contains the following modules 
 - `liquidity_pools`: assets in the liquidity pool are used as collaterals in synthetic asset and margin trading. Anyone can `create_pool` and `deposit_liquidity`, only owner can `remove_pool` and `disable_pool`, owner can set `bid_spread` and `additional_collateral_ratio`, and specify which trades are supported by this pool
 - `synthetic_tokens`: represents synthetic assets like fEUR. It is an implementation of MultiCurrency from our [Open Runtime Module Library](https://github.com/laminar-protocol/open-runtime-module-library)
@@ -323,9 +323,9 @@ Our margin trading protocol is currently under review by financial advisors. Whi
 
 See more details [here](https://github.com/laminar-protocol/flowchain/issues/7)
 
-[![Status badge](https://github.com/laminar-protocol/flowchain/workflows/Test/badge.svg)](https://github.com/laminar-protocol/flowchain/actions?workflow=Test)
+# 7. Building & Running Flowchain 
 
-# Building & Running Flowchain 
+[![Status badge](https://github.com/laminar-protocol/flowchain/workflows/Test/badge.svg)](https://github.com/laminar-protocol/flowchain/actions?workflow=Test)
 
 ## Building
 
