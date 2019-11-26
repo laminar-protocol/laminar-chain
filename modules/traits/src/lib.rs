@@ -5,7 +5,7 @@ use rstd::fmt::Debug;
 use sr_primitives::{traits::MaybeSerializeDeserialize, Permill};
 
 pub trait Leverage {
-	fn get_value() -> u8;
+	fn get_value(&self) -> u8;
 	fn is_long(&self) -> bool;
 	fn is_short(&self) -> bool {
 		!self.is_long()
