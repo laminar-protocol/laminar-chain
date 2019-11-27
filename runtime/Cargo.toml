@@ -40,9 +40,11 @@ orml-tokens = { path = "../orml/tokens", default-features = false }
 orml-currencies = { path = "../orml/currencies", default-features = false }
 orml-prices = { path = "../orml/prices", default-features = false }
 orml-traits = { path = "../orml/traits", default-features = false }
+orml-utilities = { path = "../orml/utilities", default-features = false }
 
 synthetic-tokens = { package = "module-synthetic-tokens", path = "../modules/synthetic-tokens", default-features = false }
 synthetic-protocol = { package = "module-synthetic-protocol", path = "../modules/synthetic-protocol", default-features = false }
+traits = { package = "module-traits", path = "../modules/traits", default-features = false }
 module-primitives = { path = "../modules/primitives", default-features = false }
 
 [build-dependencies]
@@ -85,7 +87,9 @@ std = [
 	"orml-currencies/std",
 	"orml-prices/std",
 	"orml-traits/std",
+	"orml-utilities/std",
 	"module-primitives/std",
 	"synthetic-tokens/std",
 	"synthetic-protocol/std",
+	"traits/std",
 ]

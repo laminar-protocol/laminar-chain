@@ -7,8 +7,11 @@ edition = "2018"
 [dependencies]
 serde = { version = "1.0.101", optional = true, features = ["derive"] }
 codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false }
+primitives = { package = "substrate-primitives",  git = "https://github.com/paritytech/substrate.git", default-features = false }
 sr-primitives = { git = "https://github.com/paritytech/substrate.git", default-features = false }
 rstd = { package = "sr-std", git = "https://github.com/paritytech/substrate.git", default-features = false }
+orml-utilities = { path = "../../orml/utilities", default-features = false }
+orml-prices = { path = "../../orml/prices", default-features = false }
 
 [features]
 default = ["std"]
@@ -16,4 +19,6 @@ std = [
 	"codec/std",
 	"sr-primitives/std",
 	"serde",
+	"orml-utilities/std",
+	"orml-prices/std",
 ]

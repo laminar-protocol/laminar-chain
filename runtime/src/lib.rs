@@ -30,6 +30,9 @@ use module_primitives::{CurrencyId, LiquidityPoolId};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::DataProvider;
 
+use module_primitives::{Price, Balance, BalancePriceConverter};
+use traits::{LiquidityPoolBaseTypes, LiquidityPoolsConfig};
+
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{construct_runtime, parameter_types, traits::Randomness, weights::Weight, StorageValue};
 #[cfg(any(feature = "std", test))]
@@ -49,9 +52,6 @@ pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::Account
 /// The type for looking up accounts. We don't expect more than 4 billion of them, but you
 /// never know...
 pub type AccountIndex = u32;
-
-/// Balance of an account.
-pub type Balance = u128;
 
 /// Signed version of Balance
 pub type Amount = i128;
@@ -278,15 +278,15 @@ impl orml_currencies::Trait for Runtime {
 	type GetNativeCurrencyId = GetFlowTokenId;
 }
 
+// TODO: replace this mock
 pub struct DummySource;
-impl DataProvider<CurrencyId, Balance> for DummySource {
-	fn get(currency: &CurrencyId) -> Option<Balance> {
+impl DataProvider<CurrencyId, Price> for DummySource {
+	fn get(currency: &CurrencyId) -> Option<Price> {
 		None
 	}
 }
 impl orml_prices::Trait for Runtime {
 	type CurrencyId = CurrencyId;
-	type Price = Balance; // TODO: use Fix128
 	type Source = DummySource;
 }
 
@@ -296,13 +296,35 @@ impl synthetic_tokens::Trait for Runtime {
 	type LiquidityPoolId = LiquidityPoolId;
 }
 
+// TODO: replace this mock
+pub struct DummyLiquidityPoolsConfig;
+impl LiquidityPoolBaseTypes for DummyLiquidityPoolsConfig {
+	type LiquidityPoolId = LiquidityPoolId;
+	type CurrencyId = CurrencyId;
+}
+impl LiquidityPoolsConfig for DummyLiquidityPoolsConfig {
+	fn get_bid_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Permill {
+		Permill::from_percent(3)
+	}
+
+	fn get_ask_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Permill {
+		Permill::from_percent(3)
+	}
+
+	fn get_additional_collateral_ratio(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Permill {
+		Permill::from_percent(3)
+	}
+}
 impl synthetic_protocol::Trait for Runtime {
 	type Event = Event;
 	type MultiCurrency = orml_currencies::Module<Runtime>;
+	type BaseCurrency = FlowToken;
 	type GetBaseCurrencyId = GetFlowTokenId;
-	type Price = Balance; // TODO: use Fix128
 	type PriceProvider = orml_prices::Module<Runtime>; // TODO: update this
 	type LiquidityPoolId = LiquidityPoolId;
+	type LiquidityPoolsConfig = DummyLiquidityPoolsConfig;
+	type BalanceToPrice = BalancePriceConverter;
+	type PriceToBalance = BalancePriceConverter;
 }
 
 construct_runtime!(
