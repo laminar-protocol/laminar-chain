@@ -27,6 +27,8 @@ Table of Contents
 - [6. Implementation](#6-implementation)
   - [6.1 Ethereum Implementation](#61-ethereum-implementation)
   - [6.2 Substrate Implementation - Flowchain](#62-substrate-implementation---flowchain)
+  - [6.3 Oracle Implementation](#63-oracle-implementation)
+    - [6.3.1. Oracle Server](#631-oracle-server)
 - [7. Building & Running Flowchain](#7-building--running-flowchain)
   - [Building](#building)
   - [Run](#run)
@@ -322,15 +324,103 @@ See more details [here](https://github.com/laminar-protocol/flow-protocol-ethere
 
 ## 6.2 Substrate Implementation - Flowchain
 The Flowchain contains the following modules 
-- `liquidity_pools`: assets in the liquidity pool are used as collaterals in synthetic asset and margin trading. Anyone can `create_pool` and `deposit_liquidity`, only owner can `remove_pool` and `disable_pool`, owner can set `bid_spread` and `additional_collateral_ratio`, and specify which trades are supported by this pool
+
+- **`orml-oracle`**: is part of the [Open Runtime Module Library](https://github.com/laminar-protocol/open-runtime-module-library), takes price feed, and allows other modules to get price for particular currency
+
+    ```
+    // Dispatchable methods
+    fn feed_value(origin, key: T::Key, value: T::Value)
+    fn feed_values(origin, values: Vec<(T::Key, T::Value)>)
+    // Module callable methods
+    fn read_raw_values(key: &T::Key)
+    fn get(key: &T::Key)
+    ```
+
+- **`orml-currencies`**: is part of the [Open Runtime Module Library](https://github.com/laminar-protocol/open-runtime-module-library), supports `MultiCurrency` and native token via `balance` 
+
+    ```
+    // Dispatchable methods
+    pub fn transfer(origin,
+			dest: <T::Lookup as StaticLookup>::Source,
+			currency_id: CurrencyIdOf<T>,
+			#[compact] amount: BalanceOf<T>,)
+    pub fn transfer_native_currency(origin,
+			dest: <T::Lookup as StaticLookup>::Source,
+			#[compact] amount: BalanceOf<T>,)
+    ```
+
+- **`liquidity_pools`**: assets in the liquidity pool are used as collaterals in synthetic asset and margin trading. Anyone can `create_pool` and `deposit_liquidity`, only owner can `remove_pool` and `disable_pool`, owner can set `bid_spread` and `additional_collateral_ratio`, and specify which trades are supported by this pool
+
+    ```
+    // Dispatchable methods
+    fn create_pool(origin)
+    fn disable_pool(origin, pool: LiquidityPoolId)
+    fn remove_pool(origin, pool: LiquidityPoolId)
+    fn deposit_liquidity(origin, pool: LiquidityPoolId, amount: Balance)
+    fn withdraw_liquidity(origin, pool: LiquidityPoolId, amount: Balance)
+    fn set_bid_spread(origin, pool: LiquidityPoolId, currency_id: CurrencyId, ask: Permill, bid: Permill)
+    fn set_additional_collateral_ratio(origin, pool: LiquidityPoolId, currency_id: CurrencyId, ratio: Option<Permill>)
+    fn set_enabled_trades(origin, pool: LiquidityPoolId, currency_id: CurrencyId, long: Leverages, short: Leverages)
+    ```
+
 - `synthetic_tokens`: represents synthetic assets like fEUR. It is an implementation of MultiCurrency from our [Open Runtime Module Library](https://github.com/laminar-protocol/open-runtime-module-library)
+
+    ```
+    // Storage
+    ExtremeRatio: CurrencyId => Option<Permill>
+    LiquidationRatio: CurrencyId => Option<Permill>
+    CollateralRatio: CurrencyId => Option<Permill>
+    Positions: map (LiquidityPoolId, CurrencyId) => Position
+    // Module callable methods
+    addPosition(who: AccountId, pool: LiquidityPoolId, collaterals: Balance, minted: Balance)
+    removePosition(who: AccountId, pool: LiquidityPoolId, collaterals: Balance, minted: Balance)
+    ```
+
 - `synthetic_protocol`: it is the entry/proxy module for people to trade 1:1 with synthetic assets. You can `mint` and `redeem` a particular synthetic asset, `liquidate` a position that's below required collateral ratio. Later version we will use off-chain worker to implement liquidation process to improve responsiveness to risks.
+
+    ```
+    // Dispatchable methods
+    fn mint(origin, currency_id: CurrencyId, pool: LiquidityPoolId, base_amount: Balance, max_slippage: fn Permill)
+    fn redeem(origin, currency_id: CurrencyId, pool: LiquidityPoolId, flow_amount: Balance, max_slippage: Permill)
+    fn liquidate(origin, currency_id: CurrencyId, pool: LiquidityPoolId, flow_amount: Balance)
+    ```
+
 - `margin_protocol`: people can use this module to `openPosition` and `closePosition` for leveraged long or short trades
+  
+    ```
+    // Dispatchable methods
+    fn openPosition(origin, pair: TradingPair, pool: LiquidityPoolId, base_amount: Balance)
+    fn closePosition(origin, position_id: PositionId)
+    ```
+
 - `primitives`: constants for supported leverages, currencies etc
 
 Our margin trading protocol is currently under review by financial advisors. While the MVP testnet will implement the current version of margin trading protocol, it is expected that the next version will be upgraded to a more elaborated margin trading mechanisms. More details on the upgrade will be disclosed as we progress.
 
 See more details [here](https://github.com/laminar-protocol/flowchain/issues/7)
+
+## 6.3 Oracle Implementation
+We have defined the oracle interface and assume trusted oracles to provide price feed to the protocols.
+```
+// Pseudo Interface
+    function isPriceOracle() returns (bool);
+    function getPrice(SymbolId symbol) returns (uint);
+```
+
+At this stage, we have a simple Oracle design to serve our purpose for proofing the concept.
+
+The oracle price is set by price feed administrator. We will watch closely governance standards in the oracle space, and gradually improve this. Due to sensitivity to pricing in trading use cases, two price baselines are defined to protect sudden and dramatic (potentially malicious) price fluctuation. 
+
+The difference between the new price and the last price is capped by the **`delta last limit`**. We also take a snapshot of price over a certain period. The difference between the capped new price and the snapshot price is further capped by the **`delta snapshot limit`**.
+
+Pseudo cap function, for last price cap, `priceCap` is the **`delta last limit`**, and `lastPrice` is the Oracle last price; for snapshot price cap, `priceCap` is the **`delta snapshot limit`**, and `lastPrice` is the snapshot price.
+
+### 6.3.1. Oracle Server
+There will be multiple Oracle servers set up to feed prices into the Oracle contract onchain. For mainnet, reputable price source like Bloomberg Forex API will be fetched to the server then feed into the Oracle contract. Monitoring services will be set up to ensure server availability and price sanity. 
+
+Note: any compromised oracle server is able to influence the price to a limited degree due to the price cap function built into the Oracle contract. A K'th largest algorithm will be able to tolerate up to K compromised servers. 
+
+Again we will continue watch closely the development in the Oracle space and open to collaboration to make it more resilient for our trading platform.
 
 # 7. Building & Running Flowchain 
 
