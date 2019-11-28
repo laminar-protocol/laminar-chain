@@ -30,7 +30,7 @@ use module_primitives::{CurrencyId, LiquidityPoolId};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::DataProvider;
 
-use module_primitives::{Price, Balance, BalancePriceConverter};
+use module_primitives::{Balance, BalancePriceConverter, Price};
 use traits::{LiquidityPoolBaseTypes, LiquidityPoolsConfig};
 
 // A few exports that help ease life for downstream crates.
@@ -281,7 +281,7 @@ impl orml_currencies::Trait for Runtime {
 // TODO: replace this mock
 pub struct DummySource;
 impl DataProvider<CurrencyId, Price> for DummySource {
-	fn get(currency: &CurrencyId) -> Option<Price> {
+	fn get(_currency: &CurrencyId) -> Option<Price> {
 		None
 	}
 }
@@ -303,25 +303,28 @@ impl LiquidityPoolBaseTypes for DummyLiquidityPoolsConfig {
 	type CurrencyId = CurrencyId;
 }
 impl LiquidityPoolsConfig for DummyLiquidityPoolsConfig {
-	fn get_bid_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Permill {
+	fn get_bid_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
 		Permill::from_percent(3)
 	}
 
-	fn get_ask_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Permill {
+	fn get_ask_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
 		Permill::from_percent(3)
 	}
 
-	fn get_additional_collateral_ratio(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Permill {
+	fn get_additional_collateral_ratio(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
 		Permill::from_percent(3)
 	}
 }
+parameter_types! {
+	pub const GetCollateralCurrencyId: CurrencyId = CurrencyId::AUSD;
+}
+type CollateralCurrency = orml_currencies::Currency<Runtime, GetCollateralCurrencyId>;
 impl synthetic_protocol::Trait for Runtime {
 	type Event = Event;
 	type MultiCurrency = orml_currencies::Module<Runtime>;
-	type BaseCurrency = FlowToken;
-	type GetBaseCurrencyId = GetFlowTokenId;
-	type PriceProvider = orml_prices::Module<Runtime>; // TODO: update this
-	type LiquidityPoolId = LiquidityPoolId;
+	type CollateralCurrency = CollateralCurrency;
+	type GetCollateralCurrencyId = GetCollateralCurrencyId;
+	type PriceProvider = orml_prices::Module<Runtime>;
 	type LiquidityPoolsConfig = DummyLiquidityPoolsConfig;
 	type BalanceToPrice = BalancePriceConverter;
 	type PriceToBalance = BalancePriceConverter;
