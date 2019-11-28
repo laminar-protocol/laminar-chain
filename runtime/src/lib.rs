@@ -13,6 +13,7 @@ use pallet_grandpa::fg_primitives;
 use pallet_grandpa::AuthorityList as GrandpaAuthorityList;
 use primitives::u32_trait::{_1, _2};
 use primitives::OpaqueMetadata;
+use rstd::marker;
 use rstd::prelude::*;
 use sr_api::impl_runtime_apis;
 use sr_primitives::traits::{
@@ -31,13 +32,13 @@ use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::DataProvider;
 
 use module_primitives::{Balance, BalancePriceConverter, Price};
-use traits::{LiquidityPoolBaseTypes, LiquidityPoolsConfig};
+use traits::{LiquidityPoolBaseTypes, LiquidityPoolsConfig, LiquidityPoolsCurrency};
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{construct_runtime, parameter_types, traits::Randomness, weights::Weight, StorageValue};
 #[cfg(any(feature = "std", test))]
 pub use sr_primitives::BuildStorage;
-pub use sr_primitives::{Perbill, Permill};
+pub use sr_primitives::{traits::Zero, Perbill, Permill};
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -297,12 +298,12 @@ impl synthetic_tokens::Trait for Runtime {
 }
 
 // TODO: replace this mock
-pub struct DummyLiquidityPoolsConfig;
-impl LiquidityPoolBaseTypes for DummyLiquidityPoolsConfig {
+pub struct DummyLiquidityPools<AccountId>(marker::PhantomData<AccountId>);
+impl LiquidityPoolBaseTypes for DummyLiquidityPools<AccountId> {
 	type LiquidityPoolId = LiquidityPoolId;
 	type CurrencyId = CurrencyId;
 }
-impl LiquidityPoolsConfig for DummyLiquidityPoolsConfig {
+impl LiquidityPoolsConfig for DummyLiquidityPools<AccountId> {
 	fn get_bid_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
 		Permill::from_percent(3)
 	}
@@ -315,6 +316,22 @@ impl LiquidityPoolsConfig for DummyLiquidityPoolsConfig {
 		Permill::from_percent(3)
 	}
 }
+impl LiquidityPoolsCurrency<AccountId> for DummyLiquidityPools<AccountId> {
+	type Balance = Balance;
+	type Error = &'static str;
+
+	fn balance(_: Self::LiquidityPoolId) -> Self::Balance {
+		Zero::zero()
+	}
+
+	fn deposit(_from: &AccountId, _pool_id: Self::LiquidityPoolId, _amount: Self::Balance) -> Result<(), Self::Error> {
+		Ok(())
+	}
+
+	fn withdraw(_to: &AccountId, _pool_id: Self::LiquidityPoolId, _amount: Self::Balance) -> Result<(), Self::Error> {
+		Ok(())
+	}
+}
 parameter_types! {
 	pub const GetCollateralCurrencyId: CurrencyId = CurrencyId::AUSD;
 }
@@ -325,7 +342,8 @@ impl synthetic_protocol::Trait for Runtime {
 	type CollateralCurrency = CollateralCurrency;
 	type GetCollateralCurrencyId = GetCollateralCurrencyId;
 	type PriceProvider = orml_prices::Module<Runtime>;
-	type LiquidityPoolsConfig = DummyLiquidityPoolsConfig;
+	type LiquidityPoolsConfig = DummyLiquidityPools<AccountId>;
+	type LiquidityPoolsCurrency = DummyLiquidityPools<AccountId>;
 	type BalanceToPrice = BalancePriceConverter;
 	type PriceToBalance = BalancePriceConverter;
 }

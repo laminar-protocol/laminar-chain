@@ -3,8 +3,8 @@
 use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_module, decl_storage, Parameter};
 use sr_primitives::{
-	traits::{MaybeSerializeDeserialize, Member, Saturating, SimpleArithmetic, Zero, AccountIdConversion},
-	Permill, ModuleId,
+	traits::{AccountIdConversion, MaybeSerializeDeserialize, Member, Saturating, SimpleArithmetic, Zero},
+	ModuleId, Permill,
 };
 
 pub trait Trait: frame_system::Trait {

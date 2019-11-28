@@ -2,7 +2,10 @@
 
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
 use rstd::result;
-use sr_primitives::{traits::Convert, Permill};
+use sr_primitives::{
+	traits::{CheckedAdd, Convert},
+	Permill,
+};
 // FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
 // would cause compiling error in `decl_module!` and `construct_runtime!`
 // #3295 https://github.com/paritytech/substrate/issues/3295
@@ -11,7 +14,7 @@ use frame_system::{self as system, ensure_signed};
 use orml_prices::Price;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
 
-use traits::LiquidityPoolsConfig;
+use traits::{LiquidityPoolsConfig, LiquidityPoolsCurrency};
 
 type ErrorOf<T> = <<T as Trait>::MultiCurrency as MultiCurrency<<T as frame_system::Trait>::AccountId>>::Error;
 
@@ -24,6 +27,12 @@ pub trait Trait: synthetic_tokens::Trait {
 	type LiquidityPoolsConfig: LiquidityPoolsConfig<
 		CurrencyId = Self::CurrencyId,
 		LiquidityPoolId = Self::LiquidityPoolId,
+	>;
+	type LiquidityPoolsCurrency: LiquidityPoolsCurrency<
+		Self::AccountId,
+		CurrencyId = Self::CurrencyId,
+		LiquidityPoolId = Self::LiquidityPoolId,
+		Balance = Self::Balance,
 	>;
 	type BalanceToPrice: Convert<Self::Balance, Price>;
 	type PriceToBalance: Convert<Price, Self::Balance>;
@@ -75,6 +84,7 @@ decl_error! {
 	pub enum Error
 	{
 		BalanceTooLow,
+		LiquidityProviderBalanceTooLow,
 		SlippageTooHigh,
 		NumOverflow,
 		NoPrice,
@@ -91,28 +101,41 @@ impl<T: Trait> Module<T> {
 		who: &T::AccountId,
 		pool_id: T::LiquidityPoolId,
 		currency_id: T::CurrencyId,
-		collateral_amount: T::Balance,
+		collateral: T::Balance,
 		max_slippage: Permill,
 	) -> SynthesisResult<T> {
-		ensure!(T::CollateralCurrency::balance(who) >= collateral_amount, Error::BalanceTooLow);
+		ensure!(T::CollateralCurrency::balance(who) >= collateral, Error::BalanceTooLow);
 
-		let price = T::PriceProvider::get_price(T::GetCollateralCurrencyId::get(), currency_id).ok_or(Error::NoPrice)?;
+		let price =
+			T::PriceProvider::get_price(T::GetCollateralCurrencyId::get(), currency_id).ok_or(Error::NoPrice)?;
 		let ask_price = Self::_get_ask_price(pool_id, currency_id, price, max_slippage)?;
-		let minted_amount = {
-			let amount = ask_price
-				.checked_mul(&T::BalanceToPrice::convert(collateral_amount))
-				.ok_or(Error::NumOverflow)?;
-			T::PriceToBalance::convert(amount)
-		};
 
-		// TODO: additional collateral amount?
+		let minted_by_price = T::BalanceToPrice::convert(collateral)
+			.checked_div(&ask_price)
+			.ok_or(Error::NumOverflow)?;
+		let minted = T::PriceToBalance::convert(minted_by_price);
 
-		T::MultiCurrency::deposit(currency_id, who, minted_amount).map_err(|e| e.into())?;
-		T::CollateralCurrency::transfer(who, &<SyntheticTokens<T>>::account_id(), collateral_amount).map_err(|e| e.into())?;
+		let minted_current_value = minted_by_price.checked_mul(&price).ok_or(Error::NumOverflow)?;
+		let additional_collateral = Self::_calc_additional_collateral_amount(
+			pool_id,
+			currency_id,
+			minted,
+			T::PriceToBalance::convert(minted_current_value),
+		)?;
 
-		<SyntheticTokens<T>>::add_position(pool_id, currency_id, collateral_amount, minted_amount);
+		ensure!(
+			T::LiquidityPoolsCurrency::balance(pool_id) >= additional_collateral,
+			Error::LiquidityProviderBalanceTooLow,
+		);
 
-		Ok(minted_amount)
+		T::MultiCurrency::deposit(currency_id, who, minted).map_err(|e| e.into())?;
+		T::CollateralCurrency::transfer(who, &<SyntheticTokens<T>>::account_id(), collateral).map_err(|e| e.into())?;
+		T::LiquidityPoolsCurrency::withdraw(&<SyntheticTokens<T>>::account_id(), pool_id, additional_collateral)
+			.map_err(|e| e.into())?;
+
+		<SyntheticTokens<T>>::add_position(pool_id, currency_id, collateral, minted);
+
+		Ok(minted)
 	}
 
 	fn _redeem(
@@ -135,7 +158,7 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-// Price
+// other private methods
 
 impl<T: Trait> Module<T> {
 	/// Get ask price from liquidity pool for a given currency. Would fail if price could not meet max slippage.
@@ -153,5 +176,23 @@ impl<T: Trait> Module<T> {
 
 		let spread_amount = price.checked_mul(&ask_spread.into()).ok_or(Error::NumOverflow)?;
 		price.checked_add(&spread_amount).ok_or(Error::NumOverflow)
+	}
+
+	/// Calculate liquidity provider's collateral parts:
+	/// 	minted_current_value * (1 + ratio) - minted_amount
+	fn _calc_additional_collateral_amount(
+		pool_id: T::LiquidityPoolId,
+		currency_id: T::CurrencyId,
+		minted: T::Balance,
+		minted_current_value: T::Balance,
+	) -> SynthesisResult<T> {
+		let ratio = T::LiquidityPoolsConfig::get_additional_collateral_ratio(pool_id, currency_id);
+		// should never overflow as ratio <= 1
+		let additional_value = minted_current_value * T::PriceToBalance::convert(ratio.into());
+		let with_additional_value = minted_current_value
+			.checked_add(&additional_value)
+			.ok_or(Error::NumOverflow)?;
+		// should never overflow
+		Ok(with_additional_value - minted)
 	}
 }
