@@ -6,7 +6,7 @@ use sr_primitives::RuntimeDebug;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-type LiquidityPoolId = u32;
+pub type LiquidityPoolId = u32;
 
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
