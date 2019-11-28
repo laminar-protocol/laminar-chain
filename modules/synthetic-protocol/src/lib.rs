@@ -110,12 +110,15 @@ impl<T: Trait> Module<T> {
 			T::PriceProvider::get_price(T::GetCollateralCurrencyId::get(), currency_id).ok_or(Error::NoPrice)?;
 		let ask_price = Self::_get_ask_price(pool_id, currency_id, price, max_slippage)?;
 
+		// minted = collateral / ask_price
 		let minted_by_price = T::BalanceToPrice::convert(collateral)
 			.checked_div(&ask_price)
 			.ok_or(Error::NumOverflow)?;
 		let minted = T::PriceToBalance::convert(minted_by_price);
 
+		// minted_current_value = minted * price
 		let minted_current_value = minted_by_price.checked_mul(&price).ok_or(Error::NumOverflow)?;
+		// additional_collateral = minted_current_value * (1 + ratio) - minted_amount
 		let additional_collateral = Self::_calc_additional_collateral_amount(
 			pool_id,
 			currency_id,
@@ -129,9 +132,11 @@ impl<T: Trait> Module<T> {
 		);
 
 		T::MultiCurrency::deposit(currency_id, who, minted).map_err(|e| e.into())?;
-		T::CollateralCurrency::transfer(who, &<SyntheticTokens<T>>::account_id(), collateral).map_err(|e| e.into())?;
+
+		T::CollateralCurrency::transfer(who, &<SyntheticTokens<T>>::account_id(), collateral)
+			.expect("`who`'s balance checked above; qed");
 		T::LiquidityPoolsCurrency::withdraw(&<SyntheticTokens<T>>::account_id(), pool_id, additional_collateral)
-			.map_err(|e| e.into())?;
+			.expect("liquidity pool balance checked above; qed");
 
 		<SyntheticTokens<T>>::add_position(pool_id, currency_id, collateral, minted);
 
@@ -162,6 +167,8 @@ impl<T: Trait> Module<T> {
 
 impl<T: Trait> Module<T> {
 	/// Get ask price from liquidity pool for a given currency. Would fail if price could not meet max slippage.
+	///
+	/// ask_price = price * (1 + ask_spread)
 	fn _get_ask_price(
 		pool_id: T::LiquidityPoolId,
 		currency_id: T::CurrencyId,
