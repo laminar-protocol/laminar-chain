@@ -1,8 +1,12 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::FullCodec;
-use rstd::fmt::Debug;
-use sr_primitives::{traits::MaybeSerializeDeserialize, Permill};
+use frame_support::Parameter;
+use rstd::{fmt::Debug, result};
+use sr_primitives::{
+	traits::{MaybeSerializeDeserialize, Member, SimpleArithmetic},
+	Permill,
+};
 
 pub trait Leverage {
 	fn get_value(&self) -> u8;
@@ -33,4 +37,24 @@ pub trait LiquidityPoolsPosition: LiquidityPoolBaseTypes {
 	) -> bool;
 }
 
-pub trait LiquidityPools: LiquidityPoolsConfig + LiquidityPoolsPosition {}
+pub trait LiquidityPoolsCurrency<AccountId>: LiquidityPoolBaseTypes {
+	type Balance: Parameter + Member + SimpleArithmetic + Default + Copy + MaybeSerializeDeserialize;
+	type Error: Into<&'static str> + Debug;
+
+	fn balance(pool_id: Self::LiquidityPoolId) -> Self::Balance;
+	fn deposit(
+		from: &AccountId,
+		pool_id: Self::LiquidityPoolId,
+		amount: Self::Balance,
+	) -> result::Result<(), Self::Error>;
+	fn withdraw(
+		to: &AccountId,
+		pool_id: Self::LiquidityPoolId,
+		amount: Self::Balance,
+	) -> result::Result<(), Self::Error>;
+}
+
+pub trait LiquidityPools<AccountId>:
+	LiquidityPoolsConfig + LiquidityPoolsPosition + LiquidityPoolsCurrency<AccountId>
+{
+}
