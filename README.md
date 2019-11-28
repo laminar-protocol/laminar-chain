@@ -1,27 +1,38 @@
 Table of Contents
 
-<!-- TOC -->
-
-- [Introduction](#introduction)
-- [Overview](#overview)
-- [The Collateralized Synthetic Asset Protocol](#the-collateralized-synthetic-asset-protocol)
-    - [Liquidity Pool](#liquidity-pool)
-    - [Collateral](#collateral)
-    - [Liquidation Incentive](#liquidation-incentive)
-    - [fToken](#ftoken)
-        - [Deposit/Mint](#depositmint)
-        - [Withdraw](#withdraw)
-        - [Liquidation](#liquidation)
-        - [Exchange Rate](#exchange-rate)
-- [The Collateralized Margin Trading Protocol](#the-collateralized-margin-trading-protocol)
-    - [Liquidity Pool](#liquidity-pool)
-    - [Margin Protocol](#margin-protocol)
-        - [Collateralized Position](#collateralized-position)
-    - [Trading Pair](#trading-pair)
-        - [Status of a Position](#status-of-a-position)
-        - [Profit & Loss](#profit--loss)
-
-<!-- /TOC -->
+- [1. Introduction](#1-introduction)
+- [2. Overview](#2-overview)
+- [3. The Collateralized Synthetic Asset Protocol](#3-the-collateralized-synthetic-asset-protocol)
+  - [3.1. Liquidity Pool](#31-liquidity-pool)
+  - [3.2. Collateral](#32-collateral)
+  - [3.3. Liquidation Incentive](#33-liquidation-incentive)
+  - [3.4. fToken](#34-ftoken)
+    - [3.4.1. Deposit/Mint](#341-depositmint)
+    - [3.4.2. Withdraw](#342-withdraw)
+    - [3.4.3. Liquidation](#343-liquidation)
+    - [3.4.4. Exchange Rate](#344-exchange-rate)
+- [4. The Collateralized Margin Trading Protocol](#4-the-collateralized-margin-trading-protocol)
+  - [4.1. Liquidity Pool](#41-liquidity-pool)
+  - [4.2. Margin Protocol](#42-margin-protocol)
+    - [4.2.1. Collateralized Position](#421-collateralized-position)
+  - [4.3. Trading Pair](#43-trading-pair)
+    - [4.3.1. Status of a Position](#431-status-of-a-position)
+    - [4.3.2. Profit & Loss](#432-profit--loss)
+- [5. The Money Market Protocol](#5-the-money-market-protocol)
+  - [5.1 iToken](#51-itoken)
+  - [5.2 Interest Allocation](#52-interest-allocation)
+    - [5.2.1 Interest Share](#521-interest-share)
+      - [5.2.1.1 Allocation to Liquidity Provider](#5211-allocation-to-liquidity-provider)
+      - [5.2.1.2 Allocation to fToken depositor](#5212-allocation-to-ftoken-depositor)
+- [6. Implementation](#6-implementation)
+  - [6.1 Ethereum Implementation](#61-ethereum-implementation)
+  - [6.2 Substrate Implementation - Flowchain](#62-substrate-implementation---flowchain)
+  - [6.3 Oracle Implementation](#63-oracle-implementation)
+    - [6.3.1. Oracle Server](#631-oracle-server)
+- [7. Building & Running Flowchain](#7-building--running-flowchain)
+  - [Building](#building)
+  - [Run](#run)
+  - [Development](#development)
 
 # 1. Introduction
 Laminar aims to create an open finance platform along with financial assets to serve traders from both the crypto and mainstream finance worlds. Forex market alone has an average daily trading volume of $5 trillion, while the most active DeFi projects (mostly on Ethereum) have about $500 million of funds locked in smart contracts. 
@@ -50,7 +61,7 @@ Below we will introduce the following protocols
 - Money Market Protocol (to be published, design is being finalized)
 - Collateralized Margin Trading Protocol (to be published, design is being finalized)
 
-For formal verification on the synthetic asset design, please refer to the [Flow Synthetic Asset Whitepaper](https://github.com/laminar-protocol/flow-protocol-whitepaper)
+For formal verification on the synthetic asset design, please refer to the [Flow Synthetic Asset Whitepaper](https://github.com/laminar-protocol/flow-protocol-whitepaper). Our protocols are under review by financial partner, do expect change and we will release update as we progress. 
 
 # 3. The Collateralized Synthetic Asset Protocol
 The collateralized synthetic asset protocol allows user to mint non-USD stable-coin fToken e.g. fEUR or fJPY using USD stable-coin e.g. DAI or equivalent as collateral. There are a number of use cases for fToken
@@ -102,7 +113,7 @@ Pseudo formula when collateral ratio is between **`liquidation ratio`** and **`e
 reward = (liquidationRatio - currentLiquidityProviderCollateralRatio) / (liquidationRatio - extremeLiquidationRatio) * collateralFreed
 ```
 There is a theoretical liquidation price point for making optimal profit. 
-[!optimal](./doc/optimal.png)
+![optimal](./doc/optimal.png)
 - θ: Market fluctuation 
 - α: `additional collateral ratio`
 - γ: `extreme liquidation ratio`
@@ -112,7 +123,7 @@ There is a theoretical liquidation price point for making optimal profit.
 fToken (Flow Token) is non-USD stable-coin backed by selected trusted USD stable-coin.
 
 ### 3.4.1. Deposit/Mint
-Deposit USD stable-coin will mint and return fToken e.g. fEUR. The number of flow tokens minted is the amount of underlying asset being provided divided by the ask price from selected liquidity pool. For liquidity provider, the additional collateral required for a mint action is total collateral required subtract what deposited amount. For more details see the [Collateral Section](###collateral).
+Deposit USD stable-coin will mint and return fToken e.g. fEUR. The number of flow tokens minted is the amount of underlying asset being provided divided by the ask price from selected liquidity pool. For liquidity provider, the additional collateral required for a mint action is total collateral required subtract what deposited amount. For more details see the [3.2. Collateral](#32-collateral).
 
 Pseudo Deposit function:
 ```
@@ -139,7 +150,7 @@ function withdraw(FlowToken token, LiquidityPoolInterface pool, uint flowTokenAm
 ```
 
 ### 3.4.3. Liquidation
-If a liquidity pool has negative liquidity i.e. current collateral is below **`liquidation threshold`**, then it is subject to liquidation by anyone to bring the collateral back to required level. When a liquidation happens, a liquidator deposits some or all minted fToken on behalf of the liquidity provider, and in return receive a reward from the outstanding collateral. If the collateral is below the **`extreme liquidation threshold`**, then additional reward is given to liquidator. For more details refer to the [Liquidation Incentive Section](###liquidation-incentive).
+If a liquidity pool has negative liquidity i.e. current collateral is below **`liquidation threshold`**, then it is subject to liquidation by anyone to bring the collateral back to required level. When a liquidation happens, a liquidator deposits some or all minted fToken on behalf of the liquidity provider, and in return receive a reward from the outstanding collateral. If the collateral is below the **`extreme liquidation threshold`**, then additional reward is given to liquidator. For more details refer to the [3.3. Liquidation Incentive](#33-liquidation-incentive).
 
 Pseudo Liquidation function:
 ```
@@ -159,7 +170,7 @@ The collateralized margin trading protocol allows user to trade leveraged long o
 - as a hedge against future price fluctuation e.g. an importer, who might need to pay JPY to supplier in 2 month time, can use a 10x leverage with 10% margin hedging for the full risk expecting price fluctuating within 10%
 - as a profit amplifying instrument for traders in low-volatile market like Forex
 
-When a trader opens a long position e.g. 10x leveraged EURUSD of 1000 USD, essentially the trader puts in $1,000 margin for the price fluctuation risks of $10,000. At the same time the liquidity provider via the liquidity pool would collateralize an equivalent amount of $1,000 to secure this position. The protocol caps the potential gain and protects the loss for either party at $1,000, meaning capping price fluctuation at 10% (1/leverage). The detail mechanisms and potential fees are explained in the following sections. 
+When a trader opens a long position e.g. 10x leveraged EURUSD of 1000 USD, essentially the trader puts in $1,000 margin for the price fluctuation risks of $10,000. At the same time the liquidity provider via the liquidity pool would collateralize an equivalent or more to lock up the winnable amount for this position. The protocol caps the potential gain and protects the loss for either party at $1,000, meaning capping price fluctuation at 10% (1/leverage). The detail mechanisms and potential fees are explained in the following sections. 
 
 Tokenization of margin positions, partial closing a margin position and other more advanced trading techniques will be added in V2, and more details of the spec will be released as we progress.
 
@@ -170,7 +181,7 @@ The margin trading protocol can use the same liquidity pool as the synthetic ass
 function openPosition(address tradingPair, uint positionId, address quoteToken, int leverage, uint baseTokenAmount) returns (bool);
 ```
 
-For other details of a liquidity pool, please refer to [Liquidity Pool in Synthetic Asset](#liquidity-pool).
+For other details of a liquidity pool, please refer to [3.1. Liquidity Pool](#31-liquidity-pool).
 
 ## 4.2. Margin Protocol
 The `Margin Protocol` sets up the flow margin trading platform, supported trading pairs and leverages. It provides public methods for users and others programs to do margin trading such as `openPosition`, and `closePosition`.
@@ -189,7 +200,7 @@ function addTradingPair(address pair);
 ### 4.2.1. Collateralized Position
 When a trader wants to long 10x EURUSD, he/she opens a position for that particular trading pair at a given price. 
 
-Following on the previous example of $1,000 long 10x EURUSD example, the trader and the liquidity pool each contributes $1,000 to the collateral. The `Margin Protocol` would use the `Money Market` to mange these funds to earn while trading. Please see the Money Market section to see how it guarantees trading liquidity while earning interest. 
+Following on the previous example of $1,000 long 10x EURUSD example, the trader contributes $1,000 to the collateral, if the chosen liquidity pool has a 200% winnable cap, then the liquidity pool would put in an amount that ensures the trader can win away $2000. The `Margin Protocol` would use the `Money Market` to mange these funds to earn while trading. Please see the Money Market section to see how it guarantees trading liquidity while earning interest. 
 
 ## 4.3. Trading Pair
 Each trading pair e.g. long 10x EURUSD or short 5x JPYUSD and associated trading rules are encapsulated in a separate contract, which can then be tokenized.
@@ -211,7 +222,7 @@ The protocol caps the profit and loss at collateralized margin of each position 
 When a position is completely liquidated, meaning one party (either the trader or the liquidity pool) has lost the full of its collateralized margin, then *anyone* can come in and close the position with a reward aka the `Liquidation Fee`. 
 
 **A Position is `unsafe`**
-When a liquidity pool lost more than the pre-defined `Safe Margin`, then the pool can choose to close the position to stop the loss. 
+When a liquidity pool's remaining collateral against its original collateral is less than the pre-defined `Safe Margin`, then the pool can choose to close the position to stop the loss. 
 
 **A Position is `safe`**
 In any other situation, the position is deemed safe, and only person who opened the position can close it. 
@@ -236,10 +247,10 @@ Here we work through a simple example to demonstrate how profit and loss is calc
     profit = 100 * 0.7438 = 74.38 //wow
 ```
 
-# The Money Market Protocol 
+# 5. The Money Market Protocol 
 The money market protocol serves the synthetic asset and margin trading protocols to further increase liquidity on chain. It connects to chosen money markets e.g. Compound.Finance to maximize return while guaranteeing liquidity of the asset and trading protocols. Liquidity provider would earn interest on funds in liquidity pools and collaterals. Users would earn interest on deposited fTokens. Not all the funds managed by the Money Market would earn interest, as a certain amount of cash is required to ensure liquidity for trading.
 
-## iToken
+## 5.1 iToken
 iToken e.g. iUSD similar to the concept of cToken in Compound.Finance, is a way to account for interest earned for the funds managed by the money market. The value of iToken increases overtime. 
 
 A liquidity pool would accept iToken as locked funds to serve as collateral. A liquidity provider would deposit USD stable-coin into the Money Market to mint iUSD and transfer the iUSDs into the liquidity pool.
@@ -285,38 +296,61 @@ withdrawable_proportion_1 = (TS_1 + amount_invested_1 - TB_1) / (TS_1 + amount_i
 ```  
 For more details, please refer to the white-paper.
 
-## Interest Allocation
+## 5.2 Interest Allocation
 Interest earned from funds in the liquidity pool belongs to the liquidity provider who puts up that capital investment. This is accounted in iToken when liquidity provider withdrawing say USD from a liquidity pool. 
 
-### Interest Share
+### 5.2.1 Interest Share
 Interest earned from funds in the collateral is shared between liquidity provider and those who deposited fToken into the Money Market. **Interest share** is a way to account for capital contribution and distribution of returns. 
 
-#### Allocation to Liquidity Provider
+#### 5.2.1.1 Allocation to Liquidity Provider
 When a new position is added, the over-collateral amount would be transferred from liquidity pool to the collateral, and an equivalent amount of interest share is minted to account for return to the liquidity provider. When the position is closed, the interest share would be burnt.
 
 For example, if a new position of 100 USD to 99 fEUR is added, (for simplicity sake, spread is ignored in calculation), the additional collateral ratio is 10%, then $10 is required from the liquidity pool as additional collateral. Consequently 10 interest shares are minted to account for the contribution. 
 
 If this is the only fEUR position, and there's only 10 interest share issued, then liquidity provider will receive 100% (10/10) of total interest earned.
 
-#### Allocation to fToken depositor 
+#### 5.2.1.2 Allocation to fToken depositor 
 When a fToken holder deposits fToken to the Money Market, then an equivalent amount of interest share accounted in the underlying USD would be minted. The interest share would be burnt when fToken is withdrawn.
 
 Following on the previous example, if a user deposits 9 fEUR (=10 USD), then 10 interest shares would be minted and accounted as the contribution of this user. At this point, liquidity provider will receive 50% (10/20 interest shares) of total interest earned, while the user will receive 50% of total interest earned.
 
-# Implementation 
+# 6. Implementation 
 We have been R&D our protocol on Ethereum, where the network is highly secure with valuable assets as basis for trading. There are also existing DeFi community and DeFi building blocks such as stablecoin. However for our target protocol participants - traders and liquidity providers, a high performance and low cost specialized trading blockchain is required to deliver the intended experience. For instance, the platform needs to be capable of handling large trading volume and frequent price fluctuations. Hence we extend our R&D to Polkadot and substrate, to develop the Flowchain parachain.
 
 The Ethereum implementation will be the value gateway and will leverage the DeFi ecosystem there, for example leveraging stablecoin like DAI and money markets like Compound. Meanwhile Flowchain based on Substrate and later launched as parachain in the Polkadot ecosystem will serve as the high performance financial service and trading chain. Later the two will be integrated using Polkadot Ethereum Bridge to provide the full benefits of both worlds. 
 
-## Ethereum Implementation
+## 6.1 Ethereum Implementation
 See more details [here](https://github.com/laminar-protocol/flow-protocol-ethereum).
 
-## Substrate Implementation - Flowchain
-See more details [here](https://github.com/laminar-protocol/flowchain/issues/7)
+## 6.2 Substrate Implementation - Flowchain
+See more details [here](https://github.com/laminar-protocol/flowchain/wiki)
+
+## 6.3 Oracle Implementation
+We have defined the oracle interface and assume trusted oracles to provide price feed to the protocols.
+```
+// Pseudo Interface
+    function isPriceOracle() returns (bool);
+    function getPrice(SymbolId symbol) returns (uint);
+```
+
+At this stage, we have a simple Oracle design to serve our purpose for proofing the concept.
+
+The oracle price is set by price feed administrator. We will watch closely governance standards in the oracle space, and gradually improve this. Due to sensitivity to pricing in trading use cases, two price baselines are defined to protect sudden and dramatic (potentially malicious) price fluctuation. 
+
+The difference between the new price and the last price is capped by the **`delta last limit`**. We also take a snapshot of price over a certain period. The difference between the capped new price and the snapshot price is further capped by the **`delta snapshot limit`**.
+
+Pseudo cap function, for last price cap, `priceCap` is the **`delta last limit`**, and `lastPrice` is the Oracle last price; for snapshot price cap, `priceCap` is the **`delta snapshot limit`**, and `lastPrice` is the snapshot price.
+
+### 6.3.1. Oracle Server
+There will be multiple Oracle servers set up to feed prices into the Oracle contract onchain. For mainnet, reputable price source like Bloomberg Forex API will be fetched to the server then feed into the Oracle contract. Monitoring services will be set up to ensure server availability and price sanity. 
+
+Note: any compromised oracle server is able to influence the price to a limited degree due to the price cap function built into the Oracle contract. A K'th largest algorithm will be able to tolerate up to K compromised servers. 
+
+Again we will continue watch closely the development in the Oracle space and open to collaboration to make it more resilient for our trading platform.
+
+# 7. Building & Running Flowchain 
 
 [![Status badge](https://github.com/laminar-protocol/flowchain/workflows/Test/badge.svg)](https://github.com/laminar-protocol/flowchain/actions?workflow=Test)
-
-# Building & Running Flowchain 
 
 ## Building
 
