@@ -88,6 +88,8 @@ decl_error! {
 		SlippageTooHigh,
 		NumOverflow,
 		NoPrice,
+		LiquidityPoolSyntheticPositionTooLow,
+		NegativeAdditionalCollateralAmount,
 	}
 }
 
@@ -110,20 +112,24 @@ impl<T: Trait> Module<T> {
 			T::PriceProvider::get_price(T::GetCollateralCurrencyId::get(), currency_id).ok_or(Error::NoPrice)?;
 		let ask_price = Self::_get_ask_price(pool_id, currency_id, price, max_slippage)?;
 
-		// minted = collateral / ask_price
-		let minted_by_price = T::BalanceToPrice::convert(collateral)
+		// synthetic = collateral / ask_price
+		let synthetic_by_price = T::BalanceToPrice::convert(collateral)
 			.checked_div(&ask_price)
 			.ok_or(Error::NumOverflow)?;
-		let minted = T::PriceToBalance::convert(minted_by_price);
+		let synthetic = T::PriceToBalance::convert(synthetic_by_price);
 
-		// minted_current_value = minted * price
-		let minted_current_value = minted_by_price.checked_mul(&price).ok_or(Error::NumOverflow)?;
-		// additional_collateral = minted_current_value * (1 + ratio) - minted_amount
+		// synthetic_value = synthetic * price
+		// `synthetic_value` is how much `synthetic` values in collateral unit.
+		let synthetic_value = {
+			let in_price_type = synthetic_by_price.checked_mul(&price).ok_or(Error::NumOverflow)?;
+			T::PriceToBalance::convert(in_price_type)
+		};
+		// additional_collateral = synthetic_value * (1 + ratio) - synthetic_amount
 		let additional_collateral = Self::_calc_additional_collateral_amount(
 			pool_id,
 			currency_id,
-			minted,
-			T::PriceToBalance::convert(minted_current_value),
+			collateral,
+			synthetic_value,
 		)?;
 
 		ensure!(
@@ -131,26 +137,37 @@ impl<T: Trait> Module<T> {
 			Error::LiquidityProviderBalanceTooLow,
 		);
 
-		T::MultiCurrency::deposit(currency_id, who, minted).map_err(|e| e.into())?;
+		T::MultiCurrency::deposit(currency_id, who, synthetic).map_err(|e| e.into())?;
 
 		T::CollateralCurrency::transfer(who, &<SyntheticTokens<T>>::account_id(), collateral)
 			.expect("`who`'s balance checked above; qed");
 		T::LiquidityPoolsCurrency::withdraw(&<SyntheticTokens<T>>::account_id(), pool_id, additional_collateral)
 			.expect("liquidity pool balance checked above; qed");
 
-		<SyntheticTokens<T>>::add_position(pool_id, currency_id, collateral, minted);
+		let total_collateral = collateral + additional_collateral;
+		<SyntheticTokens<T>>::add_position(pool_id, currency_id, total_collateral, synthetic);
 
-		Ok(minted)
+		Ok(synthetic)
 	}
 
 	fn _redeem(
-		_who: &T::AccountId,
-		_pool_id: T::LiquidityPoolId,
-		_currency_id: T::CurrencyId,
-		_synthetic_token_amount: T::Balance,
-		_max_slippage: Permill,
+		who: &T::AccountId,
+		pool_id: T::LiquidityPoolId,
+		currency_id: T::CurrencyId,
+		synthetic: T::Balance,
+		max_slippage: Permill,
 	) -> SynthesisResult<T> {
-		unimplemented!()
+		ensure!(T::MultiCurrency::balance(currency_id, &who) >= synthetic, Error::BalanceTooLow);
+
+		let price = T::PriceProvider::get_price(T::GetCollateralCurrencyId::get(), currency_id).ok_or(Error::NoPrice)?;
+		// bid_price = price * (1 - bid_spread)
+		let bid_price = Self::_get_bid_price(pool_id, currency_id, price, max_slippage)?;
+		// collateral = synthetic * bid_price
+		let collateral_by_price = T::BalanceToPrice::convert(synthetic)
+			.checked_mul(&bid_price).ok_or(Error::NumOverflow)?;
+		let collateral = T::PriceToBalance::convert(collateral_by_price);
+
+		Ok(collateral)
 	}
 
 	fn _liquidate(
@@ -181,25 +198,70 @@ impl<T: Trait> Module<T> {
 			return Err(Error::SlippageTooHigh);
 		}
 
-		let spread_amount = price.checked_mul(&ask_spread.into()).ok_or(Error::NumOverflow)?;
+		let spread_amount = price.checked_mul(&ask_spread.into()).expect("ask_spread < 1; qed");
 		price.checked_add(&spread_amount).ok_or(Error::NumOverflow)
 	}
 
+	/// Get bid price from liquidity pool for a given currency. Would fail if price could not meet max slippage.
+	///
+	/// ask_price = price * (1 - bid_spread)
+	fn _get_bid_price(
+		pool_id: T::LiquidityPoolId,
+		currency_id: T::CurrencyId,
+		price: Price,
+		max_slippage: Permill,
+	) -> result::Result<Price, Error> {
+		let bid_spread = T::LiquidityPoolsConfig::get_bid_spread(pool_id, currency_id);
+
+		if bid_spread.deconstruct() > max_slippage.deconstruct() {
+			return Err(Error::SlippageTooHigh);
+		}
+
+		let spread_amount = price.checked_mul(&bid_spread.into()).expect("bid_spread < 1; qed");
+		Ok(price.checked_sub(&spread_amount).expect("price > spread_amount; qed"))
+	}
+
 	/// Calculate liquidity provider's collateral parts:
-	/// 	minted_current_value * (1 + ratio) - minted_amount
+	/// 	synthetic_value * (1 + ratio) - collateral
 	fn _calc_additional_collateral_amount(
 		pool_id: T::LiquidityPoolId,
 		currency_id: T::CurrencyId,
-		minted: T::Balance,
-		minted_current_value: T::Balance,
+		collateral: T::Balance,
+		synthetic_value: T::Balance,
+	) -> SynthesisResult<T> {
+		let with_additional_collateral = Self::_with_additional_collateral(pool_id, currency_id, synthetic_value)?;
+
+		// would not overflow as long as `ratio` bigger than `ask_spread`, not likely to happen in real world case,
+		// but better to be safe than sorry
+		with_additional_collateral.checked_sub(&collateral).ok_or(Error::NegativeAdditionalCollateralAmount)
+	}
+
+	/// Returns `collateral * (1 + ratio)`.
+	fn _with_additional_collateral(
+		pool_id: T::LiquidityPoolId,
+		currency_id: T::CurrencyId,
+		collateral: T::Balance,
 	) -> SynthesisResult<T> {
 		let ratio = T::LiquidityPoolsConfig::get_additional_collateral_ratio(pool_id, currency_id);
 		// should never overflow as ratio <= 1
-		let additional_value = minted_current_value * T::PriceToBalance::convert(ratio.into());
-		let with_additional_value = minted_current_value
-			.checked_add(&additional_value)
-			.ok_or(Error::NumOverflow)?;
-		// should never overflow
-		Ok(with_additional_value - minted)
+		let additional = collateral * T::PriceToBalance::convert(ratio.into());
+
+		collateral.checked_add(&additional).ok_or(Error::NumOverflow)
+	}
+
+	fn _calc_remove_position(
+		pool_id: T::LiquidityPoolId,
+		currency_id: T::CurrencyId,
+		price: Price,
+		synthetic: T::Balance,
+		collateral: T::Balance,
+	) -> result::Result<(T::Balance, T::Balance), Error> {
+		let (synthetic_position, collateral_position) = <SyntheticTokens<T>>::get_position(pool_id, currency_id);
+
+		ensure!(synthetic_position >= synthetic, Error::LiquidityPoolSyntheticPositionTooLow);
+		let new_synthetic_position = synthetic_position - synthetic;
+
+		// synthetic_value = new_synthetic_position * price
+		let synthetic_value = T::BalanceToPrice::convert(new_synthetic_position).checked_mul(price).ok_or(Error::NumOverflow);
 	}
 }
