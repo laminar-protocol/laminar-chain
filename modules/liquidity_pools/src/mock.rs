@@ -26,6 +26,10 @@ parameter_types! {
 	pub const MaximumBlockLength: u32 = 2 * 1024;
 	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
+
+pub type Balance = u64;
+pub type CurrencyId = u32;
+
 impl system::Trait for Test {
 	type Origin = Origin;
 	type Call = ();
@@ -47,6 +51,8 @@ impl system::Trait for Test {
 impl Trait for Test {
 	type Event = ();
 	type LiquidityPoolId = u32;
+	type Balance = Balance;
+	type CurrencyId = CurrencyId;
 }
 pub type ModuleLiquidityPools = Module<Test>;
 
