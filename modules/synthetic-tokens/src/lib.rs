@@ -16,14 +16,14 @@ pub trait Trait: frame_system::Trait {
 #[derive(Encode, Decode)]
 pub struct Position<T: Trait> {
 	collateral: T::Balance,
-	minted: T::Balance,
+	synthetic: T::Balance,
 }
 
 impl<T: Trait> Default for Position<T> {
 	fn default() -> Self {
 		Position {
 			collateral: Zero::zero(),
-			minted: Zero::zero(),
+			synthetic: Zero::zero(),
 		}
 	}
 }
@@ -64,11 +64,11 @@ impl<T: Trait> Module<T> {
 		pool_id: T::LiquidityPoolId,
 		currency_id: T::CurrencyId,
 		collateral: T::Balance,
-		minted: T::Balance,
+		synthetic: T::Balance,
 	) {
 		<Positions<T>>::mutate((pool_id, currency_id), |p| {
 			p.collateral = p.collateral.saturating_add(collateral);
-			p.minted = p.minted.saturating_add(minted)
+			p.synthetic = p.synthetic.saturating_add(synthetic)
 		});
 	}
 
@@ -76,11 +76,17 @@ impl<T: Trait> Module<T> {
 		pool_id: T::LiquidityPoolId,
 		currency_id: T::CurrencyId,
 		collateral: T::Balance,
-		minted: T::Balance,
+		synthetic: T::Balance,
 	) {
 		<Positions<T>>::mutate((pool_id, currency_id), |p| {
 			p.collateral = p.collateral.saturating_sub(collateral);
-			p.minted = p.minted.saturating_sub(minted)
+			p.synthetic = p.synthetic.saturating_sub(synthetic)
 		});
+	}
+
+	/// Get position under `pool_id` and `currency_id`. Returns `(collateral_amount, synthetic_amount)`.
+	pub fn get_position(pool_id: T::LiquidityPoolId, currency_id: T::CurrencyId) -> (T::Balance, T::Balance) {
+		let Position { collateral, synthetic } =  <Positions<T>>::get(&(pool_id, currency_id));
+		(collateral, synthetic)
 	}
 }
