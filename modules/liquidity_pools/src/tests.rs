@@ -1,45 +1,41 @@
 #![cfg(test)]
 
 use crate::{
-	mock::{new_test_ext, ModuleLiquidityPools, Origin},
+	mock::{new_test_ext, ModuleLiquidityPools, Origin, ALICE},
 	LiquidityPoolOption,
 };
 
+use paint_support::assert_ok;
 use sr_primitives::Perbill;
-use support::assert_ok;
 
 #[test]
 fn should_create_pool() {
 	new_test_ext().execute_with(|| {
-		let alice: u64 = 1;
-
 		let pool_option = LiquidityPoolOption::default();
 
-		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(alice), 1));
-		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(1, 1), pool_option);
-		assert_eq!(ModuleLiquidityPools::owners(1), alice);
-		assert_eq!(ModuleLiquidityPools::next_pool_id(), 2);
+		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE), 1));
+		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, 1), Some(pool_option));
+		assert_eq!(ModuleLiquidityPools::owners(0), Some(ALICE));
+		assert_eq!(ModuleLiquidityPools::next_pool_id(), 1);
 	});
 }
 
 #[test]
 fn is_owner_should_work() {
 	new_test_ext().execute_with(|| {
-		let alice: u64 = 1;
-		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(alice), 1));
-		assert_eq!(ModuleLiquidityPools::is_owner(1, alice), true);
-		assert_eq!(ModuleLiquidityPools::is_owner(2, alice), false);
+		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE), 1));
+		assert_eq!(ModuleLiquidityPools::is_owner(0, ALICE), true);
+		assert_eq!(ModuleLiquidityPools::is_owner(1, ALICE), false);
 	});
 }
 
 #[test]
 fn should_disable_pool() {
 	new_test_ext().execute_with(|| {
-		let alice: u64 = 1;
-		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(alice), 1));
-		assert_ok!(ModuleLiquidityPools::disable_pool(Origin::signed(alice), 1));
+		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE), 1));
+		assert_ok!(ModuleLiquidityPools::disable_pool(Origin::signed(ALICE), 0));
 		assert_eq!(
-			ModuleLiquidityPools::disable_pool(Origin::signed(alice), 2),
+			ModuleLiquidityPools::disable_pool(Origin::signed(ALICE), 2),
 			Err("NoPermission")
 		);
 	})
@@ -48,11 +44,10 @@ fn should_disable_pool() {
 #[test]
 fn should_remove_pool() {
 	new_test_ext().execute_with(|| {
-		let alice: u64 = 1;
-		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(alice), 1));
-		assert_ok!(ModuleLiquidityPools::remove_pool(Origin::signed(alice), 1));
+		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE), 1));
+		assert_ok!(ModuleLiquidityPools::remove_pool(Origin::signed(ALICE), 0));
 		assert_eq!(
-			ModuleLiquidityPools::remove_pool(Origin::signed(alice), 2),
+			ModuleLiquidityPools::remove_pool(Origin::signed(ALICE), 2),
 			Err("NoPermission")
 		);
 	})
@@ -61,20 +56,18 @@ fn should_remove_pool() {
 #[test]
 fn should_deposit_liquidity() {
 	new_test_ext().execute_with(|| {
-		let alice: u64 = 1;
-		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(alice), 1));
-		assert_ok!(ModuleLiquidityPools::deposit_liquidity(Origin::signed(alice), 1, 1000));
+		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE), 1));
+		assert_ok!(ModuleLiquidityPools::deposit_liquidity(Origin::signed(ALICE), 1, 1000));
 	})
 }
 
 #[test]
 fn should_set_spread() {
 	new_test_ext().execute_with(|| {
-		let alice: u64 = 1;
-		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(alice), 1));
+		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE), 1));
 		assert_ok!(ModuleLiquidityPools::set_spread(
-			Origin::signed(alice),
-			1,
+			Origin::signed(ALICE),
+			0,
 			1,
 			Perbill::one(),
 			Perbill::one()
@@ -86,6 +79,6 @@ fn should_set_spread() {
 			additional_collateral_ratio: None,
 		};
 
-		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(1, 1), pool_option);
+		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, 1), Some(pool_option));
 	})
 }

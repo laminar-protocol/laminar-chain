@@ -6,13 +6,12 @@ mod tests;
 
 pub use liquidity_pool_option::LiquidityPoolOption;
 
-use core::ops::Add;
+use paint_support::{decl_error, decl_event, decl_module, decl_storage, dispatch::Result, ensure, Parameter};
 use rstd::result;
 use sr_primitives::{
-	traits::{MaybeSerializeDeserialize, Member, One, SimpleArithmetic},
+	traits::{CheckedAdd, MaybeSerializeDeserialize, Member, One, SimpleArithmetic, Zero},
 	Perbill,
 };
-use support::{decl_error, decl_event, decl_module, decl_storage, dispatch::Result, ensure, Parameter};
 use system::ensure_signed;
 
 pub trait Trait: system::Trait {
@@ -24,9 +23,9 @@ pub trait Trait: system::Trait {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as LiquidityPools {
-		pub NextPoolId get(next_pool_id): T::LiquidityPoolId = T::LiquidityPoolId::one();
-		pub Owners get(owners): map T::LiquidityPoolId => T::AccountId;
-		pub LiquidityPoolOptions get(liquidity_pool_options): double_map T::LiquidityPoolId, blake2_256(T::CurrencyId) => LiquidityPoolOption;
+		pub NextPoolId get(fn next_pool_id) build(|_| T::LiquidityPoolId::zero()): T::LiquidityPoolId;
+		pub Owners get(fn owners): map T::LiquidityPoolId => Option<T::AccountId>;
+		pub LiquidityPoolOptions get(fn liquidity_pool_options): double_map T::LiquidityPoolId, blake2_256(T::CurrencyId) => Option<LiquidityPoolOption>;
 	}
 }
 
@@ -73,13 +72,15 @@ decl_module! {
 decl_error! {
 	// LiquidityPools module errors
 	pub enum Error {
-		NoPermission
+		NoPermission,
+		CannotCreateMorePool,
+		PoolNotFound,
 	}
 }
 
 impl<T: Trait> Module<T> {
 	pub fn is_owner(pool_id: T::LiquidityPoolId, who: T::AccountId) -> bool {
-		<Owners<T>>::get(pool_id) == who
+		Self::owners(pool_id) == Some(who)
 	}
 }
 
@@ -88,12 +89,14 @@ impl<T: Trait> Module<T> {
 	fn _create_pool(who: T::AccountId, currency_id: T::CurrencyId) -> result::Result<(), Error> {
 		let pool_option = LiquidityPoolOption::default();
 
-		let pool_id = <NextPoolId<T>>::get();
-
+		let pool_id = Self::next_pool_id();
 		<Owners<T>>::insert(pool_id, &who);
 		<LiquidityPoolOptions<T>>::insert(pool_id, currency_id, pool_option);
 
-		let next_pool_id = T::LiquidityPoolId::one().add(pool_id);
+		let next_pool_id = match pool_id.checked_add(&One::one()) {
+			Some(id) => id,
+			None => return Err(Error::CannotCreateMorePool),
+		};
 		<NextPoolId<T>>::put(next_pool_id);
 
 		Self::deposit_event(RawEvent::LiquidityPoolOptionCreated(who, pool_id));
@@ -101,13 +104,13 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _disable_pool(who: T::AccountId, pool_id: T::LiquidityPoolId) -> result::Result<(), Error> {
-		ensure!(<Owners<T>>::get(pool_id) == who, Error::NoPermission);
+		ensure!(Self::owners(pool_id) == Some(who), Error::NoPermission);
 		// TODO: Disable all tokens for this pool
 		Ok(())
 	}
 
 	fn _remove_pool(who: T::AccountId, pool_id: T::LiquidityPoolId) -> result::Result<(), Error> {
-		ensure!(<Owners<T>>::get(pool_id) == who, Error::NoPermission);
+		ensure!(Self::owners(pool_id) == Some(who), Error::NoPermission);
 		// TODO: No outstanding positions
 		// TODO: Withdraw all liquidity and remove this pool
 		Ok(())
@@ -120,13 +123,16 @@ impl<T: Trait> Module<T> {
 		ask: Perbill,
 		bid: Perbill,
 	) -> result::Result<(), Error> {
-		ensure!(<Owners<T>>::get(pool_id) == who, Error::NoPermission);
+		ensure!(Self::owners(pool_id) == Some(who), Error::NoPermission);
 
-		let mut pool_option = <LiquidityPoolOptions<T>>::get(&pool_id, &currency_id);
-		pool_option.bid_spread = bid;
-		pool_option.ask_spread = ask;
-		<LiquidityPoolOptions<T>>::insert(pool_id, currency_id, pool_option);
-
-		Ok(())
+		match <LiquidityPoolOptions<T>>::get(&pool_id, &currency_id) {
+			Some(mut pool_option) => {
+				pool_option.bid_spread = bid;
+				pool_option.ask_spread = ask;
+				<LiquidityPoolOptions<T>>::insert(pool_id, currency_id, pool_option);
+				Ok(())
+			}
+			None => Err(Error::PoolNotFound),
+		}
 	}
 }

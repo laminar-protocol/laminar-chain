@@ -2,6 +2,7 @@
 
 use super::*;
 
+use paint_support::{impl_outer_origin, parameter_types};
 use primitives::H256;
 use sr_primitives::{
 	testing::Header,
@@ -9,7 +10,6 @@ use sr_primitives::{
 	weights::Weight,
 	Perbill,
 };
-use support::{impl_outer_origin, parameter_types};
 
 impl_outer_origin! {
 	pub enum Origin for Test {}
@@ -61,3 +61,5 @@ pub type ModuleLiquidityPools = Module<Test>;
 pub fn new_test_ext() -> runtime_io::TestExternalities {
 	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 }
+
+pub const ALICE: u64 = 1;
