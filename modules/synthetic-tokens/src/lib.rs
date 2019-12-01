@@ -86,7 +86,7 @@ impl<T: Trait> Module<T> {
 
 	/// Get position under `pool_id` and `currency_id`. Returns `(collateral_amount, synthetic_amount)`.
 	pub fn get_position(pool_id: T::LiquidityPoolId, currency_id: T::CurrencyId) -> (T::Balance, T::Balance) {
-		let Position { collateral, synthetic } =  <Positions<T>>::get(&(pool_id, currency_id));
+		let Position { collateral, synthetic } = <Positions<T>>::get(&(pool_id, currency_id));
 		(collateral, synthetic)
 	}
 }

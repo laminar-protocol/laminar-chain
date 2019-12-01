@@ -3,7 +3,7 @@
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
 use rstd::result;
 use sr_primitives::{
-	traits::{CheckedAdd, Convert},
+	traits::{CheckedAdd, CheckedSub, Convert, Zero},
 	Permill,
 };
 // FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
@@ -90,6 +90,7 @@ decl_error! {
 		NoPrice,
 		LiquidityPoolSyntheticPositionTooLow,
 		NegativeAdditionalCollateralAmount,
+		NotEnoughCollateralInLiquidityPool,
 	}
 }
 
@@ -125,12 +126,8 @@ impl<T: Trait> Module<T> {
 			T::PriceToBalance::convert(in_price_type)
 		};
 		// additional_collateral = synthetic_value * (1 + ratio) - synthetic_amount
-		let additional_collateral = Self::_calc_additional_collateral_amount(
-			pool_id,
-			currency_id,
-			collateral,
-			synthetic_value,
-		)?;
+		let additional_collateral =
+			Self::_calc_additional_collateral_amount(pool_id, currency_id, collateral, synthetic_value)?;
 
 		ensure!(
 			T::LiquidityPoolsCurrency::balance(pool_id) >= additional_collateral,
@@ -140,9 +137,9 @@ impl<T: Trait> Module<T> {
 		T::MultiCurrency::deposit(currency_id, who, synthetic).map_err(|e| e.into())?;
 
 		T::CollateralCurrency::transfer(who, &<SyntheticTokens<T>>::account_id(), collateral)
-			.expect("`who`'s balance checked above; qed");
+			.expect("ensured enough balance of sender; qed");
 		T::LiquidityPoolsCurrency::withdraw(&<SyntheticTokens<T>>::account_id(), pool_id, additional_collateral)
-			.expect("liquidity pool balance checked above; qed");
+			.expect("ensured enough collateral in liquidity pool; qed");
 
 		let total_collateral = collateral + additional_collateral;
 		<SyntheticTokens<T>>::add_position(pool_id, currency_id, total_collateral, synthetic);
@@ -157,15 +154,25 @@ impl<T: Trait> Module<T> {
 		synthetic: T::Balance,
 		max_slippage: Permill,
 	) -> SynthesisResult<T> {
-		ensure!(T::MultiCurrency::balance(currency_id, &who) >= synthetic, Error::BalanceTooLow);
+		ensure!(
+			T::MultiCurrency::balance(currency_id, &who) >= synthetic,
+			Error::BalanceTooLow
+		);
 
-		let price = T::PriceProvider::get_price(T::GetCollateralCurrencyId::get(), currency_id).ok_or(Error::NoPrice)?;
+		let price =
+			T::PriceProvider::get_price(T::GetCollateralCurrencyId::get(), currency_id).ok_or(Error::NoPrice)?;
 		// bid_price = price * (1 - bid_spread)
 		let bid_price = Self::_get_bid_price(pool_id, currency_id, price, max_slippage)?;
 		// collateral = synthetic * bid_price
 		let collateral_by_price = T::BalanceToPrice::convert(synthetic)
-			.checked_mul(&bid_price).ok_or(Error::NumOverflow)?;
+			.checked_mul(&bid_price)
+			.ok_or(Error::NumOverflow)?;
 		let collateral = T::PriceToBalance::convert(collateral_by_price);
+
+		let (collateral_to_remove, refund_to_pool) =
+			Self::_calc_remove_position(currency_id, pool_id, price, synthetic, collateral)?;
+
+		// TODO: add interest to `refund_to_pool`
 
 		Ok(collateral)
 	}
@@ -233,7 +240,9 @@ impl<T: Trait> Module<T> {
 
 		// would not overflow as long as `ratio` bigger than `ask_spread`, not likely to happen in real world case,
 		// but better to be safe than sorry
-		with_additional_collateral.checked_sub(&collateral).ok_or(Error::NegativeAdditionalCollateralAmount)
+		with_additional_collateral
+			.checked_sub(&collateral)
+			.ok_or(Error::NegativeAdditionalCollateralAmount)
 	}
 
 	/// Returns `collateral * (1 + ratio)`.
@@ -249,6 +258,7 @@ impl<T: Trait> Module<T> {
 		collateral.checked_add(&additional).ok_or(Error::NumOverflow)
 	}
 
+	/// Calculate position change for a remove, if ok, return with `(collateral_to_remove, refund_to_pool)`
 	fn _calc_remove_position(
 		pool_id: T::LiquidityPoolId,
 		currency_id: T::CurrencyId,
@@ -256,12 +266,38 @@ impl<T: Trait> Module<T> {
 		synthetic: T::Balance,
 		collateral: T::Balance,
 	) -> result::Result<(T::Balance, T::Balance), Error> {
-		let (synthetic_position, collateral_position) = <SyntheticTokens<T>>::get_position(pool_id, currency_id);
+		let (collateral_position, synthetic_position) = <SyntheticTokens<T>>::get_position(pool_id, currency_id);
 
-		ensure!(synthetic_position >= synthetic, Error::LiquidityPoolSyntheticPositionTooLow);
-		let new_synthetic_position = synthetic_position - synthetic;
+		ensure!(
+			synthetic_position >= synthetic,
+			Error::LiquidityPoolSyntheticPositionTooLow
+		);
+		let new_synthetic_position = synthetic_position
+			.checked_sub(&synthetic)
+			.expect("ensured enough synthetic in liquidity pool; qed");
 
-		// synthetic_value = new_synthetic_position * price
-		let synthetic_value = T::BalanceToPrice::convert(new_synthetic_position).checked_mul(price).ok_or(Error::NumOverflow);
+		// new_synthetic_value = new_synthetic_position * price
+		let new_synthetic_value = {
+			let in_price_type = T::BalanceToPrice::convert(new_synthetic_position)
+				.checked_mul(&price)
+				.ok_or(Error::NumOverflow)?;
+			T::PriceToBalance::convert(in_price_type)
+		};
+		let required_collateral = Self::_with_additional_collateral(pool_id, currency_id, new_synthetic_value)?;
+
+		let mut collateral_to_remove = collateral;
+		let mut refund_to_pool = Zero::zero();
+		// TODO: handle the case `required_collateral > collateral_position`
+		if required_collateral <= collateral_position {
+			collateral_to_remove = collateral_position
+				.checked_sub(&required_collateral)
+				.expect("ensured high enough collateral position; qed");
+			// TODO: handle the case zero `refund_to_pool`
+			refund_to_pool = collateral_to_remove
+				.checked_sub(&collateral)
+				.ok_or(Error::NotEnoughCollateralInLiquidityPool)?;
+		}
+
+		Ok((collateral_to_remove, refund_to_pool))
 	}
 }
