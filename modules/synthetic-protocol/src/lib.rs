@@ -91,6 +91,7 @@ decl_error! {
 		LiquidityPoolSyntheticPositionTooLow,
 		NegativeAdditionalCollateralAmount,
 		NotEnoughCollateralInLiquidityPool,
+		NotEnoughLockedCollateralAvailable,
 	}
 }
 
@@ -134,8 +135,10 @@ impl<T: Trait> Module<T> {
 			Error::LiquidityProviderBalanceTooLow,
 		);
 
+		// mint synthetic
 		T::MultiCurrency::deposit(currency_id, who, synthetic).map_err(|e| e.into())?;
 
+		// collateralise
 		T::CollateralCurrency::transfer(who, &<SyntheticTokens<T>>::account_id(), collateral)
 			.expect("ensured enough balance of sender; qed");
 		T::LiquidityPoolsCurrency::withdraw(&<SyntheticTokens<T>>::account_id(), pool_id, additional_collateral)
@@ -170,9 +173,25 @@ impl<T: Trait> Module<T> {
 		let collateral = T::PriceToBalance::convert(collateral_by_price);
 
 		let (collateral_to_remove, refund_to_pool) =
-			Self::_calc_remove_position(currency_id, pool_id, price, synthetic, collateral)?;
+			Self::_calc_remove_position(pool_id, currency_id, price, synthetic, collateral)?;
+
+		ensure!(
+			T::CollateralCurrency::balance(&<SyntheticTokens<T>>::account_id()) >= collateral + refund_to_pool,
+			Error::NotEnoughLockedCollateralAvailable,
+		);
 
 		// TODO: add interest to `refund_to_pool`
+
+		// burn synthetic
+		T::MultiCurrency::withdraw(currency_id, who, synthetic).map_err(|e| e.into())?;
+
+		// redeem collateral
+		T::CollateralCurrency::transfer(&<SyntheticTokens<T>>::account_id(), who, collateral)
+			.expect("ensured enough locked collateral; qed");
+		T::LiquidityPoolsCurrency::deposit(&<SyntheticTokens<T>>::account_id(), pool_id, refund_to_pool)
+			.expect("ensured enough locked collateral; qed");
+
+		<SyntheticTokens<T>>::remove_position(pool_id, currency_id, collateral_to_remove, synthetic);
 
 		Ok(collateral)
 	}

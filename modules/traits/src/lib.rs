@@ -41,12 +41,17 @@ pub trait LiquidityPoolsCurrency<AccountId>: LiquidityPoolBaseTypes {
 	type Balance: Parameter + Member + SimpleArithmetic + Default + Copy + MaybeSerializeDeserialize;
 	type Error: Into<&'static str> + Debug;
 
+	/// Check collateral balance of `pool_id`.
 	fn balance(pool_id: Self::LiquidityPoolId) -> Self::Balance;
+
+	/// Deposit some amount of collateral to `pool_id`, from `who`.
 	fn deposit(
 		from: &AccountId,
 		pool_id: Self::LiquidityPoolId,
 		amount: Self::Balance,
 	) -> result::Result<(), Self::Error>;
+
+	/// Withdraw some amount of collateral to `who`, from `pool_id`.
 	fn withdraw(
 		to: &AccountId,
 		pool_id: Self::LiquidityPoolId,
