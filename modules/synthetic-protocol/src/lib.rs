@@ -52,13 +52,13 @@ decl_event! {
 		LiquidityPoolId = <T as synthetic_tokens::Trait>::LiquidityPoolId,
 	{
 		/// Synthetic token minted.
-		/// (who, synthetic_token_id, liquidity_pool_id, collateral_amount, minted_amount)
+		/// (who, synthetic_token_id, liquidity_pool_id, collateral_amount, synthetic_amount)
 		Minted(AccountId, CurrencyId, LiquidityPoolId, Balance, Balance),
 		/// Synthetic token redeemed.
-		/// (who, synthetic_token_id, liquidity_pool_id, collateral_amount, redeemed_amount)
+		/// (who, synthetic_token_id, liquidity_pool_id, collateral_amount, synthetic_amount)
 		Redeemed(AccountId, CurrencyId, LiquidityPoolId, Balance, Balance),
 		/// Synthetic token liquidated.
-		/// (who, synthetic_token_id, liquidity_pool_id, collateral_amount, synthetic_token_amount)
+		/// (who, synthetic_token_id, liquidity_pool_id, collateral_amount, synthetic_amount)
 		Liquidated(AccountId, CurrencyId, LiquidityPoolId, Balance, Balance),
 	}
 }
@@ -67,15 +67,30 @@ decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 		fn deposit_event() = default;
 
-		pub fn mint(origin,
+		pub fn mint(
+			origin,
 			pool_id: T::LiquidityPoolId,
 			currency_id: T::CurrencyId,
 			collateral_amount: T::Balance,
 			max_slippage: Permill
 		) {
 			let who = ensure_signed(origin)?;
-			let minted = Self::_mint(&who, pool_id, currency_id, collateral_amount, max_slippage)?;
-			Self::deposit_event(RawEvent::Minted(who, currency_id, pool_id, collateral_amount, minted));
+			let synthetic_amount = Self::_mint(&who, pool_id, currency_id, collateral_amount, max_slippage)?;
+
+			Self::deposit_event(RawEvent::Minted(who, currency_id, pool_id, collateral_amount, synthetic_amount));
+		}
+
+		fn redeem(
+			origin,
+			pool_id: T::LiquidityPoolId,
+			currency_id: T::CurrencyId,
+			synthetic_amount: T::Balance,
+			max_slippage: Permill,
+		) {
+			let who = ensure_signed(origin)?;
+			let collateral_amount = Self::_redeem(&who, pool_id, currency_id, synthetic_amount, max_slippage)?;
+
+			Self::deposit_event(RawEvent::Redeemed(who, currency_id, pool_id, collateral_amount, synthetic_amount));
 		}
 	}
 }
@@ -88,8 +103,8 @@ decl_error! {
 		SlippageTooHigh,
 		NumOverflow,
 		NoPrice,
-		LiquidityPoolSyntheticPositionTooLow,
 		NegativeAdditionalCollateralAmount,
+		NotEnoughSyntheticInLiquidityPool,
 		NotEnoughCollateralInLiquidityPool,
 		NotEnoughLockedCollateralAvailable,
 	}
@@ -289,7 +304,7 @@ impl<T: Trait> Module<T> {
 
 		ensure!(
 			synthetic_position >= synthetic,
-			Error::LiquidityPoolSyntheticPositionTooLow
+			Error::NotEnoughSyntheticInLiquidityPool,
 		);
 		let new_synthetic_position = synthetic_position
 			.checked_sub(&synthetic)
