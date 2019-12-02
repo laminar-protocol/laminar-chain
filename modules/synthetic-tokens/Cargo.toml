@@ -15,6 +15,7 @@ frame-support = { git = "https://github.com/paritytech/substrate.git", default-f
 frame-system = { git = "https://github.com/paritytech/substrate.git", default-features = false }
 
 orml-traits = { path = "../../orml/traits", default-features = false }
+orml-utilities = { path = "../../orml/utilities", default-features = false }
 
 [features]
 default = ["std"]
@@ -27,4 +28,5 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 	"orml-traits/std",
+	"orml-utilities/std",
 ]

@@ -7,6 +7,8 @@ use sr_primitives::{
 	ModuleId, Permill,
 };
 
+use orml_utilities::FixedU128;
+
 pub trait Trait: frame_system::Trait {
 	type CurrencyId: Parameter + Member + Copy + MaybeSerializeDeserialize;
 	type Balance: Parameter + Member + SimpleArithmetic + Default + Copy + MaybeSerializeDeserialize;
@@ -28,9 +30,9 @@ impl<T: Trait> Default for Position<T> {
 	}
 }
 
-const _EXTREME_RATIO_DEFAULT: Permill = Permill::from_percent(1); // TODO: set this
-const _LIQUIDATION_RATIO_DEFAULT: Permill = Permill::from_percent(5); // TODO: set this
-const _COLLATERAL_RATIO_DEFAULT: Permill = Permill::from_percent(10); // TODO: set this
+const EXTREME_RATIO_DEFAULT: Permill = Permill::from_percent(1); // TODO: set this
+const LIQUIDATION_RATIO_DEFAULT: Permill = Permill::from_percent(5); // TODO: set this
+const COLLATERAL_RATIO_DEFAULT: Permill = Permill::from_percent(10); // TODO: set this
 
 decl_storage! {
 	trait Store for Module<T: Trait> as SyntheticTokens {
@@ -88,5 +90,46 @@ impl<T: Trait> Module<T> {
 	pub fn get_position(pool_id: T::LiquidityPoolId, currency_id: T::CurrencyId) -> (T::Balance, T::Balance) {
 		let Position { collateral, synthetic } = <Positions<T>>::get(&(pool_id, currency_id));
 		(collateral, synthetic)
+	}
+
+	/// Calculate incentive ratio.
+	///
+	/// If `ratio < extreme_ratio`, return `1`; if `ratio >= liquidation_ratio`, return `0`; Otherwise return
+	/// `(liquidation_ratio - ratio) / (liquidation_ratio - extreme_ratio)`.
+	pub fn incentive_ratio(currency_id: T::CurrencyId, current_ratio: FixedU128) -> FixedU128 {
+		let one = FixedU128::from_rational(1, 1);
+		if current_ratio < one {
+			return FixedU128::from_parts(0);
+		}
+
+		let ratio = current_ratio.checked_sub(&one).expect("ensured current_ratio > one_percent; qed");
+		let liquidation_ratio = Self::liquidation_ratio_or_default(currency_id).into();
+		if ratio >= liquidation_ratio {
+			return FixedU128::from_parts(0);
+		}
+		let extreme_ratio = Self::extreme_ratio_or_default(currency_id).into();
+		if ratio <= extreme_ratio {
+			return one;
+		}
+
+		let ratio_to_liquidation_ratio_gap = liquidation_ratio.checked_sub(&ratio).expect("ratio < liquidation_ratio; qed");
+		let liquidation_to_extreme_gap = liquidation_ratio.checked_sub(&extreme_ratio).expect("liquidation_ratio > extreme_ratio; qed");
+
+		// ratio_to_liquidation_ratio_gap / liquidation_to_extreme_gap
+		ratio_to_liquidation_ratio_gap.checked_sub(&liquidation_to_extreme_gap).expect("liquidation_ratio > extreme_ratio; qed")
+	}
+}
+
+impl<T: Trait> Module<T> {
+	pub fn liquidation_ratio_or_default(currency_id: T::CurrencyId) -> Permill {
+		Self::liquidation_ratio(currency_id).unwrap_or(LIQUIDATION_RATIO_DEFAULT)
+	}
+
+	pub fn extreme_ratio_or_default(currency_id: T::CurrencyId) -> Permill {
+		Self::extreme_ratio(currency_id).unwrap_or(EXTREME_RATIO_DEFAULT)
+	}
+
+	pub fn collateral_ratio_or_default(currency_id: T::CurrencyId) -> Permill {
+		Self::collateral_ratio(currency_id).unwrap_or(COLLATERAL_RATIO_DEFAULT)
 	}
 }
