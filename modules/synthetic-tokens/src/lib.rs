@@ -102,7 +102,9 @@ impl<T: Trait> Module<T> {
 			return FixedU128::from_parts(0);
 		}
 
-		let ratio = current_ratio.checked_sub(&one).expect("ensured current_ratio > one_percent; qed");
+		let ratio = current_ratio
+			.checked_sub(&one)
+			.expect("ensured current_ratio > one_percent; qed");
 		let liquidation_ratio = Self::liquidation_ratio_or_default(currency_id).into();
 		if ratio >= liquidation_ratio {
 			return FixedU128::from_parts(0);
@@ -112,11 +114,17 @@ impl<T: Trait> Module<T> {
 			return one;
 		}
 
-		let ratio_to_liquidation_ratio_gap = liquidation_ratio.checked_sub(&ratio).expect("ratio < liquidation_ratio; qed");
-		let liquidation_to_extreme_gap = liquidation_ratio.checked_sub(&extreme_ratio).expect("liquidation_ratio > extreme_ratio; qed");
+		let ratio_to_liquidation_ratio_gap = liquidation_ratio
+			.checked_sub(&ratio)
+			.expect("ratio < liquidation_ratio; qed");
+		let liquidation_to_extreme_gap = liquidation_ratio
+			.checked_sub(&extreme_ratio)
+			.expect("liquidation_ratio > extreme_ratio; qed");
 
 		// ratio_to_liquidation_ratio_gap / liquidation_to_extreme_gap
-		ratio_to_liquidation_ratio_gap.checked_sub(&liquidation_to_extreme_gap).expect("liquidation_ratio > extreme_ratio; qed")
+		ratio_to_liquidation_ratio_gap
+			.checked_sub(&liquidation_to_extreme_gap)
+			.expect("liquidation_ratio > extreme_ratio; qed")
 	}
 }
 

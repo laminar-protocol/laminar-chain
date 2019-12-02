@@ -1,9 +1,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
-use rstd::{result, convert::TryInto};
+use rstd::{convert::TryInto, result};
 use sr_primitives::{
-	traits::{CheckedAdd, CheckedSub, CheckedMul, Convert, Saturating, Zero},
+	traits::{CheckedAdd, CheckedMul, CheckedSub, Convert, Saturating, Zero},
 	Permill,
 };
 // FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
@@ -363,7 +363,9 @@ impl<T: Trait> Module<T> {
 
 		// synthetic_position_value = synthetic_position * price
 		let synthetic_position_value = {
-			let in_price = T::BalanceToPrice::convert(synthetic_position).checked_mul(&price).ok_or(Error::NumOverflow)?;
+			let in_price = T::BalanceToPrice::convert(synthetic_position)
+				.checked_mul(&price)
+				.ok_or(Error::NumOverflow)?;
 			T::PriceToBalance::convert(in_price)
 		};
 		// if synthetic position not backed by enough collateral, no incentive
@@ -373,37 +375,55 @@ impl<T: Trait> Module<T> {
 
 		// current_ratio = collateral_position / synthetic_position_value
 		let current_ratio = {
-			let collateral_position_u128: u128 = TryInto::<u128>::try_into(collateral_position).map_err(|_| Error::BalanceToU128Failed)?;
-			let synthetic_position_value_u128: u128 = TryInto::<u128>::try_into(synthetic_position_value).map_err(|_| Error::BalanceToU128Failed)?;
+			let collateral_position_u128: u128 =
+				TryInto::<u128>::try_into(collateral_position).map_err(|_| Error::BalanceToU128Failed)?;
+			let synthetic_position_value_u128: u128 =
+				TryInto::<u128>::try_into(synthetic_position_value).map_err(|_| Error::BalanceToU128Failed)?;
 			FixedU128::from_rational(collateral_position_u128, synthetic_position_value_u128)
 		};
 
 		// in safe position if ratio >= liquidation_ratio
 		let one = FixedU128::from_rational(1, 1);
-		let liquidation_ratio =  <SyntheticTokens<T>>::liquidation_ratio_or_default(currency_id);
+		let liquidation_ratio = <SyntheticTokens<T>>::liquidation_ratio_or_default(currency_id);
 		let safe_ratio_threshold = Into::<FixedU128>::into(liquidation_ratio).saturating_add(one);
 		ensure!(current_ratio < safe_ratio_threshold, Error::StillInSafePosition);
 
-		let new_synthetic_position = synthetic_position.checked_sub(&synthetic).expect("ensured high enough synthetic position; qed");
-		let new_collateral_position = collateral_position.checked_sub(&collateral).expect("ensured high enough collateral position; qed");
+		let new_synthetic_position = synthetic_position
+			.checked_sub(&synthetic)
+			.expect("ensured high enough synthetic position; qed");
+		let new_collateral_position = collateral_position
+			.checked_sub(&collateral)
+			.expect("ensured high enough collateral position; qed");
 
 		// with_current_ratio = new_synthetic_position * price * current_ratio
 		let with_current_ratio = {
-			let new_synthetic_position_value = T::BalanceToPrice::convert(new_synthetic_position).checked_mul(&price).ok_or(Error::NumOverflow)?;
-			let with_current_ratio = new_synthetic_position_value.checked_mul(&current_ratio).ok_or(Error::NumOverflow)?;
+			let new_synthetic_position_value = T::BalanceToPrice::convert(new_synthetic_position)
+				.checked_mul(&price)
+				.ok_or(Error::NumOverflow)?;
+			let with_current_ratio = new_synthetic_position_value
+				.checked_mul(&current_ratio)
+				.ok_or(Error::NumOverflow)?;
 			T::PriceToBalance::convert(with_current_ratio)
 		};
 
 		if new_collateral_position > with_current_ratio {
 			// available_for_incentive = new_collateral_position - with_current_ratio
-			let available_for_incentive = new_collateral_position.checked_sub(&with_current_ratio).expect("ensured new collateral position higher; qed");
+			let available_for_incentive = new_collateral_position
+				.checked_sub(&with_current_ratio)
+				.expect("ensured new collateral position higher; qed");
 			let incentive_ratio = <SyntheticTokens<T>>::incentive_ratio(currency_id, current_ratio);
 			// incentive = available_for_incentive * incentive_ratio
-			let incentive = available_for_incentive.checked_mul(&T::PriceToBalance::convert(incentive_ratio)).ok_or(Error::NumOverflow)?;
+			let incentive = available_for_incentive
+				.checked_mul(&T::PriceToBalance::convert(incentive_ratio))
+				.ok_or(Error::NumOverflow)?;
 
-			let refund_to_pool = available_for_incentive.checked_sub(&incentive).expect("available_for_incentive > incentive; qed");
+			let refund_to_pool = available_for_incentive
+				.checked_sub(&incentive)
+				.expect("available_for_incentive > incentive; qed");
 			let collateral_with_incentive = collateral.checked_add(&incentive).ok_or(Error::NumOverflow)?;
-			let collateral_with_incentive_and_refund = collateral_with_incentive.checked_add(&refund_to_pool).ok_or(Error::NumOverflow)?;
+			let collateral_with_incentive_and_refund = collateral_with_incentive
+				.checked_add(&refund_to_pool)
+				.ok_or(Error::NumOverflow)?;
 			Ok((collateral_with_incentive_and_refund, refund_to_pool, incentive))
 		} else {
 			// no more incentive could be given
