@@ -380,8 +380,8 @@ impl<T: Trait> Module<T> {
 
 		// in safe position if ratio >= liquidation_ratio
 		let one = FixedU128::from_rational(1, 1);
-		let liquidation_ratio: FixedU128 =  <SyntheticTokens<T>>::liquidation_ratio(currency_id).into();
-		let safe_ratio_threshold = liquidation_ratio.saturating_add(one);
+		let liquidation_ratio =  <SyntheticTokens<T>>::liquidation_ratio_or_default(currency_id);
+		let safe_ratio_threshold = Into::<FixedU128>::into(liquidation_ratio).saturating_add(one);
 		ensure!(current_ratio < safe_ratio_threshold, Error::StillInSafePosition);
 
 		let new_synthetic_position = synthetic_position.checked_sub(&synthetic).expect("ensured high enough synthetic position; qed");
@@ -399,11 +399,11 @@ impl<T: Trait> Module<T> {
 			let available_for_incentive = new_collateral_position.checked_sub(&with_current_ratio).expect("ensured new collateral position higher; qed");
 			let incentive_ratio = <SyntheticTokens<T>>::incentive_ratio(currency_id, current_ratio);
 			// incentive = available_for_incentive * incentive_ratio
-			let incentive = available_for_incentive.checked_mul(&incentive_ratio).ok_or(Error::NumOverflow)?;
+			let incentive = available_for_incentive.checked_mul(&T::PriceToBalance::convert(incentive_ratio)).ok_or(Error::NumOverflow)?;
 
 			let refund_to_pool = available_for_incentive.checked_sub(&incentive).expect("available_for_incentive > incentive; qed");
-			let collateral_with_incentive = collateral.checked_add(&T::PriceToBalance::convert(incentive)).ok_or(Error::NumOverflow)?;
-			let collateral_with_incentive_and_refund = collateral_with_incentive(&T::PriceToBalance::convert(refund_to_pool)).ok_or(Error::NumOverflow)?;
+			let collateral_with_incentive = collateral.checked_add(&incentive).ok_or(Error::NumOverflow)?;
+			let collateral_with_incentive_and_refund = collateral_with_incentive.checked_add(&refund_to_pool).ok_or(Error::NumOverflow)?;
 			Ok((collateral_with_incentive_and_refund, refund_to_pool, incentive))
 		} else {
 			// no more incentive could be given
