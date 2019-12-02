@@ -1,7 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use frame_support::{decl_error, decl_module, decl_storage, Parameter};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, Parameter, StorageMap};
+use frame_system::{self as system, ensure_root};
 use sr_primitives::{
 	traits::{AccountIdConversion, MaybeSerializeDeserialize, Member, Saturating, SimpleArithmetic, Zero},
 	ModuleId, Permill,
@@ -10,6 +11,7 @@ use sr_primitives::{
 use orml_utilities::FixedU128;
 
 pub trait Trait: frame_system::Trait {
+	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 	type CurrencyId: Parameter + Member + Copy + MaybeSerializeDeserialize;
 	type Balance: Parameter + Member + SimpleArithmetic + Default + Copy + MaybeSerializeDeserialize;
 	type LiquidityPoolId: Parameter + Member + Copy + MaybeSerializeDeserialize;
@@ -47,8 +49,44 @@ decl_error! {
 	pub enum Error {}
 }
 
+decl_event! {
+	pub enum Event<T> where
+		CurrencyId = <T as Trait>::CurrencyId,
+	{
+		/// Extreme ratio updated. (currency_id, ratio)
+		ExtremeRatioUpdated(CurrencyId, Permill),
+		/// Liquidation ratio updated. (currency_id, ratio)
+		LiquidationRatioUpdated(CurrencyId, Permill),
+		/// Collateral ratio updated. (currency_id, ratio)
+		CollateralRatioUpdated(CurrencyId, Permill),
+	}
+}
+
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {}
+	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+		fn deposit_event() = default;
+
+		pub fn set_extreme_ratio(origin, currency_id: T::CurrencyId, ratio: Permill) {
+			ensure_root(origin)?;
+			<ExtremeRatio<T>>::insert(currency_id, ratio);
+
+			Self::deposit_event(RawEvent::ExtremeRatioUpdated(currency_id, ratio));
+		}
+
+		pub fn set_liquidation_ratio(origin, currency_id: T::CurrencyId, ratio: Permill) {
+			ensure_root(origin)?;
+			<LiquidationRatio<T>>::insert(currency_id, ratio);
+
+			Self::deposit_event(RawEvent::LiquidationRatioUpdated(currency_id, ratio));
+		}
+
+		pub fn set_collateral_ratio(origin, currency_id: T::CurrencyId, ratio: Permill) {
+			ensure_root(origin)?;
+			<CollateralRatio<T>>::insert(currency_id, ratio);
+
+			Self::deposit_event(RawEvent::CollateralRatioUpdated(currency_id, ratio));
+		}
+	}
 }
 
 /// The module id.

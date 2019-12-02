@@ -292,6 +292,7 @@ impl orml_prices::Trait for Runtime {
 }
 
 impl synthetic_tokens::Trait for Runtime {
+	type Event = Event;
 	type CurrencyId = CurrencyId;
 	type Balance = Balance;
 	type LiquidityPoolId = LiquidityPoolId;
@@ -369,7 +370,7 @@ construct_runtime!(
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		Prices: orml_prices::{Module, Storage},
-		SyntheticTokens: synthetic_tokens::{Module, Storage},
+		SyntheticTokens: synthetic_tokens::{Module, Storage, Call, Event<T>},
 		SyntheticProtocol: synthetic_protocol::{Module, Call, Event<T>},
 	}
 );

@@ -81,7 +81,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::Minted(who, currency_id, pool_id, collateral_amount, synthetic_amount));
 		}
 
-		fn redeem(
+		pub fn redeem(
 			origin,
 			pool_id: T::LiquidityPoolId,
 			currency_id: T::CurrencyId,
@@ -94,7 +94,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::Redeemed(who, currency_id, pool_id, collateral_amount, synthetic_amount));
 		}
 
-		fn liquidate(
+		pub fn liquidate(
 			origin,
 			pool_id: T::LiquidityPoolId,
 			currency_id: T::CurrencyId,
