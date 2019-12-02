@@ -93,6 +93,18 @@ decl_module! {
 
 			Self::deposit_event(RawEvent::Redeemed(who, currency_id, pool_id, collateral_amount, synthetic_amount));
 		}
+
+		fn liquidate(
+			origin,
+			pool_id: T::LiquidityPoolId,
+			currency_id: T::CurrencyId,
+			synthetic_amount: T::Balance,
+		) {
+			let who = ensure_signed(origin)?;
+			let collateral_amount = Self::_liquidate(&who, pool_id, currency_id, synthetic_amount)?;
+
+			Self::deposit_event(RawEvent::Liquidated(who, currency_id, pool_id, collateral_amount, synthetic_amount));
+		}
 	}
 }
 
