@@ -3,7 +3,7 @@
 use codec::FullCodec;
 use frame_support::Parameter;
 use rstd::{fmt::Debug, result};
-use sr_primitives::{
+use sp_runtime::{
 	traits::{MaybeSerializeDeserialize, Member, SimpleArithmetic},
 	Permill,
 };

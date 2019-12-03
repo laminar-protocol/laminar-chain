@@ -7,10 +7,10 @@ use futures::{
 	FutureExt, TryFutureExt,
 };
 use log::info;
+use sc_cli::{display_role, informant, parse_and_prepare, NoCustom, ParseAndPrepare};
+pub use sc_cli::{error, IntoExit, VersionInfo};
+use sc_service::{AbstractService, Configuration, Roles as ServiceRoles};
 use std::cell::RefCell;
-use substrate_cli::{display_role, informant, parse_and_prepare, NoCustom, ParseAndPrepare};
-pub use substrate_cli::{error, IntoExit, VersionInfo};
-use substrate_service::{AbstractService, Configuration, Roles as ServiceRoles};
 use tokio::runtime::Runtime;
 
 /// Parse command line arguments into service configuration.
@@ -40,6 +40,9 @@ where
 			cmd.run_with_builder(|config: Config<_>| Ok(new_full_start!(config).0), load_spec, exit)
 		}
 		ParseAndPrepare::ImportBlocks(cmd) => {
+			cmd.run_with_builder(|config: Config<_>| Ok(new_full_start!(config).0), load_spec, exit)
+		}
+		ParseAndPrepare::CheckBlock(cmd) => {
 			cmd.run_with_builder(|config: Config<_>| Ok(new_full_start!(config).0), load_spec, exit)
 		}
 		ParseAndPrepare::PurgeChain(cmd) => cmd.run(load_spec),

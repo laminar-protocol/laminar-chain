@@ -2,7 +2,7 @@
 
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
 use rstd::{convert::TryInto, result};
-use sr_primitives::{
+use sp_runtime::{
 	traits::{CheckedAdd, CheckedMul, CheckedSub, Convert, Saturating, Zero},
 	Permill,
 };

@@ -3,7 +3,7 @@
 use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, Parameter, StorageMap};
 use frame_system::{self as system, ensure_root};
-use sr_primitives::{
+use sp_runtime::{
 	traits::{AccountIdConversion, MaybeSerializeDeserialize, Member, Saturating, SimpleArithmetic, Zero},
 	ModuleId, Permill,
 };

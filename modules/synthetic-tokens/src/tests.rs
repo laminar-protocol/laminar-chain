@@ -5,7 +5,7 @@
 use super::*;
 use frame_support::{assert_noop, assert_ok};
 use mock::{alice, ExtBuilder, SyntheticTokens, System, TestEvent, FEUR, ROOT};
-use sr_primitives::Permill;
+use sp_runtime::Permill;
 
 macro_rules! assert_noop_root {
 	($x:expr) => {
