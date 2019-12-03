@@ -10,6 +10,9 @@ use sr_primitives::{
 
 use orml_utilities::FixedU128;
 
+mod mock;
+mod tests;
+
 pub trait Trait: frame_system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 	type CurrencyId: Parameter + Member + Copy + MaybeSerializeDeserialize;
@@ -161,7 +164,7 @@ impl<T: Trait> Module<T> {
 
 		// ratio_to_liquidation_ratio_gap / liquidation_to_extreme_gap
 		ratio_to_liquidation_ratio_gap
-			.checked_sub(&liquidation_to_extreme_gap)
+			.checked_div(&liquidation_to_extreme_gap)
 			.expect("liquidation_ratio > extreme_ratio; qed")
 	}
 }

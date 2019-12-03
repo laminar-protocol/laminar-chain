@@ -17,6 +17,9 @@ frame-system = { git = "https://github.com/paritytech/substrate.git", default-fe
 orml-traits = { path = "../../orml/traits", default-features = false }
 orml-utilities = { path = "../../orml/utilities", default-features = false }
 
+[dev-dependencies]
+primitives = { package = "substrate-primitives",  git = "https://github.com/paritytech/substrate.git", default-features = false }
+
 [features]
 default = ["std"]
 std = [
