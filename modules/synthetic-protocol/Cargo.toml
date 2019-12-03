@@ -1,0 +1,48 @@
+[package]
+name = "module-synthetic-protocol"
+version = "0.0.1"
+authors = ["Laminar Developers <hello@laminar.one>"]
+edition = "2018"
+
+[dependencies]
+serde = { version = "1.0.101", optional = true }
+codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false }
+sr-primitives = { git = "https://github.com/paritytech/substrate.git", default-features = false }
+runtime_io = { package = "sr-io", git = "https://github.com/paritytech/substrate.git", default-features = false }
+rstd = { package = "sr-std", git = "https://github.com/paritytech/substrate.git", default-features = false }
+
+frame-support = { git = "https://github.com/paritytech/substrate.git", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate.git", default-features = false }
+
+orml-traits = { path = "../../orml/traits", default-features = false }
+orml-prices = { path = "../../orml/prices", default-features = false }
+orml-utilities = { path = "../../orml/utilities", default-features = false }
+
+module-primitives = { path = "../primitives", default-features = false }
+traits = { package = "module-traits", path = "../traits", default-features = false }
+synthetic-tokens = { package = "module-synthetic-tokens", path = "../synthetic-tokens", default-features = false }
+
+[dev-dependencies]
+primitives = { package = "substrate-primitives", git = "https://github.com/paritytech/substrate.git", default-features = false }
+pallet-balances = { git = "https://github.com/paritytech/substrate.git", default-features = false }
+pallet-indices = { git = "https://github.com/paritytech/substrate.git", default-features = false }
+orml-tokens = { path = "../../orml/tokens", default-features = false }
+orml-currencies = { path = "../../orml/currencies", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+	"serde",
+	"codec/std",
+	"sr-primitives/std",
+	"runtime_io/std",
+	"rstd/std",
+	"frame-support/std",
+	"frame-system/std",
+	"orml-prices/std",
+	"orml-traits/std",
+	"orml-utilities/std",
+	"module-primitives/std",
+	"traits/std",
+	"synthetic-tokens/std",
+]

@@ -13,6 +13,7 @@ use pallet_grandpa::fg_primitives;
 use pallet_grandpa::AuthorityList as GrandpaAuthorityList;
 use primitives::u32_trait::{_1, _2};
 use primitives::OpaqueMetadata;
+use rstd::marker;
 use rstd::prelude::*;
 use sr_api::impl_runtime_apis;
 use sr_primitives::traits::{
@@ -26,14 +27,18 @@ use sr_primitives::{
 use version::NativeVersion;
 use version::RuntimeVersion;
 
-use module_primitives::CurrencyId;
+use module_primitives::{CurrencyId, LiquidityPoolId};
 use orml_currencies::BasicCurrencyAdapter;
+use orml_traits::DataProvider;
+
+use module_primitives::{Balance, BalancePriceConverter, Price};
+use traits::{LiquidityPoolBaseTypes, LiquidityPoolsConfig, LiquidityPoolsCurrency};
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{construct_runtime, parameter_types, traits::Randomness, weights::Weight, StorageValue};
 #[cfg(any(feature = "std", test))]
 pub use sr_primitives::BuildStorage;
-pub use sr_primitives::{Perbill, Permill};
+pub use sr_primitives::{traits::Zero, Perbill, Permill};
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -48,9 +53,6 @@ pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::Account
 /// The type for looking up accounts. We don't expect more than 4 billion of them, but you
 /// never know...
 pub type AccountIndex = u32;
-
-/// Balance of an account.
-pub type Balance = u128;
 
 /// Signed version of Balance
 pub type Amount = i128;
@@ -247,11 +249,6 @@ impl pallet_membership::Trait<OperatorMembershipInstance> for Runtime {
 	type MembershipChanged = OperatorCollective;
 }
 
-impl flow::Trait for Runtime {
-	type Event = Event;
-	type Currency = Balances;
-}
-
 impl orml_oracle::Trait for Runtime {
 	type Event = Event;
 	type OnNewData = (); // TODO: update this
@@ -270,14 +267,86 @@ impl orml_tokens::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::FLOW;
+	pub const GetFlowTokenId: CurrencyId = CurrencyId::FLOW;
 }
+
+pub type FlowToken = BasicCurrencyAdapter<Runtime, pallet_balances::Module<Runtime>, Balance, orml_tokens::Error>;
 
 impl orml_currencies::Trait for Runtime {
 	type Event = Event;
 	type MultiCurrency = orml_tokens::Module<Runtime>;
-	type NativeCurrency = BasicCurrencyAdapter<Runtime, pallet_balances::Module<Runtime>, Balance, orml_tokens::Error>;
-	type GetNativeCurrencyId = GetNativeCurrencyId;
+	type NativeCurrency = FlowToken;
+	type GetNativeCurrencyId = GetFlowTokenId;
+}
+
+// TODO: replace this mock
+pub struct DummySource;
+impl DataProvider<CurrencyId, Price> for DummySource {
+	fn get(_currency: &CurrencyId) -> Option<Price> {
+		None
+	}
+}
+impl orml_prices::Trait for Runtime {
+	type CurrencyId = CurrencyId;
+	type Source = DummySource;
+}
+
+impl synthetic_tokens::Trait for Runtime {
+	type Event = Event;
+	type CurrencyId = CurrencyId;
+	type Balance = Balance;
+	type LiquidityPoolId = LiquidityPoolId;
+}
+
+// TODO: replace this mock
+pub struct DummyLiquidityPools<AccountId>(marker::PhantomData<AccountId>);
+impl LiquidityPoolBaseTypes for DummyLiquidityPools<AccountId> {
+	type LiquidityPoolId = LiquidityPoolId;
+	type CurrencyId = CurrencyId;
+}
+impl LiquidityPoolsConfig for DummyLiquidityPools<AccountId> {
+	fn get_bid_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
+		Permill::from_percent(3)
+	}
+
+	fn get_ask_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
+		Permill::from_percent(3)
+	}
+
+	fn get_additional_collateral_ratio(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
+		Permill::from_percent(3)
+	}
+}
+impl LiquidityPoolsCurrency<AccountId> for DummyLiquidityPools<AccountId> {
+	type Balance = Balance;
+	type Error = &'static str;
+
+	fn balance(_: Self::LiquidityPoolId) -> Self::Balance {
+		Zero::zero()
+	}
+
+	fn deposit(_from: &AccountId, _pool_id: Self::LiquidityPoolId, _amount: Self::Balance) -> Result<(), Self::Error> {
+		Ok(())
+	}
+
+	fn withdraw(_to: &AccountId, _pool_id: Self::LiquidityPoolId, _amount: Self::Balance) -> Result<(), Self::Error> {
+		Ok(())
+	}
+}
+parameter_types! {
+	pub const GetCollateralCurrencyId: CurrencyId = CurrencyId::AUSD;
+}
+type CollateralCurrency = orml_currencies::Currency<Runtime, GetCollateralCurrencyId>;
+impl synthetic_protocol::Trait for Runtime {
+	type Event = Event;
+	type MultiCurrency = orml_currencies::Module<Runtime>;
+	type CollateralCurrency = CollateralCurrency;
+	type GetCollateralCurrencyId = GetCollateralCurrencyId;
+	type PriceProvider = orml_prices::Module<Runtime>;
+	type LiquidityPoolsConfig = DummyLiquidityPools<AccountId>;
+	type LiquidityPoolsCurrency = DummyLiquidityPools<AccountId>;
+	type BalanceToPrice = BalancePriceConverter;
+	type PriceToBalance = BalancePriceConverter;
 }
 
 construct_runtime!(
@@ -300,7 +369,9 @@ construct_runtime!(
 		Oracle: orml_oracle::{Module, Storage, Call, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
-		Flow: flow::{Module, Storage, Call, Event<T>},
+		Prices: orml_prices::{Module, Storage},
+		SyntheticTokens: synthetic_tokens::{Module, Storage, Call, Event<T>},
+		SyntheticProtocol: synthetic_protocol::{Module, Call, Event<T>},
 	}
 );
 

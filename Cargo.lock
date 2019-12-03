@@ -858,11 +858,16 @@ dependencies = [
  "frame-executive 2.0.0 (git+https://github.com/paritytech/substrate.git)",
  "frame-support 2.0.0 (git+https://github.com/paritytech/substrate.git)",
  "frame-system 2.0.0 (git+https://github.com/paritytech/substrate.git)",
- "module-flow 0.0.1",
  "module-primitives 0.0.1",
+ "module-synthetic-protocol 0.0.1",
+ "module-synthetic-tokens 0.0.1",
+ "module-traits 0.0.1",
  "orml-currencies 0.0.1",
  "orml-oracle 0.0.1",
+ "orml-prices 0.1.0",
  "orml-tokens 0.0.1",
+ "orml-traits 0.0.1",
+ "orml-utilities 0.0.1",
  "pallet-aura 2.0.0 (git+https://github.com/paritytech/substrate.git)",
  "pallet-balances 2.0.0 (git+https://github.com/paritytech/substrate.git)",
  "pallet-collective 2.0.0 (git+https://github.com/paritytech/substrate.git)",
@@ -2385,7 +2390,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "module-flow"
+name = "module-margin-protocol"
 version = "0.0.1"
 dependencies = [
  "frame-support 2.0.0 (git+https://github.com/paritytech/substrate.git)",
@@ -2401,10 +2406,53 @@ dependencies = [
 name = "module-primitives"
 version = "0.0.1"
 dependencies = [
+ "orml-prices 0.1.0",
+ "orml-utilities 0.0.1",
  "parity-scale-codec 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.102 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 2.0.0 (git+https://github.com/paritytech/substrate.git)",
  "sr-std 2.0.0 (git+https://github.com/paritytech/substrate.git)",
+ "substrate-primitives 2.0.0 (git+https://github.com/paritytech/substrate.git)",
+]
+
+[[package]]
+name = "module-synthetic-protocol"
+version = "0.0.1"
+dependencies = [
+ "frame-support 2.0.0 (git+https://github.com/paritytech/substrate.git)",
+ "frame-system 2.0.0 (git+https://github.com/paritytech/substrate.git)",
+ "module-primitives 0.0.1",
+ "module-synthetic-tokens 0.0.1",
+ "module-traits 0.0.1",
+ "orml-currencies 0.0.1",
+ "orml-prices 0.1.0",
+ "orml-tokens 0.0.1",
+ "orml-traits 0.0.1",
+ "orml-utilities 0.0.1",
+ "pallet-balances 2.0.0 (git+https://github.com/paritytech/substrate.git)",
+ "pallet-indices 2.0.0 (git+https://github.com/paritytech/substrate.git)",
+ "parity-scale-codec 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.102 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-io 2.0.0 (git+https://github.com/paritytech/substrate.git)",
+ "sr-primitives 2.0.0 (git+https://github.com/paritytech/substrate.git)",
+ "sr-std 2.0.0 (git+https://github.com/paritytech/substrate.git)",
+ "substrate-primitives 2.0.0 (git+https://github.com/paritytech/substrate.git)",
+]
+
+[[package]]
+name = "module-synthetic-tokens"
+version = "0.0.1"
+dependencies = [
+ "frame-support 2.0.0 (git+https://github.com/paritytech/substrate.git)",
+ "frame-system 2.0.0 (git+https://github.com/paritytech/substrate.git)",
+ "orml-traits 0.0.1",
+ "orml-utilities 0.0.1",
+ "parity-scale-codec 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.102 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-io 2.0.0 (git+https://github.com/paritytech/substrate.git)",
+ "sr-primitives 2.0.0 (git+https://github.com/paritytech/substrate.git)",
+ "sr-std 2.0.0 (git+https://github.com/paritytech/substrate.git)",
+ "substrate-primitives 2.0.0 (git+https://github.com/paritytech/substrate.git)",
 ]
 
 [[package]]
