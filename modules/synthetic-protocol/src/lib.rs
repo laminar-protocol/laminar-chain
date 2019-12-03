@@ -17,6 +17,9 @@ use orml_utilities::FixedU128;
 
 use traits::{LiquidityPoolsConfig, LiquidityPoolsCurrency};
 
+mod mock;
+mod tests;
+
 type ErrorOf<T> = <<T as Trait>::MultiCurrency as MultiCurrency<<T as frame_system::Trait>::AccountId>>::Error;
 
 pub trait Trait: synthetic_tokens::Trait {

@@ -2424,14 +2424,19 @@ dependencies = [
  "module-primitives 0.0.1",
  "module-synthetic-tokens 0.0.1",
  "module-traits 0.0.1",
+ "orml-currencies 0.0.1",
  "orml-prices 0.1.0",
+ "orml-tokens 0.0.1",
  "orml-traits 0.0.1",
  "orml-utilities 0.0.1",
+ "pallet-balances 2.0.0 (git+https://github.com/paritytech/substrate.git)",
+ "pallet-indices 2.0.0 (git+https://github.com/paritytech/substrate.git)",
  "parity-scale-codec 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.102 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 2.0.0 (git+https://github.com/paritytech/substrate.git)",
  "sr-primitives 2.0.0 (git+https://github.com/paritytech/substrate.git)",
  "sr-std 2.0.0 (git+https://github.com/paritytech/substrate.git)",
+ "substrate-primitives 2.0.0 (git+https://github.com/paritytech/substrate.git)",
 ]
 
 [[package]]

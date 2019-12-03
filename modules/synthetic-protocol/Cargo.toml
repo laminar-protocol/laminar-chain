@@ -22,6 +22,13 @@ module-primitives = { path = "../primitives", default-features = false }
 traits = { package = "module-traits", path = "../traits", default-features = false }
 synthetic-tokens = { package = "module-synthetic-tokens", path = "../synthetic-tokens", default-features = false }
 
+[dev-dependencies]
+primitives = { package = "substrate-primitives", git = "https://github.com/paritytech/substrate.git", default-features = false }
+pallet-balances = { git = "https://github.com/paritytech/substrate.git", default-features = false }
+pallet-indices = { git = "https://github.com/paritytech/substrate.git", default-features = false }
+orml-tokens = { path = "../../orml/tokens", default-features = false }
+orml-currencies = { path = "../../orml/currencies", default-features = false }
+
 [features]
 default = ["std"]
 std = [
