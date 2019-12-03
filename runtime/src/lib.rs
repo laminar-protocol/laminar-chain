@@ -9,29 +9,34 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use aura_primitives::sr25519::AuthorityId as AuraId;
-use grandpa::fg_primitives;
-use grandpa::AuthorityList as GrandpaAuthorityList;
+use pallet_grandpa::fg_primitives;
+use pallet_grandpa::AuthorityList as GrandpaAuthorityList;
 use primitives::u32_trait::{_1, _2};
 use primitives::OpaqueMetadata;
+use rstd::marker;
 use rstd::prelude::*;
-use sr_api::impl_runtime_apis;
-use sr_primitives::traits::{
-	BlakeTwo256, Block as BlockT, ConvertInto, IdentifyAccount, NumberFor, StaticLookup, Verify,
-};
-use sr_primitives::weights::Weight;
-use sr_primitives::{
-	create_runtime_str, generic, impl_opaque_keys, transaction_validity::TransactionValidity, ApplyResult,
+use sp_api::impl_runtime_apis;
+use sp_runtime::traits::{BlakeTwo256, Block as BlockT, ConvertInto, IdentifyAccount, NumberFor, StaticLookup, Verify};
+use sp_runtime::{
+	create_runtime_str, generic, impl_opaque_keys, transaction_validity::TransactionValidity, ApplyExtrinsicResult,
 	MultiSignature,
 };
 #[cfg(feature = "std")]
 use version::NativeVersion;
 use version::RuntimeVersion;
 
+pub use module_primitives::{CurrencyId, LiquidityPoolId};
+use orml_currencies::BasicCurrencyAdapter;
+use orml_traits::DataProvider;
+
+use module_primitives::{Balance, BalancePriceConverter, Price};
+use traits::{LiquidityPoolBaseTypes, LiquidityPoolsConfig, LiquidityPoolsCurrency};
+
 // A few exports that help ease life for downstream crates.
+pub use frame_support::{construct_runtime, parameter_types, traits::Randomness, weights::Weight, StorageValue};
 #[cfg(any(feature = "std", test))]
-pub use sr_primitives::BuildStorage;
-pub use sr_primitives::{Perbill, Permill};
-pub use support::{construct_runtime, parameter_types, traits::Randomness, StorageValue};
+pub use sp_runtime::BuildStorage;
+pub use sp_runtime::{traits::Zero, Perbill, Permill};
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -46,9 +51,6 @@ pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::Account
 /// The type for looking up accounts. We don't expect more than 4 billion of them, but you
 /// never know...
 pub type AccountIndex = u32;
-
-/// Balance of an account.
-pub type Balance = u128;
 
 /// Signed version of Balance
 pub type Amount = i128;
@@ -69,7 +71,7 @@ pub type DigestItem = generic::DigestItem<Hash>;
 pub mod opaque {
 	use super::*;
 
-	pub use sr_primitives::OpaqueExtrinsic as UncheckedExtrinsic;
+	pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
 
 	/// Opaque block header type.
 	pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -155,20 +157,20 @@ impl system::Trait for Runtime {
 	type Version = Version;
 }
 
-impl aura::Trait for Runtime {
+impl pallet_aura::Trait for Runtime {
 	type AuthorityId = AuraId;
 }
 
-impl grandpa::Trait for Runtime {
+impl pallet_grandpa::Trait for Runtime {
 	type Event = Event;
 }
 
-impl indices::Trait for Runtime {
+impl pallet_indices::Trait for Runtime {
 	/// The type for recording indexing into the account enumeration. If this ever overflows, there
 	/// will be problems!
 	type AccountIndex = AccountIndex;
 	/// Use the standard means of resolving an index hint from an id.
-	type ResolveHint = indices::SimpleResolveHint<Self::AccountId, Self::AccountIndex>;
+	type ResolveHint = pallet_indices::SimpleResolveHint<Self::AccountId, Self::AccountIndex>;
 	/// Determine whether an account is dead.
 	type IsDeadAccount = Balances;
 	/// The ubiquitous event type.
@@ -179,7 +181,7 @@ parameter_types! {
 	pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
 }
 
-impl timestamp::Trait for Runtime {
+impl pallet_timestamp::Trait for Runtime {
 	/// A timestamp: milliseconds since the unix epoch.
 	type Moment = u64;
 	type OnTimestampSet = Aura;
@@ -192,7 +194,7 @@ parameter_types! {
 	pub const CreationFee: u128 = 0;
 }
 
-impl balances::Trait for Runtime {
+impl pallet_balances::Trait for Runtime {
 	/// The type for recording an account's balance.
 	type Balance = Balance;
 	/// What to do if an account's free balance gets zeroed.
@@ -213,8 +215,8 @@ parameter_types! {
 	pub const TransactionByteFee: Balance = 1;
 }
 
-impl transaction_payment::Trait for Runtime {
-	type Currency = balances::Module<Runtime>;
+impl pallet_transaction_payment::Trait for Runtime {
+	type Currency = pallet_balances::Module<Runtime>;
 	type OnTransactionPayment = ();
 	type TransactionBaseFee = TransactionBaseFee;
 	type TransactionByteFee = TransactionByteFee;
@@ -222,49 +224,127 @@ impl transaction_payment::Trait for Runtime {
 	type FeeMultiplierUpdate = ();
 }
 
-impl sudo::Trait for Runtime {
+impl pallet_sudo::Trait for Runtime {
 	type Event = Event;
 	type Proposal = Call;
 }
 
-type OperatorCollectiveInstance = collective::Instance1;
-impl collective::Trait<OperatorCollectiveInstance> for Runtime {
+type OperatorCollectiveInstance = pallet_collective::Instance1;
+impl pallet_collective::Trait<OperatorCollectiveInstance> for Runtime {
 	type Origin = Origin;
 	type Proposal = Call;
 	type Event = Event;
 }
 
-type OperatorMembershipInstance = membership::Instance1;
-impl membership::Trait<OperatorMembershipInstance> for Runtime {
+type OperatorMembershipInstance = pallet_membership::Instance1;
+impl pallet_membership::Trait<OperatorMembershipInstance> for Runtime {
 	type Event = Event;
-	type AddOrigin = collective::EnsureProportionMoreThan<_1, _2, AccountId, OperatorCollectiveInstance>;
-	type RemoveOrigin = collective::EnsureProportionMoreThan<_1, _2, AccountId, OperatorCollectiveInstance>;
-	type SwapOrigin = collective::EnsureProportionMoreThan<_1, _2, AccountId, OperatorCollectiveInstance>;
-	type ResetOrigin = collective::EnsureProportionMoreThan<_1, _2, AccountId, OperatorCollectiveInstance>;
+	type AddOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, OperatorCollectiveInstance>;
+	type RemoveOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, OperatorCollectiveInstance>;
+	type SwapOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, OperatorCollectiveInstance>;
+	type ResetOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, OperatorCollectiveInstance>;
 	type MembershipInitialized = OperatorCollective;
 	type MembershipChanged = OperatorCollective;
 }
 
-impl flow::Trait for Runtime {
-	type Event = Event;
-	type Currency = Balances;
-}
-
-impl oracle::Trait for Runtime {
+impl orml_oracle::Trait for Runtime {
 	type Event = Event;
 	type OnNewData = (); // TODO: update this
 	type OperatorProvider = (); // TODO: update this
-	type CombineData = oracle::DefaultCombineData<Runtime>;
+	type CombineData = orml_oracle::DefaultCombineData<Runtime>;
 	type Time = Timestamp;
-	type Key = u32; // TODO: update this
-	type Value = Balance;
+	type OracleKey = CurrencyId;
+	type OracleValue = Balance; // TODO: update this
 }
 
-impl tokens::Trait for Runtime {
+impl orml_tokens::Trait for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type Amount = Amount;
-	type CurrencyId = u32;
+	type CurrencyId = CurrencyId;
+}
+
+parameter_types! {
+	pub const GetFlowTokenId: CurrencyId = CurrencyId::FLOW;
+}
+
+pub type FlowToken = BasicCurrencyAdapter<Runtime, pallet_balances::Module<Runtime>, Balance, orml_tokens::Error>;
+
+impl orml_currencies::Trait for Runtime {
+	type Event = Event;
+	type MultiCurrency = orml_tokens::Module<Runtime>;
+	type NativeCurrency = FlowToken;
+	type GetNativeCurrencyId = GetFlowTokenId;
+}
+
+// TODO: replace this mock
+pub struct DummySource;
+impl DataProvider<CurrencyId, Price> for DummySource {
+	fn get(_currency: &CurrencyId) -> Option<Price> {
+		None
+	}
+}
+impl orml_prices::Trait for Runtime {
+	type CurrencyId = CurrencyId;
+	type Source = DummySource;
+}
+
+impl synthetic_tokens::Trait for Runtime {
+	type Event = Event;
+	type CurrencyId = CurrencyId;
+	type Balance = Balance;
+	type LiquidityPoolId = LiquidityPoolId;
+}
+
+// TODO: replace this mock
+pub struct DummyLiquidityPools<AccountId>(marker::PhantomData<AccountId>);
+impl LiquidityPoolBaseTypes for DummyLiquidityPools<AccountId> {
+	type LiquidityPoolId = LiquidityPoolId;
+	type CurrencyId = CurrencyId;
+}
+impl LiquidityPoolsConfig for DummyLiquidityPools<AccountId> {
+	fn get_bid_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
+		Permill::from_percent(3)
+	}
+
+	fn get_ask_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
+		Permill::from_percent(3)
+	}
+
+	fn get_additional_collateral_ratio(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
+		Permill::from_percent(3)
+	}
+}
+impl LiquidityPoolsCurrency<AccountId> for DummyLiquidityPools<AccountId> {
+	type Balance = Balance;
+	type Error = &'static str;
+
+	fn balance(_: Self::LiquidityPoolId) -> Self::Balance {
+		Zero::zero()
+	}
+
+	fn deposit(_from: &AccountId, _pool_id: Self::LiquidityPoolId, _amount: Self::Balance) -> Result<(), Self::Error> {
+		Ok(())
+	}
+
+	fn withdraw(_to: &AccountId, _pool_id: Self::LiquidityPoolId, _amount: Self::Balance) -> Result<(), Self::Error> {
+		Ok(())
+	}
+}
+parameter_types! {
+	pub const GetCollateralCurrencyId: CurrencyId = CurrencyId::AUSD;
+}
+type CollateralCurrency = orml_currencies::Currency<Runtime, GetCollateralCurrencyId>;
+impl synthetic_protocol::Trait for Runtime {
+	type Event = Event;
+	type MultiCurrency = orml_currencies::Module<Runtime>;
+	type CollateralCurrency = CollateralCurrency;
+	type GetCollateralCurrencyId = GetCollateralCurrencyId;
+	type PriceProvider = orml_prices::Module<Runtime>;
+	type LiquidityPoolsConfig = DummyLiquidityPools<AccountId>;
+	type LiquidityPoolsCurrency = DummyLiquidityPools<AccountId>;
+	type BalanceToPrice = BalancePriceConverter;
+	type PriceToBalance = BalancePriceConverter;
 }
 
 construct_runtime!(
@@ -274,19 +354,22 @@ construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
 		System: system::{Module, Call, Storage, Config, Event},
-		Timestamp: timestamp::{Module, Call, Storage, Inherent},
-		Aura: aura::{Module, Config<T>, Inherent(Timestamp)},
-		Grandpa: grandpa::{Module, Call, Storage, Config, Event},
-		Indices: indices::{default, Config<T>},
-		Balances: balances,
-		TransactionPayment: transaction_payment::{Module, Storage},
-		Sudo: sudo,
-		RandomnessCollectiveFlip: randomness_collective_flip::{Module, Call, Storage},
-		OperatorCollective: collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
-		OperatorMembership: membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
-		Flow: flow::{Module, Storage, Call, Event<T>},
-		Oracle: oracle::{Module, Storage, Call, Event<T>},
-		Tokens: tokens::{Module, Storage, Call, Event<T>, Config<T>},
+		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
+		Aura: pallet_aura::{Module, Config<T>, Inherent(Timestamp)},
+		Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
+		Indices: pallet_indices,
+		Balances: pallet_balances,
+		TransactionPayment: pallet_transaction_payment::{Module, Storage},
+		Sudo: pallet_sudo,
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
+		OperatorCollective: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
+		OperatorMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
+		Oracle: orml_oracle::{Module, Storage, Call, Event<T>},
+		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
+		Currencies: orml_currencies::{Module, Call, Event<T>},
+		Prices: orml_prices::{Module, Storage},
+		SyntheticTokens: synthetic_tokens::{Module, Storage, Call, Event<T>},
+		SyntheticProtocol: synthetic_protocol::{Module, Call, Event<T>},
 	}
 );
 
@@ -307,17 +390,17 @@ pub type SignedExtra = (
 	system::CheckEra<Runtime>,
 	system::CheckNonce<Runtime>,
 	system::CheckWeight<Runtime>,
-	transaction_payment::ChargeTransactionPayment<Runtime>,
+	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 );
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Call, SignedExtra>;
 /// Executive: handles dispatch to the various modules.
-pub type Executive = executive::Executive<Runtime, Block, system::ChainContext<Runtime>, Runtime, AllModules>;
+pub type Executive = frame_executive::Executive<Runtime, Block, system::ChainContext<Runtime>, Runtime, AllModules>;
 
 impl_runtime_apis! {
-	impl sr_api::Core<Block> for Runtime {
+	impl sp_api::Core<Block> for Runtime {
 		fn version() -> RuntimeVersion {
 			VERSION
 		}
@@ -331,14 +414,14 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl sr_api::Metadata<Block> for Runtime {
+	impl sp_api::Metadata<Block> for Runtime {
 		fn metadata() -> OpaqueMetadata {
 			Runtime::metadata().into()
 		}
 	}
 
 	impl block_builder_api::BlockBuilder<Block> for Runtime {
-		fn apply_extrinsic(extrinsic: <Block as BlockT>::Extrinsic) -> ApplyResult {
+		fn apply_extrinsic(extrinsic: <Block as BlockT>::Extrinsic) -> ApplyExtrinsicResult {
 			Executive::apply_extrinsic(extrinsic)
 		}
 
@@ -362,7 +445,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl tx_pool_api::TaggedTransactionQueue<Block> for Runtime {
+	impl txpool_runtime_api::TaggedTransactionQueue<Block> for Runtime {
 		fn validate_transaction(tx: <Block as BlockT>::Extrinsic) -> TransactionValidity {
 			Executive::validate_transaction(tx)
 		}
@@ -384,7 +467,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl substrate_session::SessionKeys<Block> for Runtime {
+	impl sp_session::SessionKeys<Block> for Runtime {
 		fn generate_session_keys(seed: Option<Vec<u8>>) -> Vec<u8> {
 			opaque::SessionKeys::generate(seed)
 		}
