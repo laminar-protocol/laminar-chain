@@ -2,17 +2,18 @@ use aura_primitives::sr25519::AuthorityId as AuraId;
 use grandpa_primitives::AuthorityId as GrandpaId;
 use primitives::{sr25519, Pair, Public};
 use runtime::{
-	AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig, IndicesConfig, Signature, SudoConfig,
-	SystemConfig, WASM_BINARY,
+	AccountId, AuraConfig, BalancesConfig, CurrencyId, GenesisConfig, GrandpaConfig, IndicesConfig,
+	OperatorMembershipConfig, Signature, SudoConfig, SystemConfig, TokensConfig, WASM_BINARY,
 };
-use sr_primitives::traits::{IdentifyAccount, Verify};
-use substrate_service;
+use sc_service;
+use serde_json::map::Map;
+use sp_runtime::traits::{IdentifyAccount, Verify};
 
 // Note this is the URL for the telemetry server
 //const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
-pub type ChainSpec = substrate_service::ChainSpec<GenesisConfig>;
+pub type ChainSpec = sc_service::ChainSpec<GenesisConfig>;
 
 /// The chain specification option. This is expected to come in from the CLI and
 /// is little more than one of a number of alternatives which can easily be converted
@@ -50,6 +51,10 @@ pub fn get_authority_keys_from_seed(s: &str) -> (AuraId, GrandpaId) {
 impl Alternative {
 	/// Get an actual chain config from one of the alternatives.
 	pub(crate) fn load(self) -> Result<ChainSpec, String> {
+		let mut properties = Map::new();
+		properties.insert("tokenSymbol".into(), "FLOW".into());
+		properties.insert("tokenDecimals".into(), 18.into());
+
 		Ok(match self {
 			Alternative::Development => ChainSpec::from_genesis(
 				"Development",
@@ -70,7 +75,7 @@ impl Alternative {
 				vec![],
 				None,
 				None,
-				None,
+				Some(properties),
 				None,
 			),
 			Alternative::LocalTestnet => ChainSpec::from_genesis(
@@ -103,7 +108,7 @@ impl Alternative {
 				vec![],
 				None,
 				None,
-				None,
+				Some(properties),
 				None,
 			),
 		})
@@ -136,7 +141,7 @@ fn testnet_genesis(
 			balances: endowed_accounts.iter().cloned().map(|k| (k, 1 << 60)).collect(),
 			vesting: vec![],
 		}),
-		pallet_sudo: Some(SudoConfig { key: root_key }),
+		pallet_sudo: Some(SudoConfig { key: root_key.clone() }),
 		pallet_aura: Some(AuraConfig {
 			authorities: initial_authorities.iter().map(|x| (x.0.clone())).collect(),
 		}),
@@ -144,7 +149,14 @@ fn testnet_genesis(
 			authorities: initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
 		}),
 		pallet_collective_Instance1: Some(Default::default()),
-		pallet_membership_Instance1: Some(Default::default()),
-		orml_tokens: Some(Default::default()),
+		pallet_membership_Instance1: Some(OperatorMembershipConfig {
+			members: vec![root_key],
+			phantom: Default::default(),
+		}),
+		orml_tokens: Some(TokensConfig {
+			tokens: vec![CurrencyId::FLOW, CurrencyId::AUSD],
+			initial_balance: 1_000_000_000_000_000_000_000_u128, // $1M
+			endowed_accounts: endowed_accounts.clone(),
+		}),
 	}
 }

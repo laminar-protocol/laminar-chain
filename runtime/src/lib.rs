@@ -15,11 +15,9 @@ use primitives::u32_trait::{_1, _2};
 use primitives::OpaqueMetadata;
 use rstd::marker;
 use rstd::prelude::*;
-use sr_api::impl_runtime_apis;
-use sr_primitives::traits::{
-	BlakeTwo256, Block as BlockT, ConvertInto, IdentifyAccount, NumberFor, StaticLookup, Verify,
-};
-use sr_primitives::{
+use sp_api::impl_runtime_apis;
+use sp_runtime::traits::{BlakeTwo256, Block as BlockT, ConvertInto, IdentifyAccount, NumberFor, StaticLookup, Verify};
+use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys, transaction_validity::TransactionValidity, ApplyExtrinsicResult,
 	MultiSignature,
 };
@@ -27,7 +25,7 @@ use sr_primitives::{
 use version::NativeVersion;
 use version::RuntimeVersion;
 
-use module_primitives::{CurrencyId, LiquidityPoolId};
+pub use module_primitives::{CurrencyId, LiquidityPoolId};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::DataProvider;
 
@@ -37,8 +35,8 @@ use traits::{LiquidityPoolBaseTypes, LiquidityPoolsConfig, LiquidityPoolsCurrenc
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{construct_runtime, parameter_types, traits::Randomness, weights::Weight, StorageValue};
 #[cfg(any(feature = "std", test))]
-pub use sr_primitives::BuildStorage;
-pub use sr_primitives::{traits::Zero, Perbill, Permill};
+pub use sp_runtime::BuildStorage;
+pub use sp_runtime::{traits::Zero, Perbill, Permill};
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -73,7 +71,7 @@ pub type DigestItem = generic::DigestItem<Hash>;
 pub mod opaque {
 	use super::*;
 
-	pub use sr_primitives::OpaqueExtrinsic as UncheckedExtrinsic;
+	pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
 
 	/// Opaque block header type.
 	pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -255,8 +253,8 @@ impl orml_oracle::Trait for Runtime {
 	type OperatorProvider = (); // TODO: update this
 	type CombineData = orml_oracle::DefaultCombineData<Runtime>;
 	type Time = Timestamp;
-	type Key = u32; // TODO: update this
-	type Value = Balance;
+	type OracleKey = CurrencyId;
+	type OracleValue = Balance; // TODO: update this
 }
 
 impl orml_tokens::Trait for Runtime {
@@ -359,7 +357,7 @@ construct_runtime!(
 		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
 		Aura: pallet_aura::{Module, Config<T>, Inherent(Timestamp)},
 		Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
-		Indices: pallet_indices::{default, Config<T>},
+		Indices: pallet_indices,
 		Balances: pallet_balances,
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		Sudo: pallet_sudo,
@@ -402,7 +400,7 @@ pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Call, SignedExt
 pub type Executive = frame_executive::Executive<Runtime, Block, system::ChainContext<Runtime>, Runtime, AllModules>;
 
 impl_runtime_apis! {
-	impl sr_api::Core<Block> for Runtime {
+	impl sp_api::Core<Block> for Runtime {
 		fn version() -> RuntimeVersion {
 			VERSION
 		}
@@ -416,7 +414,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl sr_api::Metadata<Block> for Runtime {
+	impl sp_api::Metadata<Block> for Runtime {
 		fn metadata() -> OpaqueMetadata {
 			Runtime::metadata().into()
 		}
@@ -447,7 +445,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl tx_pool_api::TaggedTransactionQueue<Block> for Runtime {
+	impl txpool_runtime_api::TaggedTransactionQueue<Block> for Runtime {
 		fn validate_transaction(tx: <Block as BlockT>::Extrinsic) -> TransactionValidity {
 			Executive::validate_transaction(tx)
 		}
@@ -469,7 +467,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl substrate_session::SessionKeys<Block> for Runtime {
+	impl sp_session::SessionKeys<Block> for Runtime {
 		fn generate_session_keys(seed: Option<Vec<u8>>) -> Vec<u8> {
 			opaque::SessionKeys::generate(seed)
 		}
