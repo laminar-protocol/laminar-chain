@@ -8,8 +8,7 @@ use primitives::H256;
 use rstd::marker;
 use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
 
-use orml_currencies::BasicCurrencyAdapter;
-use orml_traits::DataProvider;
+use orml_currencies::Currency;
 
 use module_primitives::{Balance, BalancePriceConverter, LiquidityPoolId};
 use traits::LiquidityPoolBaseTypes;
@@ -28,7 +27,6 @@ mod synthetic_protocol {
 
 impl_outer_event! {
 	pub enum TestEvent for Runtime {
-		pallet_indices<T>, pallet_balances<T>,
 		orml_tokens<T>, orml_currencies<T>,
 		synthetic_tokens<T>, synthetic_protocol<T>,
 	}
@@ -64,42 +62,6 @@ impl frame_system::Trait for Runtime {
 }
 pub type System = system::Module<Runtime>;
 
-impl pallet_indices::Trait for Runtime {
-	/// The type for recording indexing into the account enumeration. If this ever overflows, there
-	/// will be problems!
-	type AccountIndex = u32;
-	/// Determine whether an account is dead.
-	type IsDeadAccount = Balances;
-	/// Use the standard means of resolving an index hint from an id.
-	type ResolveHint = pallet_indices::SimpleResolveHint<Self::AccountId, Self::AccountIndex>;
-	/// The ubiquitous event type.
-	type Event = TestEvent;
-}
-type Indices = pallet_indices::Module<Runtime>;
-
-parameter_types! {
-	pub const ExistentialDeposit: u128 = 500;
-	pub const TransferFee: u128 = 0;
-	pub const CreationFee: u128 = 0;
-}
-
-impl pallet_balances::Trait for Runtime {
-	/// The type for recording an account's balance.
-	type Balance = Balance;
-	/// What to do if an account's free balance gets zeroed.
-	type OnFreeBalanceZero = ();
-	/// What to do if a new account is created.
-	type OnNewAccount = Indices;
-	type TransferPayment = ();
-	type DustRemoval = ();
-	/// The ubiquitous event type.
-	type Event = TestEvent;
-	type ExistentialDeposit = ExistentialDeposit;
-	type TransferFee = TransferFee;
-	type CreationFee = CreationFee;
-}
-type Balances = pallet_balances::Module<Runtime>;
-
 type Amount = i128;
 impl orml_tokens::Trait for Runtime {
 	type Event = TestEvent;
@@ -109,61 +71,76 @@ impl orml_tokens::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const GetFlowTokenId: CurrencyId = CurrencyId::FLOW;
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::FLOW;
 }
 
-pub type FlowToken = BasicCurrencyAdapter<Runtime, Balances, Balance, orml_tokens::Error>;
+type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
 
 impl orml_currencies::Trait for Runtime {
 	type Event = TestEvent;
 	type MultiCurrency = orml_tokens::Module<Runtime>;
-	type NativeCurrency = FlowToken;
-	type GetNativeCurrencyId = GetFlowTokenId;
+	type NativeCurrency = NativeCurrency;
+	type GetNativeCurrencyId = GetNativeCurrencyId;
 }
 
-pub const DEFAULT_PRICE: (Balance, Balance) = (12, 10);
-/// price = x / y
-#[derive(Debug)]
-pub struct MockPrice(Balance, Balance);
-impl MockPrice {
-	pub fn get(&self) -> Option<Price> {
-		if self.0 == 0 && self.1 == 0 {
-			None
-		} else {
-			Some(Price::from_rational(self.0, self.1))
+/// mock prices module, implements `PriceProvider`.
+pub mod mock_prices {
+	use frame_support::{decl_error, decl_module, decl_storage, Parameter, StorageMap};
+	// FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
+	// would cause compiling error in `decl_module!` and `construct_runtime!`
+	// #3295 https://github.com/paritytech/substrate/issues/3295
+	use super::Price;
+	use frame_system as system;
+	use orml_traits::PriceProvider;
+	use sp_runtime::traits::{MaybeSerializeDeserialize, Member};
+
+	pub trait Trait: frame_system::Trait {
+		type CurrencyId: Parameter + Member + Copy + MaybeSerializeDeserialize;
+	}
+
+	decl_storage! {
+		trait Store for Module<T: Trait> as MockPrices {
+			pub Prices get(fn prices): map T::CurrencyId => Option<Price>;
+		}
+
+		add_extra_genesis {
+			config(prices): Vec<(T::CurrencyId, Price)>;
+			build(|config: &GenesisConfig<T>| {
+				config.prices.iter().for_each(|(currency_id, price)| {
+					<Prices<T>>::insert(currency_id, price);
+				})
+			})
 		}
 	}
 
-	pub fn set_price(&mut self, x: Balance, y: Balance) {
-		self.0 = x;
-		self.1 = y;
+	decl_module! {
+		pub struct Module<T: Trait> for enum Call where origin: T::Origin {}
 	}
 
-	pub fn set_default(&mut self) {
-		self.0 = DEFAULT_PRICE.0;
-		self.1 = DEFAULT_PRICE.1;
+	impl<T: Trait> Module<T> {
+		pub fn set_mock_price(currency_id: T::CurrencyId, price: Option<Price>) {
+			if let Some(p) = price {
+				<Prices<T>>::insert(currency_id, p);
+			} else {
+				<Prices<T>>::remove(currency_id);
+			}
+		}
 	}
 
-	pub fn set_none(&mut self) {
-		self.0 = 0;
-		self.1 = 0;
-	}
-}
+	impl<T: Trait> PriceProvider<T::CurrencyId, Price> for Module<T> {
+		fn get_price(base: T::CurrencyId, quote: T::CurrencyId) -> Option<Price> {
+			let base_price = Self::prices(base)?;
+			let quote_price = Self::prices(quote)?;
 
-pub static mut MOCK_PRICE_SOURCE: MockPrice = MockPrice(DEFAULT_PRICE.0, DEFAULT_PRICE.1);
-pub struct TestSource;
-impl DataProvider<CurrencyId, Price> for TestSource {
-	fn get(currency: &CurrencyId) -> Option<Price> {
-		match currency {
-			CurrencyId::AUSD => Some(Price::from_rational(1, 1)),
-			_ => unsafe { MOCK_PRICE_SOURCE.get() },
+			quote_price.checked_div(&base_price)
 		}
 	}
 }
-impl orml_prices::Trait for Runtime {
+
+impl mock_prices::Trait for Runtime {
 	type CurrencyId = CurrencyId;
-	type Source = TestSource;
 }
+pub type MockPrices = mock_prices::Module<Runtime>;
 
 impl synthetic_tokens::Trait for Runtime {
 	type Event = TestEvent;
@@ -235,7 +212,7 @@ impl Trait for Runtime {
 	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type CollateralCurrency = CollateralCurrency;
 	type GetCollateralCurrencyId = GetCollateralCurrencyId;
-	type PriceProvider = orml_prices::Module<Runtime>;
+	type PriceProvider = MockPrices;
 	type LiquidityPoolsConfig = TestLiquidityPools<AccountId>;
 	type LiquidityPoolsCurrency = TestLiquidityPools<AccountId>;
 	type BalanceToPrice = BalancePriceConverter;
@@ -252,6 +229,7 @@ pub struct ExtBuilder {
 	currency_id: CurrencyId,
 	endowed_accounts: Vec<AccountId>,
 	initial_balance: Balance,
+	prices: Vec<(CurrencyId, Price)>,
 }
 
 impl Default for ExtBuilder {
@@ -260,6 +238,8 @@ impl Default for ExtBuilder {
 			currency_id: CurrencyId::AUSD,
 			endowed_accounts: vec![0],
 			initial_balance: 0,
+			// collateral price set to `1` for calculation simplicity.
+			prices: vec![(CurrencyId::AUSD, FixedU128::from_rational(1, 1))],
 		}
 	}
 }
@@ -275,11 +255,17 @@ impl ExtBuilder {
 		self.balances(vec![ALICE_ACC_ID], 100)
 	}
 
-	pub fn build_and_reset_env(self) -> runtime_io::TestExternalities {
-		unsafe {
-			MOCK_PRICE_SOURCE.set_default();
-		}
+	pub fn synthetic_price(mut self, price: Price) -> Self {
+		self.prices.push((CurrencyId::FEUR, price));
+		self
+	}
 
+	/// set synthetic price to `3`
+	pub fn synthetic_price_three(self) -> Self {
+		self.synthetic_price(Price::from_rational(3, 1))
+	}
+
+	pub fn build(self) -> runtime_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default()
 			.build_storage::<Runtime>()
 			.unwrap();
@@ -291,6 +277,10 @@ impl ExtBuilder {
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
+
+		mock_prices::GenesisConfig::<Runtime> { prices: self.prices }
+			.assimilate_storage(&mut t)
+			.unwrap();
 
 		t.into()
 	}
