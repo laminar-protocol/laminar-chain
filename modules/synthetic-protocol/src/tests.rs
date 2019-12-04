@@ -5,8 +5,8 @@
 use super::*;
 use frame_support::{assert_noop, assert_ok};
 use mock::{
-	origin_of, AccountId, Balance, CollateralCurrency, CurrencyId, ExtBuilder, MockPrices,
-	SyntheticCurrency, SyntheticProtocol, SyntheticTokens, System, TestEvent, ALICE, MOCK_POOL, ONE_MILL,
+	origin_of, AccountId, Balance, CollateralCurrency, CurrencyId, ExtBuilder, MockPrices, SyntheticCurrency,
+	SyntheticProtocol, SyntheticTokens, System, TestEvent, ALICE, MOCK_POOL, ONE_MILL,
 };
 
 fn mint_feur(who: AccountId, amount: Balance) -> result::Result<(), &'static str> {
