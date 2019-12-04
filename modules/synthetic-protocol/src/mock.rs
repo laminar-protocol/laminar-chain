@@ -5,17 +5,15 @@
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
 use frame_system as system;
 use primitives::H256;
-use rstd::marker;
 use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
 
 use orml_currencies::Currency;
 
-use module_primitives::{Balance, BalancePriceConverter, LiquidityPoolId};
-use traits::LiquidityPoolBaseTypes;
+use module_primitives::{BalancePriceConverter, LiquidityPoolId};
 
 use super::*;
 
-pub use module_primitives::CurrencyId;
+pub use module_primitives::{Balance, CurrencyId};
 
 impl_outer_origin! {
 	pub enum Origin for Runtime {}
@@ -42,7 +40,7 @@ parameter_types! {
 	pub const AvailableBlockRatio: Perbill = Perbill::one();
 }
 
-type AccountId = u32;
+pub type AccountId = u32;
 impl frame_system::Trait for Runtime {
 	type Origin = Origin;
 	type Call = ();
@@ -85,9 +83,11 @@ impl orml_currencies::Trait for Runtime {
 
 parameter_types! {
 	pub const GetCollateralCurrencyId: CurrencyId = CurrencyId::AUSD;
+	pub const GetSyntheticCurrencyId: CurrencyId = CurrencyId::FEUR;
 }
 
-type CollateralCurrency = orml_currencies::Currency<Runtime, GetCollateralCurrencyId>;
+pub type CollateralCurrency = orml_currencies::Currency<Runtime, GetCollateralCurrencyId>;
+pub type SyntheticCurrency = orml_currencies::Currency<Runtime, GetSyntheticCurrencyId>;
 
 impl synthetic_tokens::Trait for Runtime {
 	type Event = TestEvent;
@@ -95,16 +95,15 @@ impl synthetic_tokens::Trait for Runtime {
 	type Balance = Balance;
 	type LiquidityPoolId = LiquidityPoolId;
 }
-pub type SyntheticTokens = Module<Runtime>;
+pub type SyntheticTokens = synthetic_tokens::Module<Runtime>;
 
 /// Mock prices module, implements `PriceProvider`, with configurable prices to test different cases.
 pub mod mock_prices {
-	use frame_support::{decl_error, decl_module, decl_storage, Parameter, StorageMap};
+	use frame_support::{decl_module, decl_storage, Parameter, StorageMap};
 	// FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
 	// would cause compiling error in `decl_module!` and `construct_runtime!`
 	// #3295 https://github.com/paritytech/substrate/issues/3295
 	use super::Price;
-	use frame_system as system;
 	use orml_traits::PriceProvider;
 	use sp_runtime::traits::{MaybeSerializeDeserialize, Member};
 
@@ -156,18 +155,15 @@ impl mock_prices::Trait for Runtime {
 }
 pub type MockPrices = mock_prices::Module<Runtime>;
 
-pub const MOCK_POOL: LiquidityPoolId = 100;
-
 /// Mock liquidity pool module, implements liquidity pool related traits, with configurable additional collateral
 /// ratio and ask/bid spread, to test different cases.
 pub mod mock_liquidity_pool {
-	use frame_support::{decl_error, decl_module, decl_storage, Parameter, StorageValue};
+	use frame_support::{decl_module, decl_storage, Parameter, StorageValue};
 	// FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
 	// would cause compiling error in `decl_module!` and `construct_runtime!`
 	// #3295 https://github.com/paritytech/substrate/issues/3295
-	use super::{AccountId, Permill, Price};
-	use frame_system as system;
-	use orml_traits::{BasicCurrency, PriceProvider};
+	use super::{AccountId, Permill};
+	use orml_traits::BasicCurrency;
 	use sp_runtime::traits::{MaybeSerializeDeserialize, Member, SimpleArithmetic};
 	use traits::{LiquidityPoolBaseTypes, LiquidityPoolsConfig, LiquidityPoolsCurrency};
 
@@ -255,10 +251,12 @@ impl Trait for Runtime {
 }
 pub type SyntheticProtocol = Module<Runtime>;
 
-const ALICE_ACC_ID: AccountId = 0;
-pub fn alice() -> Origin {
-	Origin::signed(ALICE_ACC_ID)
+pub const ALICE: AccountId = 0;
+pub fn origin_of(account_id: AccountId) -> Origin {
+	Origin::signed(account_id)
 }
+
+pub const MOCK_POOL: LiquidityPoolId = 100;
 
 pub struct ExtBuilder {
 	currency_id: CurrencyId,
@@ -283,6 +281,7 @@ impl Default for ExtBuilder {
 	}
 }
 
+pub const ONE_MILL: Balance = 1000_000;
 impl ExtBuilder {
 	pub fn balances(mut self, account_ids: Vec<AccountId>, initial_balance: Balance) -> Self {
 		self.endowed_accounts = account_ids;
@@ -290,8 +289,10 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn one_hundred_usd_for_alice(self) -> Self {
-		self.balances(vec![ALICE_ACC_ID], 100)
+	// one_million is big enough for testing, considering spread is 0.5% on average, and small enough
+	// to do math for testing.
+	pub fn one_million_for_alice_n_mock_pool(self) -> Self {
+		self.balances(vec![ALICE, MOCK_POOL], ONE_MILL)
 	}
 
 	pub fn synthetic_price(mut self, price: Price) -> Self {
@@ -309,8 +310,8 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn point_five_percent_spread(self) -> Self {
-		self.spread(Permill::from_rational_approximation(5u32, 1000u32))
+	pub fn one_percent_spread(self) -> Self {
+		self.spread(Permill::from_percent(1))
 	}
 
 	pub fn additional_collateral_ratio(mut self, ratio: Permill) -> Self {

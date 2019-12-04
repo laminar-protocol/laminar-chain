@@ -159,7 +159,7 @@ impl<T: Trait> Module<T> {
 			let in_price_type = synthetic_by_price.checked_mul(&price).ok_or(Error::NumOverflow)?;
 			T::PriceToBalance::convert(in_price_type)
 		};
-		// additional_collateral = synthetic_value * (1 + ratio) - synthetic_amount
+		// additional_collateral = synthetic_value * (1 + ratio) - collateral
 		let additional_collateral =
 			Self::_calc_additional_collateral_amount(pool_id, currency_id, collateral, synthetic_value)?;
 
@@ -344,8 +344,7 @@ impl<T: Trait> Module<T> {
 		collateral: T::Balance,
 	) -> SynthesisResult<T> {
 		let ratio = T::LiquidityPoolsConfig::get_additional_collateral_ratio(pool_id, currency_id);
-		// should never overflow as ratio <= 1
-		let additional = collateral * T::PriceToBalance::convert(ratio.into());
+		let additional = ratio * collateral;
 
 		collateral.checked_add(&additional).ok_or(Error::NumOverflow)
 	}
