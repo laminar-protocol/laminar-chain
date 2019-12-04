@@ -158,7 +158,7 @@ pub type MockPrices = mock_prices::Module<Runtime>;
 /// Mock liquidity pool module, implements liquidity pool related traits, with configurable additional collateral
 /// ratio and ask/bid spread, to test different cases.
 pub mod mock_liquidity_pool {
-	use frame_support::{decl_module, decl_storage, Parameter, StorageValue};
+	use frame_support::{decl_module, decl_storage, Parameter};
 	// FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
 	// would cause compiling error in `decl_module!` and `construct_runtime!`
 	// #3295 https://github.com/paritytech/substrate/issues/3295
@@ -184,15 +184,7 @@ pub mod mock_liquidity_pool {
 		pub struct Module<T: Trait> for enum Call where origin: T::Origin {}
 	}
 
-	impl<T: Trait> Module<T> {
-		pub fn set_mock_additional_collateral_ratio(ratio: Permill) {
-			AdditionalCollateralRatio::put(ratio);
-		}
-
-		pub fn set_mock_spread(spread: Permill) {
-			Spread::put(spread);
-		}
-	}
+	impl<T: Trait> Module<T> {}
 
 	impl<T: Trait> LiquidityPoolBaseTypes for Module<T> {
 		type LiquidityPoolId = AccountId;

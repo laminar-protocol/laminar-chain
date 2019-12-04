@@ -15,7 +15,17 @@ fn mint_feur(who: AccountId, amount: Balance) -> result::Result<(), &'static str
 		MOCK_POOL,
 		CurrencyId::FEUR,
 		amount,
-		Permill::from_percent(2),
+		Permill::from_percent(10),
+	)
+}
+
+fn redeem_feur(who: AccountId, amount: Balance) -> result::Result<(), &'static str> {
+	SyntheticProtocol::redeem(
+		origin_of(who),
+		MOCK_POOL,
+		CurrencyId::FEUR,
+		amount,
+		Permill::from_percent(10),
 	)
 }
 
@@ -157,5 +167,112 @@ fn mint() {
 				synthetic,
 			));
 			assert!(System::events().iter().any(|record| record.event == event));
+		});
+}
+
+#[test]
+fn redeem_fails_if_not_enough_synthetic() {
+	ExtBuilder::default()
+		.one_million_for_alice_n_mock_pool()
+		.synthetic_price_three()
+		.one_percent_spread()
+		.ten_percent_additional_collateral_ratio()
+		.build()
+		.execute_with(|| {
+			assert_ok!(mint_feur(ALICE, ONE_MILL));
+			assert_noop!(redeem_feur(ALICE, ONE_MILL + 1), Error::BalanceTooLow.into());
+		});
+}
+
+#[test]
+fn redeem_fails_if_no_price() {
+	ExtBuilder::default()
+		.one_million_for_alice_n_mock_pool()
+		.synthetic_price_three()
+		.one_percent_spread()
+		.ten_percent_additional_collateral_ratio()
+		.build()
+		.execute_with(|| {
+			assert_ok!(mint_feur(ALICE, ONE_MILL));
+
+			MockPrices::set_mock_price(CurrencyId::FEUR, None);
+
+			assert_noop!(redeem_feur(ALICE, 1), Error::NoPrice.into());
+		});
+}
+
+#[test]
+fn redeem_fails_if_slippage_too_greedy() {
+	ExtBuilder::default()
+		.one_million_for_alice_n_mock_pool()
+		.synthetic_price_three()
+		.one_percent_spread()
+		.ten_percent_additional_collateral_ratio()
+		.build()
+		.execute_with(|| {
+			assert_ok!(mint_feur(ALICE, ONE_MILL));
+
+			assert_noop!(
+				SyntheticProtocol::redeem(
+					origin_of(ALICE),
+					MOCK_POOL,
+					CurrencyId::FEUR,
+					1,
+					Permill::from_rational_approximation(9u32, 1000u32)
+				),
+				Error::SlippageTooHigh.into()
+			);
+		});
+}
+
+#[test]
+fn redeem_fails_if_synthetic_position_too_low() {
+	let another_pool = 101;
+	assert_ne!(another_pool, MOCK_POOL);
+
+	ExtBuilder::default()
+		.balances(vec![ALICE, MOCK_POOL, another_pool], ONE_MILL)
+		.synthetic_price_three()
+		.one_percent_spread()
+		.ten_percent_additional_collateral_ratio()
+		.build()
+		.execute_with(|| {
+			assert_ok!(mint_feur(ALICE, ONE_MILL / 10));
+
+			// mint via another pool
+			assert_ok!(SyntheticProtocol::mint(
+				origin_of(ALICE),
+				another_pool,
+				CurrencyId::FEUR,
+				ONE_MILL / 10,
+				Permill::from_percent(10),
+			));
+
+			// redeem all in one pool, synthetic position would be too low
+			assert_noop!(
+				redeem_feur(ALICE, SyntheticCurrency::balance(&ALICE)),
+				Error::LiquidityPoolSyntheticPositionTooLow.into()
+			);
+		});
+}
+
+#[test]
+fn redeem_fails_if_collateral_position_too_low() {
+	ExtBuilder::default()
+		.one_million_for_alice_n_mock_pool()
+		.synthetic_price_three()
+		.one_percent_spread()
+		.ten_percent_additional_collateral_ratio()
+		.build()
+		.execute_with(|| {
+			assert_ok!(mint_feur(ALICE, ONE_MILL));
+
+			// price changed, collateral position would be too low to redeem
+			MockPrices::set_mock_price(CurrencyId::FEUR, Some(Price::from_rational(4, 1)));
+
+			assert_noop!(
+				redeem_feur(ALICE, SyntheticCurrency::balance(&ALICE)),
+				Error::LiquidityPoolCollateralPositionTooLow.into()
+			);
 		});
 }

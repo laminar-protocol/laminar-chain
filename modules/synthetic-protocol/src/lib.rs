@@ -380,10 +380,12 @@ impl<T: Trait> Module<T> {
 		let mut refund_to_pool = Zero::zero();
 		// TODO: handle the case `required_collateral > collateral_position`
 		if required_collateral <= collateral_position {
+			// collateral_to_remove = collateral_position - required_collateral
 			collateral_to_remove = collateral_position
 				.checked_sub(&required_collateral)
 				.expect("ensured high enough collateral position; qed");
 			// TODO: handle the case zero `refund_to_pool`
+			// refund_to_pool = collateral_to_remove - collateral
 			refund_to_pool = collateral_to_remove
 				.checked_sub(&collateral)
 				.ok_or(Error::LiquidityPoolCollateralPositionTooLow)?;
