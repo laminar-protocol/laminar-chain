@@ -3,7 +3,7 @@
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
 use rstd::{convert::TryInto, result};
 use sp_runtime::{
-	traits::{CheckedAdd, CheckedMul, CheckedSub, Convert, Saturating, Zero},
+	traits::{CheckedAdd, CheckedSub, Convert, Saturating, Zero},
 	Permill,
 };
 // FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
@@ -402,16 +402,16 @@ impl<T: Trait> Module<T> {
 		pool_id: T::LiquidityPoolId,
 		currency_id: T::CurrencyId,
 		price: Price,
-		synthetic: T::Balance,
-		collateral: T::Balance,
+		burned_synthetic: T::Balance,
+		liquidized_collateral: T::Balance,
 	) -> result::Result<(T::Balance, T::Balance, T::Balance), Error> {
 		let (collateral_position, synthetic_position) = <SyntheticTokens<T>>::get_position(pool_id, currency_id);
 		ensure!(
-			synthetic_position >= synthetic,
+			synthetic_position >= burned_synthetic,
 			Error::LiquidityPoolSyntheticPositionTooLow,
 		);
 		ensure!(
-			collateral_position >= collateral,
+			collateral_position >= liquidized_collateral,
 			Error::LiquidityPoolCollateralPositionTooLow,
 		);
 
@@ -424,7 +424,7 @@ impl<T: Trait> Module<T> {
 		};
 		// if synthetic position not backed by enough collateral, no incentive
 		if collateral_position <= synthetic_position_value {
-			return Ok((collateral, Zero::zero(), Zero::zero()));
+			return Ok((liquidized_collateral, Zero::zero(), Zero::zero()));
 		}
 
 		// current_ratio = collateral_position / synthetic_position_value
@@ -443,10 +443,10 @@ impl<T: Trait> Module<T> {
 		ensure!(current_ratio < safe_ratio_threshold, Error::StillInSafePosition);
 
 		let new_synthetic_position = synthetic_position
-			.checked_sub(&synthetic)
+			.checked_sub(&burned_synthetic)
 			.expect("ensured high enough synthetic position; qed");
 		let new_collateral_position = collateral_position
-			.checked_sub(&collateral)
+			.checked_sub(&liquidized_collateral)
 			.expect("ensured high enough collateral position; qed");
 
 		// with_current_ratio = new_synthetic_position * price * current_ratio
@@ -467,21 +467,26 @@ impl<T: Trait> Module<T> {
 				.expect("ensured new collateral position higher; qed");
 			let incentive_ratio = <SyntheticTokens<T>>::incentive_ratio(currency_id, current_ratio);
 			// incentive = available_for_incentive * incentive_ratio
-			let incentive = available_for_incentive
-				.checked_mul(&T::PriceToBalance::convert(incentive_ratio))
-				.ok_or(Error::NumOverflow)?;
+			let incentive = {
+				let in_price = T::BalanceToPrice::convert(available_for_incentive)
+					.checked_mul(&incentive_ratio)
+					.ok_or(Error::NumOverflow)?;
+				T::PriceToBalance::convert(in_price)
+			};
 
 			let pool_refund_collateral = available_for_incentive
 				.checked_sub(&incentive)
 				.expect("available_for_incentive > incentive; qed");
-			let collateral_with_incentive = collateral.checked_add(&incentive).ok_or(Error::NumOverflow)?;
+			let collateral_with_incentive = liquidized_collateral
+				.checked_add(&incentive)
+				.ok_or(Error::NumOverflow)?;
 			let collateral_with_incentive_and_refund = collateral_with_incentive
 				.checked_add(&pool_refund_collateral)
 				.ok_or(Error::NumOverflow)?;
 			Ok((collateral_with_incentive_and_refund, pool_refund_collateral, incentive))
 		} else {
 			// no more incentive could be given
-			Ok((collateral, Zero::zero(), Zero::zero()))
+			Ok((liquidized_collateral, Zero::zero(), Zero::zero()))
 		}
 	}
 }
