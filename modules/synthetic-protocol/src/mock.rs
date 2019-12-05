@@ -99,11 +99,8 @@ pub type SyntheticTokens = synthetic_tokens::Module<Runtime>;
 
 /// Mock prices module, implements `PriceProvider`, with configurable prices to test different cases.
 pub mod mock_prices {
-	use frame_support::{decl_module, decl_storage, Parameter, StorageMap};
-	// FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
-	// would cause compiling error in `decl_module!` and `construct_runtime!`
-	// #3295 https://github.com/paritytech/substrate/issues/3295
 	use super::Price;
+	use frame_support::{decl_module, decl_storage, Parameter, StorageMap};
 	use orml_traits::PriceProvider;
 	use sp_runtime::traits::{MaybeSerializeDeserialize, Member};
 
@@ -158,11 +155,8 @@ pub type MockPrices = mock_prices::Module<Runtime>;
 /// Mock liquidity pool module, implements liquidity pool related traits, with configurable additional collateral
 /// ratio and ask/bid spread, to test different cases.
 pub mod mock_liquidity_pool {
-	use frame_support::{decl_module, decl_storage, Parameter};
-	// FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
-	// would cause compiling error in `decl_module!` and `construct_runtime!`
-	// #3295 https://github.com/paritytech/substrate/issues/3295
 	use super::{AccountId, Permill};
+	use frame_support::{decl_module, decl_storage, Parameter};
 	use orml_traits::BasicCurrency;
 	use sp_runtime::traits::{MaybeSerializeDeserialize, Member, SimpleArithmetic};
 	use traits::{LiquidityPoolBaseTypes, LiquidityPoolsConfig, LiquidityPoolsCurrency};
