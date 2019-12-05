@@ -250,6 +250,7 @@ pub fn origin_of(account_id: AccountId) -> Origin {
 }
 
 pub const MOCK_POOL: LiquidityPoolId = 100;
+pub const ANOTHER_MOCK_POOL: LiquidityPoolId = 101;
 
 pub struct ExtBuilder {
 	currency_id: CurrencyId,
@@ -283,7 +284,7 @@ impl ExtBuilder {
 	}
 
 	// one_million is big enough for testing, considering spread is 0.5% on average, and small enough
-	// to do math for testing.
+	// to do math verification by hand.
 	pub fn one_million_for_alice_n_mock_pool(self) -> Self {
 		self.balances(vec![ALICE, MOCK_POOL], ONE_MILL)
 	}
