@@ -5,8 +5,8 @@ use crate::{
 	LiquidityPoolOption,
 };
 
-use paint_support::assert_ok;
-use sr_primitives::Perbill;
+use frame_support::assert_ok;
+use sp_runtime::Perbill;
 
 #[test]
 fn should_create_pool() {

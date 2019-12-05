@@ -1,5 +1,5 @@
 use codec::{Decode, Encode};
-use sr_primitives::{Perbill, RuntimeDebug};
+use sp_runtime::{Perbill, RuntimeDebug};
 
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct LiquidityPoolOption {

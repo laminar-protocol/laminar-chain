@@ -6,10 +6,10 @@ mod tests;
 
 pub use liquidity_pool_option::LiquidityPoolOption;
 
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch::Result, ensure, Parameter};
 use frame_system::{self as system, ensure_signed};
-use paint_support::{decl_error, decl_event, decl_module, decl_storage, dispatch::Result, ensure, Parameter};
 use rstd::result;
-use sr_primitives::{
+use sp_runtime::{
 	traits::{CheckedAdd, MaybeSerializeDeserialize, Member, One, SimpleArithmetic, Zero},
 	Perbill,
 };
