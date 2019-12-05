@@ -244,6 +244,7 @@ impl Trait for Runtime {
 pub type SyntheticProtocol = Module<Runtime>;
 
 pub const ALICE: AccountId = 0;
+pub const BOB: AccountId = 1;
 pub fn origin_of(account_id: AccountId) -> Origin {
 	Origin::signed(account_id)
 }
