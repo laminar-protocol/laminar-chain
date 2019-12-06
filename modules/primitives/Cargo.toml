@@ -12,6 +12,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", default-feat
 rstd = { package = "sp-std", git = "https://github.com/paritytech/substrate.git", default-features = false }
 orml-utilities = { path = "../../orml/utilities", default-features = false }
 orml-prices = { path = "../../orml/prices", default-features = false }
+bitmask = "0.5.0"
 
 [features]
 default = ["std"]

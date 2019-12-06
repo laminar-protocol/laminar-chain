@@ -6,6 +6,7 @@ use crate::{
 };
 
 use frame_support::assert_ok;
+use primitives::{Leverage, Leverages};
 use sp_runtime::Permill;
 
 #[test]
@@ -77,6 +78,8 @@ fn should_set_spread() {
 			bid_spread: Permill::one(),
 			ask_spread: Permill::one(),
 			additional_collateral_ratio: None,
+			enabled_longs: Leverages::none(),
+			enabled_shorts: Leverages::none(),
 		};
 
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, 1), Some(pool_option));
@@ -98,6 +101,32 @@ fn should_set_additional_collateral_ratio() {
 			bid_spread: Permill::zero(),
 			ask_spread: Permill::zero(),
 			additional_collateral_ratio: Some(Permill::from_percent(120)),
+			enabled_longs: Leverages::none(),
+			enabled_shorts: Leverages::none(),
+		};
+
+		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, 1), Some(pool_option));
+	})
+}
+
+#[test]
+fn should_set_enabled_trades() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE), 1));
+		assert_ok!(ModuleLiquidityPools::set_enabled_trades(
+			Origin::signed(ALICE),
+			0,
+			1,
+			Leverage::Ten.into(),
+			Leverage::Five.into()
+		));
+
+		let pool_option = LiquidityPoolOption {
+			bid_spread: Permill::zero(),
+			ask_spread: Permill::zero(),
+			additional_collateral_ratio: None,
+			enabled_longs: Leverage::Ten.into(),
+			enabled_shorts: Leverage::Five.into(),
 		};
 
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, 1), Some(pool_option));

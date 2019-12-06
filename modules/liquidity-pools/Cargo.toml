@@ -15,9 +15,10 @@ frame-support = { git = "https://github.com/paritytech/substrate.git", default-f
 frame-system = { git = "https://github.com/paritytech/substrate.git", default-features = false }
 
 traits = { package = "module-traits", path = "../traits", default-features = false }
+primitives = { package = "module-primitives", path = "../primitives", default-features = false }
 
 [dev-dependencies]
-primitives = { package = "sp-core",  git = "https://github.com/paritytech/substrate.git", default-features = false }
+sp-core = { package = "sp-core",  git = "https://github.com/paritytech/substrate.git", default-features = false }
 
 [features]
 default = ["std"]
@@ -30,4 +31,5 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 	"traits/std",
+	"primitives/std",
 ]

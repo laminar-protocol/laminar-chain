@@ -8,6 +8,7 @@ pub use liquidity_pool_option::LiquidityPoolOption;
 
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch::Result, ensure, Parameter};
 use frame_system::{self as system, ensure_signed};
+use primitives::Leverages;
 use rstd::result;
 use sp_runtime::{
 	traits::{CheckedAdd, MaybeSerializeDeserialize, Member, One, SimpleArithmetic, Zero},
@@ -74,6 +75,10 @@ decl_module! {
 			Self::_set_additional_collateral_ratio(who, pool_id, currency_id, ratio).map_err(|e| e.into())
 		}
 
+		pub fn set_enabled_trades(origin, pool_id: T::LiquidityPoolId, currency_id: T::CurrencyId, longs: Leverages, shorts: Leverages) -> Result {
+			let who = ensure_signed(origin)?;
+			Self::_set_enabled_trades(who, pool_id, currency_id, longs, shorts).map_err(|e| e.into())
+		}
 	}
 }
 
@@ -157,6 +162,26 @@ impl<T: Trait> Module<T> {
 		match <LiquidityPoolOptions<T>>::get(&pool_id, &currency_id) {
 			Some(mut pool_option) => {
 				pool_option.additional_collateral_ratio = ratio;
+				<LiquidityPoolOptions<T>>::insert(pool_id, currency_id, pool_option);
+				Ok(())
+			}
+			None => Err(Error::PoolNotFound),
+		}
+	}
+
+	fn _set_enabled_trades(
+		who: T::AccountId,
+		pool_id: T::LiquidityPoolId,
+		currency_id: T::CurrencyId,
+		longs: Leverages,
+		shorts: Leverages,
+	) -> result::Result<(), Error> {
+		ensure!(Self::is_owner(pool_id, who), Error::NoPermission);
+
+		match <LiquidityPoolOptions<T>>::get(&pool_id, &currency_id) {
+			Some(mut pool_option) => {
+				pool_option.enabled_longs = longs;
+				pool_option.enabled_shorts = shorts;
 				<LiquidityPoolOptions<T>>::insert(pool_id, currency_id, pool_option);
 				Ok(())
 			}
