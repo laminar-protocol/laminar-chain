@@ -1,6 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use bitmask::bitmask;
 use codec::{Decode, Encode};
 use sp_runtime::{traits::Convert, RuntimeDebug};
 
@@ -55,6 +54,9 @@ impl Convert<Price, Balance> for BalancePriceConverter {
 		}
 	}
 }
+
+#[macro_use]
+extern crate bitmask;
 
 bitmask! {
 	#[derive(Encode, Decode, Default)]
