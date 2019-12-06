@@ -2417,8 +2417,6 @@ dependencies = [
  "orml-tokens 0.0.1",
  "orml-traits 0.0.1",
  "orml-utilities 0.0.1",
- "pallet-balances 2.0.0 (git+https://github.com/paritytech/substrate.git)",
- "pallet-indices 2.0.0 (git+https://github.com/paritytech/substrate.git)",
  "parity-scale-codec 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.103 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-core 2.0.0 (git+https://github.com/paritytech/substrate.git)",

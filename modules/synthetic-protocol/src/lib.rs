@@ -3,7 +3,7 @@
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
 use rstd::{convert::TryInto, result};
 use sp_runtime::{
-	traits::{CheckedAdd, CheckedMul, CheckedSub, Convert, Saturating, Zero},
+	traits::{CheckedAdd, CheckedSub, Convert, Saturating, Zero},
 	Permill,
 };
 // FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
@@ -159,7 +159,7 @@ impl<T: Trait> Module<T> {
 			let in_price_type = synthetic_by_price.checked_mul(&price).ok_or(Error::NumOverflow)?;
 			T::PriceToBalance::convert(in_price_type)
 		};
-		// additional_collateral = synthetic_value * (1 + ratio) - synthetic_amount
+		// additional_collateral = synthetic_value * (1 + ratio) - collateral
 		let additional_collateral =
 			Self::_calc_additional_collateral_amount(pool_id, currency_id, collateral, synthetic_value)?;
 
@@ -201,35 +201,36 @@ impl<T: Trait> Module<T> {
 		let bid_price = Self::_get_bid_price(pool_id, currency_id, price, Some(max_slippage))?;
 
 		// collateral = synthetic * bid_price
-		let collateral = {
+		let redeemed_collateral = {
 			let collateral_by_price = T::BalanceToPrice::convert(synthetic)
 				.checked_mul(&bid_price)
 				.ok_or(Error::NumOverflow)?;
 			T::PriceToBalance::convert(collateral_by_price)
 		};
 
-		let (collateral_to_remove, refund_to_pool) =
-			Self::_calc_remove_position(pool_id, currency_id, price, synthetic, collateral)?;
+		let (collateral_position_delta, pool_refund_collateral) =
+			Self::_calc_remove_position(pool_id, currency_id, price, synthetic, redeemed_collateral)?;
 
 		ensure!(
-			T::CollateralCurrency::balance(&<SyntheticTokens<T>>::account_id()) >= collateral + refund_to_pool,
+			T::CollateralCurrency::balance(&<SyntheticTokens<T>>::account_id())
+				>= redeemed_collateral + pool_refund_collateral,
 			Error::NotEnoughLockedCollateralAvailable,
 		);
 
-		// TODO: calculate and add interest to `refund_to_pool`
+		// TODO: calculate and add interest to `pool_refund_collateral`
 
 		// burn synthetic
 		T::MultiCurrency::withdraw(currency_id, who, synthetic).map_err(|e| e.into())?;
 
 		// redeem collateral
-		T::CollateralCurrency::transfer(&<SyntheticTokens<T>>::account_id(), who, collateral)
+		T::CollateralCurrency::transfer(&<SyntheticTokens<T>>::account_id(), who, redeemed_collateral)
 			.expect("ensured enough locked collateral; qed");
-		T::LiquidityPoolsCurrency::deposit(&<SyntheticTokens<T>>::account_id(), pool_id, refund_to_pool)
+		T::LiquidityPoolsCurrency::deposit(&<SyntheticTokens<T>>::account_id(), pool_id, pool_refund_collateral)
 			.expect("ensured enough locked collateral; qed");
 
-		<SyntheticTokens<T>>::remove_position(pool_id, currency_id, collateral_to_remove, synthetic);
+		<SyntheticTokens<T>>::remove_position(pool_id, currency_id, collateral_position_delta, synthetic);
 
-		Ok(collateral)
+		Ok(redeemed_collateral)
 	}
 
 	fn _liquidate(
@@ -254,10 +255,10 @@ impl<T: Trait> Module<T> {
 			T::PriceToBalance::convert(in_price)
 		};
 
-		let (collateral_to_remove, refund_to_pool, incentive) =
+		let (collateral_position_delta, pool_refund_collateral, incentive) =
 			Self::_calc_remove_position_and_incentive(pool_id, currency_id, price, synthetic, collateral)?;
 
-		// TODO: calculate and add interest to `refund_to_pool`
+		// TODO: calculate and add interest to `pool_refund_collateral`
 
 		// burn synthetic
 		T::MultiCurrency::withdraw(currency_id, who, synthetic).map_err(|e| e.into())?;
@@ -268,10 +269,10 @@ impl<T: Trait> Module<T> {
 			.expect("ensured enough locked collateral; qed");
 
 		// refund to pool
-		T::LiquidityPoolsCurrency::deposit(&<SyntheticTokens<T>>::account_id(), pool_id, refund_to_pool)
+		T::LiquidityPoolsCurrency::deposit(&<SyntheticTokens<T>>::account_id(), pool_id, pool_refund_collateral)
 			.expect("ensured enough locked collateral; qed");
 
-		<SyntheticTokens<T>>::remove_position(pool_id, currency_id, collateral_to_remove, synthetic);
+		<SyntheticTokens<T>>::remove_position(pool_id, currency_id, collateral_position_delta, synthetic);
 
 		Ok(collateral)
 	}
@@ -344,28 +345,27 @@ impl<T: Trait> Module<T> {
 		collateral: T::Balance,
 	) -> SynthesisResult<T> {
 		let ratio = T::LiquidityPoolsConfig::get_additional_collateral_ratio(pool_id, currency_id);
-		// should never overflow as ratio <= 1
-		let additional = collateral * T::PriceToBalance::convert(ratio.into());
+		let additional = ratio * collateral;
 
 		collateral.checked_add(&additional).ok_or(Error::NumOverflow)
 	}
 
-	/// Calculate position change for a remove, if ok, return with `(collateral_to_remove, refund_to_pool)`
+	/// Calculate position change for a remove, if ok, return with `(collateral_position_delta, pool_refund_collateral)`
 	fn _calc_remove_position(
 		pool_id: T::LiquidityPoolId,
 		currency_id: T::CurrencyId,
 		price: Price,
-		synthetic: T::Balance,
-		collateral: T::Balance,
+		burned_synthetic: T::Balance,
+		redeemed_collateral: T::Balance,
 	) -> result::Result<(T::Balance, T::Balance), Error> {
 		let (collateral_position, synthetic_position) = <SyntheticTokens<T>>::get_position(pool_id, currency_id);
 
 		ensure!(
-			synthetic_position >= synthetic,
+			synthetic_position >= burned_synthetic,
 			Error::LiquidityPoolSyntheticPositionTooLow,
 		);
 		let new_synthetic_position = synthetic_position
-			.checked_sub(&synthetic)
+			.checked_sub(&burned_synthetic)
 			.expect("ensured high enough synthetic position; qed");
 
 		// new_synthetic_value = new_synthetic_position * price
@@ -377,39 +377,41 @@ impl<T: Trait> Module<T> {
 		};
 		let required_collateral = Self::_with_additional_collateral(pool_id, currency_id, new_synthetic_value)?;
 
-		let mut collateral_to_remove = collateral;
-		let mut refund_to_pool = Zero::zero();
+		let mut collateral_position_delta = redeemed_collateral;
+		let mut pool_refund_collateral = Zero::zero();
 		// TODO: handle the case `required_collateral > collateral_position`
 		if required_collateral <= collateral_position {
-			collateral_to_remove = collateral_position
+			// collateral_position_delta = collateral_position - required_collateral
+			collateral_position_delta = collateral_position
 				.checked_sub(&required_collateral)
 				.expect("ensured high enough collateral position; qed");
-			// TODO: handle the case zero `refund_to_pool`
-			refund_to_pool = collateral_to_remove
-				.checked_sub(&collateral)
+			// TODO: handle the case zero `pool_refund_collateral`
+			// pool_refund_collateral = collateral_position_delta - collateral
+			pool_refund_collateral = collateral_position_delta
+				.checked_sub(&redeemed_collateral)
 				.ok_or(Error::LiquidityPoolCollateralPositionTooLow)?;
 		}
 
-		Ok((collateral_to_remove, refund_to_pool))
+		Ok((collateral_position_delta, pool_refund_collateral))
 	}
 
 	/// Calculate position change and incentive for a remove.
 	///
-	/// If `Ok`, return with `(collateral_to_remove, refund_to_pool, incentive)`
+	/// If `Ok`, return with `(collateral_position_delta, pool_refund_collateral, incentive)`
 	fn _calc_remove_position_and_incentive(
 		pool_id: T::LiquidityPoolId,
 		currency_id: T::CurrencyId,
 		price: Price,
-		synthetic: T::Balance,
-		collateral: T::Balance,
+		burned_synthetic: T::Balance,
+		liquidized_collateral: T::Balance,
 	) -> result::Result<(T::Balance, T::Balance, T::Balance), Error> {
 		let (collateral_position, synthetic_position) = <SyntheticTokens<T>>::get_position(pool_id, currency_id);
 		ensure!(
-			synthetic_position >= synthetic,
+			synthetic_position >= burned_synthetic,
 			Error::LiquidityPoolSyntheticPositionTooLow,
 		);
 		ensure!(
-			collateral_position >= collateral,
+			collateral_position >= liquidized_collateral,
 			Error::LiquidityPoolCollateralPositionTooLow,
 		);
 
@@ -422,7 +424,7 @@ impl<T: Trait> Module<T> {
 		};
 		// if synthetic position not backed by enough collateral, no incentive
 		if collateral_position <= synthetic_position_value {
-			return Ok((collateral, Zero::zero(), Zero::zero()));
+			return Ok((liquidized_collateral, Zero::zero(), Zero::zero()));
 		}
 
 		// current_ratio = collateral_position / synthetic_position_value
@@ -441,10 +443,10 @@ impl<T: Trait> Module<T> {
 		ensure!(current_ratio < safe_ratio_threshold, Error::StillInSafePosition);
 
 		let new_synthetic_position = synthetic_position
-			.checked_sub(&synthetic)
+			.checked_sub(&burned_synthetic)
 			.expect("ensured high enough synthetic position; qed");
 		let new_collateral_position = collateral_position
-			.checked_sub(&collateral)
+			.checked_sub(&liquidized_collateral)
 			.expect("ensured high enough collateral position; qed");
 
 		// with_current_ratio = new_synthetic_position * price * current_ratio
@@ -465,21 +467,26 @@ impl<T: Trait> Module<T> {
 				.expect("ensured new collateral position higher; qed");
 			let incentive_ratio = <SyntheticTokens<T>>::incentive_ratio(currency_id, current_ratio);
 			// incentive = available_for_incentive * incentive_ratio
-			let incentive = available_for_incentive
-				.checked_mul(&T::PriceToBalance::convert(incentive_ratio))
-				.ok_or(Error::NumOverflow)?;
+			let incentive = {
+				let in_price = T::BalanceToPrice::convert(available_for_incentive)
+					.checked_mul(&incentive_ratio)
+					.ok_or(Error::NumOverflow)?;
+				T::PriceToBalance::convert(in_price)
+			};
 
-			let refund_to_pool = available_for_incentive
+			let pool_refund_collateral = available_for_incentive
 				.checked_sub(&incentive)
 				.expect("available_for_incentive > incentive; qed");
-			let collateral_with_incentive = collateral.checked_add(&incentive).ok_or(Error::NumOverflow)?;
-			let collateral_with_incentive_and_refund = collateral_with_incentive
-				.checked_add(&refund_to_pool)
+			let collateral_with_incentive = liquidized_collateral
+				.checked_add(&incentive)
 				.ok_or(Error::NumOverflow)?;
-			Ok((collateral_with_incentive_and_refund, refund_to_pool, incentive))
+			let collateral_with_incentive_and_refund = collateral_with_incentive
+				.checked_add(&pool_refund_collateral)
+				.ok_or(Error::NumOverflow)?;
+			Ok((collateral_with_incentive_and_refund, pool_refund_collateral, incentive))
 		} else {
 			// no more incentive could be given
-			Ok((collateral, Zero::zero(), Zero::zero()))
+			Ok((liquidized_collateral, Zero::zero(), Zero::zero()))
 		}
 	}
 }

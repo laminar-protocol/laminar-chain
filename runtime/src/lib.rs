@@ -247,11 +247,17 @@ impl pallet_membership::Trait<OperatorMembershipInstance> for Runtime {
 	type MembershipChanged = OperatorCollective;
 }
 
+// TODO: set this
+parameter_types! {
+	pub const MinimumCount: u32 = 3;
+	pub const ExpiresIn: u32 = 600;
+}
+
 impl orml_oracle::Trait for Runtime {
 	type Event = Event;
 	type OnNewData = (); // TODO: update this
 	type OperatorProvider = (); // TODO: update this
-	type CombineData = orml_oracle::DefaultCombineData<Runtime>;
+	type CombineData = orml_oracle::DefaultCombineData<Runtime, MinimumCount, ExpiresIn>;
 	type Time = Timestamp;
 	type OracleKey = CurrencyId;
 	type OracleValue = Balance; // TODO: update this

@@ -5,18 +5,17 @@
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
 use frame_system as system;
 use primitives::H256;
-use rstd::marker;
+use rstd::{cell::RefCell, collections::btree_map::BTreeMap};
 use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
 
-use orml_currencies::BasicCurrencyAdapter;
-use orml_traits::DataProvider;
+use orml_currencies::Currency;
 
-use module_primitives::{Balance, BalancePriceConverter, LiquidityPoolId};
+use module_primitives::{BalancePriceConverter, LiquidityPoolId};
 use traits::LiquidityPoolBaseTypes;
 
 use super::*;
 
-pub use module_primitives::CurrencyId;
+pub use module_primitives::{Balance, CurrencyId};
 
 impl_outer_origin! {
 	pub enum Origin for Runtime {}
@@ -28,7 +27,6 @@ mod synthetic_protocol {
 
 impl_outer_event! {
 	pub enum TestEvent for Runtime {
-		pallet_indices<T>, pallet_balances<T>,
 		orml_tokens<T>, orml_currencies<T>,
 		synthetic_tokens<T>, synthetic_protocol<T>,
 	}
@@ -44,7 +42,7 @@ parameter_types! {
 	pub const AvailableBlockRatio: Perbill = Perbill::one();
 }
 
-type AccountId = u64;
+pub type AccountId = u32;
 impl frame_system::Trait for Runtime {
 	type Origin = Origin;
 	type Call = ();
@@ -64,42 +62,6 @@ impl frame_system::Trait for Runtime {
 }
 pub type System = system::Module<Runtime>;
 
-impl pallet_indices::Trait for Runtime {
-	/// The type for recording indexing into the account enumeration. If this ever overflows, there
-	/// will be problems!
-	type AccountIndex = u32;
-	/// Determine whether an account is dead.
-	type IsDeadAccount = Balances;
-	/// Use the standard means of resolving an index hint from an id.
-	type ResolveHint = pallet_indices::SimpleResolveHint<Self::AccountId, Self::AccountIndex>;
-	/// The ubiquitous event type.
-	type Event = TestEvent;
-}
-type Indices = pallet_indices::Module<Runtime>;
-
-parameter_types! {
-	pub const ExistentialDeposit: u128 = 500;
-	pub const TransferFee: u128 = 0;
-	pub const CreationFee: u128 = 0;
-}
-
-impl pallet_balances::Trait for Runtime {
-	/// The type for recording an account's balance.
-	type Balance = Balance;
-	/// What to do if an account's free balance gets zeroed.
-	type OnFreeBalanceZero = ();
-	/// What to do if a new account is created.
-	type OnNewAccount = Indices;
-	type TransferPayment = ();
-	type DustRemoval = ();
-	/// The ubiquitous event type.
-	type Event = TestEvent;
-	type ExistentialDeposit = ExistentialDeposit;
-	type TransferFee = TransferFee;
-	type CreationFee = CreationFee;
-}
-type Balances = pallet_balances::Module<Runtime>;
-
 type Amount = i128;
 impl orml_tokens::Trait for Runtime {
 	type Event = TestEvent;
@@ -109,61 +71,25 @@ impl orml_tokens::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const GetFlowTokenId: CurrencyId = CurrencyId::FLOW;
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::FLOW;
 }
 
-pub type FlowToken = BasicCurrencyAdapter<Runtime, Balances, Balance, orml_tokens::Error>;
+type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
 
 impl orml_currencies::Trait for Runtime {
 	type Event = TestEvent;
 	type MultiCurrency = orml_tokens::Module<Runtime>;
-	type NativeCurrency = FlowToken;
-	type GetNativeCurrencyId = GetFlowTokenId;
+	type NativeCurrency = NativeCurrency;
+	type GetNativeCurrencyId = GetNativeCurrencyId;
 }
 
-pub const DEFAULT_PRICE: (Balance, Balance) = (12, 10);
-/// price = x / y
-#[derive(Debug)]
-pub struct MockPrice(Balance, Balance);
-impl MockPrice {
-	pub fn get(&self) -> Option<Price> {
-		if self.0 == 0 && self.1 == 0 {
-			None
-		} else {
-			Some(Price::from_rational(self.0, self.1))
-		}
-	}
-
-	pub fn set_price(&mut self, x: Balance, y: Balance) {
-		self.0 = x;
-		self.1 = y;
-	}
-
-	pub fn set_default(&mut self) {
-		self.0 = DEFAULT_PRICE.0;
-		self.1 = DEFAULT_PRICE.1;
-	}
-
-	pub fn set_none(&mut self) {
-		self.0 = 0;
-		self.1 = 0;
-	}
+parameter_types! {
+	pub const GetCollateralCurrencyId: CurrencyId = CurrencyId::AUSD;
+	pub const GetSyntheticCurrencyId: CurrencyId = CurrencyId::FEUR;
 }
 
-pub static mut MOCK_PRICE_SOURCE: MockPrice = MockPrice(DEFAULT_PRICE.0, DEFAULT_PRICE.1);
-pub struct TestSource;
-impl DataProvider<CurrencyId, Price> for TestSource {
-	fn get(currency: &CurrencyId) -> Option<Price> {
-		match currency {
-			CurrencyId::AUSD => Some(Price::from_rational(1, 1)),
-			_ => unsafe { MOCK_PRICE_SOURCE.get() },
-		}
-	}
-}
-impl orml_prices::Trait for Runtime {
-	type CurrencyId = CurrencyId;
-	type Source = TestSource;
-}
+pub type CollateralCurrency = orml_currencies::Currency<Runtime, GetCollateralCurrencyId>;
+pub type SyntheticCurrency = orml_currencies::Currency<Runtime, GetSyntheticCurrencyId>;
 
 impl synthetic_tokens::Trait for Runtime {
 	type Event = TestEvent;
@@ -171,87 +97,124 @@ impl synthetic_tokens::Trait for Runtime {
 	type Balance = Balance;
 	type LiquidityPoolId = LiquidityPoolId;
 }
-pub type SyntheticTokens = Module<Runtime>;
+pub type SyntheticTokens = synthetic_tokens::Module<Runtime>;
 
-pub const MOCK_POOL: LiquidityPoolId = 1;
+thread_local! {
+	static PRICES: RefCell<BTreeMap<CurrencyId, Price>> = RefCell::new(BTreeMap::new());
+}
 
-pub struct TestLiquidityPools<AccountId>(marker::PhantomData<AccountId>);
-impl LiquidityPoolBaseTypes for TestLiquidityPools<AccountId> {
-	type LiquidityPoolId = LiquidityPoolId;
+pub struct MockPrices;
+impl MockPrices {
+	pub fn set_mock_price(currency_id: CurrencyId, price: Option<Price>) {
+		if let Some(p) = price {
+			PRICES.with(|v| v.borrow_mut().insert(currency_id, p));
+		} else {
+			PRICES.with(|v| v.borrow_mut().remove(&currency_id));
+		}
+	}
+
+	fn prices(currency_id: CurrencyId) -> Option<Price> {
+		PRICES.with(|v| v.borrow_mut().get(&currency_id).map(|p| *p))
+	}
+}
+impl PriceProvider<CurrencyId, Price> for MockPrices {
+	fn get_price(base: CurrencyId, quote: CurrencyId) -> Option<Price> {
+		let base_price = Self::prices(base)?;
+		let quote_price = Self::prices(quote)?;
+
+		quote_price.checked_div(&base_price)
+	}
+}
+
+thread_local! {
+	static SPREAD: RefCell<Permill> = RefCell::new(Permill::zero());
+	static ADDITIONAL_COLLATERAL_RATIO: RefCell<Permill> = RefCell::new(Permill::zero());
+}
+
+pub struct MockLiquidityPools;
+impl MockLiquidityPools {
+	fn spread() -> Permill {
+		SPREAD.with(|v| *v.borrow_mut())
+	}
+
+	fn additional_collateral_ratio() -> Permill {
+		ADDITIONAL_COLLATERAL_RATIO.with(|v| *v.borrow_mut())
+	}
+
+	pub fn set_mock_spread(spread: Permill) {
+		SPREAD.with(|v| *v.borrow_mut() = spread);
+	}
+
+	pub fn set_mock_additional_collateral_ratio(ratio: Permill) {
+		ADDITIONAL_COLLATERAL_RATIO.with(|v| *v.borrow_mut() = ratio);
+	}
+}
+
+impl LiquidityPoolBaseTypes for MockLiquidityPools {
+	type LiquidityPoolId = AccountId;
 	type CurrencyId = CurrencyId;
 }
 
-pub fn spread() -> Permill {
-	Permill::from_rational_approximation(5u32, 1000u32)
-}
-pub fn greedy_slippage() -> Permill {
-	Permill::from_rational_approximation(3u32, 1000u32)
-}
-pub fn tolerable_slippage() -> Permill {
-	Permill::from_rational_approximation(7u32, 1000u32)
-}
-pub fn additional_collateral_ratio() -> Permill {
-	Permill::from_percent(5)
-}
-
-impl LiquidityPoolsConfig for TestLiquidityPools<AccountId> {
+impl LiquidityPoolsConfig for MockLiquidityPools {
 	fn get_bid_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
-		spread()
+		Self::spread()
 	}
 
 	fn get_ask_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
-		spread()
+		Self::spread()
 	}
 
 	fn get_additional_collateral_ratio(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
-		additional_collateral_ratio()
+		Self::additional_collateral_ratio()
 	}
 }
 
-impl LiquidityPoolsCurrency<AccountId> for TestLiquidityPools<AccountId> {
+impl LiquidityPoolsCurrency<AccountId> for MockLiquidityPools {
 	type Balance = Balance;
 	type Error = &'static str;
 
-	fn balance(_: Self::LiquidityPoolId) -> Self::Balance {
-		Zero::zero()
+	fn balance(pool_id: Self::LiquidityPoolId) -> Self::Balance {
+		CollateralCurrency::balance(&pool_id)
 	}
 
-	fn deposit(_from: &AccountId, _pool_id: Self::LiquidityPoolId, _amount: Self::Balance) -> Result<(), Self::Error> {
-		Ok(())
+	fn deposit(from: &AccountId, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> Result<(), Self::Error> {
+		CollateralCurrency::transfer(from, &pool_id, amount).map_err(|e| e.into())
 	}
 
-	fn withdraw(_to: &AccountId, _pool_id: Self::LiquidityPoolId, _amount: Self::Balance) -> Result<(), Self::Error> {
-		Ok(())
+	fn withdraw(to: &AccountId, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> Result<(), Self::Error> {
+		CollateralCurrency::transfer(&pool_id, to, amount).map_err(|e| e.into())
 	}
 }
 
-parameter_types! {
-	pub const GetCollateralCurrencyId: CurrencyId = CurrencyId::AUSD;
-}
-
-type CollateralCurrency = orml_currencies::Currency<Runtime, GetCollateralCurrencyId>;
 impl Trait for Runtime {
 	type Event = TestEvent;
 	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type CollateralCurrency = CollateralCurrency;
 	type GetCollateralCurrencyId = GetCollateralCurrencyId;
-	type PriceProvider = orml_prices::Module<Runtime>;
-	type LiquidityPoolsConfig = TestLiquidityPools<AccountId>;
-	type LiquidityPoolsCurrency = TestLiquidityPools<AccountId>;
+	type PriceProvider = MockPrices;
+	type LiquidityPoolsConfig = MockLiquidityPools;
+	type LiquidityPoolsCurrency = MockLiquidityPools;
 	type BalanceToPrice = BalancePriceConverter;
 	type PriceToBalance = BalancePriceConverter;
 }
 pub type SyntheticProtocol = Module<Runtime>;
 
-const ALICE_ACC_ID: AccountId = 0;
-pub fn alice() -> Origin {
-	Origin::signed(ALICE_ACC_ID)
+pub const ALICE: AccountId = 0;
+pub const BOB: AccountId = 1;
+pub fn origin_of(account_id: AccountId) -> Origin {
+	Origin::signed(account_id)
 }
+
+pub const MOCK_POOL: LiquidityPoolId = 100;
+pub const ANOTHER_MOCK_POOL: LiquidityPoolId = 101;
 
 pub struct ExtBuilder {
 	currency_id: CurrencyId,
 	endowed_accounts: Vec<AccountId>,
 	initial_balance: Balance,
+	prices: Vec<(CurrencyId, Price)>,
+	spread: Permill,
+	additional_collateral_ratio: Permill,
 }
 
 impl Default for ExtBuilder {
@@ -260,10 +223,15 @@ impl Default for ExtBuilder {
 			currency_id: CurrencyId::AUSD,
 			endowed_accounts: vec![0],
 			initial_balance: 0,
+			// collateral price set to `1` for calculation simplicity.
+			prices: vec![(CurrencyId::AUSD, FixedU128::from_rational(1, 1))],
+			spread: Permill::zero(),
+			additional_collateral_ratio: Permill::zero(),
 		}
 	}
 }
 
+pub const ONE_MILL: Balance = 1000_000;
 impl ExtBuilder {
 	pub fn balances(mut self, account_ids: Vec<AccountId>, initial_balance: Balance) -> Self {
 		self.endowed_accounts = account_ids;
@@ -271,14 +239,51 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn one_hundred_usd_for_alice(self) -> Self {
-		self.balances(vec![ALICE_ACC_ID], 100)
+	// one_million is big enough for testing, considering spread is 0.5% on average, and small enough
+	// to do math verification by hand.
+	pub fn one_million_for_alice_n_mock_pool(self) -> Self {
+		self.balances(vec![ALICE, MOCK_POOL], ONE_MILL)
 	}
 
-	pub fn build_and_reset_env(self) -> runtime_io::TestExternalities {
-		unsafe {
-			MOCK_PRICE_SOURCE.set_default();
-		}
+	pub fn synthetic_price(mut self, price: Price) -> Self {
+		self.prices.push((CurrencyId::FEUR, price));
+		self
+	}
+
+	/// set synthetic price to `3`
+	pub fn synthetic_price_three(self) -> Self {
+		self.synthetic_price(Price::from_rational(3, 1))
+	}
+
+	pub fn spread(mut self, spread: Permill) -> Self {
+		self.spread = spread;
+		self
+	}
+
+	pub fn one_percent_spread(self) -> Self {
+		self.spread(Permill::from_percent(1))
+	}
+
+	pub fn additional_collateral_ratio(mut self, ratio: Permill) -> Self {
+		self.additional_collateral_ratio = ratio;
+		self
+	}
+
+	pub fn ten_percent_additional_collateral_ratio(self) -> Self {
+		self.additional_collateral_ratio(Permill::from_percent(10))
+	}
+
+	fn set_mocks(&self) {
+		self.prices
+			.iter()
+			.for_each(|(c, p)| MockPrices::set_mock_price(*c, Some(*p)));
+
+		MockLiquidityPools::set_mock_spread(self.spread);
+		MockLiquidityPools::set_mock_additional_collateral_ratio(self.additional_collateral_ratio);
+	}
+
+	pub fn build(self) -> runtime_io::TestExternalities {
+		self.set_mocks();
 
 		let mut t = frame_system::GenesisConfig::default()
 			.build_storage::<Runtime>()
