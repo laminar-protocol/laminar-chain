@@ -3,6 +3,9 @@
 use codec::{Decode, Encode};
 use sp_runtime::{traits::Convert, RuntimeDebug};
 
+#[macro_use]
+extern crate bitmask;
+
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
@@ -54,9 +57,6 @@ impl Convert<Price, Balance> for BalancePriceConverter {
 		}
 	}
 }
-
-#[macro_use]
-extern crate bitmask;
 
 bitmask! {
 	#[derive(Encode, Decode, Default)]
