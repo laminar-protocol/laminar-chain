@@ -2,6 +2,7 @@
 
 #![cfg(test)]
 
+use rstd::{cell::RefCell, collections::btree_map::BTreeMap};
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
 use frame_system as system;
 use primitives::H256;
@@ -97,60 +98,32 @@ impl synthetic_tokens::Trait for Runtime {
 }
 pub type SyntheticTokens = synthetic_tokens::Module<Runtime>;
 
-/// Mock prices module, implements `PriceProvider`, with configurable prices to test different cases.
-pub mod mock_prices {
-	use super::Price;
-	use frame_support::{decl_module, decl_storage, Parameter, StorageMap};
-	use orml_traits::PriceProvider;
-	use sp_runtime::traits::{MaybeSerializeDeserialize, Member};
-
-	pub trait Trait: frame_system::Trait {
-		type CurrencyId: Parameter + Member + Copy + MaybeSerializeDeserialize;
-	}
-
-	decl_storage! {
-		trait Store for Module<T: Trait> as MockPrices {
-			pub Prices get(fn prices): map T::CurrencyId => Option<Price>;
-		}
-
-		add_extra_genesis {
-			config(prices): Vec<(T::CurrencyId, Price)>;
-			build(|config: &GenesisConfig<T>| {
-				config.prices.iter().for_each(|(currency_id, price)| {
-					<Prices<T>>::insert(currency_id, price);
-				})
-			})
-		}
-	}
-
-	decl_module! {
-		pub struct Module<T: Trait> for enum Call where origin: T::Origin {}
-	}
-
-	impl<T: Trait> Module<T> {
-		pub fn set_mock_price(currency_id: T::CurrencyId, price: Option<Price>) {
-			if let Some(p) = price {
-				<Prices<T>>::insert(currency_id, p);
-			} else {
-				<Prices<T>>::remove(currency_id);
-			}
-		}
-	}
-
-	impl<T: Trait> PriceProvider<T::CurrencyId, Price> for Module<T> {
-		fn get_price(base: T::CurrencyId, quote: T::CurrencyId) -> Option<Price> {
-			let base_price = Self::prices(base)?;
-			let quote_price = Self::prices(quote)?;
-
-			quote_price.checked_div(&base_price)
-		}
-	}
+thread_local! {
+	static PRICES: RefCell<BTreeMap<CurrencyId, Price>> = RefCell::new(BTreeMap::new());
 }
 
-impl mock_prices::Trait for Runtime {
-	type CurrencyId = CurrencyId;
+pub struct MockPrices;
+impl MockPrices {
+	pub fn set_mock_price(currency_id: CurrencyId, price: Option<Price>) {
+		if let Some(p) = price {
+			PRICES.with(|v| v.borrow_mut().insert(currency_id, p));
+		} else {
+			PRICES.with(|v| v.borrow_mut().remove(&currency_id));
+		}
+	}
+
+	pub fn prices(currency_id: CurrencyId) -> Option<Price> {
+		PRICES.with(|v| v.borrow_mut().get(&currency_id).map(|p| *p))
+	}
 }
-pub type MockPrices = mock_prices::Module<Runtime>;
+impl PriceProvider<CurrencyId, Price> for MockPrices {
+	fn get_price(base: CurrencyId, quote: CurrencyId) -> Option<Price> {
+		let base_price = Self::prices(base)?;
+		let quote_price = Self::prices(quote)?;
+
+		quote_price.checked_div(&base_price)
+	}
+}
 
 /// Mock liquidity pool module, implements liquidity pool related traits, with configurable additional collateral
 /// ratio and ask/bid spread, to test different cases.
@@ -311,7 +284,13 @@ impl ExtBuilder {
 		self.additional_collateral_ratio(Permill::from_percent(10))
 	}
 
+	fn set_mock_statics(&self) {
+		self.prices.iter().for_each(|(c, p)| MockPrices::set_mock_price(*c, Some(*p)));
+	}
+
 	pub fn build(self) -> runtime_io::TestExternalities {
+		self.set_mock_statics();
+
 		let mut t = frame_system::GenesisConfig::default()
 			.build_storage::<Runtime>()
 			.unwrap();
@@ -323,10 +302,6 @@ impl ExtBuilder {
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
-
-		mock_prices::GenesisConfig::<Runtime> { prices: self.prices }
-			.assimilate_storage(&mut t)
-			.unwrap();
 
 		mock_liquidity_pool::GenesisConfig {
 			spread: self.spread,
