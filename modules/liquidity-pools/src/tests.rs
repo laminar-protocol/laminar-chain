@@ -6,7 +6,7 @@ use crate::{
 };
 
 use frame_support::assert_ok;
-use sp_runtime::Perbill;
+use sp_runtime::Permill;
 
 #[test]
 fn should_create_pool() {
@@ -69,14 +69,35 @@ fn should_set_spread() {
 			Origin::signed(ALICE),
 			0,
 			1,
-			Perbill::one(),
-			Perbill::one()
+			Permill::one(),
+			Permill::one()
 		));
 
 		let pool_option = LiquidityPoolOption {
-			bid_spread: Perbill::one(),
-			ask_spread: Perbill::one(),
+			bid_spread: Permill::one(),
+			ask_spread: Permill::one(),
 			additional_collateral_ratio: None,
+		};
+
+		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, 1), Some(pool_option));
+	})
+}
+
+#[test]
+fn should_set_additional_collateral_ratio() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE), 1));
+		assert_ok!(ModuleLiquidityPools::set_additional_collateral_ratio(
+			Origin::signed(ALICE),
+			0,
+			1,
+			Some(Permill::from_percent(120)),
+		));
+
+		let pool_option = LiquidityPoolOption {
+			bid_spread: Permill::zero(),
+			ask_spread: Permill::zero(),
+			additional_collateral_ratio: Some(Permill::from_percent(120)),
 		};
 
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, 1), Some(pool_option));

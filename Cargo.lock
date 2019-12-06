@@ -2383,6 +2383,7 @@ version = "0.0.1"
 dependencies = [
  "frame-support 2.0.0 (git+https://github.com/paritytech/substrate.git)",
  "frame-system 2.0.0 (git+https://github.com/paritytech/substrate.git)",
+ "module-traits 0.0.1",
  "parity-scale-codec 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.103 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-core 2.0.0 (git+https://github.com/paritytech/substrate.git)",

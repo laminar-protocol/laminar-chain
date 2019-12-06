@@ -28,6 +28,7 @@ parameter_types! {
 
 pub type Balance = u64;
 pub type CurrencyId = u32;
+pub type LiquidityPoolId = u32;
 
 impl system::Trait for Test {
 	type Origin = Origin;
@@ -47,11 +48,20 @@ impl system::Trait for Test {
 	type Version = ();
 }
 
+pub struct PoolManager;
+
+impl LiquidityPoolManager<LiquidityPoolId> for PoolManager {
+	fn can_remove(pool_id: LiquidityPoolId) -> bool {
+		true
+	}
+}
+
 impl Trait for Test {
 	type Event = ();
-	type LiquidityPoolId = u32;
+	type LiquidityPoolId = LiquidityPoolId;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
+	type PoolManager = PoolManager;
 }
 pub type ModuleLiquidityPools = Module<Test>;
 

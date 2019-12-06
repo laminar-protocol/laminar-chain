@@ -11,14 +11,16 @@ use frame_system::{self as system, ensure_signed};
 use rstd::result;
 use sp_runtime::{
 	traits::{CheckedAdd, MaybeSerializeDeserialize, Member, One, SimpleArithmetic, Zero},
-	Perbill,
+	Permill,
 };
+use traits::LiquidityPoolManager;
 
 pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 	type LiquidityPoolId: Parameter + Member + Copy + Ord + Default + SimpleArithmetic;
 	type Balance: Parameter + Member + SimpleArithmetic + Default + Copy + MaybeSerializeDeserialize;
 	type CurrencyId: Parameter + Member + Copy + Ord + Default;
+	type PoolManager: LiquidityPoolManager<Self::LiquidityPoolId>;
 }
 
 decl_storage! {
@@ -62,10 +64,16 @@ decl_module! {
 			Ok(())
 		}
 
-		pub fn set_spread(origin, pool_id: T::LiquidityPoolId, currency_id: T::CurrencyId, ask: Perbill, bid: Perbill) -> Result {
+		pub fn set_spread(origin, pool_id: T::LiquidityPoolId, currency_id: T::CurrencyId, ask: Permill, bid: Permill) -> Result {
 			let who = ensure_signed(origin)?;
 			Self::_set_spread(who, pool_id, currency_id, ask, bid).map_err(|e| e.into())
 		}
+
+		pub fn set_additional_collateral_ratio(origin, pool_id: T::LiquidityPoolId, currency_id: T::CurrencyId, ratio: Option<Permill>) -> Result {
+			let who = ensure_signed(origin)?;
+			Self::_set_additional_collateral_ratio(who, pool_id, currency_id, ratio).map_err(|e| e.into())
+		}
+
 	}
 }
 
@@ -75,6 +83,7 @@ decl_error! {
 		NoPermission,
 		CannotCreateMorePool,
 		PoolNotFound,
+		CannotRemovePool,
 	}
 }
 
@@ -104,13 +113,14 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _disable_pool(who: T::AccountId, pool_id: T::LiquidityPoolId) -> result::Result<(), Error> {
-		ensure!(Self::owners(pool_id) == Some(who), Error::NoPermission);
+		ensure!(Self::is_owner(pool_id, who), Error::NoPermission);
 		// TODO: Disable all tokens for this pool
 		Ok(())
 	}
 
 	fn _remove_pool(who: T::AccountId, pool_id: T::LiquidityPoolId) -> result::Result<(), Error> {
-		ensure!(Self::owners(pool_id) == Some(who), Error::NoPermission);
+		ensure!(Self::is_owner(pool_id, who), Error::NoPermission);
+		ensure!(T::PoolManager::can_remove(pool_id), Error::CannotRemovePool);
 		// TODO: No outstanding positions
 		// TODO: Withdraw all liquidity and remove this pool
 		Ok(())
@@ -120,15 +130,33 @@ impl<T: Trait> Module<T> {
 		who: T::AccountId,
 		pool_id: T::LiquidityPoolId,
 		currency_id: T::CurrencyId,
-		ask: Perbill,
-		bid: Perbill,
+		ask: Permill,
+		bid: Permill,
 	) -> result::Result<(), Error> {
-		ensure!(Self::owners(pool_id) == Some(who), Error::NoPermission);
+		ensure!(Self::is_owner(pool_id, who), Error::NoPermission);
 
 		match <LiquidityPoolOptions<T>>::get(&pool_id, &currency_id) {
 			Some(mut pool_option) => {
 				pool_option.bid_spread = bid;
 				pool_option.ask_spread = ask;
+				<LiquidityPoolOptions<T>>::insert(pool_id, currency_id, pool_option);
+				Ok(())
+			}
+			None => Err(Error::PoolNotFound),
+		}
+	}
+
+	fn _set_additional_collateral_ratio(
+		who: T::AccountId,
+		pool_id: T::LiquidityPoolId,
+		currency_id: T::CurrencyId,
+		ratio: Option<Permill>,
+	) -> result::Result<(), Error> {
+		ensure!(Self::is_owner(pool_id, who), Error::NoPermission);
+
+		match <LiquidityPoolOptions<T>>::get(&pool_id, &currency_id) {
+			Some(mut pool_option) => {
+				pool_option.additional_collateral_ratio = ratio;
 				<LiquidityPoolOptions<T>>::insert(pool_id, currency_id, pool_option);
 				Ok(())
 			}

@@ -63,3 +63,7 @@ pub trait LiquidityPools<AccountId>:
 	LiquidityPoolsConfig + LiquidityPoolsPosition + LiquidityPoolsCurrency<AccountId>
 {
 }
+
+pub trait LiquidityPoolManager<LiquidityPoolId> {
+	fn can_remove(pool: LiquidityPoolId) -> bool;
+}

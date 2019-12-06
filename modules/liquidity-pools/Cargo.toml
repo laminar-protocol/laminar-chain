@@ -14,6 +14,8 @@ rstd = { package = "sp-std", git = "https://github.com/paritytech/substrate.git"
 frame-support = { git = "https://github.com/paritytech/substrate.git", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate.git", default-features = false }
 
+traits = { package = "module-traits", path = "../traits", default-features = false }
+
 [dev-dependencies]
 primitives = { package = "sp-core",  git = "https://github.com/paritytech/substrate.git", default-features = false }
 
@@ -27,4 +29,5 @@ std = [
 	"rstd/std",
 	"frame-support/std",
 	"frame-system/std",
+	"traits/std",
 ]
