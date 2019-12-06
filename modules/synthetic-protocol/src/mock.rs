@@ -2,15 +2,16 @@
 
 #![cfg(test)]
 
-use rstd::{cell::RefCell, collections::btree_map::BTreeMap};
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
 use frame_system as system;
 use primitives::H256;
+use rstd::{cell::RefCell, collections::btree_map::BTreeMap};
 use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
 
 use orml_currencies::Currency;
 
 use module_primitives::{BalancePriceConverter, LiquidityPoolId};
+use traits::LiquidityPoolBaseTypes;
 
 use super::*;
 
@@ -112,7 +113,7 @@ impl MockPrices {
 		}
 	}
 
-	pub fn prices(currency_id: CurrencyId) -> Option<Price> {
+	fn prices(currency_id: CurrencyId) -> Option<Price> {
 		PRICES.with(|v| v.borrow_mut().get(&currency_id).map(|p| *p))
 	}
 }
@@ -125,77 +126,65 @@ impl PriceProvider<CurrencyId, Price> for MockPrices {
 	}
 }
 
-/// Mock liquidity pool module, implements liquidity pool related traits, with configurable additional collateral
-/// ratio and ask/bid spread, to test different cases.
-pub mod mock_liquidity_pool {
-	use super::{AccountId, Permill};
-	use frame_support::{decl_module, decl_storage, Parameter};
-	use orml_traits::BasicCurrency;
-	use sp_runtime::traits::{MaybeSerializeDeserialize, Member, SimpleArithmetic};
-	use traits::{LiquidityPoolBaseTypes, LiquidityPoolsConfig, LiquidityPoolsCurrency};
+thread_local! {
+	static SPREAD: RefCell<Permill> = RefCell::new(Permill::zero());
+	static ADDITIONAL_COLLATERAL_RATIO: RefCell<Permill> = RefCell::new(Permill::zero());
+}
 
-	pub trait Trait: frame_system::Trait {
-		type CurrencyId: Parameter + Member + Copy + MaybeSerializeDeserialize;
-		type Balance: Parameter + Member + SimpleArithmetic + Default + Copy + MaybeSerializeDeserialize;
-		type CollateralCurrency: BasicCurrency<AccountId, Balance = Self::Balance>;
+pub struct MockLiquidityPools;
+impl MockLiquidityPools {
+	fn spread() -> Permill {
+		SPREAD.with(|v| *v.borrow_mut())
 	}
 
-	decl_storage! {
-		trait Store for Module<T: Trait> as MockLiquidityPools {
-			pub AdditionalCollateralRatio get(fn additional_collateral_ratio) config(): Permill;
-			pub Spread get(fn spread) config(): Permill;
-		}
+	fn additional_collateral_ratio() -> Permill {
+		ADDITIONAL_COLLATERAL_RATIO.with(|v| *v.borrow_mut())
 	}
 
-	decl_module! {
-		pub struct Module<T: Trait> for enum Call where origin: T::Origin {}
+	pub fn set_mock_spread(spread: Permill) {
+		SPREAD.with(|v| *v.borrow_mut() = spread);
 	}
 
-	impl<T: Trait> Module<T> {}
-
-	impl<T: Trait> LiquidityPoolBaseTypes for Module<T> {
-		type LiquidityPoolId = AccountId;
-		type CurrencyId = T::CurrencyId;
-	}
-
-	impl<T: Trait> LiquidityPoolsConfig for Module<T> {
-		fn get_bid_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
-			Self::spread()
-		}
-
-		fn get_ask_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
-			Self::spread()
-		}
-
-		fn get_additional_collateral_ratio(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
-			Self::additional_collateral_ratio()
-		}
-	}
-
-	impl<T: Trait> LiquidityPoolsCurrency<AccountId> for Module<T> {
-		type Balance = T::Balance;
-		type Error = &'static str;
-
-		fn balance(pool_id: Self::LiquidityPoolId) -> Self::Balance {
-			T::CollateralCurrency::balance(&pool_id)
-		}
-
-		fn deposit(from: &AccountId, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> Result<(), Self::Error> {
-			T::CollateralCurrency::transfer(from, &pool_id, amount).map_err(|e| e.into())
-		}
-
-		fn withdraw(to: &AccountId, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> Result<(), Self::Error> {
-			T::CollateralCurrency::transfer(&pool_id, to, amount).map_err(|e| e.into())
-		}
+	pub fn set_mock_additional_collateral_ratio(ratio: Permill) {
+		ADDITIONAL_COLLATERAL_RATIO.with(|v| *v.borrow_mut() = ratio);
 	}
 }
 
-impl mock_liquidity_pool::Trait for Runtime {
+impl LiquidityPoolBaseTypes for MockLiquidityPools {
+	type LiquidityPoolId = AccountId;
 	type CurrencyId = CurrencyId;
-	type Balance = Balance;
-	type CollateralCurrency = CollateralCurrency;
 }
-pub type MockLiquidityPools = mock_liquidity_pool::Module<Runtime>;
+
+impl LiquidityPoolsConfig for MockLiquidityPools {
+	fn get_bid_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
+		Self::spread()
+	}
+
+	fn get_ask_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
+		Self::spread()
+	}
+
+	fn get_additional_collateral_ratio(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
+		Self::additional_collateral_ratio()
+	}
+}
+
+impl LiquidityPoolsCurrency<AccountId> for MockLiquidityPools {
+	type Balance = Balance;
+	type Error = &'static str;
+
+	fn balance(pool_id: Self::LiquidityPoolId) -> Self::Balance {
+		CollateralCurrency::balance(&pool_id)
+	}
+
+	fn deposit(from: &AccountId, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> Result<(), Self::Error> {
+		CollateralCurrency::transfer(from, &pool_id, amount).map_err(|e| e.into())
+	}
+
+	fn withdraw(to: &AccountId, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> Result<(), Self::Error> {
+		CollateralCurrency::transfer(&pool_id, to, amount).map_err(|e| e.into())
+	}
+}
 
 impl Trait for Runtime {
 	type Event = TestEvent;
@@ -284,12 +273,17 @@ impl ExtBuilder {
 		self.additional_collateral_ratio(Permill::from_percent(10))
 	}
 
-	fn set_mock_statics(&self) {
-		self.prices.iter().for_each(|(c, p)| MockPrices::set_mock_price(*c, Some(*p)));
+	fn set_mocks(&self) {
+		self.prices
+			.iter()
+			.for_each(|(c, p)| MockPrices::set_mock_price(*c, Some(*p)));
+
+		MockLiquidityPools::set_mock_spread(self.spread);
+		MockLiquidityPools::set_mock_additional_collateral_ratio(self.additional_collateral_ratio);
 	}
 
 	pub fn build(self) -> runtime_io::TestExternalities {
-		self.set_mock_statics();
+		self.set_mocks();
 
 		let mut t = frame_system::GenesisConfig::default()
 			.build_storage::<Runtime>()
@@ -299,13 +293,6 @@ impl ExtBuilder {
 			tokens: vec![self.currency_id],
 			initial_balance: self.initial_balance,
 			endowed_accounts: self.endowed_accounts,
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
-
-		mock_liquidity_pool::GenesisConfig {
-			spread: self.spread,
-			additional_collateral_ratio: self.additional_collateral_ratio,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
