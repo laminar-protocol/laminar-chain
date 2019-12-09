@@ -29,6 +29,7 @@ pub trait Trait: synthetic_tokens::Trait {
 	type GetCollateralCurrencyId: Get<Self::CurrencyId>;
 	type PriceProvider: PriceProvider<Self::CurrencyId, Price>;
 	type LiquidityPoolsConfig: LiquidityPoolsConfig<
+		Self::AccountId,
 		CurrencyId = Self::CurrencyId,
 		LiquidityPoolId = Self::LiquidityPoolId,
 	>;
@@ -67,6 +68,9 @@ decl_event! {
 		/// Collateral added.
 		/// (who, synthetic_currency_id, liquidity_pool_id, collateral_amount)
 		CollateralAdded(AccountId, CurrencyId, LiquidityPoolId, Balance),
+		/// Collateral withdrew.
+		/// (who, synthetic_currency_id, liquidity_pool_id, collateral_amount)
+		CollateralWithdrew(AccountId, CurrencyId, LiquidityPoolId, Balance),
 	}
 }
 
@@ -123,6 +127,17 @@ decl_module! {
 
 			Self::deposit_event(RawEvent::CollateralAdded(who, currency_id, pool_id, collateral_amount));
 		}
+
+		pub fn withdraw_collateral(
+			origin,
+			pool_id: T::LiquidityPoolId,
+			currency_id: T::CurrencyId,
+		) {
+			let who = ensure_signed(origin)?;
+			let withdrew_collateral_amount = Self::_withdraw_collateral(&who, pool_id, currency_id)?;
+
+			Self::deposit_event(RawEvent::CollateralWithdrew(who, currency_id, pool_id, withdrew_collateral_amount));
+		}
 	}
 }
 
@@ -140,6 +155,7 @@ decl_error! {
 		NotEnoughLockedCollateralAvailable,
 		StillInSafePosition,
 		BalanceToU128Failed,
+		NotPoolOwner,
 	}
 }
 
@@ -298,13 +314,42 @@ impl<T: Trait> Module<T> {
 		currency_id: T::CurrencyId,
 		collateral: T::Balance,
 	) -> result::Result<(), Error> {
-		ensure!(T::CollateralCurrency::balance(who) >= collateral, Error::BalanceTooLow,);
+		ensure!(T::CollateralCurrency::balance(who) >= collateral, Error::BalanceTooLow);
 
-		T::CollateralCurrency::transfer(who, &<SyntheticTokens<T>>::account_id(), collateral)
-			.expect("ensured enough balance of sender; qed");
+		T::LiquidityPoolsCurrency::deposit(who, pool_id, collateral).expect("ensured enough balance; qed");
+		T::LiquidityPoolsCurrency::withdraw(&<SyntheticTokens<T>>::account_id(), pool_id, collateral)
+			.expect("have deposited equal amount; qed");
+
 		<SyntheticTokens<T>>::add_position(pool_id, currency_id, collateral, Zero::zero());
 
 		Ok(())
+	}
+
+	fn _withdraw_collateral(
+		who: &T::AccountId,
+		pool_id: T::LiquidityPoolId,
+		currency_id: T::CurrencyId,
+	) -> SynthesisResult<T> {
+		ensure!(T::LiquidityPoolsConfig::is_owner(pool_id, who), Error::NotPoolOwner);
+
+		let price =
+			T::PriceProvider::get_price(T::GetCollateralCurrencyId::get(), currency_id).ok_or(Error::NoPrice)?;
+		let (collateral_position_delta, pool_refund_collateral) =
+			Self::_calc_remove_position(pool_id, currency_id, price, Zero::zero(), Zero::zero())?;
+
+		// TODO: calculate and add interest to `pool_refund_collateral`
+
+		ensure!(
+			T::CollateralCurrency::balance(&<SyntheticTokens<T>>::account_id()) > pool_refund_collateral,
+			Error::NotEnoughLockedCollateralAvailable
+		);
+
+		T::LiquidityPoolsCurrency::deposit(&<SyntheticTokens<T>>::account_id(), pool_id, pool_refund_collateral)
+			.expect("ensured enough locked collateral; qed");
+
+		<SyntheticTokens<T>>::remove_position(pool_id, currency_id, collateral_position_delta, Zero::zero());
+
+		Ok(pool_refund_collateral)
 	}
 }
 
