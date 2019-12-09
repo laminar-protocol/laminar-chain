@@ -308,7 +308,7 @@ impl LiquidityPoolBaseTypes for DummyLiquidityPools<AccountId> {
 	type LiquidityPoolId = LiquidityPoolId;
 	type CurrencyId = CurrencyId;
 }
-impl LiquidityPoolsConfig for DummyLiquidityPools<AccountId> {
+impl LiquidityPoolsConfig<AccountId> for DummyLiquidityPools<AccountId> {
 	fn get_bid_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
 		Permill::from_percent(3)
 	}
@@ -319,6 +319,10 @@ impl LiquidityPoolsConfig for DummyLiquidityPools<AccountId> {
 
 	fn get_additional_collateral_ratio(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
 		Permill::from_percent(3)
+	}
+
+	fn is_owner(_pool_id: Self::LiquidityPoolId, _who: &AccountId) -> bool {
+		true
 	}
 }
 impl LiquidityPoolsCurrency<AccountId> for DummyLiquidityPools<AccountId> {

@@ -155,7 +155,7 @@ impl LiquidityPoolBaseTypes for MockLiquidityPools {
 	type CurrencyId = CurrencyId;
 }
 
-impl LiquidityPoolsConfig for MockLiquidityPools {
+impl LiquidityPoolsConfig<AccountId> for MockLiquidityPools {
 	fn get_bid_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
 		Self::spread()
 	}
@@ -166,6 +166,11 @@ impl LiquidityPoolsConfig for MockLiquidityPools {
 
 	fn get_additional_collateral_ratio(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
 		Self::additional_collateral_ratio()
+	}
+
+	/// ALICE is the mock owner
+	fn is_owner(_pool_id: Self::LiquidityPoolId, who: &u32) -> bool {
+		who == &ALICE
 	}
 }
 
