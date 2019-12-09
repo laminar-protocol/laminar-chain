@@ -56,14 +56,17 @@ decl_event! {
 		LiquidityPoolId = <T as synthetic_tokens::Trait>::LiquidityPoolId,
 	{
 		/// Synthetic token minted.
-		/// (who, synthetic_token_id, liquidity_pool_id, collateral_amount, synthetic_amount)
+		/// (who, synthetic_currency_id, liquidity_pool_id, collateral_amount, synthetic_amount)
 		Minted(AccountId, CurrencyId, LiquidityPoolId, Balance, Balance),
 		/// Synthetic token redeemed.
-		/// (who, synthetic_token_id, liquidity_pool_id, collateral_amount, synthetic_amount)
+		/// (who, synthetic_currency_id, liquidity_pool_id, collateral_amount, synthetic_amount)
 		Redeemed(AccountId, CurrencyId, LiquidityPoolId, Balance, Balance),
 		/// Synthetic token liquidated.
-		/// (who, synthetic_token_id, liquidity_pool_id, collateral_amount, synthetic_amount)
+		/// (who, synthetic_currency_id, liquidity_pool_id, collateral_amount, synthetic_amount)
 		Liquidated(AccountId, CurrencyId, LiquidityPoolId, Balance, Balance),
+		/// Collateral added.
+		/// (who, synthetic_currency_id, liquidity_pool_id, collateral_amount)
+		CollateralAdded(AccountId, CurrencyId, LiquidityPoolId, Balance),
 	}
 }
 
@@ -107,6 +110,18 @@ decl_module! {
 			let collateral_amount = Self::_liquidate(&who, pool_id, currency_id, synthetic_amount)?;
 
 			Self::deposit_event(RawEvent::Liquidated(who, currency_id, pool_id, collateral_amount, synthetic_amount));
+		}
+
+		pub fn add_collateral(
+			origin,
+			pool_id: T::LiquidityPoolId,
+			currency_id: T::CurrencyId,
+			collateral_amount: T::Balance,
+		) {
+			let who = ensure_signed(origin)?;
+			Self::_add_collateral(&who, pool_id, currency_id, collateral_amount)?;
+
+			Self::deposit_event(RawEvent::CollateralAdded(who, currency_id, pool_id, collateral_amount));
 		}
 	}
 }
@@ -275,6 +290,21 @@ impl<T: Trait> Module<T> {
 		<SyntheticTokens<T>>::remove_position(pool_id, currency_id, collateral_position_delta, synthetic);
 
 		Ok(collateral)
+	}
+
+	fn _add_collateral(
+		who: &T::AccountId,
+		pool_id: T::LiquidityPoolId,
+		currency_id: T::CurrencyId,
+		collateral: T::Balance,
+	) -> result::Result<(), Error> {
+		ensure!(T::CollateralCurrency::balance(who) >= collateral, Error::BalanceTooLow,);
+
+		T::CollateralCurrency::transfer(who, &<SyntheticTokens<T>>::account_id(), collateral)
+			.expect("ensured enough balance of sender; qed");
+		<SyntheticTokens<T>>::add_position(pool_id, currency_id, collateral, Zero::zero());
+
+		Ok(())
 	}
 }
 
