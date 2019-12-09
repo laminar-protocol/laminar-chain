@@ -346,6 +346,8 @@ impl<T: Trait> Module<T> {
 
 		T::LiquidityPoolsCurrency::deposit(&<SyntheticTokens<T>>::account_id(), pool_id, pool_refund_collateral)
 			.expect("ensured enough locked collateral; qed");
+		T::LiquidityPoolsCurrency::withdraw(who, pool_id, pool_refund_collateral)
+			.expect("have deposited equal amount; qed");
 
 		<SyntheticTokens<T>>::remove_position(pool_id, currency_id, collateral_position_delta, Zero::zero());
 

@@ -34,6 +34,14 @@ fn liquidate(who: AccountId, amount: Balance) -> result::Result<(), &'static str
 	SyntheticProtocol::liquidate(origin_of(who), MOCK_POOL, CurrencyId::FEUR, amount)
 }
 
+fn add_collateral(who: AccountId, amount: Balance) -> result::Result<(), &'static str> {
+	SyntheticProtocol::add_collateral(origin_of(who), MOCK_POOL, CurrencyId::FEUR, amount)
+}
+
+fn withdraw_collateral(who: AccountId) -> result::Result<(), &'static str> {
+	SyntheticProtocol::withdraw_collateral(origin_of(who), MOCK_POOL, CurrencyId::FEUR)
+}
+
 fn mock_pool_balance() -> Balance {
 	MockLiquidityPools::balance(MOCK_POOL)
 }
@@ -377,6 +385,16 @@ fn redeem_does_correct_math() {
 
 			// position update
 			assert_eq!(position(), (new_collateral_position, rest_of_synthetic));
+
+			// event deposited
+			let event = TestEvent::synthetic_protocol(RawEvent::Redeemed(
+				ALICE,
+				CurrencyId::FEUR,
+				MOCK_POOL,
+				redeemed_collateral,
+				synthetic_to_redeem,
+			));
+			assert!(System::events().iter().any(|record| record.event == event));
 		});
 }
 
@@ -657,5 +675,186 @@ fn liquidate_does_correct_math() {
 					minted_synthetic - burned_synthetic
 				)
 			);
+
+			// event deposited
+			let event = TestEvent::synthetic_protocol(RawEvent::Liquidated(
+				BOB,
+				CurrencyId::FEUR,
+				MOCK_POOL,
+				liquidized_collateral,
+				burned_synthetic,
+			));
+			assert!(System::events().iter().any(|record| record.event == event));
+		});
+}
+
+#[test]
+fn add_collateral_fails_if_balance_too_low() {
+	ExtBuilder::default()
+		.one_million_for_alice_n_mock_pool()
+		.synthetic_price_three()
+		.one_percent_spread()
+		.ten_percent_additional_collateral_ratio()
+		.build()
+		.execute_with(|| {
+			assert_ok!(mint_feur(ALICE, ONE_MILL));
+			assert_noop!(add_collateral(ALICE, 1), Error::BalanceTooLow.into());
+		});
+}
+
+#[test]
+fn add_collateral_works() {
+	ExtBuilder::default()
+		.one_million_for_alice_n_mock_pool()
+		.synthetic_price_three()
+		.one_percent_spread()
+		.ten_percent_additional_collateral_ratio()
+		.build()
+		.execute_with(|| {
+			assert_ok!(mint_feur(ALICE, ONE_MILL / 2));
+			let minted_synthetic_amount = SyntheticCurrency::total_issuance();
+			let (collateral_position, synthetic_position) = position();
+			let pool_balance = mock_pool_balance();
+
+			let added_collateral = 1_000;
+			assert_ok!(add_collateral(ALICE, added_collateral));
+
+			assert_eq!(collateral_balance(ALICE), ONE_MILL / 2 - added_collateral);
+
+			// minted synthetic amount stays the same
+			assert_eq!(SyntheticCurrency::total_issuance(), minted_synthetic_amount);
+
+			// liquidity pool balance stays the same
+			assert_eq!(mock_pool_balance(), pool_balance);
+
+			// position change matched
+			let (new_collateral_position, new_synthetic_position) = position();
+			assert_eq!(new_synthetic_position, synthetic_position);
+			assert_eq!(new_collateral_position, collateral_position + added_collateral);
+
+			// event deposited
+			let event = TestEvent::synthetic_protocol(RawEvent::CollateralAdded(
+				ALICE,
+				CurrencyId::FEUR,
+				MOCK_POOL,
+				added_collateral,
+			));
+			assert!(System::events().iter().any(|record| record.event == event));
+		});
+}
+
+#[test]
+fn only_owner_could_withdraw_collateral() {
+	ExtBuilder::default()
+		.one_million_for_alice_n_mock_pool()
+		.synthetic_price_three()
+		.one_percent_spread()
+		.ten_percent_additional_collateral_ratio()
+		.build()
+		.execute_with(|| {
+			assert_ok!(mint_feur(ALICE, ONE_MILL));
+			assert_noop!(withdraw_collateral(BOB), Error::NotPoolOwner.into());
+		});
+}
+
+#[test]
+fn withdraw_collateral_fails_if_no_price() {
+	ExtBuilder::default()
+		.one_million_for_alice_n_mock_pool()
+		.synthetic_price_three()
+		.one_percent_spread()
+		.ten_percent_additional_collateral_ratio()
+		.build()
+		.execute_with(|| {
+			assert_ok!(mint_feur(ALICE, ONE_MILL));
+
+			MockPrices::set_mock_price(CurrencyId::FEUR, None);
+			assert_noop!(withdraw_collateral(ALICE), Error::NoPrice.into());
+		});
+}
+
+#[test]
+fn withdraw_collateral_fails_if_not_enough_locked_collateral() {
+	ExtBuilder::default()
+		.one_million_for_alice_n_mock_pool()
+		.synthetic_price_three()
+		.one_percent_spread()
+		.ten_percent_additional_collateral_ratio()
+		.build()
+		.execute_with(|| {
+			assert_ok!(mint_feur(ALICE, ONE_MILL));
+			let (collateral_position, _) = position();
+
+			// mock not enough locked collateral
+			assert_ok!(CollateralCurrency::withdraw(
+				&SyntheticTokens::account_id(),
+				collateral_position
+			));
+
+			assert_noop!(
+				withdraw_collateral(ALICE),
+				Error::NotEnoughLockedCollateralAvailable.into()
+			);
+		});
+}
+
+#[test]
+fn withdraw_collateral_does_correct_math() {
+	ExtBuilder::default()
+		.one_million_for_alice_n_mock_pool()
+		.synthetic_price_three()
+		.one_percent_spread()
+		.ten_percent_additional_collateral_ratio()
+		.build()
+		.execute_with(|| {
+			assert_ok!(mint_feur(ALICE, ONE_MILL));
+			let minted_synthetic_amount = SyntheticCurrency::total_issuance();
+			let (collateral_position, synthetic_position) = position();
+			let pool_balance = mock_pool_balance();
+
+			// after minted...
+			// minted_synthetic = 330_033
+			// collateral_position = 1_089_109
+			// collateral_from_pool = 89_109
+
+			MockPrices::set_mock_price(CurrencyId::FEUR, Some(Price::from_rational(29, 10)));
+
+			// required_collateral
+			// = new_synthetic_value * (1 + additional_collateral_ratio)
+			// = 330_033 * 2.9 * (1 + 0.1)
+			// = 957_095.7 * 1.1
+			// ~= 957_095 * 1.1 (FixedU128 type got floored int)
+			// ~= 1_052_804
+
+			// collateral_position_delta
+			// = collateral_position - required_collateral
+			// = 1_089_109 - 1_052_804
+			// = 36_305
+			let withdrew_amount = 36_305;
+
+			assert_ok!(withdraw_collateral(ALICE));
+
+			// ALICE withdrew collateral
+			assert_eq!(collateral_balance(ALICE), withdrew_amount);
+
+			// minted synthetic amount stays the same
+			assert_eq!(SyntheticCurrency::total_issuance(), minted_synthetic_amount);
+
+			// liquidity pool balance stays the same
+			assert_eq!(mock_pool_balance(), pool_balance);
+
+			// collateral position changed
+			let (new_collateral_position, new_synthetic_position) = position();
+			assert_eq!(new_collateral_position, collateral_position - withdrew_amount);
+			assert_eq!(new_synthetic_position, synthetic_position);
+
+			// event deposited
+			let event = TestEvent::synthetic_protocol(RawEvent::CollateralWithdrew(
+				ALICE,
+				CurrencyId::FEUR,
+				MOCK_POOL,
+				withdrew_amount,
+			));
+			assert!(System::events().iter().any(|record| record.event == event));
 		});
 }
