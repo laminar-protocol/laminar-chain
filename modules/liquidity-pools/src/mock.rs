@@ -10,6 +10,11 @@ use sp_runtime::{
 	Perbill,
 };
 
+use orml_currencies::Currency;
+use primitives::{Balance, CurrencyId, LiquidityPoolId};
+
+pub type AccountId = u32;
+
 impl_outer_origin! {
 	pub enum Origin for Test {}
 }
@@ -26,10 +31,6 @@ parameter_types! {
 	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
 
-pub type Balance = u64;
-pub type CurrencyId = u32;
-pub type LiquidityPoolId = u32;
-
 impl system::Trait for Test {
 	type Origin = Origin;
 	type Call = ();
@@ -37,7 +38,7 @@ impl system::Trait for Test {
 	type BlockNumber = u64;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type AccountId = u64;
+	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type Event = ();
@@ -48,27 +49,65 @@ impl system::Trait for Test {
 	type Version = ();
 }
 
+parameter_types! {
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::FLOW;
+}
+
+type NativeCurrency = Currency<Test, GetNativeCurrencyId>;
+
+impl orml_currencies::Trait for Test {
+	type Event = ();
+	type MultiCurrency = orml_tokens::Module<Test>;
+	type NativeCurrency = NativeCurrency;
+	type GetNativeCurrencyId = GetNativeCurrencyId;
+}
+
+type Amount = i128;
+impl orml_tokens::Trait for Test {
+	type Event = ();
+	type Balance = Balance;
+	type Amount = Amount;
+	type CurrencyId = CurrencyId;
+}
+
 pub struct PoolManager;
 
 impl LiquidityPoolManager<LiquidityPoolId> for PoolManager {
-	fn can_remove(pool_id: LiquidityPoolId) -> bool {
+	fn can_remove(_pool_id: LiquidityPoolId) -> bool {
 		true
 	}
 }
 
+parameter_types! {
+	pub const ExistentialDeposit: u128 = 50;
+}
+
 impl Trait for Test {
 	type Event = ();
+	type MultiCurrency = orml_currencies::Module<Test>;
 	type LiquidityPoolId = LiquidityPoolId;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
 	type PoolManager = PoolManager;
+	type ExistentialDeposit = ExistentialDeposit;
 }
 pub type ModuleLiquidityPools = Module<Test>;
 
 // This function basically just builds a genesis storage key/value store according to
 // our desired mockup.
 pub fn new_test_ext() -> runtime_io::TestExternalities {
-	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+	let mut t = system::GenesisConfig::default().build_storage::<Test>().unwrap().into();
+
+	orml_tokens::GenesisConfig::<Test> {
+		tokens: vec![CurrencyId::AUSD],
+		initial_balance: 100_000,
+		endowed_accounts: vec![ALICE, BOB],
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
+
+	t.into()
 }
 
-pub const ALICE: u64 = 1;
+pub const ALICE: AccountId = 1;
+pub const BOB: AccountId = 2;
