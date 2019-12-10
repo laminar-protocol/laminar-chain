@@ -133,18 +133,19 @@ impl<T: Trait> Module<T> {
 // Private methods
 impl<T: Trait> Module<T> {
 	fn _create_pool(who: T::AccountId, currency_id: T::CurrencyId) -> result::Result<(), Error> {
-		let pool_option: LiquidityPoolOption<T::Balance> = LiquidityPoolOption::default();
-
 		let pool_id = Self::next_pool_id();
-		<Owners<T>>::insert(&pool_id, &who);
-		<LiquidityPoolOptions<T>>::insert(&pool_id, &currency_id, pool_option);
-
 		// increment next pool id
-		let next_pool_id = match pool_id.checked_add(&One::one()) {
-			Some(id) => id,
+		match pool_id.checked_add(&One::one()) {
+			Some(id) => <NextPoolId<T>>::put(id),
 			None => return Err(Error::CannotCreateMorePool),
 		};
-		<NextPoolId<T>>::put(next_pool_id);
+
+		// create pool
+		let pool_option: LiquidityPoolOption<T::Balance> = LiquidityPoolOption::default();
+		<LiquidityPoolOptions<T>>::insert(&pool_id, &currency_id, pool_option);
+
+		// owner reference
+		<Owners<T>>::insert(&pool_id, &who);
 
 		Self::deposit_event(RawEvent::LiquidityPoolOptionCreated(who, pool_id));
 		Ok(())
