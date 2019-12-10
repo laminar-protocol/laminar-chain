@@ -136,9 +136,10 @@ impl<T: Trait> Module<T> {
 		let pool_option: LiquidityPoolOption<T::Balance> = LiquidityPoolOption::default();
 
 		let pool_id = Self::next_pool_id();
-		<Owners<T>>::insert(pool_id, &who);
-		<LiquidityPoolOptions<T>>::insert(pool_id, currency_id, pool_option);
+		<Owners<T>>::insert(&pool_id, &who);
+		<LiquidityPoolOptions<T>>::insert(&pool_id, &currency_id, pool_option);
 
+		// increment next pool id
 		let next_pool_id = match pool_id.checked_add(&One::one()) {
 			Some(id) => id,
 			None => return Err(Error::CannotCreateMorePool),
@@ -170,7 +171,11 @@ impl<T: Trait> Module<T> {
 		};
 
 		T::MultiCurrency::deposit(currency_id, &who, pool.balance).map_err(|e| e.into())?;
-		<LiquidityPoolOptions<T>>::remove(pool_id, currency_id);
+		<LiquidityPoolOptions<T>>::remove(&pool_id, &currency_id);
+
+		// remove owner reference
+		<Owners<T>>::remove(&pool_id);
+
 		Self::deposit_event(RawEvent::LiquidityPoolRemoved(who, pool_id, currency_id));
 		Ok(())
 	}
@@ -193,7 +198,7 @@ impl<T: Trait> Module<T> {
 
 				// update pool balance
 				pool.balance = new_balance;
-				<LiquidityPoolOptions<T>>::insert(pool_id, currency_id, pool);
+				<LiquidityPoolOptions<T>>::insert(&pool_id, &currency_id, pool);
 
 				Self::deposit_event(RawEvent::DepositLiquidity(who, pool_id, currency_id, amount));
 				Ok(())
@@ -227,7 +232,7 @@ impl<T: Trait> Module<T> {
 
 				// update pool balance
 				pool.balance = new_balance;
-				<LiquidityPoolOptions<T>>::insert(pool_id, currency_id, pool);
+				<LiquidityPoolOptions<T>>::insert(&pool_id, &currency_id, pool);
 
 				Self::deposit_event(RawEvent::WithdrawLiquidity(who, pool_id, currency_id, amount));
 				Ok(())
@@ -252,7 +257,7 @@ impl<T: Trait> Module<T> {
 
 		pool.bid_spread = bid;
 		pool.ask_spread = ask;
-		<LiquidityPoolOptions<T>>::insert(pool_id, currency_id, pool);
+		<LiquidityPoolOptions<T>>::insert(&pool_id, &currency_id, pool);
 
 		Self::deposit_event(RawEvent::SetSpread(who, pool_id, currency_id, ask, bid));
 		Ok(())
@@ -272,7 +277,7 @@ impl<T: Trait> Module<T> {
 		};
 
 		pool.additional_collateral_ratio = ratio;
-		<LiquidityPoolOptions<T>>::insert(pool_id, currency_id, pool);
+		<LiquidityPoolOptions<T>>::insert(&pool_id, &currency_id, pool);
 
 		Self::deposit_event(RawEvent::SetAdditionalCollateralRatio(who, pool_id, currency_id, ratio));
 		Ok(())
@@ -294,7 +299,7 @@ impl<T: Trait> Module<T> {
 
 		pool.enabled_longs = longs;
 		pool.enabled_shorts = shorts;
-		<LiquidityPoolOptions<T>>::insert(pool_id, currency_id, pool);
+		<LiquidityPoolOptions<T>>::insert(&pool_id, &currency_id, pool);
 
 		Self::deposit_event(RawEvent::SetEnabledTrades(who, pool_id, currency_id, longs, shorts));
 		Ok(())

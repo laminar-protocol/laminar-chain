@@ -73,6 +73,7 @@ fn should_remove_pool() {
 			CurrencyId::AUSD
 		));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
+		assert_eq!(ModuleLiquidityPools::owners(0), None);
 	})
 }
 
