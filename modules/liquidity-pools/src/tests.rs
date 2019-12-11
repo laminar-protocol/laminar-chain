@@ -46,10 +46,33 @@ fn should_disable_pool() {
 			Origin::signed(ALICE),
 			CurrencyId::AUSD
 		));
-		assert_ok!(ModuleLiquidityPools::disable_pool(Origin::signed(ALICE), 0));
+
+		assert_ok!(ModuleLiquidityPools::set_enabled_trades(
+			Origin::signed(ALICE),
+			0,
+			CurrencyId::AUSD,
+			Leverage::Ten.into(),
+			Leverage::Five.into()
+		));
+
+		assert_ok!(ModuleLiquidityPools::disable_pool(
+			Origin::signed(ALICE),
+			0,
+			CurrencyId::AUSD
+		));
+
+		let pool = LiquidityPoolOption {
+			bid_spread: Permill::zero(),
+			ask_spread: Permill::zero(),
+			additional_collateral_ratio: None,
+			enabled_longs: Leverages::none(),
+			enabled_shorts: Leverages::none(),
+			balance: 0,
+		};
+
 		assert_eq!(
-			ModuleLiquidityPools::disable_pool(Origin::signed(ALICE), 2),
-			Err("NoPermission")
+			ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD),
+			Some(pool)
 		);
 	})
 }

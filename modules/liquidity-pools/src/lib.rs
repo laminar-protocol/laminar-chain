@@ -72,9 +72,9 @@ decl_module! {
 			Self::_create_pool(who, currency_id).map_err(|e| e.into())
 		}
 
-		pub fn disable_pool(origin, pool_id: T::LiquidityPoolId) -> Result {
+		pub fn disable_pool(origin, pool_id: T::LiquidityPoolId, currency_id: T::CurrencyId) -> Result {
 			let who = ensure_signed(origin)?;
-			Self::_disable_pool(who, pool_id).map_err(|e| e.into())
+			Self::_disable_pool(who, pool_id, currency_id).map_err(|e| e.into())
 		}
 
 		pub fn remove_pool(origin, pool_id: T::LiquidityPoolId, currency_id: T::CurrencyId) -> Result {
@@ -149,9 +149,18 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	fn _disable_pool(who: T::AccountId, pool_id: T::LiquidityPoolId) -> result::Result<(), Error> {
+	fn _disable_pool(
+		who: T::AccountId,
+		pool_id: T::LiquidityPoolId,
+		currency_id: T::CurrencyId,
+	) -> result::Result<(), Error> {
 		ensure!(Self::is_owner(pool_id, &who), Error::NoPermission);
-		// TODO: Disable all tokens for this pool
+
+		let mut pool = <LiquidityPoolOptions<T>>::get(&pool_id, &currency_id).ok_or(Error::PoolNotFound)?;
+		pool.enabled_longs = Leverages::none();
+		pool.enabled_shorts = Leverages::none();
+		<LiquidityPoolOptions<T>>::insert(&pool_id, &currency_id, pool);
+
 		Self::deposit_event(RawEvent::LiquidityPoolDisabled(who, pool_id));
 		Ok(())
 	}
