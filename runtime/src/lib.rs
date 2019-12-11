@@ -247,11 +247,17 @@ impl pallet_membership::Trait<OperatorMembershipInstance> for Runtime {
 	type MembershipChanged = OperatorCollective;
 }
 
+// TODO: set this
+parameter_types! {
+	pub const MinimumCount: u32 = 3;
+	pub const ExpiresIn: u32 = 600;
+}
+
 impl orml_oracle::Trait for Runtime {
 	type Event = Event;
 	type OnNewData = (); // TODO: update this
 	type OperatorProvider = (); // TODO: update this
-	type CombineData = orml_oracle::DefaultCombineData<Runtime>;
+	type CombineData = orml_oracle::DefaultCombineData<Runtime, MinimumCount, ExpiresIn>;
 	type Time = Timestamp;
 	type OracleKey = CurrencyId;
 	type OracleValue = Balance; // TODO: update this
@@ -302,7 +308,7 @@ impl LiquidityPoolBaseTypes for DummyLiquidityPools<AccountId> {
 	type LiquidityPoolId = LiquidityPoolId;
 	type CurrencyId = CurrencyId;
 }
-impl LiquidityPoolsConfig for DummyLiquidityPools<AccountId> {
+impl LiquidityPoolsConfig<AccountId> for DummyLiquidityPools<AccountId> {
 	fn get_bid_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
 		Permill::from_percent(3)
 	}
@@ -313,6 +319,10 @@ impl LiquidityPoolsConfig for DummyLiquidityPools<AccountId> {
 
 	fn get_additional_collateral_ratio(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
 		Permill::from_percent(3)
+	}
+
+	fn is_owner(_pool_id: Self::LiquidityPoolId, _who: &AccountId) -> bool {
+		true
 	}
 }
 impl LiquidityPoolsCurrency<AccountId> for DummyLiquidityPools<AccountId> {

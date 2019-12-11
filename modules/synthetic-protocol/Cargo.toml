@@ -24,8 +24,6 @@ synthetic-tokens = { package = "module-synthetic-tokens", path = "../synthetic-t
 
 [dev-dependencies]
 primitives = { package = "sp-core", git = "https://github.com/paritytech/substrate.git", default-features = false }
-pallet-balances = { git = "https://github.com/paritytech/substrate.git", default-features = false }
-pallet-indices = { git = "https://github.com/paritytech/substrate.git", default-features = false }
 orml-tokens = { path = "../../orml/tokens", default-features = false }
 orml-currencies = { path = "../../orml/currencies", default-features = false }
 
