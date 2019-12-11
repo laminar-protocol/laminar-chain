@@ -10,6 +10,47 @@ use primitives::{CurrencyId, Leverage, Leverages};
 use sp_runtime::Permill;
 
 #[test]
+fn is_owner_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(ModuleLiquidityPools::create_pool(
+			Origin::signed(ALICE),
+			CurrencyId::AUSD
+		));
+		assert_eq!(ModuleLiquidityPools::is_owner(0, &ALICE), true);
+		assert_eq!(ModuleLiquidityPools::is_owner(1, &ALICE), false);
+	});
+}
+
+#[test]
+fn is_enabled_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(ModuleLiquidityPools::create_pool(
+			Origin::signed(ALICE),
+			CurrencyId::AUSD
+		));
+		assert_ok!(ModuleLiquidityPools::set_enabled_trades(
+			Origin::signed(ALICE),
+			0,
+			CurrencyId::AUSD,
+			Leverage::Ten.into(),
+			Leverage::Five.into()
+		));
+		assert_eq!(
+			ModuleLiquidityPools::is_enabled(0, CurrencyId::AUSD, Leverage::Ten),
+			true
+		);
+		assert_eq!(
+			ModuleLiquidityPools::is_enabled(0, CurrencyId::AUSD, Leverage::Five),
+			true
+		);
+		assert_eq!(
+			ModuleLiquidityPools::is_enabled(0, CurrencyId::AUSD, Leverage::Fifty),
+			false
+		);
+	});
+}
+
+#[test]
 fn should_create_pool() {
 	new_test_ext().execute_with(|| {
 		let pool_option = LiquidityPoolOption::default();
@@ -24,18 +65,6 @@ fn should_create_pool() {
 		);
 		assert_eq!(ModuleLiquidityPools::owners(0), Some(ALICE));
 		assert_eq!(ModuleLiquidityPools::next_pool_id(), 1);
-	});
-}
-
-#[test]
-fn is_owner_should_work() {
-	new_test_ext().execute_with(|| {
-		assert_ok!(ModuleLiquidityPools::create_pool(
-			Origin::signed(ALICE),
-			CurrencyId::AUSD
-		));
-		assert_eq!(ModuleLiquidityPools::is_owner(0, &ALICE), true);
-		assert_eq!(ModuleLiquidityPools::is_owner(1, &ALICE), false);
 	});
 }
 

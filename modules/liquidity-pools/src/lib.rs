@@ -11,7 +11,7 @@ use frame_support::{
 };
 use frame_system::{self as system, ensure_signed};
 use orml_traits::MultiCurrency;
-use primitives::Leverages;
+use primitives::{Leverage, Leverages};
 use rstd::result;
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, One, SimpleArithmetic, Zero},
@@ -125,6 +125,13 @@ impl<T: Trait> Module<T> {
 	pub fn is_owner(pool_id: T::LiquidityPoolId, who: &T::AccountId) -> bool {
 		match Self::owners(pool_id) {
 			Some(id) => &id == who,
+			None => false,
+		}
+	}
+
+	pub fn is_enabled(pool_id: T::LiquidityPoolId, currency_id: T::CurrencyId, leverage: Leverage) -> bool {
+		match <LiquidityPoolOptions<T>>::get(&pool_id, &currency_id) {
+			Some(pool) => pool.enabled_longs.contains(leverage) || pool.enabled_shorts.contains(leverage),
 			None => false,
 		}
 	}
