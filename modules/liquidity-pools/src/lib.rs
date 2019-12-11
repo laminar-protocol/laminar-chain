@@ -135,10 +135,8 @@ impl<T: Trait> Module<T> {
 	fn _create_pool(who: T::AccountId, currency_id: T::CurrencyId) -> result::Result<(), Error> {
 		let pool_id = Self::next_pool_id();
 		// increment next pool id
-		match pool_id.checked_add(&One::one()) {
-			Some(id) => <NextPoolId<T>>::put(id),
-			None => return Err(Error::CannotCreateMorePool),
-		};
+		let next_pool_id = pool_id.checked_add(&One::one()).ok_or(Error::CannotCreateMorePool)?;
+		<NextPoolId<T>>::put(next_pool_id);
 
 		// create pool
 		let pool_option: LiquidityPoolOption<T::Balance> = LiquidityPoolOption::default();
@@ -166,10 +164,7 @@ impl<T: Trait> Module<T> {
 		ensure!(Self::is_owner(pool_id, &who), Error::NoPermission);
 		ensure!(T::PoolManager::can_remove(pool_id), Error::CannotRemovePool);
 
-		let pool = match <LiquidityPoolOptions<T>>::get(&pool_id, &currency_id) {
-			Some(pool) => pool,
-			None => return Err(Error::PoolNotFound),
-		};
+		let pool = <LiquidityPoolOptions<T>>::get(&pool_id, &currency_id).ok_or(Error::PoolNotFound)?;
 
 		T::MultiCurrency::deposit(currency_id, &who, pool.balance).map_err(|e| e.into())?;
 		<LiquidityPoolOptions<T>>::remove(&pool_id, &currency_id);
@@ -187,25 +182,19 @@ impl<T: Trait> Module<T> {
 		currency_id: T::CurrencyId,
 		amount: T::Balance,
 	) -> result::Result<(), Error> {
-		let mut pool = match <LiquidityPoolOptions<T>>::get(&pool_id, &currency_id) {
-			Some(pool) => pool,
-			None => return Err(Error::PoolNotFound),
-		};
+		let mut pool = <LiquidityPoolOptions<T>>::get(&pool_id, &currency_id).ok_or(Error::PoolNotFound)?;
 
-		match pool.balance.checked_add(&amount) {
-			Some(new_balance) => {
-				// withdraw account
-				T::MultiCurrency::withdraw(currency_id, &who, amount).map_err(|e| e.into())?;
+		// update pool balance
+		pool.balance = pool.balance.checked_add(&amount).ok_or(Error::DepositFailed)?;
 
-				// update pool balance
-				pool.balance = new_balance;
-				<LiquidityPoolOptions<T>>::insert(&pool_id, &currency_id, pool);
+		// withdraw account
+		T::MultiCurrency::withdraw(currency_id, &who, amount).map_err(|e| e.into())?;
 
-				Self::deposit_event(RawEvent::DepositLiquidity(who, pool_id, currency_id, amount));
-				Ok(())
-			}
-			None => Err(Error::DepositFailed),
-		}
+		// update pool balance
+		<LiquidityPoolOptions<T>>::insert(&pool_id, &currency_id, pool);
+
+		Self::deposit_event(RawEvent::DepositLiquidity(who, pool_id, currency_id, amount));
+		Ok(())
 	}
 
 	fn _withdraw_liquidity(
@@ -216,30 +205,24 @@ impl<T: Trait> Module<T> {
 	) -> result::Result<(), Error> {
 		ensure!(Self::is_owner(pool_id, &who), Error::NoPermission);
 
-		let mut pool = match <LiquidityPoolOptions<T>>::get(&pool_id, &currency_id) {
-			Some(pool) => pool,
-			None => return Err(Error::PoolNotFound),
-		};
+		let mut pool = <LiquidityPoolOptions<T>>::get(&pool_id, &currency_id).ok_or(Error::PoolNotFound)?;
 
-		match pool.balance.checked_sub(&amount) {
-			Some(new_balance) => {
-				// check minimum balance
-				if new_balance < T::ExistentialDeposit::get() {
-					return Err(Error::WithdrawFailed);
-				}
+		let new_balance = pool.balance.checked_sub(&amount).ok_or(Error::WithdrawFailed)?;
 
-				// deposit amount to account
-				T::MultiCurrency::deposit(currency_id, &who, amount).map_err(|e| e.into())?;
-
-				// update pool balance
-				pool.balance = new_balance;
-				<LiquidityPoolOptions<T>>::insert(&pool_id, &currency_id, pool);
-
-				Self::deposit_event(RawEvent::WithdrawLiquidity(who, pool_id, currency_id, amount));
-				Ok(())
-			}
-			None => Err(Error::WithdrawFailed),
+		// check minimum balance
+		if new_balance < T::ExistentialDeposit::get() {
+			return Err(Error::WithdrawFailed);
 		}
+
+		// deposit amount to account
+		T::MultiCurrency::deposit(currency_id, &who, amount).map_err(|e| e.into())?;
+
+		// update pool balance
+		pool.balance = new_balance;
+		<LiquidityPoolOptions<T>>::insert(&pool_id, &currency_id, pool);
+
+		Self::deposit_event(RawEvent::WithdrawLiquidity(who, pool_id, currency_id, amount));
+		Ok(())
 	}
 
 	fn _set_spread(
@@ -251,11 +234,7 @@ impl<T: Trait> Module<T> {
 	) -> result::Result<(), Error> {
 		ensure!(Self::is_owner(pool_id, &who), Error::NoPermission);
 
-		let mut pool = match <LiquidityPoolOptions<T>>::get(&pool_id, &currency_id) {
-			Some(pool) => pool,
-			None => return Err(Error::PoolNotFound),
-		};
-
+		let mut pool = <LiquidityPoolOptions<T>>::get(&pool_id, &currency_id).ok_or(Error::PoolNotFound)?;
 		pool.bid_spread = bid;
 		pool.ask_spread = ask;
 		<LiquidityPoolOptions<T>>::insert(&pool_id, &currency_id, pool);
@@ -272,11 +251,7 @@ impl<T: Trait> Module<T> {
 	) -> result::Result<(), Error> {
 		ensure!(Self::is_owner(pool_id, &who), Error::NoPermission);
 
-		let mut pool = match <LiquidityPoolOptions<T>>::get(&pool_id, &currency_id) {
-			Some(pool) => pool,
-			None => return Err(Error::PoolNotFound),
-		};
-
+		let mut pool = <LiquidityPoolOptions<T>>::get(&pool_id, &currency_id).ok_or(Error::PoolNotFound)?;
 		pool.additional_collateral_ratio = ratio;
 		<LiquidityPoolOptions<T>>::insert(&pool_id, &currency_id, pool);
 
@@ -293,11 +268,7 @@ impl<T: Trait> Module<T> {
 	) -> result::Result<(), Error> {
 		ensure!(Self::is_owner(pool_id, &who), Error::NoPermission);
 
-		let mut pool = match <LiquidityPoolOptions<T>>::get(&pool_id, &currency_id) {
-			Some(pool) => pool,
-			None => return Err(Error::PoolNotFound),
-		};
-
+		let mut pool = <LiquidityPoolOptions<T>>::get(&pool_id, &currency_id).ok_or(Error::PoolNotFound)?;
 		pool.enabled_longs = longs;
 		pool.enabled_shorts = shorts;
 		<LiquidityPoolOptions<T>>::insert(&pool_id, &currency_id, pool);
