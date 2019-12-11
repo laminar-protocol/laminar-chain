@@ -21,10 +21,12 @@ pub trait LiquidityPoolBaseTypes {
 	type CurrencyId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug;
 }
 
-pub trait LiquidityPoolsConfig: LiquidityPoolBaseTypes {
+pub trait LiquidityPoolsConfig<AccountId>: LiquidityPoolBaseTypes {
 	fn get_bid_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Permill;
 	fn get_ask_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Permill;
 	fn get_additional_collateral_ratio(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Permill;
+
+	fn is_owner(pool_id: Self::LiquidityPoolId, who: &AccountId) -> bool;
 }
 
 pub trait LiquidityPoolsPosition: LiquidityPoolBaseTypes {
@@ -60,7 +62,7 @@ pub trait LiquidityPoolsCurrency<AccountId>: LiquidityPoolBaseTypes {
 }
 
 pub trait LiquidityPools<AccountId>:
-	LiquidityPoolsConfig + LiquidityPoolsPosition + LiquidityPoolsCurrency<AccountId>
+	LiquidityPoolsConfig<AccountId> + LiquidityPoolsPosition + LiquidityPoolsCurrency<AccountId>
 {
 }
 
