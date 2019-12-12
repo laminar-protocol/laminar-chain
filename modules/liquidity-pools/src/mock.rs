@@ -50,10 +50,14 @@ impl system::Trait for Test {
 }
 
 parameter_types! {
+	pub const ExistentialDeposit: u128 = 50;
 	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::FLOW;
+	pub const GetLiquidityCurrencyId: CurrencyId = CurrencyId::AUSD;
+	pub const LiquidityCurrencyIds: Vec<CurrencyId> = vec![CurrencyId::AUSD, CurrencyId::FEUR, CurrencyId::FJPY];
 }
 
 type NativeCurrency = Currency<Test, GetNativeCurrencyId>;
+pub type LiquidityCurrency = orml_currencies::Currency<Test, GetLiquidityCurrencyId>;
 
 impl orml_currencies::Trait for Test {
 	type Event = ();
@@ -78,18 +82,16 @@ impl LiquidityPoolManager<LiquidityPoolId> for PoolManager {
 	}
 }
 
-parameter_types! {
-	pub const ExistentialDeposit: u128 = 50;
-}
-
 impl Trait for Test {
 	type Event = ();
 	type MultiCurrency = orml_currencies::Module<Test>;
+	type LiquidityCurrency = LiquidityCurrency;
 	type LiquidityPoolId = LiquidityPoolId;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
 	type PoolManager = PoolManager;
 	type ExistentialDeposit = ExistentialDeposit;
+	type LiquidityCurrencyIds = LiquidityCurrencyIds;
 }
 pub type ModuleLiquidityPools = Module<Test>;
 
