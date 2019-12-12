@@ -173,13 +173,10 @@ impl<T: Trait> Module<T> {
 		ensure!(Self::is_owner(pool_id, who), Error::NoPermission);
 
 		for currency_id in T::LiquidityCurrencyIds::get() {
-			match <LiquidityPoolOptions<T>>::get(&pool_id, currency_id) {
-				Some(mut pool) => {
-					pool.enabled_longs = Leverages::none();
-					pool.enabled_shorts = Leverages::none();
-					<LiquidityPoolOptions<T>>::insert(&pool_id, currency_id, pool);
-				}
-				None => {}
+			if let Some(mut pool) = <LiquidityPoolOptions<T>>::get(&pool_id, currency_id) {
+				pool.enabled_longs = Leverages::none();
+				pool.enabled_shorts = Leverages::none();
+				<LiquidityPoolOptions<T>>::insert(&pool_id, currency_id, pool);
 			}
 		}
 
