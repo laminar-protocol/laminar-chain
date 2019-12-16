@@ -14,10 +14,14 @@ use orml_traits::{BasicCurrency, MultiCurrency};
 use primitives::{Leverage, Leverages};
 use rstd::result;
 use sp_runtime::{
-	traits::{CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, One, SimpleArithmetic, Zero},
-	Permill,
+	traits::{
+		AccountIdConversion, CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, One, SimpleArithmetic, Zero,
+	},
+	ModuleId, Permill,
 };
 use traits::LiquidityPoolManager;
+
+const MODULE_ID: ModuleId = ModuleId(*b"flow/lp_");
 
 type ErrorOf<T> = <<T as Trait>::MultiCurrency as MultiCurrency<<T as frame_system::Trait>::AccountId>>::Error;
 
@@ -142,6 +146,10 @@ decl_error! {
 }
 
 impl<T: Trait> Module<T> {
+	pub fn account_id() -> T::AccountId {
+		MODULE_ID.into_account()
+	}
+
 	pub fn is_owner(pool_id: T::LiquidityPoolId, who: &T::AccountId) -> bool {
 		match Self::owners(pool_id) {
 			Some(id) => &id == who,
@@ -188,8 +196,8 @@ impl<T: Trait> Module<T> {
 		ensure!(T::PoolManager::can_remove(pool_id), Error::CannotRemovePool);
 
 		let balance = Self::balances(&pool_id);
-		// deposit liquidity balance to pool owner
-		T::LiquidityCurrency::deposit(who, balance).map_err(|e| e.into())?;
+		// transfer balance to pool owner
+		T::LiquidityCurrency::transfer(&Self::account_id(), who, balance).map_err(|e| e.into())?;
 
 		<Balances<T>>::remove(&pool_id);
 		<Owners<T>>::remove(&pool_id);
@@ -208,8 +216,8 @@ impl<T: Trait> Module<T> {
 	) -> result::Result<(), Error> {
 		let balance = Self::balances(&pool_id);
 		let new_balance = balance.checked_add(&amount).ok_or(Error::CannotDepositAmount)?;
-		// withdraw account
-		T::LiquidityCurrency::withdraw(who, amount).map_err(|e| e.into())?;
+		// transfer amount to this pool
+		T::LiquidityCurrency::transfer(who, &Self::account_id(), amount).map_err(|e| e.into())?;
 		// update balance
 		<Balances<T>>::insert(&pool_id, new_balance);
 		Ok(())
@@ -229,8 +237,8 @@ impl<T: Trait> Module<T> {
 			return Err(Error::CannotWithdrawAmount);
 		}
 
-		// deposit amount to account
-		T::LiquidityCurrency::deposit(who, amount).map_err(|e| e.into())?;
+		// transfer amount to account
+		T::LiquidityCurrency::transfer(&Self::account_id(), who, amount).map_err(|e| e.into())?;
 
 		// update balance
 		<Balances<T>>::insert(&pool_id, new_balance);
