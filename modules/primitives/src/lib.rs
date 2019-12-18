@@ -61,15 +61,42 @@ impl Convert<Price, Balance> for BalancePriceConverter {
 
 bitmask! {
 	#[derive(Encode, Decode, Default)]
-	pub mask Leverages: u16 where
-
-	#[derive(Encode, Decode)]
-	flags Leverage {
-		Five 	= 0b00000001,
-		Ten 	= 0b00000010,
-		Twenty 	= 0b00000100,
-		Thirty 	= 0b00001000,
-		Forty	= 0b00010000,
-		Fifty	= 0b00100000,
+	pub mask Leverages: u16 where flags Leverage {
+		ShortFive 	= 0b0000000000000001,
+		LongFive 	= 0b0000000000000010,
+		ShortTen 	= 0b0000000000000100,
+		LongTen 	= 0b0000000000001000,
+		ShortTwenty	= 0b0000000000010000,
+		LongTwenty 	= 0b0000000000100000,
+		ShortThirty	= 0b0000000001000000,
+		LongThirty	= 0b0000000010000000,
+		ShortForty	= 0b0000000100000000,
+		LongForty	= 0b0000001000000000,
+		ShortFifty	= 0b0000010000000000,
+		LongFifty	= 0b0000100000000000,
 	}
+}
+
+impl Leverage {
+	fn is_long(self) -> bool {
+		!self.is_short()
+	}
+
+	fn is_short(self) -> bool {
+		(Leverage::ShortFive
+			| Leverage::ShortTen
+			| Leverage::ShortTwenty
+			| Leverage::ShortThirty
+			| Leverage::ShortForty
+			| Leverage::ShortFifty)
+			.contains(self)
+	}
+}
+
+#[test]
+fn should_check_short_and_long() {
+	assert_eq!(Leverage::ShortFifty.is_short(), true);
+	assert_eq!(Leverage::LongFifty.is_short(), false);
+	assert_eq!(Leverage::LongFifty.is_long(), true);
+	assert_eq!(Leverage::ShortFive.is_long(), false);
 }

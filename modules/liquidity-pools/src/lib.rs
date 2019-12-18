@@ -6,6 +6,7 @@ mod tests;
 
 pub use liquidity_pool_option::LiquidityPoolOption;
 
+use codec::FullCodec;
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage, dispatch::Result, ensure, traits::Get, Parameter,
 };
@@ -19,7 +20,10 @@ use sp_runtime::{
 	},
 	ModuleId, Permill,
 };
-use traits::LiquidityPoolManager;
+use traits::{
+	LiquidityPoolBaseTypes, LiquidityPoolManager, LiquidityPools, LiquidityPoolsConfig, LiquidityPoolsCurrency,
+	LiquidityPoolsPosition,
+};
 
 const MODULE_ID: ModuleId = ModuleId(*b"flow/lp_");
 
@@ -29,9 +33,16 @@ pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Self::Balance, CurrencyId = Self::CurrencyId>;
 	type LiquidityCurrency: BasicCurrency<Self::AccountId, Balance = Self::Balance, Error = ErrorOf<Self>>;
-	type LiquidityPoolId: Parameter + Member + Copy + Ord + Default + SimpleArithmetic;
+	type LiquidityPoolId: FullCodec
+		+ Parameter
+		+ Member
+		+ Copy
+		+ Ord
+		+ Default
+		+ SimpleArithmetic
+		+ MaybeSerializeDeserialize;
 	type Balance: Parameter + Member + SimpleArithmetic + Default + Copy + MaybeSerializeDeserialize;
-	type CurrencyId: Parameter + Member + Copy + MaybeSerializeDeserialize;
+	type CurrencyId: FullCodec + Parameter + Member + Copy + MaybeSerializeDeserialize;
 	type PoolManager: LiquidityPoolManager<Self::LiquidityPoolId>;
 	type ExistentialDeposit: Get<Self::Balance>;
 	type LiquidityCurrencyIds: Get<Vec<Self::CurrencyId>>;
@@ -158,12 +169,83 @@ impl<T: Trait> Module<T> {
 	}
 
 	pub fn is_enabled(pool_id: T::LiquidityPoolId, currency_id: T::CurrencyId, leverage: Leverage) -> bool {
-		match <LiquidityPoolOptions<T>>::get(&pool_id, &currency_id) {
+		match Self::liquidity_pool_options(&pool_id, &currency_id) {
 			Some(pool) => pool.enabled_longs.contains(leverage) || pool.enabled_shorts.contains(leverage),
 			None => false,
 		}
 	}
 }
+
+impl<T: Trait> LiquidityPoolBaseTypes for Module<T> {
+	type LiquidityPoolId = T::LiquidityPoolId;
+	type CurrencyId = T::CurrencyId;
+}
+
+impl<T: Trait> LiquidityPoolsConfig<T::AccountId> for Module<T> {
+	fn get_bid_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill> {
+		match Self::liquidity_pool_options(&pool_id, &currency_id) {
+			Some(pool) => Some(pool.bid_spread),
+			None => None,
+		}
+	}
+
+	fn get_ask_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill> {
+		match Self::liquidity_pool_options(&pool_id, &currency_id) {
+			Some(pool) => Some(pool.ask_spread),
+			None => None,
+		}
+	}
+
+	fn get_additional_collateral_ratio(
+		pool_id: Self::LiquidityPoolId,
+		currency_id: Self::CurrencyId,
+	) -> Option<Permill> {
+		match Self::liquidity_pool_options(&pool_id, &currency_id) {
+			Some(pool) => pool.additional_collateral_ratio,
+			None => None,
+		}
+	}
+
+	fn is_owner(pool_id: Self::LiquidityPoolId, who: &T::AccountId) -> bool {
+		Self::is_owner(pool_id, who)
+	}
+}
+
+impl<T: Trait> LiquidityPoolsPosition for Module<T> {
+	fn is_allowed_position(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId, leverage: Leverage) -> bool {
+		Self::is_enabled(pool_id, currency_id, leverage)
+	}
+}
+
+impl<T: Trait> LiquidityPoolsCurrency<T::AccountId> for Module<T> {
+	type Balance = T::Balance;
+	type Error = Error;
+
+	/// Check collateral balance of `pool_id`.
+	fn balance(pool_id: Self::LiquidityPoolId) -> Self::Balance {
+		Self::balances(&pool_id)
+	}
+
+	/// Deposit some amount of collateral to `pool_id`, from `who`.
+	fn deposit(
+		from: &T::AccountId,
+		pool_id: Self::LiquidityPoolId,
+		amount: Self::Balance,
+	) -> result::Result<(), Self::Error> {
+		Self::_deposit_liquidity(from, pool_id, amount)
+	}
+
+	/// Withdraw some amount of collateral to `who`, from `pool_id`.
+	fn withdraw(
+		to: &T::AccountId,
+		pool_id: Self::LiquidityPoolId,
+		amount: Self::Balance,
+	) -> result::Result<(), Self::Error> {
+		Self::_withdraw_liquidity(to, pool_id, amount)
+	}
+}
+
+impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {}
 
 // Private methods
 impl<T: Trait> Module<T> {
@@ -181,7 +263,7 @@ impl<T: Trait> Module<T> {
 		ensure!(Self::is_owner(pool_id, who), Error::NoPermission);
 
 		for currency_id in T::LiquidityCurrencyIds::get() {
-			if let Some(mut pool) = <LiquidityPoolOptions<T>>::get(&pool_id, currency_id) {
+			if let Some(mut pool) = Self::liquidity_pool_options(&pool_id, currency_id) {
 				pool.enabled_longs = Leverages::none();
 				pool.enabled_shorts = Leverages::none();
 				<LiquidityPoolOptions<T>>::insert(&pool_id, currency_id, pool);
@@ -253,7 +335,7 @@ impl<T: Trait> Module<T> {
 		bid: Permill,
 	) -> result::Result<(), Error> {
 		ensure!(Self::is_owner(pool_id, who), Error::NoPermission);
-		let mut pool = <LiquidityPoolOptions<T>>::get(&pool_id, &currency_id).unwrap_or_default();
+		let mut pool = Self::liquidity_pool_options(&pool_id, &currency_id).unwrap_or_default();
 		pool.bid_spread = bid;
 		pool.ask_spread = ask;
 		<LiquidityPoolOptions<T>>::insert(&pool_id, &currency_id, pool);
@@ -267,7 +349,7 @@ impl<T: Trait> Module<T> {
 		ratio: Option<Permill>,
 	) -> result::Result<(), Error> {
 		ensure!(Self::is_owner(pool_id, who), Error::NoPermission);
-		let mut pool = <LiquidityPoolOptions<T>>::get(&pool_id, &currency_id).unwrap_or_default();
+		let mut pool = Self::liquidity_pool_options(&pool_id, &currency_id).unwrap_or_default();
 		pool.additional_collateral_ratio = ratio;
 		<LiquidityPoolOptions<T>>::insert(&pool_id, &currency_id, pool);
 		Ok(())
@@ -281,7 +363,7 @@ impl<T: Trait> Module<T> {
 		shorts: Leverages,
 	) -> result::Result<(), Error> {
 		ensure!(Self::is_owner(pool_id, who), Error::NoPermission);
-		let mut pool = <LiquidityPoolOptions<T>>::get(&pool_id, &currency_id).unwrap_or_default();
+		let mut pool = Self::liquidity_pool_options(&pool_id, &currency_id).unwrap_or_default();
 		pool.enabled_longs = longs;
 		pool.enabled_shorts = shorts;
 		<LiquidityPoolOptions<T>>::insert(&pool_id, &currency_id, pool);
