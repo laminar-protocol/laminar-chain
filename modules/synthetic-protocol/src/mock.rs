@@ -156,16 +156,19 @@ impl LiquidityPoolBaseTypes for MockLiquidityPools {
 }
 
 impl LiquidityPoolsConfig<AccountId> for MockLiquidityPools {
-	fn get_bid_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
-		Self::spread()
+	fn get_bid_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Option<Permill> {
+		Some(Self::spread())
 	}
 
-	fn get_ask_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
-		Self::spread()
+	fn get_ask_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Option<Permill> {
+		Some(Self::spread())
 	}
 
-	fn get_additional_collateral_ratio(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
-		Self::additional_collateral_ratio()
+	fn get_additional_collateral_ratio(
+		_pool_id: Self::LiquidityPoolId,
+		_currency_id: Self::CurrencyId,
+	) -> Option<Permill> {
+		Some(Self::additional_collateral_ratio())
 	}
 
 	/// ALICE is the mock owner

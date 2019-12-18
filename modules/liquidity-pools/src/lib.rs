@@ -13,6 +13,7 @@ use frame_support::{
 use frame_system::{self as system, ensure_signed};
 use orml_traits::{BasicCurrency, MultiCurrency};
 use primitives::{Leverage, Leverages};
+use rstd::prelude::*;
 use rstd::result;
 use sp_runtime::{
 	traits::{

@@ -854,6 +854,7 @@ dependencies = [
  "frame-executive 2.0.0 (git+https://github.com/paritytech/substrate.git)",
  "frame-support 2.0.0 (git+https://github.com/paritytech/substrate.git)",
  "frame-system 2.0.0 (git+https://github.com/paritytech/substrate.git)",
+ "module-liquidity-pools 0.0.1",
  "module-primitives 0.0.1",
  "module-synthetic-protocol 0.0.1",
  "module-synthetic-tokens 0.0.1",

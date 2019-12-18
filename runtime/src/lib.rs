@@ -13,7 +13,6 @@ use pallet_grandpa::fg_primitives;
 use pallet_grandpa::AuthorityList as GrandpaAuthorityList;
 use primitives::u32_trait::{_1, _2};
 use primitives::OpaqueMetadata;
-use rstd::marker;
 use rstd::prelude::*;
 use sp_api::impl_runtime_apis;
 use sp_runtime::traits::{BlakeTwo256, Block as BlockT, ConvertInto, IdentifyAccount, NumberFor, StaticLookup, Verify};
@@ -30,7 +29,7 @@ use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::DataProvider;
 
 use module_primitives::{Balance, BalancePriceConverter, Price};
-use traits::{LiquidityPoolBaseTypes, LiquidityPoolsConfig, LiquidityPoolsCurrency};
+use traits::LiquidityPoolManager;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{construct_runtime, parameter_types, traits::Randomness, weights::Weight, StorageValue};
@@ -302,45 +301,33 @@ impl synthetic_tokens::Trait for Runtime {
 	type LiquidityPoolId = LiquidityPoolId;
 }
 
-// TODO: replace this mock
-pub struct DummyLiquidityPools<AccountId>(marker::PhantomData<AccountId>);
-impl LiquidityPoolBaseTypes for DummyLiquidityPools<AccountId> {
-	type LiquidityPoolId = LiquidityPoolId;
-	type CurrencyId = CurrencyId;
+parameter_types! {
+	pub const GetLiquidityCurrencyId: CurrencyId = CurrencyId::AUSD;
+	pub const LiquidityCurrencyIds: Vec<CurrencyId> = vec![CurrencyId::AUSD, CurrencyId::FEUR, CurrencyId::FJPY];
 }
-impl LiquidityPoolsConfig<AccountId> for DummyLiquidityPools<AccountId> {
-	fn get_bid_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
-		Permill::from_percent(3)
-	}
 
-	fn get_ask_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
-		Permill::from_percent(3)
-	}
+type LiquidityCurrency = orml_currencies::Currency<Runtime, GetLiquidityCurrencyId>;
 
-	fn get_additional_collateral_ratio(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
-		Permill::from_percent(3)
-	}
+pub struct PoolManager;
 
-	fn is_owner(_pool_id: Self::LiquidityPoolId, _who: &AccountId) -> bool {
+impl LiquidityPoolManager<LiquidityPoolId> for PoolManager {
+	fn can_remove(_pool_id: LiquidityPoolId) -> bool {
 		true
 	}
 }
-impl LiquidityPoolsCurrency<AccountId> for DummyLiquidityPools<AccountId> {
+
+impl liquidity_pools::Trait for Runtime {
+	type Event = Event;
+	type MultiCurrency = orml_currencies::Module<Runtime>;
+	type LiquidityCurrency = LiquidityCurrency;
+	type LiquidityPoolId = LiquidityPoolId;
 	type Balance = Balance;
-	type Error = &'static str;
-
-	fn balance(_: Self::LiquidityPoolId) -> Self::Balance {
-		Zero::zero()
-	}
-
-	fn deposit(_from: &AccountId, _pool_id: Self::LiquidityPoolId, _amount: Self::Balance) -> Result<(), Self::Error> {
-		Ok(())
-	}
-
-	fn withdraw(_to: &AccountId, _pool_id: Self::LiquidityPoolId, _amount: Self::Balance) -> Result<(), Self::Error> {
-		Ok(())
-	}
+	type CurrencyId = CurrencyId;
+	type PoolManager = PoolManager;
+	type ExistentialDeposit = ExistentialDeposit;
+	type LiquidityCurrencyIds = LiquidityCurrencyIds;
 }
+
 parameter_types! {
 	pub const GetCollateralCurrencyId: CurrencyId = CurrencyId::AUSD;
 }
@@ -351,8 +338,8 @@ impl synthetic_protocol::Trait for Runtime {
 	type CollateralCurrency = CollateralCurrency;
 	type GetCollateralCurrencyId = GetCollateralCurrencyId;
 	type PriceProvider = orml_prices::Module<Runtime>;
-	type LiquidityPoolsConfig = DummyLiquidityPools<AccountId>;
-	type LiquidityPoolsCurrency = DummyLiquidityPools<AccountId>;
+	type LiquidityPoolsConfig = liquidity_pools::Module<Runtime>;
+	type LiquidityPoolsCurrency = liquidity_pools::Module<Runtime>;
 	type BalanceToPrice = BalancePriceConverter;
 	type PriceToBalance = BalancePriceConverter;
 }
@@ -380,6 +367,7 @@ construct_runtime!(
 		Prices: orml_prices::{Module, Storage},
 		SyntheticTokens: synthetic_tokens::{Module, Storage, Call, Event<T>},
 		SyntheticProtocol: synthetic_protocol::{Module, Call, Event<T>},
+		LiquidityPools: liquidity_pools::{Module, Storage, Call, Event<T>},
 	}
 );
 

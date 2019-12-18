@@ -78,10 +78,12 @@ bitmask! {
 }
 
 impl Leverage {
+	#[allow(dead_code)]
 	fn is_long(self) -> bool {
 		!self.is_short()
 	}
 
+	#[allow(dead_code)]
 	fn is_short(self) -> bool {
 		(Leverage::ShortFive
 			| Leverage::ShortTen
