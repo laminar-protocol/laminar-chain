@@ -107,6 +107,13 @@ impl Leverage {
 	}
 }
 
+#[cfg(not(feature = "std"))]
+impl core::fmt::Debug for Leverages {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+		write!(f, "Leverages {:?}", self)
+	}
+}
+
 #[test]
 fn should_check_short_and_long() {
 	assert_eq!(Leverage::ShortFifty.is_short(), true);
