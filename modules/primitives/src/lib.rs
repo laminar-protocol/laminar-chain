@@ -79,19 +79,31 @@ bitmask! {
 
 impl Leverage {
 	#[allow(dead_code)]
-	fn is_long(self) -> bool {
+	fn is_long(&self) -> bool {
 		!self.is_short()
 	}
 
 	#[allow(dead_code)]
-	fn is_short(self) -> bool {
+	fn is_short(&self) -> bool {
 		(Leverage::ShortFive
 			| Leverage::ShortTen
 			| Leverage::ShortTwenty
 			| Leverage::ShortThirty
 			| Leverage::ShortForty
 			| Leverage::ShortFifty)
-			.contains(self)
+			.contains(*self)
+	}
+
+	#[allow(dead_code, unused_variables)]
+	fn get_value(&self) -> u8 {
+		match self {
+			Leverage::ShortFive | Leverage::LongFive => 5,
+			Leverage::ShortTen | Leverage::LongTen => 10,
+			Leverage::ShortTwenty | Leverage::LongTwenty => 20,
+			Leverage::ShortThirty | Leverage::LongThirty => 30,
+			Leverage::ShortForty | Leverage::LongForty => 40,
+			Leverage::ShortFifty | Leverage::LongFifty => 50,
+		}
 	}
 }
 

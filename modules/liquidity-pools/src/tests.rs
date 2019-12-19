@@ -31,8 +31,7 @@ fn is_enabled_should_work() {
 			Origin::signed(ALICE),
 			0,
 			CurrencyId::AUSD,
-			Leverage::ShortTen.into(),
-			Leverage::LongFive.into()
+			Leverage::ShortTen | Leverage::LongFive,
 		));
 		assert_eq!(
 			ModuleLiquidityPools::is_enabled(0, CurrencyId::AUSD, Leverage::ShortTen),
@@ -76,8 +75,7 @@ fn should_disable_pool() {
 			Origin::signed(ALICE),
 			0,
 			CurrencyId::AUSD,
-			Leverage::ShortTen.into(),
-			Leverage::LongFive.into()
+			Leverage::ShortTen | Leverage::LongFive,
 		));
 
 		assert_ok!(ModuleLiquidityPools::disable_pool(Origin::signed(ALICE), 0));
@@ -86,8 +84,7 @@ fn should_disable_pool() {
 			bid_spread: Permill::zero(),
 			ask_spread: Permill::zero(),
 			additional_collateral_ratio: None,
-			enabled_longs: Leverages::none(),
-			enabled_shorts: Leverages::none(),
+			enabled: Leverages::none(),
 		};
 
 		assert_eq!(
@@ -173,8 +170,7 @@ fn should_set_spread() {
 			bid_spread: Permill::one(),
 			ask_spread: Permill::one(),
 			additional_collateral_ratio: None,
-			enabled_longs: Leverages::none(),
-			enabled_shorts: Leverages::none(),
+			enabled: Leverages::none(),
 		};
 
 		assert_eq!(
@@ -210,8 +206,7 @@ fn should_set_additional_collateral_ratio() {
 			bid_spread: Permill::zero(),
 			ask_spread: Permill::zero(),
 			additional_collateral_ratio: Some(Permill::from_percent(120)),
-			enabled_longs: Leverages::none(),
-			enabled_shorts: Leverages::none(),
+			enabled: Leverages::none(),
 		};
 
 		assert_eq!(
@@ -246,16 +241,14 @@ fn should_set_enabled_trades() {
 			Origin::signed(ALICE),
 			0,
 			CurrencyId::AUSD,
-			Leverage::ShortTen.into(),
-			Leverage::LongFive.into()
+			Leverage::ShortTen | Leverage::LongFive,
 		));
 
 		let pool_option = LiquidityPoolOption {
 			bid_spread: Permill::zero(),
 			ask_spread: Permill::zero(),
 			additional_collateral_ratio: None,
-			enabled_longs: Leverage::ShortTen.into(),
-			enabled_shorts: Leverage::LongFive.into(),
+			enabled: Leverage::ShortTen | Leverage::LongFive,
 		};
 
 		assert_eq!(
