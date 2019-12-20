@@ -46,6 +46,7 @@ synthetic-tokens = { package = "module-synthetic-tokens", path = "../modules/syn
 synthetic-protocol = { package = "module-synthetic-protocol", path = "../modules/synthetic-protocol", default-features = false }
 traits = { package = "module-traits", path = "../modules/traits", default-features = false }
 module-primitives = { path = "../modules/primitives", default-features = false }
+liquidity-pools = { package = "module-liquidity-pools", path = "../modules/liquidity-pools", default-features = false }
 
 [build-dependencies]
 wasm-builder-runner = { package = "substrate-wasm-builder-runner", version = "1.0.4" }
@@ -92,4 +93,5 @@ std = [
 	"synthetic-tokens/std",
 	"synthetic-protocol/std",
 	"traits/std",
+	"liquidity-pools/std",
 ]

@@ -156,6 +156,9 @@ decl_error! {
 		StillInSafePosition,
 		BalanceToU128Failed,
 		NotPoolOwner,
+		NoBidSpread,
+		NoAskSpread,
+		NoAdditionalCollateralRatio,
 	}
 }
 
@@ -367,7 +370,7 @@ impl<T: Trait> Module<T> {
 		price: Price,
 		max_slippage: Permill,
 	) -> result::Result<Price, Error> {
-		let ask_spread = T::LiquidityPoolsConfig::get_ask_spread(pool_id, currency_id);
+		let ask_spread = T::LiquidityPoolsConfig::get_ask_spread(pool_id, currency_id).ok_or(Error::NoAskSpread)?;
 
 		if ask_spread.deconstruct() > max_slippage.deconstruct() {
 			return Err(Error::SlippageTooHigh);
@@ -386,7 +389,7 @@ impl<T: Trait> Module<T> {
 		price: Price,
 		max_slippage: Option<Permill>,
 	) -> result::Result<Price, Error> {
-		let bid_spread = T::LiquidityPoolsConfig::get_bid_spread(pool_id, currency_id);
+		let bid_spread = T::LiquidityPoolsConfig::get_bid_spread(pool_id, currency_id).ok_or(Error::NoBidSpread)?;
 
 		if let Some(m) = max_slippage {
 			if bid_spread.deconstruct() > m.deconstruct() {
@@ -421,7 +424,8 @@ impl<T: Trait> Module<T> {
 		currency_id: T::CurrencyId,
 		collateral: T::Balance,
 	) -> SynthesisResult<T> {
-		let ratio = T::LiquidityPoolsConfig::get_additional_collateral_ratio(pool_id, currency_id);
+		let ratio = T::LiquidityPoolsConfig::get_additional_collateral_ratio(pool_id, currency_id)
+			.ok_or(Error::NoAdditionalCollateralRatio)?;
 		let additional = ratio * collateral;
 
 		collateral.checked_add(&additional).ok_or(Error::NumOverflow)

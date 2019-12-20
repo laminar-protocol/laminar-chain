@@ -854,6 +854,7 @@ dependencies = [
  "frame-executive 2.0.0 (git+https://github.com/paritytech/substrate.git)",
  "frame-support 2.0.0 (git+https://github.com/paritytech/substrate.git)",
  "frame-system 2.0.0 (git+https://github.com/paritytech/substrate.git)",
+ "module-liquidity-pools 0.0.1",
  "module-primitives 0.0.1",
  "module-synthetic-protocol 0.0.1",
  "module-synthetic-tokens 0.0.1",
@@ -2463,6 +2464,7 @@ name = "module-traits"
 version = "0.0.1"
 dependencies = [
  "frame-support 2.0.0 (git+https://github.com/paritytech/substrate.git)",
+ "module-primitives 0.0.1",
  "parity-scale-codec 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-runtime 2.0.0 (git+https://github.com/paritytech/substrate.git)",
  "sp-std 2.0.0 (git+https://github.com/paritytech/substrate.git)",

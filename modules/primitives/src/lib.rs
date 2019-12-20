@@ -61,15 +61,63 @@ impl Convert<Price, Balance> for BalancePriceConverter {
 
 bitmask! {
 	#[derive(Encode, Decode, Default)]
-	pub mask Leverages: u16 where
-
-	#[derive(Encode, Decode)]
-	flags Leverage {
-		Five 	= 0b00000001,
-		Ten 	= 0b00000010,
-		Twenty 	= 0b00000100,
-		Thirty 	= 0b00001000,
-		Forty	= 0b00010000,
-		Fifty	= 0b00100000,
+	pub mask Leverages: u16 where flags Leverage {
+		ShortFive 	= 0b0000000000000001,
+		LongFive 	= 0b0000000000000010,
+		ShortTen 	= 0b0000000000000100,
+		LongTen 	= 0b0000000000001000,
+		ShortTwenty	= 0b0000000000010000,
+		LongTwenty 	= 0b0000000000100000,
+		ShortThirty	= 0b0000000001000000,
+		LongThirty	= 0b0000000010000000,
+		ShortForty	= 0b0000000100000000,
+		LongForty	= 0b0000001000000000,
+		ShortFifty	= 0b0000010000000000,
+		LongFifty	= 0b0000100000000000,
 	}
+}
+
+impl Leverage {
+	#[allow(dead_code)]
+	fn is_long(&self) -> bool {
+		!self.is_short()
+	}
+
+	#[allow(dead_code)]
+	fn is_short(&self) -> bool {
+		(Leverage::ShortFive
+			| Leverage::ShortTen
+			| Leverage::ShortTwenty
+			| Leverage::ShortThirty
+			| Leverage::ShortForty
+			| Leverage::ShortFifty)
+			.contains(*self)
+	}
+
+	#[allow(dead_code, unused_variables)]
+	fn get_value(&self) -> u8 {
+		match self {
+			Leverage::ShortFive | Leverage::LongFive => 5,
+			Leverage::ShortTen | Leverage::LongTen => 10,
+			Leverage::ShortTwenty | Leverage::LongTwenty => 20,
+			Leverage::ShortThirty | Leverage::LongThirty => 30,
+			Leverage::ShortForty | Leverage::LongForty => 40,
+			Leverage::ShortFifty | Leverage::LongFifty => 50,
+		}
+	}
+}
+
+#[cfg(not(feature = "std"))]
+impl core::fmt::Debug for Leverages {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+		write!(f, "Leverages {:?}", self)
+	}
+}
+
+#[test]
+fn should_check_short_and_long() {
+	assert_eq!(Leverage::ShortFifty.is_short(), true);
+	assert_eq!(Leverage::LongFifty.is_short(), false);
+	assert_eq!(Leverage::LongFifty.is_long(), true);
+	assert_eq!(Leverage::ShortFive.is_long(), false);
 }

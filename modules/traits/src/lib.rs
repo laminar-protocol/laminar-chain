@@ -2,19 +2,12 @@
 
 use codec::FullCodec;
 use frame_support::Parameter;
+use primitives::Leverage;
 use rstd::{fmt::Debug, result};
 use sp_runtime::{
 	traits::{MaybeSerializeDeserialize, Member, SimpleArithmetic},
 	Permill,
 };
-
-pub trait Leverage {
-	fn get_value(&self) -> u8;
-	fn is_long(&self) -> bool;
-	fn is_short(&self) -> bool {
-		!self.is_long()
-	}
-}
 
 pub trait LiquidityPoolBaseTypes {
 	type LiquidityPoolId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug;
@@ -22,21 +15,18 @@ pub trait LiquidityPoolBaseTypes {
 }
 
 pub trait LiquidityPoolsConfig<AccountId>: LiquidityPoolBaseTypes {
-	fn get_bid_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Permill;
-	fn get_ask_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Permill;
-	fn get_additional_collateral_ratio(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Permill;
+	fn get_bid_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill>;
+	fn get_ask_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill>;
+	fn get_additional_collateral_ratio(
+		pool_id: Self::LiquidityPoolId,
+		currency_id: Self::CurrencyId,
+	) -> Option<Permill>;
 
 	fn is_owner(pool_id: Self::LiquidityPoolId, who: &AccountId) -> bool;
 }
 
 pub trait LiquidityPoolsPosition: LiquidityPoolBaseTypes {
-	type Leverage: Leverage;
-
-	fn is_allowed_position(
-		pool_id: Self::LiquidityPoolId,
-		currency_id: Self::CurrencyId,
-		leverage: Self::Leverage,
-	) -> bool;
+	fn is_allowed_position(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId, leverage: Leverage) -> bool;
 }
 
 pub trait LiquidityPoolsCurrency<AccountId>: LiquidityPoolBaseTypes {
