@@ -29,7 +29,7 @@ const MODULE_ID: ModuleId = ModuleId(*b"flow/lp_");
 pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Self::Balance, CurrencyId = Self::CurrencyId>;
-	type LiquidityCurrency: BasicCurrency<Self::AccountId, Balance = Self::Balance, Error = ErrorOf<Self>>;
+	type LiquidityCurrency: BasicCurrency<Self::AccountId, Balance = Self::Balance>;
 	type LiquidityPoolId: FullCodec
 		+ Parameter
 		+ Member
@@ -86,60 +86,52 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		pub fn create_pool(origin) -> Result {
+		pub fn create_pool(origin) {
 			let who = ensure_signed(origin)?;
 			let pool_id = Self::_create_pool(&who)?;
 			Self::deposit_event(RawEvent::LiquidityPoolCreated(who, pool_id));
-			Ok(())
 		}
 
-		pub fn disable_pool(origin, pool_id: T::LiquidityPoolId) -> Result {
+		pub fn disable_pool(origin, pool_id: T::LiquidityPoolId) {
 			let who = ensure_signed(origin)?;
 			Self::_disable_pool(&who, pool_id)?;
 			Self::deposit_event(RawEvent::LiquidityPoolDisabled(who, pool_id));
-			Ok(())
 		}
 
-		pub fn remove_pool(origin, pool_id: T::LiquidityPoolId) -> Result {
+		pub fn remove_pool(origin, pool_id: T::LiquidityPoolId) {
 			let who = ensure_signed(origin)?;
 			Self::_remove_pool(&who, pool_id)?;
 			Self::deposit_event(RawEvent::LiquidityPoolRemoved(who, pool_id));
-			Ok(())
 		}
 
-		pub fn deposit_liquidity(origin, pool_id: T::LiquidityPoolId, amount: T::Balance) -> Result {
+		pub fn deposit_liquidity(origin, pool_id: T::LiquidityPoolId, amount: T::Balance) {
 			let who = ensure_signed(origin)?;
 			Self::_deposit_liquidity(&who, pool_id, amount)?;
 			Self::deposit_event(RawEvent::DepositLiquidity(who, pool_id, amount));
-			Ok(())
 		}
 
-		pub fn withdraw_liquidity(origin, pool_id: T::LiquidityPoolId, amount: T::Balance) -> Result {
+		pub fn withdraw_liquidity(origin, pool_id: T::LiquidityPoolId, amount: T::Balance) {
 			let who = ensure_signed(origin)?;
 			Self::_withdraw_liquidity(&who, pool_id, amount)?;
 			Self::deposit_event(RawEvent::WithdrawLiquidity(who, pool_id, amount));
-			Ok(())
 		}
 
-		pub fn set_spread(origin, pool_id: T::LiquidityPoolId, currency_id: T::CurrencyId, ask: Permill, bid: Permill) -> Result {
+		pub fn set_spread(origin, pool_id: T::LiquidityPoolId, currency_id: T::CurrencyId, ask: Permill, bid: Permill) {
 			let who = ensure_signed(origin)?;
 			Self::_set_spread(&who, pool_id, currency_id, ask, bid)?;
 			Self::deposit_event(RawEvent::SetSpread(who, pool_id, currency_id, ask, bid));
-			Ok(())
 		}
 
-		pub fn set_additional_collateral_ratio(origin, pool_id: T::LiquidityPoolId, currency_id: T::CurrencyId, ratio: Option<Permill>) -> Result {
+		pub fn set_additional_collateral_ratio(origin, pool_id: T::LiquidityPoolId, currency_id: T::CurrencyId, ratio: Option<Permill>) {
 			let who = ensure_signed(origin)?;
 			Self::_set_additional_collateral_ratio(&who, pool_id, currency_id, ratio)?;
 			Self::deposit_event(RawEvent::SetAdditionalCollateralRatio(who, pool_id, currency_id, ratio));
-			Ok(())
 		}
 
-		pub fn set_enabled_trades(origin, pool_id: T::LiquidityPoolId, currency_id: T::CurrencyId, enabled: Leverages) -> Result {
+		pub fn set_enabled_trades(origin, pool_id: T::LiquidityPoolId, currency_id: T::CurrencyId, enabled: Leverages) {
 			let who = ensure_signed(origin)?;
 			Self::_set_enabled_trades(&who, pool_id, currency_id, enabled)?;
 			Self::deposit_event(RawEvent::SetEnabledTrades(who, pool_id, currency_id, enabled));
-			Ok(())
 		}
 	}
 }
@@ -232,7 +224,7 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {}
 
 // Private methods
 impl<T: Trait> Module<T> {
-	fn _create_pool(who: &T::AccountId) -> result::Result<T::LiquidityPoolId, Error> {
+	fn _create_pool(who: &T::AccountId) -> result::Result<T::LiquidityPoolId, Error<T>> {
 		let pool_id = Self::next_pool_id();
 		// increment next pool id
 		let next_pool_id = pool_id
@@ -244,7 +236,7 @@ impl<T: Trait> Module<T> {
 		Ok(pool_id)
 	}
 
-	fn _disable_pool(who: &T::AccountId, pool_id: T::LiquidityPoolId) -> result::Result<(), Error> {
+	fn _disable_pool(who: &T::AccountId, pool_id: T::LiquidityPoolId) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, who), Error::<T>::NoPermission);
 
 		for currency_id in T::LiquidityCurrencyIds::get() {
@@ -257,13 +249,13 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	fn _remove_pool(who: &T::AccountId, pool_id: T::LiquidityPoolId) -> result::Result<(), Error> {
+	fn _remove_pool(who: &T::AccountId, pool_id: T::LiquidityPoolId) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, who), Error::<T>::NoPermission);
 		ensure!(T::PoolManager::can_remove(pool_id), Error::<T>::CannotRemovePool);
 
 		let balance = Self::balances(&pool_id);
 		// transfer balance to pool owner
-		T::LiquidityCurrency::transfer(&Self::account_id(), who, balance).map_err(|e| e.into())?;
+		T::LiquidityCurrency::transfer(&Self::account_id(), who, balance)?;
 
 		<Balances<T>>::remove(&pool_id);
 		<Owners<T>>::remove(&pool_id);
@@ -275,36 +267,28 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	fn _deposit_liquidity(
-		who: &T::AccountId,
-		pool_id: T::LiquidityPoolId,
-		amount: T::Balance,
-	) -> result::Result<(), Error> {
+	fn _deposit_liquidity(who: &T::AccountId, pool_id: T::LiquidityPoolId, amount: T::Balance) -> DispatchResult {
 		let balance = Self::balances(&pool_id);
 		let new_balance = balance.checked_add(&amount).ok_or(Error::<T>::CannotDepositAmount)?;
 		// transfer amount to this pool
-		T::LiquidityCurrency::transfer(who, &Self::account_id(), amount).map_err(|e| e.into())?;
+		T::LiquidityCurrency::transfer(who, &Self::account_id(), amount)?;
 		// update balance
 		<Balances<T>>::insert(&pool_id, new_balance);
 		Ok(())
 	}
 
-	fn _withdraw_liquidity(
-		who: &T::AccountId,
-		pool_id: T::LiquidityPoolId,
-		amount: T::Balance,
-	) -> result::Result<(), Error> {
+	fn _withdraw_liquidity(who: &T::AccountId, pool_id: T::LiquidityPoolId, amount: T::Balance) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, who), Error::<T>::NoPermission);
 		let balance = Self::balances(&pool_id);
 		let new_balance = balance.checked_sub(&amount).ok_or(Error::<T>::CannotWithdrawAmount)?;
 
 		// check minimum balance
 		if new_balance < T::ExistentialDeposit::get() {
-			return Err(Error::<T>::CannotWithdrawAmount);
+			return Err(Error::<T>::CannotWithdrawAmount.into());
 		}
 
 		// transfer amount to account
-		T::LiquidityCurrency::transfer(&Self::account_id(), who, amount).map_err(|e| e.into())?;
+		T::LiquidityCurrency::transfer(&Self::account_id(), who, amount)?;
 
 		// update balance
 		<Balances<T>>::insert(&pool_id, new_balance);
@@ -317,7 +301,7 @@ impl<T: Trait> Module<T> {
 		currency_id: T::CurrencyId,
 		ask: Permill,
 		bid: Permill,
-	) -> result::Result<(), Error> {
+	) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, who), Error::<T>::NoPermission);
 		let mut pool = Self::liquidity_pool_options(&pool_id, &currency_id).unwrap_or_default();
 		pool.bid_spread = bid;
@@ -331,7 +315,7 @@ impl<T: Trait> Module<T> {
 		pool_id: T::LiquidityPoolId,
 		currency_id: T::CurrencyId,
 		ratio: Option<Permill>,
-	) -> result::Result<(), Error> {
+	) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, who), Error::<T>::NoPermission);
 		let mut pool = Self::liquidity_pool_options(&pool_id, &currency_id).unwrap_or_default();
 		pool.additional_collateral_ratio = ratio;
@@ -344,7 +328,7 @@ impl<T: Trait> Module<T> {
 		pool_id: T::LiquidityPoolId,
 		currency_id: T::CurrencyId,
 		enabled: Leverages,
-	) -> result::Result<(), Error> {
+	) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, who), Error::<T>::NoPermission);
 		let mut pool = Self::liquidity_pool_options(&pool_id, &currency_id).unwrap_or_default();
 		pool.enabled = enabled;

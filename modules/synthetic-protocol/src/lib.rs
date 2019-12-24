@@ -4,7 +4,7 @@ use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, t
 use rstd::{convert::TryInto, result};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedSub, Convert, Saturating, Zero},
-	DispatchResult, Permill,
+	DispatchError, DispatchResult, Permill,
 };
 // FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
 // would cause compiling error in `decl_module!` and `construct_runtime!`
@@ -164,7 +164,7 @@ decl_error! {
 // Dispatch calls
 
 type SyntheticTokens<T> = synthetic_tokens::Module<T>;
-type SynthesisResult<T> = result::Result<<T as synthetic_tokens::Trait>::Balance, Error<T>>;
+type SynthesisResult<T> = result::Result<<T as synthetic_tokens::Trait>::Balance, DispatchError>;
 
 impl<T: Trait> Module<T> {
 	fn _mint(
@@ -205,7 +205,7 @@ impl<T: Trait> Module<T> {
 		);
 
 		// mint synthetic
-		T::MultiCurrency::deposit(currency_id, who, synthetic).map_err(|e| e.into())?;
+		T::MultiCurrency::deposit(currency_id, who, synthetic)?;
 
 		// collateralise
 		T::CollateralCurrency::transfer(who, &<SyntheticTokens<T>>::account_id(), collateral)
@@ -256,7 +256,7 @@ impl<T: Trait> Module<T> {
 		// TODO: calculate and add interest to `pool_refund_collateral`
 
 		// burn synthetic
-		T::MultiCurrency::withdraw(currency_id, who, synthetic).map_err(|e| e.into())?;
+		T::MultiCurrency::withdraw(currency_id, who, synthetic)?;
 
 		// redeem collateral
 		T::CollateralCurrency::transfer(&<SyntheticTokens<T>>::account_id(), who, redeemed_collateral)
@@ -297,7 +297,7 @@ impl<T: Trait> Module<T> {
 		// TODO: calculate and add interest to `pool_refund_collateral`
 
 		// burn synthetic
-		T::MultiCurrency::withdraw(currency_id, who, synthetic).map_err(|e| e.into())?;
+		T::MultiCurrency::withdraw(currency_id, who, synthetic)?;
 
 		// Give liquidator collateral and incentive.
 		let collateral_with_incentive = collateral.checked_add(&incentive).ok_or(Error::<T>::NumOverflow)?;
@@ -377,16 +377,16 @@ impl<T: Trait> Module<T> {
 		currency_id: T::CurrencyId,
 		price: Price,
 		max_slippage: Permill,
-	) -> result::Result<Price, Error<T>> {
+	) -> result::Result<Price, DispatchError> {
 		let ask_spread =
 			T::LiquidityPoolsConfig::get_ask_spread(pool_id, currency_id).ok_or(Error::<T>::NoAskSpread)?;
 
 		if ask_spread.deconstruct() > max_slippage.deconstruct() {
-			return Err(Error::<T>::SlippageTooHigh);
+			return Err(Error::<T>::SlippageTooHigh.into());
 		}
 
 		let spread_amount = price.checked_mul(&ask_spread.into()).expect("ask_spread < 1; qed");
-		price.checked_add(&spread_amount).ok_or(Error::<T>::NumOverflow)
+		price.checked_add(&spread_amount).ok_or(Error::<T>::NumOverflow.into())
 	}
 
 	/// Get bid price from liquidity pool for a given currency. Would fail if price could not meet max slippage.
@@ -397,13 +397,13 @@ impl<T: Trait> Module<T> {
 		currency_id: T::CurrencyId,
 		price: Price,
 		max_slippage: Option<Permill>,
-	) -> result::Result<Price, Error<T>> {
+	) -> result::Result<Price, DispatchError> {
 		let bid_spread =
 			T::LiquidityPoolsConfig::get_bid_spread(pool_id, currency_id).ok_or(Error::<T>::NoBidSpread)?;
 
 		if let Some(m) = max_slippage {
 			if bid_spread.deconstruct() > m.deconstruct() {
-				return Err(Error::<T>::SlippageTooHigh);
+				return Err(Error::<T>::SlippageTooHigh.into());
 			}
 		}
 
@@ -425,7 +425,7 @@ impl<T: Trait> Module<T> {
 		// but better to be safe than sorry
 		with_additional_collateral
 			.checked_sub(&collateral)
-			.ok_or(Error::<T>::NegativeAdditionalCollateralAmount)
+			.ok_or(Error::<T>::NegativeAdditionalCollateralAmount.into())
 	}
 
 	/// Returns `collateral * (1 + ratio)`.
@@ -438,7 +438,9 @@ impl<T: Trait> Module<T> {
 			.ok_or(Error::<T>::NoAdditionalCollateralRatio)?;
 		let additional = ratio * collateral;
 
-		collateral.checked_add(&additional).ok_or(Error::<T>::NumOverflow)
+		collateral
+			.checked_add(&additional)
+			.ok_or(Error::<T>::NumOverflow.into())
 	}
 
 	/// Calculate position change for a remove, if ok, return with `(collateral_position_delta, pool_refund_collateral)`
@@ -448,7 +450,7 @@ impl<T: Trait> Module<T> {
 		price: Price,
 		burned_synthetic: T::Balance,
 		redeemed_collateral: T::Balance,
-	) -> result::Result<(T::Balance, T::Balance), Error> {
+	) -> result::Result<(T::Balance, T::Balance), DispatchError> {
 		let (collateral_position, synthetic_position) = <SyntheticTokens<T>>::get_position(pool_id, currency_id);
 
 		ensure!(
@@ -495,7 +497,7 @@ impl<T: Trait> Module<T> {
 		price: Price,
 		burned_synthetic: T::Balance,
 		liquidized_collateral: T::Balance,
-	) -> result::Result<(T::Balance, T::Balance, T::Balance), Error> {
+	) -> result::Result<(T::Balance, T::Balance, T::Balance), DispatchError> {
 		let (collateral_position, synthetic_position) = <SyntheticTokens<T>>::get_position(pool_id, currency_id);
 		ensure!(
 			synthetic_position >= burned_synthetic,
