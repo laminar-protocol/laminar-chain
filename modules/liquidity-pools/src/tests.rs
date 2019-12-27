@@ -1,8 +1,8 @@
 #![cfg(test)]
 
 use crate::{
-	mock::{new_test_ext, AccountId, ModuleLiquidityPools, Origin, ALICE},
-	LiquidityPoolOption,
+	mock::{new_test_ext, AccountId, ModuleLiquidityPools, Origin, Runtime, ALICE},
+	Error, LiquidityPoolOption,
 };
 
 use frame_support::assert_ok;
@@ -146,7 +146,7 @@ fn should_fail_withdraw_liquidity() {
 		assert_eq!(ModuleLiquidityPools::balances(&0), 1000);
 		assert_eq!(
 			ModuleLiquidityPools::withdraw_liquidity(Origin::signed(ALICE), 0, 5000),
-			Err("CannotWithdrawAmount")
+			Err(Error::<Runtime>::CannotWithdrawAmount.into()),
 		);
 		assert_eq!(ModuleLiquidityPools::balances(&0), 1000);
 	})
