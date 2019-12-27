@@ -6,7 +6,7 @@ use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
 use frame_system as system;
 use primitives::H256;
 use rstd::{cell::RefCell, collections::btree_map::BTreeMap};
-use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
+use sp_runtime::{testing::Header, traits::IdentityLookup, DispatchResult, Perbill};
 
 use orml_currencies::Currency;
 
@@ -59,6 +59,7 @@ impl frame_system::Trait for Runtime {
 	type MaximumBlockLength = MaximumBlockLength;
 	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
+	type ModuleToIndex = ();
 }
 pub type System = system::Module<Runtime>;
 
@@ -179,17 +180,16 @@ impl LiquidityPoolsConfig<AccountId> for MockLiquidityPools {
 
 impl LiquidityPoolsCurrency<AccountId> for MockLiquidityPools {
 	type Balance = Balance;
-	type Error = &'static str;
 
 	fn balance(pool_id: Self::LiquidityPoolId) -> Self::Balance {
 		CollateralCurrency::balance(&pool_id)
 	}
 
-	fn deposit(from: &AccountId, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> Result<(), Self::Error> {
+	fn deposit(from: &AccountId, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
 		CollateralCurrency::transfer(from, &pool_id, amount).map_err(|e| e.into())
 	}
 
-	fn withdraw(to: &AccountId, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> Result<(), Self::Error> {
+	fn withdraw(to: &AccountId, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
 		CollateralCurrency::transfer(&pool_id, to, amount).map_err(|e| e.into())
 	}
 }

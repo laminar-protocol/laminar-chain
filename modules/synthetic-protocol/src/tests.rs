@@ -5,12 +5,13 @@
 use super::*;
 use frame_support::{assert_noop, assert_ok};
 use mock::{
-	origin_of, AccountId, Balance, CollateralCurrency, CurrencyId, ExtBuilder, MockLiquidityPools, MockPrices,
+	origin_of, AccountId, Balance, CollateralCurrency, CurrencyId, ExtBuilder, MockLiquidityPools, MockPrices, Runtime,
 	SyntheticCurrency, SyntheticProtocol, SyntheticTokens, System, TestEvent, ALICE, ANOTHER_MOCK_POOL, BOB, MOCK_POOL,
 	ONE_MILL,
 };
+use sp_runtime::DispatchResult;
 
-fn mint_feur(who: AccountId, amount: Balance) -> result::Result<(), &'static str> {
+fn mint_feur(who: AccountId, amount: Balance) -> DispatchResult {
 	SyntheticProtocol::mint(
 		origin_of(who),
 		MOCK_POOL,
@@ -20,7 +21,7 @@ fn mint_feur(who: AccountId, amount: Balance) -> result::Result<(), &'static str
 	)
 }
 
-fn redeem_ausd(who: AccountId, amount: Balance) -> result::Result<(), &'static str> {
+fn redeem_ausd(who: AccountId, amount: Balance) -> DispatchResult {
 	SyntheticProtocol::redeem(
 		origin_of(who),
 		MOCK_POOL,
@@ -30,15 +31,15 @@ fn redeem_ausd(who: AccountId, amount: Balance) -> result::Result<(), &'static s
 	)
 }
 
-fn liquidate(who: AccountId, amount: Balance) -> result::Result<(), &'static str> {
+fn liquidate(who: AccountId, amount: Balance) -> DispatchResult {
 	SyntheticProtocol::liquidate(origin_of(who), MOCK_POOL, CurrencyId::FEUR, amount)
 }
 
-fn add_collateral(who: AccountId, amount: Balance) -> result::Result<(), &'static str> {
+fn add_collateral(who: AccountId, amount: Balance) -> DispatchResult {
 	SyntheticProtocol::add_collateral(origin_of(who), MOCK_POOL, CurrencyId::FEUR, amount)
 }
 
-fn withdraw_collateral(who: AccountId) -> result::Result<(), &'static str> {
+fn withdraw_collateral(who: AccountId) -> DispatchResult {
 	SyntheticProtocol::withdraw_collateral(origin_of(who), MOCK_POOL, CurrencyId::FEUR)
 }
 
@@ -74,7 +75,7 @@ fn mint_fails_if_balance_too_low() {
 		.ten_percent_additional_collateral_ratio()
 		.build()
 		.execute_with(|| {
-			assert_noop!(mint_feur(ALICE, 1), Error::BalanceTooLow.into());
+			assert_noop!(mint_feur(ALICE, 1), Error::<Runtime>::BalanceTooLow);
 		});
 }
 
@@ -86,7 +87,7 @@ fn mint_fails_if_no_price() {
 		.ten_percent_additional_collateral_ratio()
 		.build()
 		.execute_with(|| {
-			assert_noop!(mint_feur(ALICE, 1), Error::NoPrice.into());
+			assert_noop!(mint_feur(ALICE, 1), Error::<Runtime>::NoPrice);
 		});
 }
 
@@ -107,7 +108,7 @@ fn mint_fails_if_slippage_too_greedy() {
 					1,
 					Permill::from_rational_approximation(9u32, 1_000u32)
 				),
-				Error::SlippageTooHigh.into()
+				Error::<Runtime>::SlippageTooHigh
 			);
 		});
 }
@@ -121,7 +122,10 @@ fn mint_fails_if_wrong_spread_ratio_config() {
 		.additional_collateral_ratio(Permill::from_percent(1))
 		.build()
 		.execute_with(|| {
-			assert_noop!(mint_feur(ALICE, 1), Error::NegativeAdditionalCollateralAmount.into());
+			assert_noop!(
+				mint_feur(ALICE, 1),
+				Error::<Runtime>::NegativeAdditionalCollateralAmount
+			);
 		});
 }
 
@@ -134,7 +138,10 @@ fn mint_fails_if_pool_has_no_liquidity() {
 		.ten_percent_additional_collateral_ratio()
 		.build()
 		.execute_with(|| {
-			assert_noop!(mint_feur(ALICE, ONE_MILL), Error::LiquidityProviderBalanceTooLow.into(),);
+			assert_noop!(
+				mint_feur(ALICE, ONE_MILL),
+				Error::<Runtime>::LiquidityProviderBalanceTooLow,
+			);
 		});
 }
 
@@ -202,7 +209,7 @@ fn redeem_fails_if_not_enough_synthetic() {
 		.build()
 		.execute_with(|| {
 			assert_ok!(mint_feur(ALICE, ONE_MILL));
-			assert_noop!(redeem_ausd(ALICE, ONE_MILL + 1), Error::BalanceTooLow.into());
+			assert_noop!(redeem_ausd(ALICE, ONE_MILL + 1), Error::<Runtime>::BalanceTooLow);
 		});
 }
 
@@ -219,7 +226,7 @@ fn redeem_fails_if_no_price() {
 
 			set_mock_feur_price_none();
 
-			assert_noop!(redeem_ausd(ALICE, 1), Error::NoPrice.into());
+			assert_noop!(redeem_ausd(ALICE, 1), Error::<Runtime>::NoPrice);
 		});
 }
 
@@ -242,7 +249,7 @@ fn redeem_fails_if_slippage_too_greedy() {
 					1,
 					Permill::from_rational_approximation(9u32, 1_000u32)
 				),
-				Error::SlippageTooHigh.into()
+				Error::<Runtime>::SlippageTooHigh
 			);
 		});
 }
@@ -270,7 +277,7 @@ fn redeem_fails_if_synthetic_position_too_low() {
 			// redeem all in one pool, synthetic position would be too low
 			assert_noop!(
 				redeem_ausd(ALICE, SyntheticCurrency::balance(&ALICE)),
-				Error::LiquidityPoolSyntheticPositionTooLow.into()
+				Error::<Runtime>::LiquidityPoolSyntheticPositionTooLow
 			);
 		});
 }
@@ -291,7 +298,7 @@ fn redeem_fails_if_collateral_position_too_low() {
 
 			assert_noop!(
 				redeem_ausd(ALICE, SyntheticCurrency::balance(&ALICE)),
-				Error::LiquidityPoolCollateralPositionTooLow.into()
+				Error::<Runtime>::LiquidityPoolCollateralPositionTooLow
 			);
 		});
 }
@@ -315,7 +322,7 @@ fn redeem_fails_if_not_enough_locked_collateral() {
 
 			assert_noop!(
 				redeem_ausd(ALICE, SyntheticCurrency::balance(&ALICE)),
-				Error::NotEnoughLockedCollateralAvailable.into(),
+				Error::<Runtime>::NotEnoughLockedCollateralAvailable,
 			);
 		});
 }
@@ -488,7 +495,7 @@ fn liquidate_fails_if_liquidator_not_enough_synthetic() {
 			assert_ok!(mint_feur(ALICE, ONE_MILL));
 			set_mock_feur_price(32, 10);
 
-			assert_noop!(liquidate(BOB, 1), Error::BalanceTooLow.into());
+			assert_noop!(liquidate(BOB, 1), Error::<Runtime>::BalanceTooLow);
 		});
 }
 
@@ -504,7 +511,7 @@ fn liquidate_fails_if_no_price() {
 			assert_ok!(mint_feur(ALICE, ONE_MILL));
 			set_mock_feur_price_none();
 
-			assert_noop!(liquidate(ALICE, 1), Error::NoPrice.into());
+			assert_noop!(liquidate(ALICE, 1), Error::<Runtime>::NoPrice);
 		});
 }
 
@@ -529,7 +536,7 @@ fn liquidate_fails_if_synthetic_position_too_low() {
 			set_mock_feur_price(32, 10);
 			assert_noop!(
 				liquidate(ALICE, synthetic_balance(ALICE)),
-				Error::LiquidityPoolSyntheticPositionTooLow.into()
+				Error::<Runtime>::LiquidityPoolSyntheticPositionTooLow
 			);
 		});
 }
@@ -548,7 +555,7 @@ fn liquidate_fails_if_collateral_position_too_low() {
 
 			assert_noop!(
 				liquidate(ALICE, synthetic_balance(ALICE)),
-				Error::LiquidityPoolCollateralPositionTooLow.into()
+				Error::<Runtime>::LiquidityPoolCollateralPositionTooLow
 			);
 		});
 }
@@ -565,7 +572,7 @@ fn liquidate_fails_if_still_in_safe_position() {
 			assert_ok!(mint_feur(ALICE, ONE_MILL));
 
 			set_mock_feur_price(31, 10);
-			assert_noop!(liquidate(ALICE, 1), Error::StillInSafePosition.into());
+			assert_noop!(liquidate(ALICE, 1), Error::<Runtime>::StillInSafePosition);
 		});
 }
 
@@ -698,7 +705,7 @@ fn add_collateral_fails_if_balance_too_low() {
 		.build()
 		.execute_with(|| {
 			assert_ok!(mint_feur(ALICE, ONE_MILL));
-			assert_noop!(add_collateral(ALICE, 1), Error::BalanceTooLow.into());
+			assert_noop!(add_collateral(ALICE, 1), Error::<Runtime>::BalanceTooLow);
 		});
 }
 
@@ -753,7 +760,7 @@ fn only_owner_could_withdraw_collateral() {
 		.build()
 		.execute_with(|| {
 			assert_ok!(mint_feur(ALICE, ONE_MILL));
-			assert_noop!(withdraw_collateral(BOB), Error::NotPoolOwner.into());
+			assert_noop!(withdraw_collateral(BOB), Error::<Runtime>::NotPoolOwner);
 		});
 }
 
@@ -769,7 +776,7 @@ fn withdraw_collateral_fails_if_no_price() {
 			assert_ok!(mint_feur(ALICE, ONE_MILL));
 
 			MockPrices::set_mock_price(CurrencyId::FEUR, None);
-			assert_noop!(withdraw_collateral(ALICE), Error::NoPrice.into());
+			assert_noop!(withdraw_collateral(ALICE), Error::<Runtime>::NoPrice);
 		});
 }
 
@@ -793,7 +800,7 @@ fn withdraw_collateral_fails_if_not_enough_locked_collateral() {
 
 			assert_noop!(
 				withdraw_collateral(ALICE),
-				Error::NotEnoughLockedCollateralAvailable.into()
+				Error::<Runtime>::NotEnoughLockedCollateralAvailable
 			);
 		});
 }

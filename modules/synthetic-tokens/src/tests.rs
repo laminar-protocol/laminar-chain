@@ -5,11 +5,11 @@
 use super::*;
 use frame_support::{assert_noop, assert_ok};
 use mock::{alice, ExtBuilder, SyntheticTokens, System, TestEvent, FEUR, ROOT};
-use sp_runtime::Permill;
+use sp_runtime::{traits::BadOrigin, Permill};
 
 macro_rules! assert_noop_root {
 	($x:expr) => {
-		assert_noop!($x, frame_system::Error::RequireRootOrigin.into());
+		assert_noop!($x, BadOrigin);
 	};
 }
 

@@ -10,6 +10,9 @@ build-wasm: githooks
 check: githooks
 	SKIP_WASM_BUILD= cargo check
 
+check-tests: githooks
+	SKIP_WASM_BUILD= cargo check --tests --all
+
 check-debug:
 	RUSTFLAGS="-Z external-macro-backtrace" BUILD_DUMMY_WASM_BINARY= cargo +nightly check
 

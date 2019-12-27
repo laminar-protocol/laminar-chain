@@ -16,14 +16,14 @@ use primitives::{Balance, CurrencyId, LiquidityPoolId};
 pub type AccountId = u32;
 
 impl_outer_origin! {
-	pub enum Origin for Test {}
+	pub enum Origin for Runtime {}
 }
 
 // For testing the module, we construct most of a mock runtime. This means
-// first constructing a configuration type (`Test`) which `impl`s each of the
+// first constructing a configuration type (`Runtime`) which `impl`s each of the
 // configuration traits of modules we want to use.
 #[derive(Clone, Eq, PartialEq)]
-pub struct Test;
+pub struct Runtime;
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 	pub const MaximumBlockWeight: Weight = 1024;
@@ -31,7 +31,7 @@ parameter_types! {
 	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
 
-impl system::Trait for Test {
+impl system::Trait for Runtime {
 	type Origin = Origin;
 	type Call = ();
 	type Index = u64;
@@ -47,6 +47,7 @@ impl system::Trait for Test {
 	type MaximumBlockLength = MaximumBlockLength;
 	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
+	type ModuleToIndex = ();
 }
 
 parameter_types! {
@@ -56,18 +57,18 @@ parameter_types! {
 	pub const LiquidityCurrencyIds: Vec<CurrencyId> = vec![CurrencyId::AUSD, CurrencyId::FEUR, CurrencyId::FJPY];
 }
 
-type NativeCurrency = Currency<Test, GetNativeCurrencyId>;
-pub type LiquidityCurrency = orml_currencies::Currency<Test, GetLiquidityCurrencyId>;
+type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
+pub type LiquidityCurrency = orml_currencies::Currency<Runtime, GetLiquidityCurrencyId>;
 
-impl orml_currencies::Trait for Test {
+impl orml_currencies::Trait for Runtime {
 	type Event = ();
-	type MultiCurrency = orml_tokens::Module<Test>;
+	type MultiCurrency = orml_tokens::Module<Runtime>;
 	type NativeCurrency = NativeCurrency;
 	type GetNativeCurrencyId = GetNativeCurrencyId;
 }
 
 type Amount = i128;
-impl orml_tokens::Trait for Test {
+impl orml_tokens::Trait for Runtime {
 	type Event = ();
 	type Balance = Balance;
 	type Amount = Amount;
@@ -82,9 +83,9 @@ impl LiquidityPoolManager<LiquidityPoolId> for PoolManager {
 	}
 }
 
-impl Trait for Test {
+impl Trait for Runtime {
 	type Event = ();
-	type MultiCurrency = orml_currencies::Module<Test>;
+	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type LiquidityCurrency = LiquidityCurrency;
 	type LiquidityPoolId = LiquidityPoolId;
 	type Balance = Balance;
@@ -93,14 +94,17 @@ impl Trait for Test {
 	type ExistentialDeposit = ExistentialDeposit;
 	type LiquidityCurrencyIds = LiquidityCurrencyIds;
 }
-pub type ModuleLiquidityPools = Module<Test>;
+pub type ModuleLiquidityPools = Module<Runtime>;
 
 // This function basically just builds a genesis storage key/value store according to
 // our desired mockup.
 pub fn new_test_ext() -> runtime_io::TestExternalities {
-	let mut t = system::GenesisConfig::default().build_storage::<Test>().unwrap().into();
+	let mut t = system::GenesisConfig::default()
+		.build_storage::<Runtime>()
+		.unwrap()
+		.into();
 
-	orml_tokens::GenesisConfig::<Test> {
+	orml_tokens::GenesisConfig::<Runtime> {
 		tokens: vec![CurrencyId::AUSD],
 		initial_balance: 100_000,
 		endowed_accounts: vec![ALICE, BOB],

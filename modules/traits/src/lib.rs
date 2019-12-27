@@ -3,10 +3,10 @@
 use codec::FullCodec;
 use frame_support::Parameter;
 use primitives::Leverage;
-use rstd::{fmt::Debug, result};
+use rstd::fmt::Debug;
 use sp_runtime::{
 	traits::{MaybeSerializeDeserialize, Member, SimpleArithmetic},
-	Permill,
+	DispatchResult, Permill,
 };
 
 pub trait LiquidityPoolBaseTypes {
@@ -31,24 +31,15 @@ pub trait LiquidityPoolsPosition: LiquidityPoolBaseTypes {
 
 pub trait LiquidityPoolsCurrency<AccountId>: LiquidityPoolBaseTypes {
 	type Balance: Parameter + Member + SimpleArithmetic + Default + Copy + MaybeSerializeDeserialize;
-	type Error: Into<&'static str> + Debug;
 
 	/// Check collateral balance of `pool_id`.
 	fn balance(pool_id: Self::LiquidityPoolId) -> Self::Balance;
 
 	/// Deposit some amount of collateral to `pool_id`, from `who`.
-	fn deposit(
-		from: &AccountId,
-		pool_id: Self::LiquidityPoolId,
-		amount: Self::Balance,
-	) -> result::Result<(), Self::Error>;
+	fn deposit(from: &AccountId, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult;
 
 	/// Withdraw some amount of collateral to `who`, from `pool_id`.
-	fn withdraw(
-		to: &AccountId,
-		pool_id: Self::LiquidityPoolId,
-		amount: Self::Balance,
-	) -> result::Result<(), Self::Error>;
+	fn withdraw(to: &AccountId, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult;
 }
 
 pub trait LiquidityPools<AccountId>:
