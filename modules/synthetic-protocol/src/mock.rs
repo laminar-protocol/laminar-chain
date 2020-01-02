@@ -217,9 +217,7 @@ pub const MOCK_POOL: LiquidityPoolId = 100;
 pub const ANOTHER_MOCK_POOL: LiquidityPoolId = 101;
 
 pub struct ExtBuilder {
-	currency_id: CurrencyId,
-	endowed_accounts: Vec<AccountId>,
-	initial_balance: Balance,
+	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	prices: Vec<(CurrencyId, Price)>,
 	spread: Permill,
 	additional_collateral_ratio: Permill,
@@ -228,9 +226,7 @@ pub struct ExtBuilder {
 impl Default for ExtBuilder {
 	fn default() -> Self {
 		Self {
-			currency_id: CurrencyId::AUSD,
-			endowed_accounts: vec![0],
-			initial_balance: 0,
+			endowed_accounts: vec![],
 			// collateral price set to `1` for calculation simplicity.
 			prices: vec![(CurrencyId::AUSD, FixedU128::from_rational(1, 1))],
 			spread: Permill::zero(),
@@ -241,16 +237,18 @@ impl Default for ExtBuilder {
 
 pub const ONE_MILL: Balance = 1000_000;
 impl ExtBuilder {
-	pub fn balances(mut self, account_ids: Vec<AccountId>, initial_balance: Balance) -> Self {
-		self.endowed_accounts = account_ids;
-		self.initial_balance = initial_balance;
+	pub fn balances(mut self, endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
+		self.endowed_accounts = endowed_accounts;
 		self
 	}
 
 	// one_million is big enough for testing, considering spread is 0.5% on average, and small enough
 	// to do math verification by hand.
 	pub fn one_million_for_alice_n_mock_pool(self) -> Self {
-		self.balances(vec![ALICE, MOCK_POOL], ONE_MILL)
+		self.balances(vec![
+			(ALICE, CurrencyId::AUSD, ONE_MILL),
+			(MOCK_POOL, CurrencyId::AUSD, ONE_MILL),
+		])
 	}
 
 	pub fn synthetic_price(mut self, price: Price) -> Self {
@@ -298,8 +296,6 @@ impl ExtBuilder {
 			.unwrap();
 
 		orml_tokens::GenesisConfig::<Runtime> {
-			tokens: vec![self.currency_id],
-			initial_balance: self.initial_balance,
 			endowed_accounts: self.endowed_accounts,
 		}
 		.assimilate_storage(&mut t)

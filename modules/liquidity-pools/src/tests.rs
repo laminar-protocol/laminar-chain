@@ -70,27 +70,24 @@ fn should_create_pool() {
 fn should_disable_pool() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
-
+		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
 		assert_ok!(ModuleLiquidityPools::set_enabled_trades(
 			Origin::signed(ALICE),
 			0,
 			CurrencyId::AUSD,
 			Leverage::ShortTen | Leverage::LongFive,
 		));
-
-		assert_ok!(ModuleLiquidityPools::disable_pool(Origin::signed(ALICE), 0));
-
-		let pool = LiquidityPoolOption {
-			bid_spread: Permill::zero(),
-			ask_spread: Permill::zero(),
-			additional_collateral_ratio: None,
-			enabled: Leverages::none(),
-		};
-
 		assert_eq!(
 			ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD),
-			Some(pool)
+			Some(LiquidityPoolOption {
+				bid_spread: Permill::zero(),
+				ask_spread: Permill::zero(),
+				additional_collateral_ratio: None,
+				enabled: Leverage::ShortTen | Leverage::LongFive,
+			})
 		);
+		assert_ok!(ModuleLiquidityPools::disable_pool(Origin::signed(ALICE), 0));
+		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
 	})
 }
 

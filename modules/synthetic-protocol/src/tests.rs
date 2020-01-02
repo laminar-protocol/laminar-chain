@@ -132,7 +132,7 @@ fn mint_fails_if_wrong_spread_ratio_config() {
 #[test]
 fn mint_fails_if_pool_has_no_liquidity() {
 	ExtBuilder::default()
-		.balances(vec![ALICE], ONE_MILL)
+		.balances(vec![(ALICE, CurrencyId::AUSD, ONE_MILL)])
 		.synthetic_price_three()
 		.one_percent_spread()
 		.ten_percent_additional_collateral_ratio()
@@ -257,7 +257,11 @@ fn redeem_fails_if_slippage_too_greedy() {
 #[test]
 fn redeem_fails_if_synthetic_position_too_low() {
 	ExtBuilder::default()
-		.balances(vec![ALICE, MOCK_POOL, ANOTHER_MOCK_POOL], ONE_MILL)
+		.balances(vec![
+			(ALICE, CurrencyId::AUSD, ONE_MILL),
+			(MOCK_POOL, CurrencyId::AUSD, ONE_MILL),
+			(ANOTHER_MOCK_POOL, CurrencyId::AUSD, ONE_MILL),
+		])
 		.synthetic_price_three()
 		.one_percent_spread()
 		.ten_percent_additional_collateral_ratio()
@@ -459,7 +463,11 @@ fn buyer_could_stop_loss() {
 #[test]
 fn mint_and_redeem_by_multi_buyers() {
 	ExtBuilder::default()
-		.balances(vec![ALICE, BOB, MOCK_POOL], ONE_MILL)
+		.balances(vec![
+			(ALICE, CurrencyId::AUSD, ONE_MILL),
+			(BOB, CurrencyId::AUSD, ONE_MILL),
+			(MOCK_POOL, CurrencyId::AUSD, ONE_MILL),
+		])
 		.synthetic_price_three()
 		.one_percent_spread()
 		.ten_percent_additional_collateral_ratio()
@@ -518,7 +526,11 @@ fn liquidate_fails_if_no_price() {
 #[test]
 fn liquidate_fails_if_synthetic_position_too_low() {
 	ExtBuilder::default()
-		.balances(vec![ALICE, MOCK_POOL, ANOTHER_MOCK_POOL], ONE_MILL)
+		.balances(vec![
+			(ALICE, CurrencyId::AUSD, ONE_MILL),
+			(MOCK_POOL, CurrencyId::AUSD, ONE_MILL),
+			(ANOTHER_MOCK_POOL, CurrencyId::AUSD, ONE_MILL),
+		])
 		.synthetic_price_three()
 		.one_percent_spread()
 		.ten_percent_additional_collateral_ratio()

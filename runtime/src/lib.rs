@@ -307,7 +307,6 @@ impl synthetic_tokens::Trait for Runtime {
 
 parameter_types! {
 	pub const GetLiquidityCurrencyId: CurrencyId = CurrencyId::AUSD;
-	pub const LiquidityCurrencyIds: Vec<CurrencyId> = vec![CurrencyId::AUSD, CurrencyId::FEUR, CurrencyId::FJPY];
 }
 
 type LiquidityCurrency = orml_currencies::Currency<Runtime, GetLiquidityCurrencyId>;
@@ -329,7 +328,6 @@ impl liquidity_pools::Trait for Runtime {
 	type CurrencyId = CurrencyId;
 	type PoolManager = PoolManager;
 	type ExistentialDeposit = ExistentialDeposit;
-	type LiquidityCurrencyIds = LiquidityCurrencyIds;
 }
 
 parameter_types! {

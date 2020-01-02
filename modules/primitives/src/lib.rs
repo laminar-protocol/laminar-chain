@@ -13,9 +13,8 @@ pub use orml_prices::Price;
 
 pub type LiquidityPoolId = u32;
 
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug)]
-// `PartialOrd` and `Ord` are only used for tests
-#[cfg_attr(feature = "std", derive(PartialOrd, Ord, Serialize, Deserialize))]
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Ord, PartialOrd, Clone, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CurrencyId {
 	FLOW = 0,
 	AUSD,
