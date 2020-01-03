@@ -22,7 +22,7 @@ orml-traits = { path = "../../orml/traits", default-features = false }
 orml-tokens = { path = "../../orml/tokens", default-features = false }
 
 [dev-dependencies]
-sp-core = {  git = "https://github.com/paritytech/substrate.git", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate.git", default-features = false }
 
 [features]
 default = ["std"]
