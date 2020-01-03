@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", default-features = false }
-rstd = { package = "sp-std", git = "https://github.com/paritytech/substrate.git", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate.git", default-features = false }
 frame-support = { git = "https://github.com/paritytech/substrate.git", default-features = false }
 
 primitives = { package = "module-primitives", path = "../primitives", default-features = false }
@@ -17,7 +17,7 @@ default = ["std"]
 std = [
 	"codec/std",
 	"sp-runtime/std",
-	"rstd/std",
+	"sp-std/std",
 	"frame-support/std",
 	"primitives/std",
 ]

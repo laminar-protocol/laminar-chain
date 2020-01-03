@@ -3,11 +3,11 @@
 use codec::FullCodec;
 use frame_support::Parameter;
 use primitives::Leverage;
-use rstd::fmt::Debug;
 use sp_runtime::{
 	traits::{MaybeSerializeDeserialize, Member, SimpleArithmetic},
 	DispatchResult, Permill,
 };
+use sp_std::fmt::Debug;
 
 pub trait LiquidityPoolBaseTypes {
 	type LiquidityPoolId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug;

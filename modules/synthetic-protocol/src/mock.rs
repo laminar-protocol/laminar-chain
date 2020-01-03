@@ -4,9 +4,9 @@
 
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
 use frame_system as system;
-use primitives::H256;
-use rstd::{cell::RefCell, collections::btree_map::BTreeMap};
+use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup, DispatchResult, Perbill};
+use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
 
 use orml_currencies::Currency;
 
@@ -288,7 +288,7 @@ impl ExtBuilder {
 		MockLiquidityPools::set_mock_additional_collateral_ratio(self.additional_collateral_ratio);
 	}
 
-	pub fn build(self) -> runtime_io::TestExternalities {
+	pub fn build(self) -> sp_io::TestExternalities {
 		self.set_mocks();
 
 		let mut t = frame_system::GenesisConfig::default()

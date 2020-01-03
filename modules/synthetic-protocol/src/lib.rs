@@ -1,11 +1,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
-use rstd::{convert::TryInto, result};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedSub, Convert, Saturating, Zero},
 	DispatchError, DispatchResult, Permill,
 };
+use sp_std::{convert::TryInto, result};
 // FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
 // would cause compiling error in `decl_module!` and `construct_runtime!`
 // #3295 https://github.com/paritytech/substrate/issues/3295

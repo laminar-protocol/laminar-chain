@@ -4,7 +4,7 @@
 
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
 use frame_system as system;
-use primitives::H256;
+use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
 
 use super::*;
@@ -77,7 +77,7 @@ pub fn alice() -> Origin {
 pub struct ExtBuilder;
 
 impl ExtBuilder {
-	pub fn build(self) -> runtime_io::TestExternalities {
+	pub fn build(self) -> sp_io::TestExternalities {
 		frame_system::GenesisConfig::default()
 			.build_storage::<Runtime>()
 			.unwrap()

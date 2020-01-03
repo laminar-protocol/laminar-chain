@@ -8,21 +8,21 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use aura_primitives::sr25519::AuthorityId as AuraId;
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::AuthorityList as GrandpaAuthorityList;
-use primitives::u32_trait::{_1, _2};
-use primitives::OpaqueMetadata;
-use rstd::prelude::*;
 use sp_api::impl_runtime_apis;
+use sp_consensus_aura::sr25519::AuthorityId as AuraId;
+use sp_core::u32_trait::{_1, _2};
+use sp_core::OpaqueMetadata;
 use sp_runtime::traits::{BlakeTwo256, Block as BlockT, ConvertInto, IdentifyAccount, NumberFor, StaticLookup, Verify};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys, transaction_validity::TransactionValidity, ApplyExtrinsicResult,
 	MultiSignature,
 };
+use sp_std::prelude::*;
 #[cfg(feature = "std")]
-use version::NativeVersion;
-use version::RuntimeVersion;
+use sp_version::NativeVersion;
+use sp_version::RuntimeVersion;
 
 pub use module_primitives::{CurrencyId, LiquidityPoolId};
 use orml_currencies::BasicCurrencyAdapter;
@@ -58,7 +58,7 @@ pub type Amount = i128;
 pub type Index = u32;
 
 /// A hash of some data used by the chain.
-pub type Hash = primitives::H256;
+pub type Hash = sp_core::H256;
 
 /// Digest item type.
 pub type DigestItem = generic::DigestItem<Hash>;
@@ -420,7 +420,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl block_builder_api::BlockBuilder<Block> for Runtime {
+	impl sp_block_builder::BlockBuilder<Block> for Runtime {
 		fn apply_extrinsic(extrinsic: <Block as BlockT>::Extrinsic) -> ApplyExtrinsicResult {
 			Executive::apply_extrinsic(extrinsic)
 		}
@@ -429,14 +429,14 @@ impl_runtime_apis! {
 			Executive::finalize_block()
 		}
 
-		fn inherent_extrinsics(data: inherents::InherentData) -> Vec<<Block as BlockT>::Extrinsic> {
+		fn inherent_extrinsics(data: sp_inherents::InherentData) -> Vec<<Block as BlockT>::Extrinsic> {
 			data.create_extrinsics()
 		}
 
 		fn check_inherents(
 			block: Block,
-			data: inherents::InherentData,
-		) -> inherents::CheckInherentsResult {
+			data: sp_inherents::InherentData,
+		) -> sp_inherents::CheckInherentsResult {
 			data.check_extrinsics(&block)
 		}
 
@@ -451,13 +451,13 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl offchain_primitives::OffchainWorkerApi<Block> for Runtime {
+	impl sp_offchain::OffchainWorkerApi<Block> for Runtime {
 		fn offchain_worker(number: NumberFor<Block>) {
 			Executive::offchain_worker(number)
 		}
 	}
 
-	impl aura_primitives::AuraApi<Block, AuraId> for Runtime {
+	impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
 		fn slot_duration() -> u64 {
 			Aura::slot_duration()
 		}
