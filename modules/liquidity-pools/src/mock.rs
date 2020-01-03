@@ -54,7 +54,6 @@ parameter_types! {
 	pub const ExistentialDeposit: u128 = 50;
 	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::FLOW;
 	pub const GetLiquidityCurrencyId: CurrencyId = CurrencyId::AUSD;
-	pub const LiquidityCurrencyIds: Vec<CurrencyId> = vec![CurrencyId::AUSD, CurrencyId::FEUR, CurrencyId::FJPY];
 }
 
 type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
@@ -92,7 +91,6 @@ impl Trait for Runtime {
 	type CurrencyId = CurrencyId;
 	type PoolManager = PoolManager;
 	type ExistentialDeposit = ExistentialDeposit;
-	type LiquidityCurrencyIds = LiquidityCurrencyIds;
 }
 pub type ModuleLiquidityPools = Module<Runtime>;
 
@@ -105,9 +103,7 @@ pub fn new_test_ext() -> runtime_io::TestExternalities {
 		.into();
 
 	orml_tokens::GenesisConfig::<Runtime> {
-		tokens: vec![CurrencyId::AUSD],
-		initial_balance: 100_000,
-		endowed_accounts: vec![ALICE, BOB],
+		endowed_accounts: vec![(ALICE, CurrencyId::AUSD, 100_000), (BOB, CurrencyId::AUSD, 100_000)],
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();

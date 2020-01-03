@@ -154,9 +154,22 @@ fn testnet_genesis(
 			phantom: Default::default(),
 		}),
 		orml_tokens: Some(TokensConfig {
-			tokens: vec![CurrencyId::FLOW, CurrencyId::AUSD],
-			initial_balance: 1_000_000_000_000_000_000_000_u128, // $1M
-			endowed_accounts: endowed_accounts.clone(),
+			endowed_accounts: vec![CurrencyId::FLOW, CurrencyId::AUSD]
+				.into_iter()
+				.flat_map(|currency_id| {
+					endowed_accounts
+						.clone()
+						.into_iter()
+						.map(|account_id| {
+							(
+								account_id,
+								currency_id,
+								1_000_000_000_000_000_000_000_u128, // $1M
+							)
+						})
+						.collect::<Vec<_>>()
+				})
+				.collect::<Vec<_>>(),
 		}),
 	}
 }

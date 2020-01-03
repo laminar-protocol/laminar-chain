@@ -42,7 +42,6 @@ pub trait Trait: system::Trait {
 	type CurrencyId: FullCodec + Parameter + Member + Copy + MaybeSerializeDeserialize;
 	type PoolManager: LiquidityPoolManager<Self::LiquidityPoolId>;
 	type ExistentialDeposit: Get<Self::Balance>;
-	type LiquidityCurrencyIds: Get<Vec<Self::CurrencyId>>;
 }
 
 decl_storage! {
@@ -238,14 +237,7 @@ impl<T: Trait> Module<T> {
 
 	fn _disable_pool(who: &T::AccountId, pool_id: T::LiquidityPoolId) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, who), Error::<T>::NoPermission);
-
-		for currency_id in T::LiquidityCurrencyIds::get() {
-			if let Some(mut pool) = Self::liquidity_pool_options(&pool_id, currency_id) {
-				pool.enabled = Leverages::none();
-				<LiquidityPoolOptions<T>>::insert(&pool_id, currency_id, pool);
-			}
-		}
-
+		<LiquidityPoolOptions<T>>::remove_prefix(&pool_id);
 		Ok(())
 	}
 
@@ -259,10 +251,7 @@ impl<T: Trait> Module<T> {
 
 		<Balances<T>>::remove(&pool_id);
 		<Owners<T>>::remove(&pool_id);
-
-		for currency_id in T::LiquidityCurrencyIds::get() {
-			<LiquidityPoolOptions<T>>::remove(&pool_id, currency_id);
-		}
+		<LiquidityPoolOptions<T>>::remove_prefix(&pool_id);
 
 		Ok(())
 	}
