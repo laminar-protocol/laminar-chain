@@ -1,12 +1,12 @@
-use aura_primitives::sr25519::AuthorityId as AuraId;
 use grandpa_primitives::AuthorityId as GrandpaId;
-use primitives::{sr25519, Pair, Public};
 use runtime::{
 	AccountId, AuraConfig, BalancesConfig, CurrencyId, GenesisConfig, GrandpaConfig, IndicesConfig,
 	OperatorMembershipConfig, Signature, SudoConfig, SystemConfig, TokensConfig, WASM_BINARY,
 };
 use sc_service;
 use serde_json::map::Map;
+use sp_consensus_aura::sr25519::AuthorityId as AuraId;
+use sp_core::{sr25519, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 
 // Note this is the URL for the telemetry server

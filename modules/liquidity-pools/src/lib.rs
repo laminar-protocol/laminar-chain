@@ -11,14 +11,13 @@ use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, t
 use frame_system::{self as system, ensure_signed};
 use orml_traits::{BasicCurrency, MultiCurrency};
 use primitives::{Leverage, Leverages};
-use rstd::prelude::*;
-use rstd::result;
 use sp_runtime::{
 	traits::{
 		AccountIdConversion, CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, One, SimpleArithmetic, Zero,
 	},
 	DispatchResult, ModuleId, Permill,
 };
+use sp_std::{prelude::*, result};
 use traits::{
 	LiquidityPoolBaseTypes, LiquidityPoolManager, LiquidityPools, LiquidityPoolsConfig, LiquidityPoolsCurrency,
 	LiquidityPoolsPosition,
