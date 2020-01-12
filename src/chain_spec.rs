@@ -123,6 +123,8 @@ impl Alternative {
 	}
 }
 
+const INITIAL_BALANCE: u128 = 1_000_000_000_000_000_000_000_u128; // $1M
+
 fn testnet_genesis(
 	initial_authorities: Vec<(AuraId, GrandpaId)>,
 	root_key: AccountId,
@@ -154,22 +156,15 @@ fn testnet_genesis(
 			phantom: Default::default(),
 		}),
 		orml_tokens: Some(TokensConfig {
-			endowed_accounts: vec![CurrencyId::FLOW, CurrencyId::AUSD]
-				.into_iter()
-				.flat_map(|currency_id| {
-					endowed_accounts
-						.clone()
-						.into_iter()
-						.map(|account_id| {
-							(
-								account_id,
-								currency_id,
-								1_000_000_000_000_000_000_000_u128, // $1M
-							)
-						})
-						.collect::<Vec<_>>()
+			endowed_accounts: endowed_accounts
+				.iter()
+				.flat_map(|x| {
+					vec![
+						(x.clone(), CurrencyId::FLOW, INITIAL_BALANCE),
+						(x.clone(), CurrencyId::AUSD, INITIAL_BALANCE),
+					]
 				})
-				.collect::<Vec<_>>(),
+				.collect(),
 		}),
 	}
 }
