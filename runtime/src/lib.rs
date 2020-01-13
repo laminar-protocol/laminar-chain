@@ -252,6 +252,21 @@ impl pallet_membership::Trait<OperatorMembershipInstance> for Runtime {
 	type MembershipChanged = OperatorCollective;
 }
 
+parameter_types! {
+	pub const MultisigDepositBase: Balance = 30;
+	pub const MultisigDepositFactor: Balance = 5;
+	pub const MaxSignatories: u16 = 100;
+}
+
+impl pallet_utility::Trait for Runtime {
+	type Event = Event;
+	type Call = Call;
+	type Currency = Balances;
+	type MultisigDepositBase = MultisigDepositBase;
+	type MultisigDepositFactor = MultisigDepositFactor;
+	type MaxSignatories = MaxSignatories;
+}
+
 // TODO: set this
 parameter_types! {
 	pub const MinimumCount: u32 = 3;
@@ -365,6 +380,7 @@ construct_runtime!(
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
 		OperatorCollective: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		OperatorMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
+		Utility: pallet_utility::{Module, Call, Storage, Event<T>},
 		Oracle: orml_oracle::{Module, Storage, Call, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
