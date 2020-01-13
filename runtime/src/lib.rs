@@ -26,6 +26,7 @@ use sp_version::RuntimeVersion;
 
 pub use module_primitives::{CurrencyId, LiquidityPoolId};
 use orml_currencies::BasicCurrencyAdapter;
+use orml_oracle::OperatorProvider;
 
 use module_primitives::{BalancePriceConverter, Price};
 use traits::LiquidityPoolManager;
@@ -251,6 +252,17 @@ impl pallet_membership::Trait<OperatorMembershipInstance> for Runtime {
 	type MembershipChanged = OperatorCollective;
 }
 
+pub struct OperatorCollectiveProvider;
+impl OperatorProvider<AccountId> for OperatorCollectiveProvider {
+	fn can_feed_data(who: &AccountId) -> bool {
+		OperatorCollective::is_member(who)
+	}
+
+	fn operators() -> Vec<AccountId> {
+		OperatorCollective::members()
+	}
+}
+
 // TODO: set this
 parameter_types! {
 	pub const MinimumCount: u32 = 3;
@@ -260,7 +272,7 @@ parameter_types! {
 impl orml_oracle::Trait for Runtime {
 	type Event = Event;
 	type OnNewData = (); // TODO: update this
-	type OperatorProvider = (); // TODO: update this
+	type OperatorProvider = OperatorCollectiveProvider;
 	type CombineData = orml_oracle::DefaultCombineData<Runtime, MinimumCount, ExpiresIn>;
 	type Time = Timestamp;
 	type OracleKey = CurrencyId;
