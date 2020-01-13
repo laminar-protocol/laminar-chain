@@ -12,9 +12,7 @@ use frame_system::{self as system, ensure_signed};
 use orml_traits::{BasicCurrency, MultiCurrency};
 use primitives::{Leverage, Leverages};
 use sp_runtime::{
-	traits::{
-		AccountIdConversion, CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, One, SimpleArithmetic, Zero,
-	},
+	traits::{AccountIdConversion, CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, One, SimpleArithmetic},
 	DispatchResult, ModuleId, Permill,
 };
 use sp_std::{prelude::*, result};
@@ -45,9 +43,9 @@ pub trait Trait: system::Trait {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as LiquidityPools {
-		pub NextPoolId get(fn next_pool_id) build(|_| T::LiquidityPoolId::zero()): T::LiquidityPoolId;
+		pub NextPoolId get(fn next_pool_id): T::LiquidityPoolId;
 		pub Owners get(fn owners): map T::LiquidityPoolId => Option<T::AccountId>;
-		pub LiquidityPoolOptions get(fn liquidity_pool_options): double_map T::LiquidityPoolId, blake2_256(T::CurrencyId) => Option<LiquidityPoolOption>;
+		pub LiquidityPoolOptions get(fn liquidity_pool_options): double_map T::LiquidityPoolId, T::CurrencyId => Option<LiquidityPoolOption>;
 		pub Balances get(fn balances): map T::LiquidityPoolId => T::Balance;
 	}
 }

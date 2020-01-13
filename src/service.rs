@@ -74,7 +74,12 @@ macro_rules! new_full_start {
 			import_setup = Some((grandpa_block_import, grandpa_link));
 
 			Ok(import_queue)
-		})?;
+		})?
+		.with_rpc_extensions(
+			|client, pool, _backend, _fetcher, _remote_blockchain| -> Result<super::rpc::RpcExtension, _> {
+				Ok(super::rpc::create_full(client, pool))
+			},
+		)?;
 
 		(builder, import_setup, inherent_data_providers)
 		}};
@@ -118,7 +123,7 @@ pub fn new_full<C: Send + Default + 'static>(
 
 		let can_author_with = sp_consensus::CanAuthorWithNativeVersion::new(client.executor().clone());
 
-		let aura = sc_consensus_aura::start_aura::<_, _, _, _, _, AuraPair, _, _, _, _>(
+		let aura = sc_consensus_aura::start_aura::<_, _, _, _, _, AuraPair, _, _, _>(
 			sc_consensus_aura::SlotDuration::get_or_compute(&*client)?,
 			client,
 			select_chain,
@@ -236,5 +241,13 @@ pub fn new_light<C: Send + Default + 'static>(
 		.with_finality_proof_provider(|client, backend| {
 			Ok(Arc::new(GrandpaFinalityProofProvider::new(backend, client)) as _)
 		})?
+		.with_rpc_extensions(
+			|client, pool, _backend, fetcher, remote_blockchain| -> Result<super::rpc::RpcExtension, _> {
+				let fetcher = fetcher.ok_or_else(|| "Trying to start node RPC without active fetcher")?;
+				let remote_blockchain =
+					remote_blockchain.ok_or_else(|| "Trying to start node RPC without active remote blockchain")?;
+				Ok(super::rpc::create_light(client, remote_blockchain, fetcher, pool))
+			},
+		)?
 		.build()
 }
