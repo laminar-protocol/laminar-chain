@@ -52,7 +52,7 @@ impl system::Trait for Runtime {
 
 parameter_types! {
 	pub const ExistentialDeposit: u128 = 50;
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::FLOW;
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::LAMI;
 	pub const GetLiquidityCurrencyId: CurrencyId = CurrencyId::AUSD;
 }
 
