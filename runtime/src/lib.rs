@@ -26,7 +26,6 @@ use sp_version::RuntimeVersion;
 
 pub use module_primitives::{CurrencyId, LiquidityPoolId};
 use orml_currencies::BasicCurrencyAdapter;
-use orml_traits::DataProvider;
 
 use module_primitives::{BalancePriceConverter, Price};
 use traits::LiquidityPoolManager;
@@ -265,7 +264,7 @@ impl orml_oracle::Trait for Runtime {
 	type CombineData = orml_oracle::DefaultCombineData<Runtime, MinimumCount, ExpiresIn>;
 	type Time = Timestamp;
 	type OracleKey = CurrencyId;
-	type OracleValue = Balance; // TODO: update this
+	type OracleValue = Price;
 }
 
 impl orml_tokens::Trait for Runtime {
@@ -288,16 +287,9 @@ impl orml_currencies::Trait for Runtime {
 	type GetNativeCurrencyId = GetFlowTokenId;
 }
 
-// TODO: replace this mock
-pub struct DummySource;
-impl DataProvider<CurrencyId, Price> for DummySource {
-	fn get(_currency: &CurrencyId) -> Option<Price> {
-		None
-	}
-}
 impl orml_prices::Trait for Runtime {
 	type CurrencyId = CurrencyId;
-	type Source = DummySource;
+	type Source = orml_oracle::Module<Runtime>;
 }
 
 impl synthetic_tokens::Trait for Runtime {
