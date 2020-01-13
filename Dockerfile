@@ -2,14 +2,14 @@
 
 FROM phusion/baseimage:0.10.2 as builder
 LABEL maintainer="hello@laminar.one"
-LABEL description="This is the build stage for Flowchain Node. Here we create the binary."
+LABEL description="This is the build stage for Laminar Chain Node. Here we create the binary."
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 ARG PROFILE=release
-WORKDIR /flowchain
+WORKDIR /laminar
 
-COPY . /flowchain
+COPY . /laminar
 
 RUN apt-get update && \
 	apt-get dist-upgrade -y -o Dpkg::Options::="--force-confold" && \
@@ -26,15 +26,15 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
 
 FROM phusion/baseimage:0.10.2
 LABEL maintainer="hello@laminar.one"
-LABEL description="This is the 2nd stage: a very small image where we copy the Flowchain Node binary."
+LABEL description="This is the 2nd stage: a very small image where we copy the Laminar Chain Node binary."
 ARG PROFILE=release
 
 RUN mv /usr/share/ca* /tmp && \
 	rm -rf /usr/share/*  && \
 	mv /tmp/ca-certificates /usr/share/ && \
-	useradd -m -u 1000 -U -s /bin/sh -d /flowchain flowchain
+	useradd -m -u 1000 -U -s /bin/sh -d /laminar laminar
 
-COPY --from=builder /flowchain/target/$PROFILE/flowchain /usr/local/bin
+COPY --from=builder /laminar/target/$PROFILE/flowchain /usr/local/bin
 
 # checks
 RUN ldd /usr/local/bin/flowchain && \
@@ -44,11 +44,11 @@ RUN ldd /usr/local/bin/flowchain && \
 RUN rm -rf /usr/lib/python* && \
 	rm -rf /usr/bin /usr/sbin /usr/share/man
 
-USER flowchain
+USER laminar
 EXPOSE 30333 9933 9944
 
-RUN mkdir /flowchain/data
+RUN mkdir /laminar/data
 
-VOLUME ["/flowchain/data"]
+VOLUME ["/laminar/data"]
 
 CMD ["/usr/local/bin/flowchain"]

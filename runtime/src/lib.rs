@@ -287,7 +287,7 @@ impl orml_tokens::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const GetFlowTokenId: CurrencyId = CurrencyId::FLOW;
+	pub const GetFlowTokenId: CurrencyId = CurrencyId::LAMI;
 }
 
 pub type FlowToken = BasicCurrencyAdapter<Runtime, pallet_balances::Module<Runtime>, Balance>;

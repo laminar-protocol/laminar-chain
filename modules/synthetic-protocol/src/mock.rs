@@ -72,7 +72,7 @@ impl orml_tokens::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::FLOW;
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::LAMI;
 }
 
 type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
