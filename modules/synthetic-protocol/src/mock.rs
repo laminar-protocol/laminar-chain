@@ -64,11 +64,18 @@ impl frame_system::Trait for Runtime {
 pub type System = system::Module<Runtime>;
 
 type Amount = i128;
+
+parameter_types! {
+	pub const ExistentialDeposit: u128 = 0;
+}
+
 impl orml_tokens::Trait for Runtime {
 	type Event = TestEvent;
 	type Balance = Balance;
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
+	type ExistentialDeposit = ();
+	type DustRemoval = ();
 }
 
 parameter_types! {
