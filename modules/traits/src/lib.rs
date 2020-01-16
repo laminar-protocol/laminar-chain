@@ -9,12 +9,11 @@ use sp_runtime::{
 };
 use sp_std::fmt::Debug;
 
-pub trait LiquidityPoolBaseTypes {
+pub trait LiquidityPools<AccountId> {
 	type LiquidityPoolId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug;
 	type CurrencyId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug;
-}
+	type Balance: Parameter + Member + SimpleArithmetic + Default + Copy + MaybeSerializeDeserialize;
 
-pub trait LiquidityPoolsConfig<AccountId>: LiquidityPoolBaseTypes {
 	fn get_bid_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill>;
 	fn get_ask_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill>;
 	fn get_additional_collateral_ratio(
@@ -23,28 +22,15 @@ pub trait LiquidityPoolsConfig<AccountId>: LiquidityPoolBaseTypes {
 	) -> Option<Permill>;
 
 	fn is_owner(pool_id: Self::LiquidityPoolId, who: &AccountId) -> bool;
-}
 
-pub trait LiquidityPoolsPosition: LiquidityPoolBaseTypes {
 	fn is_allowed_position(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId, leverage: Leverage) -> bool;
-}
 
-pub trait LiquidityPoolsCurrency<AccountId>: LiquidityPoolBaseTypes {
-	type Balance: Parameter + Member + SimpleArithmetic + Default + Copy + MaybeSerializeDeserialize;
-
-	/// Check collateral balance of `pool_id`.
-	fn balance(pool_id: Self::LiquidityPoolId) -> Self::Balance;
-
-	/// Deposit some amount of collateral to `pool_id`, from `who`.
-	fn deposit(from: &AccountId, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult;
-
-	/// Withdraw some amount of collateral to `who`, from `pool_id`.
-	fn withdraw(to: &AccountId, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult;
-}
-
-pub trait LiquidityPools<AccountId>:
-	LiquidityPoolsConfig<AccountId> + LiquidityPoolsPosition + LiquidityPoolsCurrency<AccountId>
-{
+	/// Return collateral balance of `pool_id`.
+	fn liquidity(pool_id: Self::LiquidityPoolId) -> Self::Balance;
+	/// Deposit some amount of collateral to `pool_id`, from `source`.
+	fn deposit_liquidity(source: &AccountId, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult;
+	/// Withdraw some amount of collateral to `dest`, from `pool_id`.
+	fn withdraw_liquidity(dest: &AccountId, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult;
 }
 
 pub trait LiquidityPoolManager<LiquidityPoolId> {

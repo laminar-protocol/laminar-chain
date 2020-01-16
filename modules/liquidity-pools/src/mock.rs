@@ -52,7 +52,7 @@ impl system::Trait for Runtime {
 
 parameter_types! {
 	pub const ExistentialDeposit: u128 = 50;
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::FLOW;
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::LAMI;
 	pub const GetLiquidityCurrencyId: CurrencyId = CurrencyId::AUSD;
 }
 
@@ -72,6 +72,8 @@ impl orml_tokens::Trait for Runtime {
 	type Balance = Balance;
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
+	type ExistentialDeposit = ExistentialDeposit;
+	type DustRemoval = ();
 }
 
 pub struct PoolManager;

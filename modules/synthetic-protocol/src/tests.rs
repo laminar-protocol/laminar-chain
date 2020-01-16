@@ -43,8 +43,8 @@ fn withdraw_collateral(who: AccountId) -> DispatchResult {
 	SyntheticProtocol::withdraw_collateral(origin_of(who), MOCK_POOL, CurrencyId::FEUR)
 }
 
-fn mock_pool_balance() -> Balance {
-	MockLiquidityPools::balance(MOCK_POOL)
+fn mock_pool_liquidity() -> Balance {
+	MockLiquidityPools::liquidity(MOCK_POOL)
 }
 
 fn collateral_balance(who: AccountId) -> Balance {
@@ -179,7 +179,7 @@ fn mint_does_correct_math() {
 			assert_eq!(SyntheticCurrency::total_issuance(), synthetic);
 
 			// liquidity pool collateralized
-			assert_eq!(mock_pool_balance(), ONE_MILL - collateral_from_pool);
+			assert_eq!(mock_pool_liquidity(), ONE_MILL - collateral_from_pool);
 
 			// collateral locked in synthetic-tokens module account
 			assert_eq!(collateral_balance(SyntheticTokens::account_id()), total_collateralized);
@@ -384,7 +384,7 @@ fn redeem_does_correct_math() {
 
 			// liquidity pool got collateral refund
 			assert_eq!(
-				mock_pool_balance(),
+				mock_pool_liquidity(),
 				ONE_MILL - collateral_from_pool + pool_refund_collateral
 			);
 
@@ -420,7 +420,7 @@ fn pool_makes_profit() {
 		.execute_with(|| {
 			assert_ok!(mint_feur(ALICE, ONE_MILL));
 			assert_ok!(redeem_ausd(ALICE, synthetic_balance(ALICE)));
-			assert!(mock_pool_balance() > ONE_MILL);
+			assert!(mock_pool_liquidity() > ONE_MILL);
 		});
 }
 
@@ -675,7 +675,7 @@ fn liquidate_does_correct_math() {
 
 			// liquidity pool got refund
 			assert_eq!(
-				mock_pool_balance(),
+				mock_pool_liquidity(),
 				ONE_MILL - collateral_from_pool + pool_refund_collateral
 			);
 
@@ -733,7 +733,7 @@ fn add_collateral_works() {
 			assert_ok!(mint_feur(ALICE, ONE_MILL / 2));
 			let minted_synthetic_amount = SyntheticCurrency::total_issuance();
 			let (collateral_position, synthetic_position) = position();
-			let pool_balance = mock_pool_balance();
+			let pool_balance = mock_pool_liquidity();
 
 			let added_collateral = 1_000;
 			assert_ok!(add_collateral(ALICE, added_collateral));
@@ -744,7 +744,7 @@ fn add_collateral_works() {
 			assert_eq!(SyntheticCurrency::total_issuance(), minted_synthetic_amount);
 
 			// liquidity pool balance stays the same
-			assert_eq!(mock_pool_balance(), pool_balance);
+			assert_eq!(mock_pool_liquidity(), pool_balance);
 
 			// position change matched
 			let (new_collateral_position, new_synthetic_position) = position();
@@ -829,7 +829,7 @@ fn withdraw_collateral_does_correct_math() {
 			assert_ok!(mint_feur(ALICE, ONE_MILL));
 			let minted_synthetic_amount = SyntheticCurrency::total_issuance();
 			let (collateral_position, synthetic_position) = position();
-			let pool_balance = mock_pool_balance();
+			let pool_balance = mock_pool_liquidity();
 
 			// after minted...
 			// minted_synthetic = 330_033
@@ -860,7 +860,7 @@ fn withdraw_collateral_does_correct_math() {
 			assert_eq!(SyntheticCurrency::total_issuance(), minted_synthetic_amount);
 
 			// liquidity pool balance stays the same
-			assert_eq!(mock_pool_balance(), pool_balance);
+			assert_eq!(mock_pool_liquidity(), pool_balance);
 
 			// collateral position changed
 			let (new_collateral_position, new_synthetic_position) = position();

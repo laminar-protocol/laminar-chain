@@ -284,10 +284,12 @@ impl orml_tokens::Trait for Runtime {
 	type Balance = Balance;
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
+	type ExistentialDeposit = ExistentialDeposit;
+	type DustRemoval = ();
 }
 
 parameter_types! {
-	pub const GetFlowTokenId: CurrencyId = CurrencyId::FLOW;
+	pub const GetFlowTokenId: CurrencyId = CurrencyId::LAMI;
 }
 
 pub type FlowToken = BasicCurrencyAdapter<Runtime, pallet_balances::Module<Runtime>, Balance>;
@@ -346,8 +348,7 @@ impl synthetic_protocol::Trait for Runtime {
 	type CollateralCurrency = CollateralCurrency;
 	type GetCollateralCurrencyId = GetCollateralCurrencyId;
 	type PriceProvider = orml_prices::Module<Runtime>;
-	type LiquidityPoolsConfig = liquidity_pools::Module<Runtime>;
-	type LiquidityPoolsCurrency = liquidity_pools::Module<Runtime>;
+	type LiquidityPools = liquidity_pools::Module<Runtime>;
 	type BalanceToPrice = BalancePriceConverter;
 	type PriceToBalance = BalancePriceConverter;
 }

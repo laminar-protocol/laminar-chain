@@ -16,7 +16,7 @@ pub type LiquidityPoolId = u32;
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CurrencyId {
-	FLOW = 0,
+	LAMI = 0,
 	AUSD,
 	FEUR,
 	FJPY,
