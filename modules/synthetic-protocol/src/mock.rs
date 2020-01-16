@@ -11,11 +11,11 @@ use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
 use orml_currencies::Currency;
 
 use module_primitives::{BalancePriceConverter, LiquidityPoolId};
-use traits::LiquidityPoolBaseTypes;
+use traits::LiquidityPools;
 
 use super::*;
 
-pub use module_primitives::{Balance, CurrencyId};
+pub use module_primitives::{Balance, CurrencyId, Leverage};
 
 impl_outer_origin! {
 	pub enum Origin for Runtime {}
@@ -158,12 +158,11 @@ impl MockLiquidityPools {
 	}
 }
 
-impl LiquidityPoolBaseTypes for MockLiquidityPools {
+impl LiquidityPools<AccountId> for MockLiquidityPools {
 	type LiquidityPoolId = AccountId;
 	type CurrencyId = CurrencyId;
-}
+	type Balance = Balance;
 
-impl LiquidityPoolsConfig<AccountId> for MockLiquidityPools {
 	fn get_bid_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Option<Permill> {
 		Some(Self::spread())
 	}
@@ -183,20 +182,24 @@ impl LiquidityPoolsConfig<AccountId> for MockLiquidityPools {
 	fn is_owner(_pool_id: Self::LiquidityPoolId, who: &u32) -> bool {
 		who == &ALICE
 	}
-}
 
-impl LiquidityPoolsCurrency<AccountId> for MockLiquidityPools {
-	type Balance = Balance;
+	fn is_allowed_position(
+		_pool_id: Self::LiquidityPoolId,
+		_currency_id: Self::CurrencyId,
+		_leverage: Leverage,
+	) -> bool {
+		true
+	}
 
-	fn balance(pool_id: Self::LiquidityPoolId) -> Self::Balance {
+	fn liquidity(pool_id: Self::LiquidityPoolId) -> Self::Balance {
 		CollateralCurrency::balance(&pool_id)
 	}
 
-	fn deposit(from: &AccountId, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
+	fn deposit_liquidity(from: &AccountId, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
 		CollateralCurrency::transfer(from, &pool_id, amount).map_err(|e| e.into())
 	}
 
-	fn withdraw(to: &AccountId, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
+	fn withdraw_liquidity(to: &AccountId, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
 		CollateralCurrency::transfer(&pool_id, to, amount).map_err(|e| e.into())
 	}
 }
@@ -207,8 +210,7 @@ impl Trait for Runtime {
 	type CollateralCurrency = CollateralCurrency;
 	type GetCollateralCurrencyId = GetCollateralCurrencyId;
 	type PriceProvider = MockPrices;
-	type LiquidityPoolsConfig = MockLiquidityPools;
-	type LiquidityPoolsCurrency = MockLiquidityPools;
+	type LiquidityPools = MockLiquidityPools;
 	type BalanceToPrice = BalancePriceConverter;
 	type PriceToBalance = BalancePriceConverter;
 }
