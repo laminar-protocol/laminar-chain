@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use crate::{
-	mock::{new_test_ext, AccountId, ModuleLiquidityPools, Origin, Runtime, ALICE},
+	mock::{new_test_ext, AccountId, ModuleLiquidityPools, Origin, Runtime, ALICE, BOB},
 	Error, LiquidityPoolOption,
 };
 
@@ -126,6 +126,10 @@ fn should_withdraw_liquidity() {
 		assert_eq!(ModuleLiquidityPools::balances(&0), 1000);
 		assert_ok!(ModuleLiquidityPools::withdraw_liquidity(Origin::signed(ALICE), 0, 500));
 		assert_eq!(ModuleLiquidityPools::balances(&0), 500);
+		assert_ok!(<ModuleLiquidityPools as LiquidityPools<AccountId>>::withdraw_liquidity(
+			&BOB, 0, 100
+		));
+		assert_eq!(ModuleLiquidityPools::balances(&0), 400);
 	})
 }
 

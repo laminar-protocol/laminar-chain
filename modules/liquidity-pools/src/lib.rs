@@ -105,6 +105,7 @@ decl_module! {
 
 		pub fn withdraw_liquidity(origin, pool_id: T::LiquidityPoolId, amount: T::Balance) {
 			let who = ensure_signed(origin)?;
+			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
 			Self::_withdraw_liquidity(&who, pool_id, amount)?;
 			Self::deposit_event(RawEvent::WithdrawLiquidity(who, pool_id, amount));
 		}
@@ -260,7 +261,6 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _withdraw_liquidity(who: &T::AccountId, pool_id: T::LiquidityPoolId, amount: T::Balance) -> DispatchResult {
-		ensure!(Self::is_owner(pool_id, who), Error::<T>::NoPermission);
 		let balance = Self::balances(&pool_id);
 		let new_balance = balance.checked_sub(&amount).ok_or(Error::<T>::CannotWithdrawAmount)?;
 
