@@ -16,10 +16,7 @@ use sp_runtime::{
 	DispatchResult, ModuleId, Permill,
 };
 use sp_std::{prelude::*, result};
-use traits::{
-	LiquidityPoolBaseTypes, LiquidityPoolManager, LiquidityPools, LiquidityPoolsConfig, LiquidityPoolsCurrency,
-	LiquidityPoolsPosition,
-};
+use traits::{LiquidityPoolManager, LiquidityPools};
 
 const MODULE_ID: ModuleId = ModuleId(*b"flow/lp_");
 
@@ -163,12 +160,11 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> LiquidityPoolBaseTypes for Module<T> {
+impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 	type LiquidityPoolId = T::LiquidityPoolId;
 	type CurrencyId = T::CurrencyId;
-}
+	type Balance = T::Balance;
 
-impl<T: Trait> LiquidityPoolsConfig<T::AccountId> for Module<T> {
 	fn get_bid_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill> {
 		Self::liquidity_pool_options(&pool_id, &currency_id).map(|pool| pool.bid_spread)
 	}
@@ -189,34 +185,34 @@ impl<T: Trait> LiquidityPoolsConfig<T::AccountId> for Module<T> {
 	fn is_owner(pool_id: Self::LiquidityPoolId, who: &T::AccountId) -> bool {
 		Self::is_owner(pool_id, who)
 	}
-}
 
-impl<T: Trait> LiquidityPoolsPosition for Module<T> {
 	fn is_allowed_position(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId, leverage: Leverage) -> bool {
 		Self::is_enabled(pool_id, currency_id, leverage)
 	}
-}
-
-impl<T: Trait> LiquidityPoolsCurrency<T::AccountId> for Module<T> {
-	type Balance = T::Balance;
 
 	/// Check collateral balance of `pool_id`.
-	fn balance(pool_id: Self::LiquidityPoolId) -> Self::Balance {
+	fn liquidity(pool_id: Self::LiquidityPoolId) -> Self::Balance {
 		Self::balances(&pool_id)
 	}
 
-	/// Deposit some amount of collateral to `pool_id`, from `who`.
-	fn deposit(from: &T::AccountId, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
-		Self::_deposit_liquidity(from, pool_id, amount)
+	/// Deposit some amount of collateral to `pool_id`, from `source`.
+	fn deposit_liquidity(
+		source: &T::AccountId,
+		pool_id: Self::LiquidityPoolId,
+		amount: Self::Balance,
+	) -> DispatchResult {
+		Self::_deposit_liquidity(source, pool_id, amount)
 	}
 
-	/// Withdraw some amount of collateral to `who`, from `pool_id`.
-	fn withdraw(to: &T::AccountId, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
-		Self::_withdraw_liquidity(to, pool_id, amount)
+	/// Withdraw some amount of collateral to `dest`, from `pool_id`.
+	fn withdraw_liquidity(
+		dest: &T::AccountId,
+		pool_id: Self::LiquidityPoolId,
+		amount: Self::Balance,
+	) -> DispatchResult {
+		Self::_withdraw_liquidity(dest, pool_id, amount)
 	}
 }
-
-impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {}
 
 // Private methods
 impl<T: Trait> Module<T> {

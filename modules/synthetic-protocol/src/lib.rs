@@ -15,7 +15,7 @@ use orml_prices::Price;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
 use orml_utilities::FixedU128;
 
-use traits::{LiquidityPoolsConfig, LiquidityPoolsCurrency};
+use traits::LiquidityPools;
 
 mod mock;
 mod tests;
@@ -26,16 +26,11 @@ pub trait Trait: synthetic_tokens::Trait {
 	type CollateralCurrency: BasicCurrency<Self::AccountId, Balance = Self::Balance>;
 	type GetCollateralCurrencyId: Get<Self::CurrencyId>;
 	type PriceProvider: PriceProvider<Self::CurrencyId, Price>;
-	type LiquidityPoolsConfig: LiquidityPoolsConfig<
+	type LiquidityPools: LiquidityPools<
 		Self::AccountId,
 		CurrencyId = Self::CurrencyId,
-		LiquidityPoolId = Self::LiquidityPoolId,
-	>;
-	type LiquidityPoolsCurrency: LiquidityPoolsCurrency<
-		Self::AccountId,
-		CurrencyId = Self::CurrencyId,
-		LiquidityPoolId = Self::LiquidityPoolId,
 		Balance = Self::Balance,
+		LiquidityPoolId = Self::LiquidityPoolId,
 	>;
 	type BalanceToPrice: Convert<Self::Balance, Price>;
 	type PriceToBalance: Convert<Price, Self::Balance>;
@@ -200,7 +195,7 @@ impl<T: Trait> Module<T> {
 			Self::_calc_additional_collateral_amount(pool_id, currency_id, collateral, synthetic_value)?;
 
 		ensure!(
-			T::LiquidityPoolsCurrency::balance(pool_id) >= additional_collateral,
+			T::LiquidityPools::liquidity(pool_id) >= additional_collateral,
 			Error::<T>::LiquidityProviderBalanceTooLow,
 		);
 
@@ -210,7 +205,7 @@ impl<T: Trait> Module<T> {
 		// collateralise
 		T::CollateralCurrency::transfer(who, &<SyntheticTokens<T>>::account_id(), collateral)
 			.expect("ensured enough balance of sender; qed");
-		T::LiquidityPoolsCurrency::withdraw(&<SyntheticTokens<T>>::account_id(), pool_id, additional_collateral)
+		T::LiquidityPools::withdraw_liquidity(&<SyntheticTokens<T>>::account_id(), pool_id, additional_collateral)
 			.expect("ensured enough collateral in liquidity pool; qed");
 
 		let total_collateral = collateral + additional_collateral;
@@ -261,7 +256,7 @@ impl<T: Trait> Module<T> {
 		// redeem collateral
 		T::CollateralCurrency::transfer(&<SyntheticTokens<T>>::account_id(), who, redeemed_collateral)
 			.expect("ensured enough locked collateral; qed");
-		T::LiquidityPoolsCurrency::deposit(&<SyntheticTokens<T>>::account_id(), pool_id, pool_refund_collateral)
+		T::LiquidityPools::deposit_liquidity(&<SyntheticTokens<T>>::account_id(), pool_id, pool_refund_collateral)
 			.expect("ensured enough locked collateral; qed");
 
 		<SyntheticTokens<T>>::remove_position(pool_id, currency_id, collateral_position_delta, synthetic);
@@ -305,7 +300,7 @@ impl<T: Trait> Module<T> {
 			.expect("ensured enough locked collateral; qed");
 
 		// refund to pool
-		T::LiquidityPoolsCurrency::deposit(&<SyntheticTokens<T>>::account_id(), pool_id, pool_refund_collateral)
+		T::LiquidityPools::deposit_liquidity(&<SyntheticTokens<T>>::account_id(), pool_id, pool_refund_collateral)
 			.expect("ensured enough locked collateral; qed");
 
 		<SyntheticTokens<T>>::remove_position(pool_id, currency_id, collateral_position_delta, synthetic);
@@ -324,8 +319,8 @@ impl<T: Trait> Module<T> {
 			Error::<T>::BalanceTooLow
 		);
 
-		T::LiquidityPoolsCurrency::deposit(who, pool_id, collateral).expect("ensured enough balance; qed");
-		T::LiquidityPoolsCurrency::withdraw(&<SyntheticTokens<T>>::account_id(), pool_id, collateral)
+		T::LiquidityPools::deposit_liquidity(who, pool_id, collateral).expect("ensured enough balance; qed");
+		T::LiquidityPools::withdraw_liquidity(&<SyntheticTokens<T>>::account_id(), pool_id, collateral)
 			.expect("have deposited equal amount; qed");
 
 		<SyntheticTokens<T>>::add_position(pool_id, currency_id, collateral, Zero::zero());
@@ -338,10 +333,7 @@ impl<T: Trait> Module<T> {
 		pool_id: T::LiquidityPoolId,
 		currency_id: T::CurrencyId,
 	) -> SynthesisResult<T> {
-		ensure!(
-			T::LiquidityPoolsConfig::is_owner(pool_id, who),
-			Error::<T>::NotPoolOwner
-		);
+		ensure!(T::LiquidityPools::is_owner(pool_id, who), Error::<T>::NotPoolOwner);
 
 		let price =
 			T::PriceProvider::get_price(T::GetCollateralCurrencyId::get(), currency_id).ok_or(Error::<T>::NoPrice)?;
@@ -355,9 +347,9 @@ impl<T: Trait> Module<T> {
 			Error::<T>::NotEnoughLockedCollateralAvailable
 		);
 
-		T::LiquidityPoolsCurrency::deposit(&<SyntheticTokens<T>>::account_id(), pool_id, pool_refund_collateral)
+		T::LiquidityPools::deposit_liquidity(&<SyntheticTokens<T>>::account_id(), pool_id, pool_refund_collateral)
 			.expect("ensured enough locked collateral; qed");
-		T::LiquidityPoolsCurrency::withdraw(who, pool_id, pool_refund_collateral)
+		T::LiquidityPools::withdraw_liquidity(who, pool_id, pool_refund_collateral)
 			.expect("have deposited equal amount; qed");
 
 		<SyntheticTokens<T>>::remove_position(pool_id, currency_id, collateral_position_delta, Zero::zero());
@@ -378,8 +370,7 @@ impl<T: Trait> Module<T> {
 		price: Price,
 		max_slippage: Permill,
 	) -> result::Result<Price, DispatchError> {
-		let ask_spread =
-			T::LiquidityPoolsConfig::get_ask_spread(pool_id, currency_id).ok_or(Error::<T>::NoAskSpread)?;
+		let ask_spread = T::LiquidityPools::get_ask_spread(pool_id, currency_id).ok_or(Error::<T>::NoAskSpread)?;
 
 		if ask_spread.deconstruct() > max_slippage.deconstruct() {
 			return Err(Error::<T>::SlippageTooHigh.into());
@@ -398,8 +389,7 @@ impl<T: Trait> Module<T> {
 		price: Price,
 		max_slippage: Option<Permill>,
 	) -> result::Result<Price, DispatchError> {
-		let bid_spread =
-			T::LiquidityPoolsConfig::get_bid_spread(pool_id, currency_id).ok_or(Error::<T>::NoBidSpread)?;
+		let bid_spread = T::LiquidityPools::get_bid_spread(pool_id, currency_id).ok_or(Error::<T>::NoBidSpread)?;
 
 		if let Some(m) = max_slippage {
 			if bid_spread.deconstruct() > m.deconstruct() {
@@ -434,7 +424,7 @@ impl<T: Trait> Module<T> {
 		currency_id: T::CurrencyId,
 		collateral: T::Balance,
 	) -> SynthesisResult<T> {
-		let ratio = T::LiquidityPoolsConfig::get_additional_collateral_ratio(pool_id, currency_id)
+		let ratio = T::LiquidityPools::get_additional_collateral_ratio(pool_id, currency_id)
 			.ok_or(Error::<T>::NoAdditionalCollateralRatio)?;
 		let additional = ratio * collateral;
 

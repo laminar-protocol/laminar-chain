@@ -8,7 +8,7 @@ use crate::{
 use frame_support::assert_ok;
 use primitives::{CurrencyId, Leverage, Leverages};
 use sp_runtime::Permill;
-use traits::{LiquidityPoolsConfig, LiquidityPoolsCurrency, LiquidityPoolsPosition};
+use traits::LiquidityPools;
 
 #[test]
 fn is_owner_should_work() {
@@ -17,7 +17,7 @@ fn is_owner_should_work() {
 		assert_eq!(ModuleLiquidityPools::is_owner(0, &ALICE), true);
 		assert_eq!(ModuleLiquidityPools::is_owner(1, &ALICE), false);
 		assert_eq!(
-			<ModuleLiquidityPools as LiquidityPoolsConfig<AccountId>>::is_owner(1, &ALICE),
+			<ModuleLiquidityPools as LiquidityPools<AccountId>>::is_owner(1, &ALICE),
 			false
 		);
 	});
@@ -47,7 +47,7 @@ fn is_enabled_should_work() {
 		);
 
 		assert_eq!(
-			<ModuleLiquidityPools as LiquidityPoolsPosition>::is_allowed_position(
+			<ModuleLiquidityPools as LiquidityPools<AccountId>>::is_allowed_position(
 				0,
 				CurrencyId::AUSD,
 				Leverage::ShortTen
@@ -101,10 +101,7 @@ fn should_remove_pool() {
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
 		assert_eq!(ModuleLiquidityPools::owners(0), None);
 		assert_eq!(ModuleLiquidityPools::balances(&0), 0);
-		assert_eq!(
-			<ModuleLiquidityPools as LiquidityPoolsCurrency<AccountId>>::balance(0),
-			0
-		);
+		assert_eq!(<ModuleLiquidityPools as LiquidityPools<AccountId>>::liquidity(0), 0);
 	})
 }
 
@@ -115,10 +112,7 @@ fn should_deposit_liquidity() {
 		assert_eq!(ModuleLiquidityPools::balances(&0), 0);
 		assert_ok!(ModuleLiquidityPools::deposit_liquidity(Origin::signed(ALICE), 0, 1000));
 		assert_eq!(ModuleLiquidityPools::balances(&0), 1000);
-		assert_eq!(
-			<ModuleLiquidityPools as LiquidityPoolsCurrency<AccountId>>::balance(0),
-			1000
-		);
+		assert_eq!(<ModuleLiquidityPools as LiquidityPools<AccountId>>::liquidity(0), 1000);
 	})
 }
 
@@ -176,11 +170,11 @@ fn should_set_spread() {
 		);
 
 		assert_eq!(
-			<ModuleLiquidityPools as LiquidityPoolsConfig<AccountId>>::get_bid_spread(0, CurrencyId::AUSD),
+			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_bid_spread(0, CurrencyId::AUSD),
 			Some(Permill::one())
 		);
 		assert_eq!(
-			<ModuleLiquidityPools as LiquidityPoolsConfig<AccountId>>::get_ask_spread(0, CurrencyId::AUSD),
+			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_ask_spread(0, CurrencyId::AUSD),
 			Some(Permill::one())
 		);
 	})
@@ -212,17 +206,11 @@ fn should_set_additional_collateral_ratio() {
 		);
 
 		assert_eq!(
-			<ModuleLiquidityPools as LiquidityPoolsConfig<AccountId>>::get_additional_collateral_ratio(
-				0,
-				CurrencyId::AUSD
-			),
+			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_additional_collateral_ratio(0, CurrencyId::AUSD),
 			Some(Permill::from_percent(120))
 		);
 		assert_eq!(
-			<ModuleLiquidityPools as LiquidityPoolsConfig<AccountId>>::get_additional_collateral_ratio(
-				0,
-				CurrencyId::FJPY
-			),
+			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_additional_collateral_ratio(0, CurrencyId::FJPY),
 			None
 		);
 	})
