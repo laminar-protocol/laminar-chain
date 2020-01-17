@@ -1,27 +1,18 @@
 /// tests for this module
+
 #[cfg(test)]
+
 mod tests {
-	extern crate flowchain_runtime;
+	pub use flowchain_runtime::{AccountId, CurrencyId, LiquidityPoolId, Runtime};
+	use frame_support::assert_ok;
+	pub use module_primitives::{Balance, Leverage};
+	pub use orml_prices::Price;
+	use orml_traits::{BasicCurrency, MultiCurrency};
+	pub use sp_runtime::{traits::Zero, DispatchResult, Perbill, Permill};
 
-	use flowchain_runtime::Runtime;
-	use frame_support::{assert_noop, assert_ok};
-	use module_primitives::Balance;
-	use orml_prices::Price;
-	use orml_traits::BasicCurrency;
-	use sp_runtime::{DispatchResult, Permill};
-
-	static ORACLE_ID1: &'static [u8; 32] = &[0u8; 32];
-	static ORACLE_ID2: &'static [u8; 32] = &[1u8; 32];
-	static ORACLE_ID3: &'static [u8; 32] = &[2u8; 32];
-	static POOL_ID: &'static [u8; 32] = &[3u8; 32];
-	static PROTOCOL_ID: &'static [u8; 32] = &[4u8; 32];
-	static ALICE_ID: &'static [u8; 32] = &[5u8; 32];
-	static BOB_ID: &'static [u8; 32] = &[6u8; 32];
-
-	const LIQUIDITY_POOL_ID: flowchain_runtime::LiquidityPoolId = 0;
-	const LIQUIDITY_NEXT_POOL_ID: flowchain_runtime::LiquidityPoolId = 1;
-
-	type AccountIdOf<T> = <T as system::Trait>::AccountId;
+	pub fn origin_of(account_id: AccountId) -> <Runtime as system::Trait>::Origin {
+		<Runtime as system::Trait>::Origin::signed(account_id)
+	}
 
 	pub type ModuleProtocol = synthetic_protocol::Module<Runtime>;
 	pub type ModuleTokens = synthetic_tokens::Module<Runtime>;
@@ -29,242 +20,175 @@ mod tests {
 	pub type ModulePrices = orml_prices::Module<Runtime>;
 	pub type ModuleLiquidityPools = liquidity_pools::Module<Runtime>;
 
-	// This function basically just builds a genesis storage key/value store according to
-	// our desired mockup.
-	fn new_test_ext() -> sp_io::TestExternalities {
-		let mut t = system::GenesisConfig::default()
-			.build_storage::<Runtime>()
-			.unwrap()
-			.into();
+	const LIQUIDITY_POOL_ID: LiquidityPoolId = 0;
 
-		orml_tokens::GenesisConfig::<Runtime> {
-			endowed_accounts: vec![
-				(
-					AccountIdOf::<Runtime>::from(*ALICE_ID),
-					flowchain_runtime::CurrencyId::AUSD,
-					10_000,
-				),
-				(
-					AccountIdOf::<Runtime>::from(*BOB_ID),
-					flowchain_runtime::CurrencyId::AUSD,
-					10_000,
-				),
-				(
-					AccountIdOf::<Runtime>::from(*POOL_ID),
-					flowchain_runtime::CurrencyId::AUSD,
-					20_000,
-				),
-				//(AccountIdOf::<Runtime>::from(*POOL_ID), flowchain_runtime::CurrencyId::FEUR, 100_000),
-				//(AccountIdOf::<Runtime>::from(*PROTOCOL_ID), flowchain_runtime::CurrencyId::AUSD, 20_000),
-				(
-					AccountIdOf::<Runtime>::from(*PROTOCOL_ID),
-					flowchain_runtime::CurrencyId::FEUR,
-					20_000,
-				),
-			],
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
+	const ORACLE1: [u8; 32] = [0u8; 32];
+	const ORACLE2: [u8; 32] = [1u8; 32];
+	const ORACLE3: [u8; 32] = [2u8; 32];
 
-		pallet_collective::GenesisConfig::<Runtime, _> {
-			members: vec![
-				AccountIdOf::<Runtime>::from(*ORACLE_ID1),
-				AccountIdOf::<Runtime>::from(*ORACLE_ID2),
-				AccountIdOf::<Runtime>::from(*ORACLE_ID3),
-			],
-			phantom: Default::default(),
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
+	const POOL: [u8; 32] = [3u8; 32];
+	const ALICE: [u8; 32] = [4u8; 32];
+	const BOB: [u8; 32] = [5u8; 32];
 
-		t.into()
+	pub struct ExtBuilder {
+		endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
+		prices: Vec<(CurrencyId, Price)>,
+		spread: Permill,
+		additional_collateral_ratio: Permill,
 	}
 
-	fn setup() {
-		let pool: AccountIdOf<Runtime> = AccountIdOf::<Runtime>::from(*POOL_ID);
-		let oracle1: AccountIdOf<Runtime> = AccountIdOf::<Runtime>::from(*ORACLE_ID1);
-		let oracle2: AccountIdOf<Runtime> = AccountIdOf::<Runtime>::from(*ORACLE_ID2);
-		let oracle3: AccountIdOf<Runtime> = AccountIdOf::<Runtime>::from(*ORACLE_ID3);
-		let protocol: AccountIdOf<Runtime> = AccountIdOf::<Runtime>::from(*PROTOCOL_ID);
-
-		assert_ok!(ModuleLiquidityPools::create_pool(
-			<Runtime as system::Trait>::Origin::signed(pool.clone())
-		));
-
-		assert_ok!(ModuleOracle::feed_value(
-			<Runtime as system::Trait>::Origin::signed(oracle1.clone()),
-			flowchain_runtime::CurrencyId::AUSD,
-			Price::from_parts(1)
-		));
-		assert_ok!(ModuleOracle::feed_value(
-			<Runtime as system::Trait>::Origin::signed(oracle2.clone()),
-			flowchain_runtime::CurrencyId::AUSD,
-			Price::from_parts(1)
-		));
-		assert_ok!(ModuleOracle::feed_value(
-			<Runtime as system::Trait>::Origin::signed(oracle3.clone()),
-			flowchain_runtime::CurrencyId::AUSD,
-			Price::from_parts(1)
-		));
-
-		assert_ok!(ModuleOracle::feed_value(
-			<Runtime as system::Trait>::Origin::signed(oracle1.clone()),
-			flowchain_runtime::CurrencyId::FEUR,
-			Price::from_parts(1)
-		));
-		assert_ok!(ModuleOracle::feed_value(
-			<Runtime as system::Trait>::Origin::signed(oracle2.clone()),
-			flowchain_runtime::CurrencyId::FEUR,
-			Price::from_parts(1)
-		));
-		assert_ok!(ModuleOracle::feed_value(
-			<Runtime as system::Trait>::Origin::signed(oracle3.clone()),
-			flowchain_runtime::CurrencyId::FEUR,
-			Price::from_parts(1)
-		));
-
-		assert_ok!(ModuleLiquidityPools::deposit_liquidity(
-			<Runtime as system::Trait>::Origin::signed(pool.clone()),
-			LIQUIDITY_POOL_ID,
-			5_000
-		));
-		assert_ok!(ModuleLiquidityPools::set_additional_collateral_ratio(
-			<Runtime as system::Trait>::Origin::signed(pool.clone()),
-			LIQUIDITY_POOL_ID,
-			flowchain_runtime::CurrencyId::FEUR,
-			Some(Permill::from_percent(50))
-		));
-		assert_ok!(ModuleLiquidityPools::set_spread(
-			<Runtime as system::Trait>::Origin::signed(pool.clone()),
-			LIQUIDITY_POOL_ID,
-			flowchain_runtime::CurrencyId::FEUR,
-			Permill::from_percent(100),
-			Permill::from_percent(100)
-		));
-		//assert_ok!(ModuleLiquidityPools::set_spread(<Runtime as system::Trait>::Origin::signed(pool.clone()), LIQUIDITY_POOL_ID, flowchain_runtime::CurrencyId::FEUR, Permill::zero(), Permill::zero()));
-
-		//assert_ok!(ModuleLiquidityPools::deposit_liquidity(<Runtime as system::Trait>::Origin::signed(protocol.clone()), LIQUIDITY_POOL_ID, 20_000));
-		(ModuleTokens::add_position(LIQUIDITY_POOL_ID, flowchain_runtime::CurrencyId::FEUR, 5_000, 5_000));
-		assert_ok!(ModuleProtocol::liquidate(
-			<Runtime as system::Trait>::Origin::signed(protocol.clone()),
-			LIQUIDITY_POOL_ID,
-			flowchain_runtime::CurrencyId::FEUR,
-			5_000
-		));
+	impl Default for ExtBuilder {
+		fn default() -> Self {
+			Self {
+				endowed_accounts: vec![],
+				// collateral price set to `1` for calculation simplicity.
+				prices: vec![],
+				spread: Permill::zero(),
+				additional_collateral_ratio: Permill::zero(),
+			}
+		}
 	}
 
-	#[test]
-	fn test_liquidity_pools() {
-		let pool: AccountIdOf<Runtime> = AccountIdOf::<Runtime>::from(*POOL_ID);
+	impl ExtBuilder {
+		pub fn balances(mut self, endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
+			self.endowed_accounts = endowed_accounts;
+			self
+		}
 
-		new_test_ext().execute_with(|| {
-			assert_ok!(ModuleLiquidityPools::create_pool(
-				<Runtime as system::Trait>::Origin::signed(pool.clone())
-			));
-			assert_eq!(ModuleLiquidityPools::is_owner(LIQUIDITY_POOL_ID, &pool.clone()), true);
-			assert_eq!(
-				ModuleLiquidityPools::is_owner(LIQUIDITY_NEXT_POOL_ID, &pool.clone()),
-				false
-			);
+		pub fn build(self) -> sp_io::TestExternalities {
+			let mut t = system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 
-			assert_ok!(ModuleLiquidityPools::set_spread(
-				<Runtime as system::Trait>::Origin::signed(pool.clone()),
-				LIQUIDITY_POOL_ID,
-				flowchain_runtime::CurrencyId::AUSD,
-				Permill::from_percent(10),
-				Permill::from_percent(10)
-			));
+			orml_tokens::GenesisConfig::<Runtime> {
+				endowed_accounts: self.endowed_accounts,
+			}
+			.assimilate_storage(&mut t)
+			.unwrap();
+
+			pallet_collective::GenesisConfig::<Runtime, _> {
+				members: vec![
+					AccountId::from(ORACLE1),
+					AccountId::from(ORACLE2),
+					AccountId::from(ORACLE3),
+				],
+				phantom: Default::default(),
+			}
+			.assimilate_storage(&mut t)
+			.unwrap();
+
+			t.into()
+		}
+	}
+
+	pub fn create_pool() -> DispatchResult {
+		ModuleLiquidityPools::create_pool(origin_of(AccountId::from(POOL)))
+	}
+
+	pub fn deposit_liquidity(amount: Balance) -> DispatchResult {
+		ModuleLiquidityPools::deposit_liquidity(origin_of(AccountId::from(POOL)), LIQUIDITY_POOL_ID, amount)
+	}
+
+	// additional_collateral_ratio
+	pub fn set_additional_collateral_ratio(permill: Permill) -> DispatchResult {
+		ModuleLiquidityPools::set_additional_collateral_ratio(
+			origin_of(AccountId::from(POOL)),
+			LIQUIDITY_POOL_ID,
+			CurrencyId::FEUR,
+			Some(permill),
+		)
+	}
+
+	// spread
+	pub fn set_spread(permill: Permill) -> DispatchResult {
+		ModuleLiquidityPools::set_spread(
+			origin_of(AccountId::from(POOL)),
+			LIQUIDITY_POOL_ID,
+			CurrencyId::FEUR,
+			permill,
+			permill,
+		)
+	}
+
+	fn set_oracle_price(prices: Vec<(CurrencyId, Price)>) -> DispatchResult {
+		prices.iter().for_each(|(c, p)| {
+			assert_ok!(ModuleOracle::feed_value(origin_of(AccountId::from(ORACLE1)), *c, *p));
+			assert_ok!(ModuleOracle::feed_value(origin_of(AccountId::from(ORACLE2)), *c, *p));
+			assert_ok!(ModuleOracle::feed_value(origin_of(AccountId::from(ORACLE3)), *c, *p));
 		});
+		Ok(())
 	}
 
-	fn buy(who: &AccountIdOf<Runtime>, amount: Balance) -> DispatchResult {
+	fn buy(who: &AccountId, amount: Balance) -> DispatchResult {
 		ModuleProtocol::mint(
-			<Runtime as system::Trait>::Origin::signed(who.clone()),
+			origin_of(who.clone()),
 			LIQUIDITY_POOL_ID,
-			flowchain_runtime::CurrencyId::FEUR,
+			CurrencyId::FEUR,
 			amount,
-			Permill::from_percent(100),
+			Permill::from_percent(10),
 		)
 	}
 
-	fn sell(who: &AccountIdOf<Runtime>, amount: Balance) -> DispatchResult {
+	fn sell(who: &AccountId, amount: Balance) -> DispatchResult {
 		ModuleProtocol::redeem(
-			<Runtime as system::Trait>::Origin::signed(who.clone()),
+			origin_of(who.clone()),
 			LIQUIDITY_POOL_ID,
-			flowchain_runtime::CurrencyId::FEUR,
+			CurrencyId::FEUR,
 			amount,
-			Permill::from_percent(100),
+			Permill::from_percent(10),
 		)
 	}
 
-	fn balance(who: &AccountIdOf<Runtime>) -> Balance {
-		<Runtime as synthetic_protocol::Trait>::CollateralCurrency::balance(&who)
+	fn collateral_balance(who: &AccountId) -> Balance {
+		<Runtime as synthetic_protocol::Trait>::CollateralCurrency::balance(who)
 	}
 
-	//fn set_price(who: &AccountIdOf<Runtime>, price :u128) -> DispatchResult {
-	//	ModuleOracle::feed_value(<Runtime as system::Trait>::Origin::signed(who.clone()), flowchain_runtime::CurrencyId::AUSD, Price::from_parts(price));
-	//	ModuleOracle::feed_value(<Runtime as system::Trait>::Origin::signed(who.clone()), flowchain_runtime::CurrencyId::FEUR, Price::from_parts(price));
-	//}
+	fn synthetic_balance(who: &AccountId) -> Balance {
+		<Runtime as synthetic_protocol::Trait>::MultiCurrency::balance(CurrencyId::FEUR, &who)
+	}
+
+	fn liquidity() -> Balance {
+		ModuleLiquidityPools::balances(LIQUIDITY_POOL_ID)
+	}
 
 	#[test]
 	fn test_can_buy_and_sell() {
-		let pool: AccountIdOf<Runtime> = AccountIdOf::<Runtime>::from(*POOL_ID);
-		let alice: AccountIdOf<Runtime> = AccountIdOf::<Runtime>::from(*ALICE_ID);
+		ExtBuilder::default()
+			.balances(vec![
+				(AccountId::from(POOL), CurrencyId::AUSD, 10_000),
+				(AccountId::from(ALICE), CurrencyId::AUSD, 10_000),
+			])
+			.build()
+			.execute_with(|| {
+				assert_ok!(create_pool());
+				assert_ok!(deposit_liquidity(10_000));
+				assert_ok!(set_additional_collateral_ratio(Permill::from_percent(10)));
+				assert_ok!(set_spread(Permill::from_percent(1)));
+				assert_ok!(set_oracle_price(vec![
+					(CurrencyId::AUSD, Price::from_rational(1, 1)),
+					(CurrencyId::FEUR, Price::from_rational(3, 1))
+				]));
 
-		new_test_ext().execute_with(|| {
-			setup();
-			assert_eq!(balance(&alice), 10000);
-			assert_ok!(buy(&pool, 1001));
-			//assert_eq!(balance(alice), 1000);
-			//		balance(usd, alice, dollar(8999)),
-			//		balance(iUsd, fToken.address, dollar(11000)),
-			//		balance(iUsd, liquidityPool.address, dollar(99010)),
-			//
-			//		sell(alice, dollar(1000)),
-			//		balance(fToken, alice, 0),
-			//		balance(usd, alice, dollar(9998)),
-			//		balance(iUsd, fToken.address, 0),
-			//		balance(iUsd, liquidityPool.address, dollar(100020)),
-		});
+				assert_eq!(collateral_balance(&AccountId::from(ALICE)), 10_000);
+				assert_eq!(collateral_balance(&AccountId::from(POOL)), 0);
+				assert_eq!(liquidity(), 10_000);
+				// ExistentialDeposit = 500, so the first time amount >= 500;
+				assert_ok!(buy(&AccountId::from(ALICE), 1001));
+				assert_eq!(collateral_balance(&AccountId::from(ALICE)), 8999);
+
+				//TODO:
+				assert_eq!(liquidity(), 9912);
+				//TODO:
+				assert_eq!(synthetic_balance(&AccountId::from(ALICE)), 0);
+				//TODO:
+				assert_eq!(synthetic_balance(&AccountId::from(POOL)), 0);
+				//		balance(iUsd, fToken.address, dollar(11000)),
+				//		balance(iUsd, liquidityPool.address, dollar(99010)),
+				//
+				assert_ok!(sell(&AccountId::from(ALICE), 1_000));
+				//		balance(fToken, alice, 0),
+				//		balance(usd, alice, dollar(9998)),
+				//		balance(iUsd, fToken.address, 0),
+				//		balance(iUsd, liquidityPool.address, dollar(100020)),
+				//});
+			});
 	}
-
-	//#[test]
-	//fn test_can_take_profit() {
-	//	let pool : AccountIdOf<Runtime> = AccountIdOf::<Runtime>::from(*POOL_ID);
-	//	let alice: AccountIdOf<Runtime> = AccountIdOf::<Runtime>::from(*ALICE_ID);
-
-	//	new_test_ext().execute_with(|| {
-	//		setup();
-	//		buy(alice, dollar(1001)),
-	//		balance(fToken, alice, dollar(1000)),
-	//		balance(usd, alice, dollar(8999)),
-	//		balance(iUsd, fToken.address, dollar(11000)),
-	//		balance(iUsd, liquidityPool.address, dollar(99010)),
-	//		setPrice(105),
-
-	//		sell(alice, dollar(1000)),
-	//		balance(fToken, alice, 0),
-	//		balance(usd, alice, '10047950000000000000000'),
-	//		balance(iUsd, fToken.address, 0),
-	//		balance(iUsd, liquidityPool.address, '99520500000000000000000'),
-	//	});
-	//}
-
-	//#[test]
-	//fn test_can_stop_lost() {
-	//	new_test_ext().execute_with(|| {
-	//		buy(alice, dollar(1001)),
-	//		balance(fToken, alice, dollar(1000)),
-	//		balance(usd, alice, dollar(8999)),
-	//		balance(iUsd, fToken.address, dollar(11000)),
-	//		balance(iUsd, liquidityPool.address, dollar(99010)),
-	//		setPrice(95),
-
-	//		sell(alice, dollar(1000)),
-	//		balance(fToken, alice, 0),
-	//		balance(usd, alice, '9948050000000000000000'),
-	//		balance(iUsd, fToken.address, 0),
-	//		balance(iUsd, liquidityPool.address, '100519500000000000000000'),
-	//	});
-	//}
 }
