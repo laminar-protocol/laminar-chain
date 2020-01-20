@@ -810,7 +810,10 @@ fn withdraw_collateral_fails_if_not_enough_locked_collateral() {
 				collateral_position
 			));
 
-			assert_noop!(withdraw_collateral(ALICE), Error::<Runtime>::BalanceTooLow);
+			assert_noop!(
+				withdraw_collateral(ALICE),
+				Error::<Runtime>::NotEnoughLockedCollateralAvailable
+			);
 		});
 }
 
