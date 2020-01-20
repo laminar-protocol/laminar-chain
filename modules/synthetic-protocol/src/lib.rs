@@ -169,10 +169,7 @@ impl<T: Trait> Module<T> {
 		collateral: T::Balance,
 		max_slippage: Permill,
 	) -> SynthesisResult<T> {
-		ensure!(
-			T::CollateralCurrency::balance(who) >= collateral,
-			Error::<T>::BalanceTooLow
-		);
+		T::CollateralCurrency::ensure_can_withdraw(who, collateral)?;
 
 		let price =
 			T::PriceProvider::get_price(T::GetCollateralCurrencyId::get(), currency_id).ok_or(Error::<T>::NoPrice)?;
@@ -221,10 +218,7 @@ impl<T: Trait> Module<T> {
 		synthetic: T::Balance,
 		max_slippage: Permill,
 	) -> SynthesisResult<T> {
-		ensure!(
-			T::MultiCurrency::balance(currency_id, &who) >= synthetic,
-			Error::<T>::BalanceTooLow
-		);
+		T::MultiCurrency::ensure_can_withdraw(currency_id, who, synthetic)?;
 
 		let price =
 			T::PriceProvider::get_price(T::GetCollateralCurrencyId::get(), currency_id).ok_or(Error::<T>::NoPrice)?;
@@ -242,11 +236,10 @@ impl<T: Trait> Module<T> {
 		let (collateral_position_delta, pool_refund_collateral) =
 			Self::_calc_remove_position(pool_id, currency_id, price, synthetic, redeemed_collateral)?;
 
-		ensure!(
-			T::CollateralCurrency::balance(&<SyntheticTokens<T>>::account_id())
-				>= redeemed_collateral + pool_refund_collateral,
-			Error::<T>::NotEnoughLockedCollateralAvailable,
-		);
+		T::CollateralCurrency::ensure_can_withdraw(
+			&<SyntheticTokens<T>>::account_id(),
+			redeemed_collateral + pool_refund_collateral,
+		)?;
 
 		// TODO: calculate and add interest to `pool_refund_collateral`
 
@@ -270,10 +263,7 @@ impl<T: Trait> Module<T> {
 		currency_id: T::CurrencyId,
 		synthetic: T::Balance,
 	) -> SynthesisResult<T> {
-		ensure!(
-			T::MultiCurrency::balance(currency_id, &who) >= synthetic,
-			Error::<T>::BalanceTooLow
-		);
+		T::MultiCurrency::ensure_can_withdraw(currency_id, who, synthetic)?;
 
 		let price =
 			T::PriceProvider::get_price(T::GetCollateralCurrencyId::get(), currency_id).ok_or(Error::<T>::NoPrice)?;
@@ -314,10 +304,7 @@ impl<T: Trait> Module<T> {
 		currency_id: T::CurrencyId,
 		collateral: T::Balance,
 	) -> DispatchResult {
-		ensure!(
-			T::CollateralCurrency::balance(who) >= collateral,
-			Error::<T>::BalanceTooLow
-		);
+		T::CollateralCurrency::ensure_can_withdraw(who, collateral)?;
 
 		T::LiquidityPools::deposit_liquidity(who, pool_id, collateral).expect("ensured enough balance; qed");
 		T::LiquidityPools::withdraw_liquidity(&<SyntheticTokens<T>>::account_id(), pool_id, collateral)
@@ -342,10 +329,7 @@ impl<T: Trait> Module<T> {
 
 		// TODO: calculate and add interest to `pool_refund_collateral`
 
-		ensure!(
-			T::CollateralCurrency::balance(&<SyntheticTokens<T>>::account_id()) > pool_refund_collateral,
-			Error::<T>::NotEnoughLockedCollateralAvailable
-		);
+		T::CollateralCurrency::ensure_can_withdraw(&<SyntheticTokens<T>>::account_id(), pool_refund_collateral)?;
 
 		T::LiquidityPools::deposit_liquidity(&<SyntheticTokens<T>>::account_id(), pool_id, pool_refund_collateral)
 			.expect("ensured enough locked collateral; qed");
