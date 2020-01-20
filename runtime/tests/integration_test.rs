@@ -31,18 +31,12 @@ mod tests {
 
 	pub struct ExtBuilder {
 		endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
-		//prices: Vec<(CurrencyId, Price)>,
-		//spread: Permill,
-		//additional_collateral_ratio: Permill,
 	}
 
 	impl Default for ExtBuilder {
 		fn default() -> Self {
 			Self {
 				endowed_accounts: vec![],
-				//prices: vec![],
-				//spread: Permill::zero(),
-				//additional_collateral_ratio: Permill::zero(),
 			}
 		}
 	}
@@ -85,7 +79,6 @@ mod tests {
 		ModuleLiquidityPools::deposit_liquidity(origin_of(AccountId::from(POOL)), LIQUIDITY_POOL_ID, amount)
 	}
 
-	// additional_collateral_ratio
 	pub fn set_additional_collateral_ratio(permill: Permill) -> DispatchResult {
 		ModuleLiquidityPools::set_additional_collateral_ratio(
 			origin_of(AccountId::from(POOL)),
@@ -95,7 +88,6 @@ mod tests {
 		)
 	}
 
-	// spread
 	pub fn set_spread(permill: Permill) -> DispatchResult {
 		ModuleLiquidityPools::set_spread(
 			origin_of(AccountId::from(POOL)),
@@ -156,7 +148,6 @@ mod tests {
 	}
 
 	fn dollar(amount: u128) -> u128 {
-		//amount
 		amount.saturating_mul(Price::accuracy())
 	}
 
@@ -183,7 +174,6 @@ mod tests {
 				assert_eq!(collateral_balance(&AccountId::from(POOL)), 0);
 				assert_eq!(liquidity(), dollar(10_000));
 				assert_eq!(collateral_balance(&ModuleTokens::account_id()), 0);
-				// ExistentialDeposit = 500, so the first time amount >= 500;
 				assert_ok!(buy(&AccountId::from(ALICE), dollar(5000)));
 				assert_eq!(collateral_balance(&AccountId::from(ALICE)), dollar(5000));
 				// synthetic = collateral / ask_price
