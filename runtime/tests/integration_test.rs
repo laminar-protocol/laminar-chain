@@ -4,7 +4,7 @@
 
 mod tests {
 	pub use flowchain_runtime::{AccountId, CurrencyId, LiquidityPoolId, Runtime};
-	use frame_support::assert_ok;
+	use frame_support::{assert_noop, assert_ok};
 	pub use module_primitives::{Balance, Leverage};
 	pub use orml_prices::Price;
 	use orml_traits::{BasicCurrency, MultiCurrency};
@@ -17,7 +17,6 @@ mod tests {
 	pub type ModuleProtocol = synthetic_protocol::Module<Runtime>;
 	pub type ModuleTokens = synthetic_tokens::Module<Runtime>;
 	pub type ModuleOracle = orml_oracle::Module<Runtime>;
-	pub type ModulePrices = orml_prices::Module<Runtime>;
 	pub type ModuleLiquidityPools = liquidity_pools::Module<Runtime>;
 
 	const LIQUIDITY_POOL_ID: LiquidityPoolId = 0;
@@ -32,19 +31,18 @@ mod tests {
 
 	pub struct ExtBuilder {
 		endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
-		prices: Vec<(CurrencyId, Price)>,
-		spread: Permill,
-		additional_collateral_ratio: Permill,
+		//prices: Vec<(CurrencyId, Price)>,
+		//spread: Permill,
+		//additional_collateral_ratio: Permill,
 	}
 
 	impl Default for ExtBuilder {
 		fn default() -> Self {
 			Self {
 				endowed_accounts: vec![],
-				// collateral price set to `1` for calculation simplicity.
-				prices: vec![],
-				spread: Permill::zero(),
-				additional_collateral_ratio: Permill::zero(),
+				//prices: vec![],
+				//spread: Permill::zero(),
+				//additional_collateral_ratio: Permill::zero(),
 			}
 		}
 	}
@@ -149,46 +147,359 @@ mod tests {
 		ModuleLiquidityPools::balances(LIQUIDITY_POOL_ID)
 	}
 
+	fn add_collateral(who: &AccountId, amount: Balance) -> DispatchResult {
+		ModuleProtocol::add_collateral(origin_of(who.clone()), LIQUIDITY_POOL_ID, CurrencyId::FEUR, amount)
+	}
+
+	fn liquidate(who: &AccountId, amount: Balance) -> DispatchResult {
+		ModuleProtocol::liquidate(origin_of(who.clone()), LIQUIDITY_POOL_ID, CurrencyId::FEUR, amount)
+	}
+
+	fn dollar(amount: u128) -> u128 {
+		//amount
+		amount.saturating_mul(Price::accuracy())
+	}
+
 	#[test]
-	fn test_can_buy_and_sell() {
+	fn test_buy_and_sell() {
 		ExtBuilder::default()
 			.balances(vec![
-				(AccountId::from(POOL), CurrencyId::AUSD, 10_000),
-				(AccountId::from(ALICE), CurrencyId::AUSD, 10_000),
+				(AccountId::from(POOL), CurrencyId::AUSD, dollar(10_000)),
+				(AccountId::from(ALICE), CurrencyId::AUSD, dollar(10_000)),
 			])
 			.build()
 			.execute_with(|| {
 				assert_ok!(create_pool());
-				assert_ok!(deposit_liquidity(10_000));
+				assert_ok!(deposit_liquidity(dollar(10_000)));
 				assert_ok!(set_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(set_spread(Permill::from_percent(1)));
 				assert_ok!(set_oracle_price(vec![
+					// collateral price set to `1` for calculation simplicity.
 					(CurrencyId::AUSD, Price::from_rational(1, 1)),
 					(CurrencyId::FEUR, Price::from_rational(3, 1))
 				]));
 
-				assert_eq!(collateral_balance(&AccountId::from(ALICE)), 10_000);
+				assert_eq!(collateral_balance(&AccountId::from(ALICE)), dollar(10_000));
 				assert_eq!(collateral_balance(&AccountId::from(POOL)), 0);
-				assert_eq!(liquidity(), 10_000);
+				assert_eq!(liquidity(), dollar(10_000));
+				assert_eq!(collateral_balance(&ModuleTokens::account_id()), 0);
 				// ExistentialDeposit = 500, so the first time amount >= 500;
-				assert_ok!(buy(&AccountId::from(ALICE), 1001));
-				assert_eq!(collateral_balance(&AccountId::from(ALICE)), 8999);
+				assert_ok!(buy(&AccountId::from(ALICE), dollar(5000)));
+				assert_eq!(collateral_balance(&AccountId::from(ALICE)), dollar(5000));
+				// synthetic = collateral / ask_price
+				// 1650 ≈ 5000 / (3 * (1 + 0.01))
+				//assert_eq!(synthetic_balance(&AccountId::from(ALICE)), dollar(1650));
+				assert_eq!(synthetic_balance(&AccountId::from(ALICE)), 1650165016501650165016);
+				// additional_collateral = (synthetic * price) * (1 + ratio) - collateral
+				// 445 = (1650 * 3.0) * (1 + 0.1) - 5000
+				// 5000 = ALICE -> ModuleTokens
+				// 445 = LiquidityPool -> ModuleTokens
+				//assert_eq!(collateral_balance(&ModuleTokens::account_id()), dollar(5445));
+				assert_eq!(collateral_balance(&ModuleTokens::account_id()), 5445544554455445544553);
+				// collateralise = balance - additional_collateral
+				// 9555 = 10_000 - 445
+				//assert_eq!(liquidity(), dollar(9555));
+				assert_eq!(liquidity(), 9554455445544554455447);
 
-				//TODO:
-				assert_eq!(liquidity(), 9912);
-				//TODO:
+				assert_ok!(sell(&AccountId::from(ALICE), dollar(800)));
+				assert_eq!(synthetic_balance(&AccountId::from(ALICE)), 850165016501650165016);
+				// collateral = synthetic * bid_price
+				// 2376 = 800 * (3 * (1 - 0.01))
+				assert_eq!(collateral_balance(&AccountId::from(ALICE)), dollar(7376));
+				// redeem_collateral = collateral_position - (synthetic * price) * (1 + ratio)
+				// 2805 = (850 * 3) * (1 + 0.1)
+				assert_eq!(collateral_balance(&ModuleTokens::account_id()), 2805544554455445544553);
+				// 2376 = ModuleTokens -> ALICE
+				// 264 = 5445 - 2805 - 2376
+				// 264 = ModuleTokens -> LiquidityPool
+				// 9819 = 9555 + 264
+				assert_eq!(liquidity(), 9818455445544554455447);
+			});
+	}
+
+	#[test]
+	fn test_take_profit() {
+		ExtBuilder::default()
+			.balances(vec![
+				(AccountId::from(POOL), CurrencyId::AUSD, dollar(10_000)),
+				(AccountId::from(ALICE), CurrencyId::AUSD, dollar(10_000)),
+			])
+			.build()
+			.execute_with(|| {
+				assert_ok!(create_pool());
+				assert_ok!(deposit_liquidity(dollar(10_000)));
+				assert_ok!(set_additional_collateral_ratio(Permill::from_percent(10)));
+				assert_ok!(set_spread(Permill::from_percent(1)));
+				assert_ok!(set_oracle_price(vec![
+					// collateral price set to `1` for calculation simplicity.
+					(CurrencyId::AUSD, Price::from_rational(1, 1)),
+					(CurrencyId::FEUR, Price::from_rational(3, 1))
+				]));
+
+				assert_eq!(collateral_balance(&AccountId::from(ALICE)), dollar(10_000));
+				assert_eq!(collateral_balance(&AccountId::from(POOL)), 0);
+				assert_eq!(liquidity(), dollar(10_000));
+				assert_eq!(collateral_balance(&ModuleTokens::account_id()), 0);
+				assert_ok!(buy(&AccountId::from(ALICE), dollar(5000)));
+				assert_eq!(collateral_balance(&AccountId::from(ALICE)), dollar(5000));
+				//assert_eq!(synthetic_balance(&AccountId::from(ALICE)), dollar(1650));
+				assert_eq!(synthetic_balance(&AccountId::from(ALICE)), 1650165016501650165016);
+				//assert_eq!(collateral_balance(&ModuleTokens::account_id()), dollar(5445));
+				assert_eq!(collateral_balance(&ModuleTokens::account_id()), 5445544554455445544553);
+				//assert_eq!(liquidity(), dollar(9555));
+				assert_eq!(liquidity(), 9554455445544554455447);
+
+				assert_ok!(set_oracle_price(vec![(CurrencyId::FEUR, Price::from_rational(31, 10))]));
+
+				assert_ok!(sell(
+					&AccountId::from(ALICE),
+					synthetic_balance(&AccountId::from(ALICE))
+				));
 				assert_eq!(synthetic_balance(&AccountId::from(ALICE)), 0);
-				//TODO:
-				assert_eq!(synthetic_balance(&AccountId::from(POOL)), 0);
-				//		balance(iUsd, fToken.address, dollar(11000)),
-				//		balance(iUsd, liquidityPool.address, dollar(99010)),
-				//
-				assert_ok!(sell(&AccountId::from(ALICE), 1_000));
-				//		balance(fToken, alice, 0),
-				//		balance(usd, alice, dollar(9998)),
-				//		balance(iUsd, fToken.address, 0),
-				//		balance(iUsd, liquidityPool.address, dollar(100020)),
-				//});
+				assert_eq!(collateral_balance(&AccountId::from(ALICE)), 10064356435643564356434);
+				assert_eq!(collateral_balance(&ModuleTokens::account_id()), 0);
+				assert_eq!(liquidity(), 9935643564356435643566);
+			});
+	}
+
+	#[test]
+	fn test_stop_lost() {
+		ExtBuilder::default()
+			.balances(vec![
+				(AccountId::from(POOL), CurrencyId::AUSD, dollar(10_000)),
+				(AccountId::from(ALICE), CurrencyId::AUSD, dollar(10_000)),
+			])
+			.build()
+			.execute_with(|| {
+				assert_ok!(create_pool());
+				assert_ok!(deposit_liquidity(dollar(10_000)));
+				assert_ok!(set_additional_collateral_ratio(Permill::from_percent(10)));
+				assert_ok!(set_spread(Permill::from_percent(1)));
+				assert_ok!(set_oracle_price(vec![
+					// collateral price set to `1` for calculation simplicity.
+					(CurrencyId::AUSD, Price::from_rational(1, 1)),
+					(CurrencyId::FEUR, Price::from_rational(3, 1))
+				]));
+
+				assert_eq!(collateral_balance(&AccountId::from(ALICE)), dollar(10_000));
+				assert_eq!(collateral_balance(&AccountId::from(POOL)), 0);
+				assert_eq!(liquidity(), dollar(10_000));
+				assert_eq!(collateral_balance(&ModuleTokens::account_id()), 0);
+				assert_ok!(buy(&AccountId::from(ALICE), dollar(5000)));
+				assert_eq!(collateral_balance(&AccountId::from(ALICE)), dollar(5000));
+				//assert_eq!(synthetic_balance(&AccountId::from(ALICE)), dollar(1650));
+				assert_eq!(synthetic_balance(&AccountId::from(ALICE)), 1650165016501650165016);
+				//assert_eq!(collateral_balance(&ModuleTokens::account_id()), dollar(5445));
+				assert_eq!(collateral_balance(&ModuleTokens::account_id()), 5445544554455445544553);
+				//assert_eq!(liquidity(), dollar(9555));
+				assert_eq!(liquidity(), 9554455445544554455447);
+
+				assert_ok!(set_oracle_price(vec![(CurrencyId::FEUR, Price::from_rational(2, 1))]));
+
+				assert_ok!(sell(
+					&AccountId::from(ALICE),
+					synthetic_balance(&AccountId::from(ALICE))
+				));
+				assert_eq!(synthetic_balance(&AccountId::from(ALICE)), 0);
+				assert_eq!(collateral_balance(&AccountId::from(ALICE)), 8267326732673267326731);
+				assert_eq!(collateral_balance(&ModuleTokens::account_id()), 0);
+				assert_eq!(liquidity(), 11732673267326732673269);
+			});
+	}
+
+	#[test]
+	fn test_multiple_users() {
+		ExtBuilder::default()
+			.balances(vec![
+				(AccountId::from(POOL), CurrencyId::AUSD, dollar(20_000)),
+				(AccountId::from(ALICE), CurrencyId::AUSD, dollar(10_000)),
+				(AccountId::from(BOB), CurrencyId::AUSD, dollar(10_000)),
+			])
+			.build()
+			.execute_with(|| {
+				assert_ok!(create_pool());
+				assert_ok!(deposit_liquidity(dollar(20_000)));
+				assert_ok!(set_additional_collateral_ratio(Permill::from_percent(10)));
+				assert_ok!(set_spread(Permill::from_percent(1)));
+				assert_ok!(set_oracle_price(vec![
+					// collateral price set to `1` for calculation simplicity.
+					(CurrencyId::AUSD, Price::from_rational(1, 1)),
+					(CurrencyId::FEUR, Price::from_rational(3, 1))
+				]));
+
+				assert_eq!(collateral_balance(&AccountId::from(POOL)), 0);
+				assert_eq!(collateral_balance(&AccountId::from(ALICE)), dollar(10_000));
+				assert_eq!(collateral_balance(&AccountId::from(BOB)), dollar(10_000));
+				assert_eq!(liquidity(), dollar(20_000));
+				assert_eq!(collateral_balance(&ModuleTokens::account_id()), 0);
+
+				// ALICE buy synthetic
+				assert_ok!(buy(&AccountId::from(ALICE), dollar(5000)));
+				assert_eq!(collateral_balance(&AccountId::from(ALICE)), dollar(5000));
+				assert_eq!(synthetic_balance(&AccountId::from(ALICE)), 1650165016501650165016);
+				assert_eq!(collateral_balance(&ModuleTokens::account_id()), 5445544554455445544553);
+				assert_eq!(liquidity(), 19554455445544554455447);
+
+				// BOB buy synthetic
+				assert_ok!(buy(&AccountId::from(BOB), dollar(5000)));
+				assert_eq!(collateral_balance(&AccountId::from(BOB)), dollar(5000));
+				assert_eq!(synthetic_balance(&AccountId::from(BOB)), 1650165016501650165016);
+				assert_eq!(collateral_balance(&ModuleTokens::account_id()), 10891089108910891089106);
+				assert_eq!(liquidity(), 19108910891089108910894);
+
+				assert_ok!(set_oracle_price(vec![(CurrencyId::FEUR, Price::from_rational(2, 1))]));
+
+				// ALICE buy synthetic and BOB sell synthetic
+				assert_ok!(buy(&AccountId::from(ALICE), dollar(2000)));
+				assert_eq!(collateral_balance(&AccountId::from(ALICE)), dollar(3000));
+				assert_eq!(synthetic_balance(&AccountId::from(ALICE)), 2640264026402640264025);
+				assert_eq!(collateral_balance(&ModuleTokens::account_id()), 13069306930693069306926);
+				assert_eq!(liquidity(), 18930693069306930693074);
+				assert_ok!(sell(&AccountId::from(BOB), dollar(1000)));
+				assert_eq!(collateral_balance(&AccountId::from(BOB)), 6980000000000000000000);
+				assert_eq!(synthetic_balance(&AccountId::from(BOB)), 650165016501650165016);
+				assert_eq!(collateral_balance(&ModuleTokens::account_id()), 7238943894389438943890);
+				assert_eq!(liquidity(), 22781056105610561056110);
+
+				// ALICE sell synthetic and BOB buy synthetic
+				assert_ok!(sell(&AccountId::from(ALICE), dollar(1000)));
+				assert_eq!(collateral_balance(&AccountId::from(ALICE)), 4980000000000000000000);
+				assert_eq!(synthetic_balance(&AccountId::from(ALICE)), 1640264026402640264025);
+				assert_eq!(collateral_balance(&ModuleTokens::account_id()), 5038943894389438943890);
+				assert_eq!(liquidity(), 23001056105610561056110);
+				assert_ok!(buy(&AccountId::from(BOB), dollar(2000)));
+				assert_eq!(collateral_balance(&AccountId::from(BOB)), 4980000000000000000000);
+				assert_eq!(synthetic_balance(&AccountId::from(BOB)), 1640264026402640264025);
+				assert_eq!(collateral_balance(&ModuleTokens::account_id()), 7217161716171617161710);
+				assert_eq!(liquidity(), 22822838283828382838290);
+
+				assert_ok!(sell(
+					&AccountId::from(ALICE),
+					synthetic_balance(&AccountId::from(ALICE))
+				));
+				assert_ok!(sell(&AccountId::from(BOB), synthetic_balance(&AccountId::from(BOB))));
+				assert_eq!(synthetic_balance(&AccountId::from(ALICE)), 0);
+				assert_eq!(collateral_balance(&AccountId::from(ALICE)), 8227722772277227722769);
+				assert_eq!(synthetic_balance(&AccountId::from(BOB)), 0);
+				assert_eq!(collateral_balance(&AccountId::from(BOB)), 8227722772277227722769);
+				assert_eq!(collateral_balance(&ModuleTokens::account_id()), 0);
+				assert_eq!(liquidity(), 23544554455445544554462);
+			});
+	}
+
+	#[test]
+	fn test_liquidate_position() {
+		ExtBuilder::default()
+			.balances(vec![
+				(AccountId::from(POOL), CurrencyId::AUSD, dollar(20_000)),
+				(AccountId::from(ALICE), CurrencyId::AUSD, dollar(10_000)),
+			])
+			.build()
+			.execute_with(|| {
+				assert_ok!(create_pool());
+				assert_ok!(deposit_liquidity(dollar(20_000)));
+				assert_ok!(set_additional_collateral_ratio(Permill::from_percent(10)));
+				assert_ok!(set_spread(Permill::from_percent(1)));
+				assert_ok!(set_oracle_price(vec![
+					// collateral price set to `1` for calculation simplicity.
+					(CurrencyId::AUSD, Price::from_rational(1, 1)),
+					(CurrencyId::FEUR, Price::from_rational(3, 1))
+				]));
+
+				assert_ok!(buy(&AccountId::from(ALICE), dollar(5000)));
+
+				assert_ok!(set_oracle_price(vec![(
+					CurrencyId::FEUR,
+					Price::from_rational(300, 90)
+				)]));
+
+				assert_ok!(liquidate(
+					&AccountId::from(ALICE),
+					synthetic_balance(&AccountId::from(ALICE))
+				));
+				assert_eq!(liquidity(), 19554455445544554455447);
+				assert_eq!(collateral_balance(&AccountId::from(ALICE)), 10445544554455445544552);
+				assert_eq!(synthetic_balance(&AccountId::from(ALICE)), 0);
+				assert_eq!(collateral_balance(&ModuleTokens::account_id()), 0);
+				assert_eq!(liquidity(), 19554455445544554455447);
+			});
+	}
+
+	#[test]
+	fn test_add_collateral() {
+		ExtBuilder::default()
+			.balances(vec![
+				(AccountId::from(POOL), CurrencyId::AUSD, dollar(40_000)),
+				(AccountId::from(ALICE), CurrencyId::AUSD, dollar(10_000)),
+			])
+			.build()
+			.execute_with(|| {
+				assert_ok!(create_pool());
+				assert_ok!(deposit_liquidity(dollar(20_000)));
+				assert_ok!(set_additional_collateral_ratio(Permill::from_percent(10)));
+				assert_ok!(set_spread(Permill::from_percent(1)));
+				assert_ok!(set_oracle_price(vec![
+					// collateral price set to `1` for calculation simplicity.
+					(CurrencyId::AUSD, Price::from_rational(1, 1)),
+					(CurrencyId::FEUR, Price::from_rational(3, 1))
+				]));
+
+				assert_ok!(buy(&AccountId::from(ALICE), dollar(5000)));
+
+				assert_ok!(set_oracle_price(vec![(
+					CurrencyId::FEUR,
+					Price::from_rational(300, 90)
+				)]));
+
+				assert_ok!(liquidate(&AccountId::from(ALICE), 1));
+				assert_ok!(add_collateral(&AccountId::from(POOL), dollar(20_000)));
+				assert_noop!(
+					liquidate(&AccountId::from(ALICE), 1),
+					synthetic_protocol::Error::<Runtime>::StillInSafePosition
+				);
+			});
+	}
+
+	#[test]
+	fn test_liquidate_partially() {
+		ExtBuilder::default()
+			.balances(vec![
+				(AccountId::from(POOL), CurrencyId::AUSD, dollar(20_000)),
+				(AccountId::from(ALICE), CurrencyId::AUSD, dollar(10_000)),
+			])
+			.build()
+			.execute_with(|| {
+				assert_ok!(create_pool());
+				assert_ok!(deposit_liquidity(dollar(20_000)));
+				assert_ok!(set_additional_collateral_ratio(Permill::from_percent(10)));
+				assert_ok!(set_spread(Permill::from_percent(1)));
+				assert_ok!(set_oracle_price(vec![
+					// collateral price set to `1` for calculation simplicity.
+					(CurrencyId::AUSD, Price::from_rational(1, 1)),
+					(CurrencyId::FEUR, Price::from_rational(3, 1))
+				]));
+
+				assert_ok!(buy(&AccountId::from(ALICE), dollar(5000)));
+
+				assert_ok!(set_oracle_price(vec![(
+					CurrencyId::FEUR,
+					Price::from_rational(300, 90)
+				)]));
+
+				assert_ok!(liquidate(&AccountId::from(ALICE), dollar(800)));
+				assert_eq!(collateral_balance(&AccountId::from(ALICE)), 7640000000000000000000);
+				assert_eq!(synthetic_balance(&AccountId::from(ALICE)), 850165016501650165016);
+				assert_eq!(collateral_balance(&ModuleTokens::account_id()), 2805544554455445544553);
+				assert_eq!(liquidity(), 19554455445544554455447);
+
+				assert_ok!(liquidate(
+					&AccountId::from(ALICE),
+					synthetic_balance(&AccountId::from(ALICE))
+				));
+				assert_eq!(collateral_balance(&AccountId::from(ALICE)), 10445544554455445544552);
+				assert_eq!(synthetic_balance(&AccountId::from(ALICE)), 0);
+				assert_eq!(collateral_balance(&ModuleTokens::account_id()), 0);
+				assert_eq!(liquidity(), 19554455445544554455447);
 			});
 	}
 }
