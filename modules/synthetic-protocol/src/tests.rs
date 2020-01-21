@@ -326,7 +326,7 @@ fn redeem_fails_if_not_enough_locked_collateral() {
 
 			assert_noop!(
 				redeem_ausd(ALICE, SyntheticCurrency::balance(&ALICE)),
-				Error::<Runtime>::BalanceTooLow,
+				Error::<Runtime>::NotEnoughLockedCollateralAvailable,
 			);
 		});
 }
@@ -809,6 +809,8 @@ fn withdraw_collateral_fails_if_not_enough_locked_collateral() {
 				&SyntheticTokens::account_id(),
 				collateral_position
 			));
+
+			set_mock_feur_price(2, 1);
 
 			assert_noop!(
 				withdraw_collateral(ALICE),

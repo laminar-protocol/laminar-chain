@@ -239,7 +239,8 @@ impl<T: Trait> Module<T> {
 		T::CollateralCurrency::ensure_can_withdraw(
 			&<SyntheticTokens<T>>::account_id(),
 			redeemed_collateral + pool_refund_collateral,
-		)?;
+		)
+		.map_err(|_| Error::<T>::NotEnoughLockedCollateralAvailable)?;
 
 		// TODO: calculate and add interest to `pool_refund_collateral`
 
@@ -329,10 +330,8 @@ impl<T: Trait> Module<T> {
 
 		// TODO: calculate and add interest to `pool_refund_collateral`
 
-		ensure!(
-			T::CollateralCurrency::balance(&<SyntheticTokens<T>>::account_id()) > pool_refund_collateral,
-			Error::<T>::NotEnoughLockedCollateralAvailable
-		);
+		T::CollateralCurrency::ensure_can_withdraw(&<SyntheticTokens<T>>::account_id(), pool_refund_collateral)
+			.map_err(|_| Error::<T>::NotEnoughLockedCollateralAvailable)?;
 
 		T::LiquidityPools::deposit_liquidity(&<SyntheticTokens<T>>::account_id(), pool_id, pool_refund_collateral)
 			.expect("ensured enough locked collateral; qed");
