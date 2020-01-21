@@ -810,6 +810,8 @@ fn withdraw_collateral_fails_if_not_enough_locked_collateral() {
 				collateral_position
 			));
 
+			set_mock_feur_price(2, 1);
+
 			assert_noop!(
 				withdraw_collateral(ALICE),
 				Error::<Runtime>::NotEnoughLockedCollateralAvailable
