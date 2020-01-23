@@ -1,5 +1,5 @@
 [package]
-name = "flowchain-runtime"
+name = "laminar-runtime"
 version = "0.0.1"
 authors = ["Laminar Developers <hello@laminar.one>"]
 edition = "2018"

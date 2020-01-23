@@ -1,4 +1,4 @@
-//! The Flowchain runtime. This can be compiled with `#[no_std]`, ready for Wasm.
+//! The Laminar runtime. This can be compiled with `#[no_std]`, ready for Wasm.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
@@ -90,8 +90,8 @@ pub mod opaque {
 
 /// This runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("flowchain"),
-	impl_name: create_runtime_str!("flowchain"),
+	spec_name: create_runtime_str!("laminar-chain"),
+	impl_name: create_runtime_str!("laminar-chain"),
 	authoring_version: 1,
 	spec_version: 1,
 	impl_version: 1,
@@ -289,16 +289,16 @@ impl orml_tokens::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const GetFlowTokenId: CurrencyId = CurrencyId::LAMI;
+	pub const GetLaminarTokenId: CurrencyId = CurrencyId::LAMI;
 }
 
-pub type FlowToken = BasicCurrencyAdapter<Runtime, pallet_balances::Module<Runtime>, Balance>;
+pub type LaminarToken = BasicCurrencyAdapter<Runtime, pallet_balances::Module<Runtime>, Balance>;
 
 impl orml_currencies::Trait for Runtime {
 	type Event = Event;
 	type MultiCurrency = orml_tokens::Module<Runtime>;
-	type NativeCurrency = FlowToken;
-	type GetNativeCurrencyId = GetFlowTokenId;
+	type NativeCurrency = LaminarToken;
+	type GetNativeCurrencyId = GetLaminarTokenId;
 }
 
 impl orml_prices::Trait for Runtime {

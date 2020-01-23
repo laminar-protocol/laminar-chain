@@ -34,11 +34,11 @@ RUN mv /usr/share/ca* /tmp && \
 	mv /tmp/ca-certificates /usr/share/ && \
 	useradd -m -u 1000 -U -s /bin/sh -d /laminar laminar
 
-COPY --from=builder /laminar/target/$PROFILE/flowchain /usr/local/bin
+COPY --from=builder /laminar/target/$PROFILE/laminar /usr/local/bin
 
 # checks
-RUN ldd /usr/local/bin/flowchain && \
-	/usr/local/bin/flowchain --version
+RUN ldd /usr/local/bin/laminar && \
+	/usr/local/bin/laminar --version
 
 # Shrinking
 RUN rm -rf /usr/lib/python* && \
@@ -51,4 +51,4 @@ RUN mkdir /laminar/data
 
 VOLUME ["/laminar/data"]
 
-CMD ["/usr/local/bin/flowchain"]
+CMD ["/usr/local/bin/laminar"]
