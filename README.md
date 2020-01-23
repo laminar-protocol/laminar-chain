@@ -26,16 +26,16 @@ Table of Contents
       - [5.2.1.2 Allocation to fToken depositor](#5212-allocation-to-ftoken-depositor)
 - [6. Implementation](#6-implementation)
   - [6.1 Ethereum Implementation](#61-ethereum-implementation)
-  - [6.2 Substrate Implementation - Flowchain](#62-substrate-implementation---flowchain)
+  - [6.2 Substrate Implementation - LaminarChain](#62-substrate-implementation---laminar-chain)
   - [6.3 Oracle Implementation](#63-oracle-implementation)
     - [6.3.1. Oracle Server](#631-oracle-server)
-- [7. Building & Running Flowchain](#7-building--running-flowchain)
+- [7. Building & Running LaminarChain](#7-building--running-laminar-chain)
   - [Building](#building)
   - [Run](#run)
   - [Development](#development)
 
 # 1. Introduction
-Laminar aims to create an open finance platform along with financial assets to serve traders from both the crypto and mainstream finance worlds. Forex market alone has an average daily trading volume of $5 trillion, while the most active DeFi projects (mostly on Ethereum) have about $500 million of funds locked in smart contracts. 
+Laminar aims to create an open finance platform along with financial assets to serve traders from both the crypto and mainstream finance worlds. Forex market alone has an average daily trading volume of $5 trillion, while the most active DeFi projects (mostly on Ethereum) have about $500 million of funds locked in smart contracts.
 
 Laminar's goal is to provide people with better access to trading instruments, and introduce new, competitive business models to mainstream financial service providers. The Flow Protocols - as Laminar's flagship product - will help to solve the challenges of opaque pricing and price manipulation in the current financial markets, bridges on- and off-chain participants, and ultimately boosts on-chain trading liquidity, exposure, and variety
 
@@ -315,15 +315,15 @@ When a fToken holder deposits fToken to the Money Market, then an equivalent amo
 Following on the previous example, if a user deposits 9 fEUR (=10 USD), then 10 interest shares would be minted and accounted as the contribution of this user. At this point, liquidity provider will receive 50% (10/20 interest shares) of total interest earned, while the user will receive 50% of total interest earned.
 
 # 6. Implementation 
-We have been R&D our protocol on Ethereum, where the network is highly secure with valuable assets as basis for trading. There are also existing DeFi community and DeFi building blocks such as stablecoin. However for our target protocol participants - traders and liquidity providers, a high performance and low cost specialized trading blockchain is required to deliver the intended experience. For instance, the platform needs to be capable of handling large trading volume and frequent price fluctuations. Hence we extend our R&D to Polkadot and substrate, to develop the Flowchain parachain.
+We have been R&D our protocol on Ethereum, where the network is highly secure with valuable assets as basis for trading. There are also existing DeFi community and DeFi building blocks such as stablecoin. However for our target protocol participants - traders and liquidity providers, a high performance and low cost specialized trading blockchain is required to deliver the intended experience. For instance, the platform needs to be capable of handling large trading volume and frequent price fluctuations. Hence we extend our R&D to Polkadot and substrate, to develop the LaminarChain parachain.
 
-The Ethereum implementation will be the value gateway and will leverage the DeFi ecosystem there, for example leveraging stablecoin like DAI and money markets like Compound. Meanwhile Flowchain based on Substrate and later launched as parachain in the Polkadot ecosystem will serve as the high performance financial service and trading chain. Later the two will be integrated using Polkadot Ethereum Bridge to provide the full benefits of both worlds. 
+The Ethereum implementation will be the value gateway and will leverage the DeFi ecosystem there, for example leveraging stablecoin like DAI and money markets like Compound. Meanwhile LaminarChain based on Substrate and later launched as parachain in the Polkadot ecosystem will serve as the high performance financial service and trading chain. Later the two will be integrated using Polkadot Ethereum Bridge to provide the full benefits of both worlds.
 
 ## 6.1 Ethereum Implementation
 See more details [here](https://github.com/laminar-protocol/flow-protocol-ethereum).
 
-## 6.2 Substrate Implementation - Flowchain
-See more details [here](https://github.com/laminar-protocol/flowchain/wiki)
+## 6.2 Substrate Implementation - LaminarChain
+See more details [here](https://github.com/laminar-protocol/laminar-chain/wiki)
 
 ## 6.3 Oracle Implementation
 We have defined the oracle interface and assume trusted oracles to provide price feed to the protocols.
@@ -348,9 +348,9 @@ Note: any compromised oracle server is able to influence the price to a limited 
 
 Again we will continue watch closely the development in the Oracle space and open to collaboration to make it more resilient for our trading platform.
 
-# 7. Building & Running Flowchain 
+# 7. Building & Running LaminarChain
 
-[![Status badge](https://github.com/laminar-protocol/flowchain/workflows/Test/badge.svg)](https://github.com/laminar-protocol/flowchain/actions?workflow=Test)
+[![Status badge](https://github.com/laminar-protocol/laminar-chain/workflows/Test/badge.svg)](https://github.com/laminar-protocol/laminar-chain/actions?workflow=Test)
 
 ## Building
 

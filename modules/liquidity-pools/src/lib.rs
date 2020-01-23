@@ -18,7 +18,7 @@ use sp_runtime::{
 use sp_std::{prelude::*, result};
 use traits::{LiquidityPoolManager, LiquidityPools};
 
-const MODULE_ID: ModuleId = ModuleId(*b"flow/lp_");
+const MODULE_ID: ModuleId = ModuleId(*b"lami/lp_");
 
 pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;

@@ -22,12 +22,12 @@ check-dummy:
 build: githooks
 	SKIP_WASM_BUILD= cargo build
 
-purge: target/debug/flowchain
-	target/debug/flowchain purge-chain --dev -y
+purge: target/debug/laminar
+	target/debug/laminar purge-chain --dev -y
 
 restart: purge run
 
-target/debug/flowchain: build
+target/debug/laminar: build
 
 GITHOOKS_SRC = $(wildcard githooks/*)
 GITHOOKS_DEST = $(patsubst githooks/%, .git/hooks/%, $(GITHOOKS_SRC))

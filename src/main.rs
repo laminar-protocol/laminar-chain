@@ -7,13 +7,13 @@ pub use sc_cli::{error, IntoExit, VersionInfo};
 
 fn main() {
 	let version = VersionInfo {
-		name: "Flowchain",
+		name: "LaminarChain",
 		commit: env!("VERGEN_SHA_SHORT"),
 		version: env!("CARGO_PKG_VERSION"),
-		executable_name: "flowchain",
+		executable_name: "laminar",
 		author: "Laminar Developers",
-		description: "flowchain",
-		support_url: "https://github.com/laminar-protocol/flowchain/issues",
+		description: "laminar-chain",
+		support_url: "https://github.com/laminar-protocol/laminar-chain/issues",
 	};
 
 	if let Err(e) = cli::run(::std::env::args(), cli::Exit, version) {

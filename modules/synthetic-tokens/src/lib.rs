@@ -98,7 +98,7 @@ decl_module! {
 ///
 /// Note that module id is used to generate module account id for locking balances purpose.
 /// DO NOT change this in runtime upgrade without migration.
-const MODULE_ID: ModuleId = ModuleId(*b"FLOWTKNS");
+const MODULE_ID: ModuleId = ModuleId(*b"lami/stk");
 
 impl<T: Trait> Module<T> {
 	pub fn account_id() -> T::AccountId {

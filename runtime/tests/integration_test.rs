@@ -3,8 +3,8 @@
 #[cfg(test)]
 
 mod tests {
-	pub use flowchain_runtime::{AccountId, CurrencyId, LiquidityPoolId, Runtime};
 	use frame_support::{assert_noop, assert_ok};
+	pub use laminar_runtime::{AccountId, CurrencyId, LiquidityPoolId, Runtime};
 	pub use module_primitives::{Balance, Leverage};
 	pub use orml_prices::Price;
 	use orml_traits::{BasicCurrency, MultiCurrency};
@@ -56,7 +56,7 @@ mod tests {
 			.assimilate_storage(&mut t)
 			.unwrap();
 
-			pallet_collective::GenesisConfig::<Runtime, _> {
+			pallet_collective::GenesisConfig::<Runtime, pallet_collective::Instance1> {
 				members: vec![
 					AccountId::from(ORACLE1),
 					AccountId::from(ORACLE2),
