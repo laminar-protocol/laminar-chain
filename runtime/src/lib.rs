@@ -93,7 +93,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("flowchain"),
 	impl_name: create_runtime_str!("flowchain"),
 	authoring_version: 1,
-	spec_version: 1,
+	spec_version: 2,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 };
@@ -263,10 +263,9 @@ impl OperatorProvider<AccountId> for OperatorCollectiveProvider {
 	}
 }
 
-// TODO: set this
 parameter_types! {
-	pub const MinimumCount: u32 = 3;
-	pub const ExpiresIn: u32 = 600;
+	pub const MinimumCount: u32 = 1; // TODO: change this
+	pub const ExpiresIn: u64 = 1000 * 60 * 60 * 24 * 100; // 100days for now TODO: change this
 }
 
 impl orml_oracle::Trait for Runtime {
