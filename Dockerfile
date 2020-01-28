@@ -51,4 +51,4 @@ RUN mkdir /laminar/data
 
 VOLUME ["/laminar/data"]
 
-CMD ["/usr/local/bin/laminar"]
+ENTRYPOINT ["/usr/local/bin/laminar"]
