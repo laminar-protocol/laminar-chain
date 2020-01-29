@@ -11,7 +11,7 @@ use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
 use orml_currencies::Currency;
 
 use module_primitives::{BalancePriceConverter, LiquidityPoolId};
-use traits::LiquidityPools;
+use module_traits::LiquidityPools;
 
 use super::*;
 
@@ -28,7 +28,7 @@ mod synthetic_protocol {
 impl_outer_event! {
 	pub enum TestEvent for Runtime {
 		orml_tokens<T>, orml_currencies<T>,
-		synthetic_tokens<T>, synthetic_protocol<T>,
+		module_synthetic_tokens<T>, synthetic_protocol<T>,
 	}
 }
 
@@ -99,13 +99,13 @@ parameter_types! {
 pub type CollateralCurrency = orml_currencies::Currency<Runtime, GetCollateralCurrencyId>;
 pub type SyntheticCurrency = orml_currencies::Currency<Runtime, GetSyntheticCurrencyId>;
 
-impl synthetic_tokens::Trait for Runtime {
+impl module_synthetic_tokens::Trait for Runtime {
 	type Event = TestEvent;
 	type CurrencyId = CurrencyId;
 	type Balance = Balance;
 	type LiquidityPoolId = LiquidityPoolId;
 }
-pub type SyntheticTokens = synthetic_tokens::Module<Runtime>;
+pub type SyntheticTokens = module_synthetic_tokens::Module<Runtime>;
 
 thread_local! {
 	static PRICES: RefCell<BTreeMap<CurrencyId, Price>> = RefCell::new(BTreeMap::new());

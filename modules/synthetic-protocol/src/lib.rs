@@ -15,12 +15,13 @@ use orml_prices::Price;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
 use orml_utilities::FixedU128;
 
-use traits::LiquidityPools;
+use module_primitives::Leverage;
+use module_traits::LiquidityPools;
 
 mod mock;
 mod tests;
 
-pub trait Trait: synthetic_tokens::Trait {
+pub trait Trait: module_synthetic_tokens::Trait {
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Self::Balance, CurrencyId = Self::CurrencyId>;
 	type CollateralCurrency: BasicCurrency<Self::AccountId, Balance = Self::Balance>;
@@ -45,9 +46,9 @@ decl_storage! {
 decl_event! {
 	pub enum Event<T> where
 		<T as frame_system::Trait>::AccountId,
-		CurrencyId = <T as synthetic_tokens::Trait>::CurrencyId,
-		Balance = <T as synthetic_tokens::Trait>::Balance,
-		LiquidityPoolId = <T as synthetic_tokens::Trait>::LiquidityPoolId,
+		CurrencyId = <T as module_synthetic_tokens::Trait>::CurrencyId,
+		Balance = <T as module_synthetic_tokens::Trait>::Balance,
+		LiquidityPoolId = <T as module_synthetic_tokens::Trait>::LiquidityPoolId,
 	{
 		/// Synthetic token minted.
 		/// (who, synthetic_currency_id, liquidity_pool_id, collateral_amount, synthetic_amount)
@@ -140,6 +141,7 @@ decl_error! {
 	pub enum Error for Module<T: Trait> {
 		BalanceTooLow,
 		LiquidityProviderBalanceTooLow,
+		NotSupportedByLiquidityPool,
 		SlippageTooHigh,
 		NumOverflow,
 		NoPrice,
@@ -158,8 +160,8 @@ decl_error! {
 
 // Dispatch calls
 
-type SyntheticTokens<T> = synthetic_tokens::Module<T>;
-type SynthesisResult<T> = result::Result<<T as synthetic_tokens::Trait>::Balance, DispatchError>;
+type SyntheticTokens<T> = module_synthetic_tokens::Module<T>;
+type SynthesisResult<T> = result::Result<<T as module_synthetic_tokens::Trait>::Balance, DispatchError>;
 
 impl<T: Trait> Module<T> {
 	fn _mint(
@@ -170,6 +172,11 @@ impl<T: Trait> Module<T> {
 		max_slippage: Permill,
 	) -> SynthesisResult<T> {
 		T::CollateralCurrency::ensure_can_withdraw(who, collateral)?;
+
+		ensure!(
+			T::LiquidityPools::is_allowed_position(pool_id, currency_id, Leverage::LongOne),
+			Error::<T>::NotSupportedByLiquidityPool
+		);
 
 		let price =
 			T::PriceProvider::get_price(T::GetCollateralCurrencyId::get(), currency_id).ok_or(Error::<T>::NoPrice)?;
