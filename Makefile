@@ -19,6 +19,9 @@ check-debug:
 check-dummy:
 	BUILD_DUMMY_WASM_BINARY= cargo check
 
+test: githooks
+	BUILD_DUMMY_WASM_BINARY= cargo test --all
+
 build: githooks
 	SKIP_WASM_BUILD= cargo build
 
