@@ -137,6 +137,7 @@ impl PriceProvider<CurrencyId, Price> for MockPrices {
 thread_local! {
 	static SPREAD: RefCell<Permill> = RefCell::new(Permill::zero());
 	static ADDITIONAL_COLLATERAL_RATIO: RefCell<Permill> = RefCell::new(Permill::zero());
+	static IS_ALLOWED: RefCell<bool> = RefCell::new(false);
 }
 
 pub struct MockLiquidityPools;
@@ -149,12 +150,20 @@ impl MockLiquidityPools {
 		ADDITIONAL_COLLATERAL_RATIO.with(|v| *v.borrow_mut())
 	}
 
+	fn is_allowed() -> bool {
+		IS_ALLOWED.with(|v| *v.borrow_mut())
+	}
+
 	pub fn set_mock_spread(spread: Permill) {
 		SPREAD.with(|v| *v.borrow_mut() = spread);
 	}
 
 	pub fn set_mock_additional_collateral_ratio(ratio: Permill) {
 		ADDITIONAL_COLLATERAL_RATIO.with(|v| *v.borrow_mut() = ratio);
+	}
+
+	pub fn set_is_allowed(allowed: bool) {
+		IS_ALLOWED.with(|v| *v.borrow_mut() = allowed);
 	}
 }
 
@@ -188,7 +197,7 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 		_currency_id: Self::CurrencyId,
 		_leverage: Leverage,
 	) -> bool {
-		true
+		Self::is_allowed()
 	}
 
 	fn liquidity(pool_id: Self::LiquidityPoolId) -> Self::Balance {
@@ -230,6 +239,7 @@ pub struct ExtBuilder {
 	prices: Vec<(CurrencyId, Price)>,
 	spread: Permill,
 	additional_collateral_ratio: Permill,
+	is_allowed: bool,
 }
 
 impl Default for ExtBuilder {
@@ -240,6 +250,7 @@ impl Default for ExtBuilder {
 			prices: vec![(CurrencyId::AUSD, FixedU128::from_rational(1, 1))],
 			spread: Permill::zero(),
 			additional_collateral_ratio: Permill::zero(),
+			is_allowed: true,
 		}
 	}
 }
@@ -288,6 +299,11 @@ impl ExtBuilder {
 		self.additional_collateral_ratio(Permill::from_percent(10))
 	}
 
+	pub fn set_is_allowed(mut self, val: bool) -> Self {
+		self.is_allowed = val;
+		self
+	}
+
 	fn set_mocks(&self) {
 		self.prices
 			.iter()
@@ -295,6 +311,7 @@ impl ExtBuilder {
 
 		MockLiquidityPools::set_mock_spread(self.spread);
 		MockLiquidityPools::set_mock_additional_collateral_ratio(self.additional_collateral_ratio);
+		MockLiquidityPools::set_is_allowed(self.is_allowed);
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
