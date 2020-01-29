@@ -879,3 +879,55 @@ fn withdraw_collateral_does_correct_math() {
 			assert!(System::events().iter().any(|record| record.event == event));
 		});
 }
+
+#[test]
+fn mint_fails_if_not_allowed() {
+	ExtBuilder::default()
+		.one_million_for_alice_n_mock_pool()
+		.set_is_allowed(false)
+		.build()
+		.execute_with(|| {
+			assert_noop!(mint_feur(ALICE, 1), Error::<Runtime>::NotSupportedByLiquidityPool);
+		});
+}
+
+#[test]
+fn can_redeem_with_not_allowed_position() {
+	ExtBuilder::default()
+		.one_million_for_alice_n_mock_pool()
+		.synthetic_price_three()
+		.one_percent_spread()
+		.ten_percent_additional_collateral_ratio()
+		.build()
+		.execute_with(|| {
+			assert_ok!(mint_feur(ALICE, 1000));
+
+			MockLiquidityPools::set_is_allowed(false);
+
+			assert_noop!(mint_feur(ALICE, 1), Error::<Runtime>::NotSupportedByLiquidityPool);
+
+			assert_ok!(redeem_ausd(ALICE, 100));
+		});
+}
+
+#[test]
+fn can_liquidate_with_not_allowed_position() {
+	ExtBuilder::default()
+		.one_million_for_alice_n_mock_pool()
+		.synthetic_price_three()
+		.one_percent_spread()
+		.ten_percent_additional_collateral_ratio()
+		.build()
+		.execute_with(|| {
+			assert_ok!(mint_feur(ALICE, ONE_MILL));
+
+			MockLiquidityPools::set_is_allowed(false);
+
+			set_mock_feur_price(32, 10);
+
+			let burned_synthetic = 100_000;
+			assert_ok!(SyntheticCurrency::deposit(&BOB, burned_synthetic));
+
+			assert_ok!(liquidate(BOB, burned_synthetic));
+		});
+}

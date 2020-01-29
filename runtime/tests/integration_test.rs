@@ -5,7 +5,7 @@
 mod tests {
 	use frame_support::{assert_noop, assert_ok};
 	pub use laminar_runtime::{AccountId, CurrencyId, LiquidityPoolId, Runtime};
-	pub use module_primitives::{Balance, Leverage};
+	pub use module_primitives::{Balance, Leverage, Leverages};
 	pub use orml_prices::Price;
 	use orml_traits::{BasicCurrency, MultiCurrency};
 	pub use sp_runtime::{traits::Zero, DispatchResult, Perbill, Permill};
@@ -72,7 +72,13 @@ mod tests {
 	}
 
 	pub fn create_pool() -> DispatchResult {
-		ModuleLiquidityPools::create_pool(origin_of(AccountId::from(POOL)))
+		ModuleLiquidityPools::create_pool(origin_of(AccountId::from(POOL)))?;
+		ModuleLiquidityPools::set_enabled_trades(
+			origin_of(AccountId::from(POOL)),
+			LIQUIDITY_POOL_ID,
+			CurrencyId::FEUR,
+			Leverages::all(),
+		)
 	}
 
 	pub fn deposit_liquidity(amount: Balance) -> DispatchResult {
