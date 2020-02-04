@@ -4,7 +4,9 @@ use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, Parameter, StorageMap};
 use frame_system::{self as system, ensure_root};
 use sp_runtime::{
-	traits::{AccountIdConversion, MaybeSerializeDeserialize, Member, Saturating, SimpleArithmetic, Zero},
+	traits::{
+		AccountIdConversion, EnsureOrigin, MaybeSerializeDeserialize, Member, Saturating, SimpleArithmetic, Zero,
+	},
 	ModuleId, Permill,
 };
 
@@ -18,6 +20,7 @@ pub trait Trait: frame_system::Trait {
 	type CurrencyId: Parameter + Member + Copy + MaybeSerializeDeserialize;
 	type Balance: Parameter + Member + SimpleArithmetic + Default + Copy + MaybeSerializeDeserialize;
 	type LiquidityPoolId: Parameter + Member + Copy + MaybeSerializeDeserialize;
+	type UpdateOrigin: EnsureOrigin<Self::Origin>;
 }
 
 #[derive(Encode, Decode)]
@@ -72,21 +75,27 @@ decl_module! {
 		fn deposit_event() = default;
 
 		pub fn set_extreme_ratio(origin, currency_id: T::CurrencyId, ratio: Permill) {
-			ensure_root(origin)?;
+			T::UpdateOrigin::try_origin(origin)
+				.map(|_| ())
+				.or_else(ensure_root)?;
 			<ExtremeRatio<T>>::insert(currency_id, ratio);
 
 			Self::deposit_event(RawEvent::ExtremeRatioUpdated(currency_id, ratio));
 		}
 
 		pub fn set_liquidation_ratio(origin, currency_id: T::CurrencyId, ratio: Permill) {
-			ensure_root(origin)?;
+			T::UpdateOrigin::try_origin(origin)
+				.map(|_| ())
+				.or_else(ensure_root)?;
 			<LiquidationRatio<T>>::insert(currency_id, ratio);
 
 			Self::deposit_event(RawEvent::LiquidationRatioUpdated(currency_id, ratio));
 		}
 
 		pub fn set_collateral_ratio(origin, currency_id: T::CurrencyId, ratio: Permill) {
-			ensure_root(origin)?;
+			T::UpdateOrigin::try_origin(origin)
+				.map(|_| ())
+				.or_else(ensure_root)?;
 			<CollateralRatio<T>>::insert(currency_id, ratio);
 
 			Self::deposit_event(RawEvent::CollateralRatioUpdated(currency_id, ratio));

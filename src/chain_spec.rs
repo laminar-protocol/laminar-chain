@@ -1,8 +1,9 @@
 use grandpa_primitives::AuthorityId as GrandpaId;
 use hex_literal::hex;
 use runtime::{
-	AccountId, AuraConfig, BalancesConfig, CurrencyId, GenesisConfig, GrandpaConfig, IndicesConfig,
-	OperatorMembershipConfig, Signature, SudoConfig, SystemConfig, TokensConfig, WASM_BINARY,
+	AccountId, AuraConfig, BalancesConfig, CurrencyId, FinancialCouncilMembershipConfig,
+	GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, IndicesConfig, OperatorMembershipConfig, Signature,
+	SudoConfig, SystemConfig, TokensConfig, WASM_BINARY,
 };
 use sc_service;
 use sc_telemetry::TelemetryEndpoints;
@@ -200,9 +201,20 @@ fn dev_genesis(
 		pallet_grandpa: Some(GrandpaConfig {
 			authorities: initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
 		}),
+
 		pallet_collective_Instance1: Some(Default::default()),
-		pallet_membership_Instance1: Some(OperatorMembershipConfig {
-			members: vec![root_key],
+		pallet_membership_Instance1: Some(GeneralCouncilMembershipConfig {
+			members: vec![root_key.clone()],
+			phantom: Default::default(),
+		}),
+		pallet_collective_Instance2: Some(Default::default()),
+		pallet_membership_Instance2: Some(FinancialCouncilMembershipConfig {
+			members: vec![root_key.clone()],
+			phantom: Default::default(),
+		}),
+		pallet_collective_Instance3: Some(Default::default()),
+		pallet_membership_Instance3: Some(OperatorMembershipConfig {
+			members: vec![root_key.clone()],
 			phantom: Default::default(),
 		}),
 		orml_tokens: Some(TokensConfig {
@@ -244,8 +256,18 @@ fn testnet_genesis(
 			authorities: initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
 		}),
 		pallet_collective_Instance1: Some(Default::default()),
-		pallet_membership_Instance1: Some(OperatorMembershipConfig {
-			members: vec![root_key],
+		pallet_membership_Instance1: Some(GeneralCouncilMembershipConfig {
+			members: vec![root_key.clone()],
+			phantom: Default::default(),
+		}),
+		pallet_collective_Instance2: Some(Default::default()),
+		pallet_membership_Instance2: Some(FinancialCouncilMembershipConfig {
+			members: vec![root_key.clone()],
+			phantom: Default::default(),
+		}),
+		pallet_collective_Instance3: Some(Default::default()),
+		pallet_membership_Instance3: Some(OperatorMembershipConfig {
+			members: vec![root_key.clone()],
 			phantom: Default::default(),
 		}),
 		orml_tokens: Some(TokensConfig {

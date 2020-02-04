@@ -2,10 +2,11 @@
 
 #![cfg(test)]
 
-use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
+use frame_support::{impl_outer_event, impl_outer_origin, ord_parameter_types, parameter_types};
 use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
+use system::EnsureSignedBy;
 
 use super::*;
 
@@ -21,6 +22,10 @@ impl_outer_event! {
 	pub enum TestEvent for Runtime {
 		synthetic_tokens<T>,
 	}
+}
+
+ord_parameter_types! {
+	pub const One: AccountId = 0;
 }
 
 // Workaround for https://github.com/rust-lang/rust/issues/26925 . Remove when sorted.
@@ -60,6 +65,7 @@ impl Trait for Runtime {
 	type CurrencyId = CurrencyId;
 	type Balance = u64;
 	type LiquidityPoolId = u32;
+	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
 }
 
 pub type SyntheticTokens = Module<Runtime>;
@@ -71,6 +77,11 @@ pub const ROOT: Origin = Origin::ROOT;
 const ALICE_ACC_ID: AccountId = 0;
 pub fn alice() -> Origin {
 	Origin::signed(ALICE_ACC_ID)
+}
+
+const BOB_ACC_ID: AccountId = 1;
+pub fn bob() -> Origin {
+	Origin::signed(BOB_ACC_ID)
 }
 
 #[derive(Default)]

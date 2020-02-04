@@ -4,7 +4,7 @@
 
 use super::*;
 use frame_support::{assert_noop, assert_ok};
-use mock::{alice, ExtBuilder, SyntheticTokens, System, TestEvent, FEUR, ROOT};
+use mock::{alice, bob, ExtBuilder, SyntheticTokens, System, TestEvent, FEUR, ROOT};
 use sp_runtime::{traits::BadOrigin, Permill};
 
 macro_rules! assert_noop_root {
@@ -31,7 +31,10 @@ fn root_set_extreme_ratio() {
 fn non_root_set_extreme_ratio_fails() {
 	ExtBuilder::default().build().execute_with(|| {
 		let ratio = Permill::from_percent(1);
-		assert_noop_root!(SyntheticTokens::set_extreme_ratio(alice(), FEUR, ratio));
+
+		assert_noop!(SyntheticTokens::set_extreme_ratio(bob(), FEUR, ratio), BadOrigin);
+
+		assert_ok!(SyntheticTokens::set_extreme_ratio(alice(), FEUR, ratio));
 	});
 }
 
@@ -53,7 +56,9 @@ fn root_set_liquidation_ratio() {
 fn non_root_set_liquidation_ratio_fails() {
 	ExtBuilder::default().build().execute_with(|| {
 		let ratio = Permill::from_percent(1);
-		assert_noop_root!(SyntheticTokens::set_liquidation_ratio(alice(), FEUR, ratio));
+		assert_noop!(SyntheticTokens::set_liquidation_ratio(bob(), FEUR, ratio), BadOrigin);
+
+		assert_ok!(SyntheticTokens::set_liquidation_ratio(alice(), FEUR, ratio));
 	});
 }
 
@@ -75,7 +80,9 @@ fn root_set_collateral_ratio() {
 fn non_root_set_collateral_ratio_fails() {
 	ExtBuilder::default().build().execute_with(|| {
 		let ratio = Permill::from_percent(1);
-		assert_noop_root!(SyntheticTokens::set_collateral_ratio(alice(), FEUR, ratio));
+		assert_noop!(SyntheticTokens::set_collateral_ratio(bob(), FEUR, ratio), BadOrigin);
+
+		assert_ok!(SyntheticTokens::set_collateral_ratio(alice(), FEUR, ratio));
 	});
 }
 
