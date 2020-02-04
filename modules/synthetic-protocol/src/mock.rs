@@ -2,11 +2,12 @@
 
 #![cfg(test)]
 
-use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
+use frame_support::{impl_outer_event, impl_outer_origin, ord_parameter_types, parameter_types};
 use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup, DispatchResult, Perbill};
 use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
+use system::EnsureSignedBy;
 
 use orml_currencies::Currency;
 
@@ -19,6 +20,10 @@ pub use module_primitives::{Balance, CurrencyId, Leverage};
 
 impl_outer_origin! {
 	pub enum Origin for Runtime {}
+}
+
+ord_parameter_types! {
+	pub const One: AccountId = 1;
 }
 
 mod synthetic_protocol {
@@ -104,6 +109,7 @@ impl module_synthetic_tokens::Trait for Runtime {
 	type CurrencyId = CurrencyId;
 	type Balance = Balance;
 	type LiquidityPoolId = LiquidityPoolId;
+	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
 }
 pub type SyntheticTokens = module_synthetic_tokens::Module<Runtime>;
 
