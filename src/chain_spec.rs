@@ -192,7 +192,6 @@ fn dev_genesis(
 		}),
 		pallet_balances: Some(BalancesConfig {
 			balances: endowed_accounts.iter().cloned().map(|k| (k, INITIAL_BALANCE)).collect(),
-			vesting: vec![],
 		}),
 		pallet_sudo: Some(SudoConfig { key: root_key.clone() }),
 		pallet_aura: Some(AuraConfig {
@@ -231,6 +230,13 @@ fn dev_genesis(
 	}
 }
 
+pub fn load_spec(id: &str) -> Result<Option<ChainSpec>, String> {
+	Ok(match Alternative::from(id) {
+		Some(spec) => Some(spec.load()?),
+		None => None,
+	})
+}
+
 fn testnet_genesis(
 	initial_authorities: Vec<(AuraId, GrandpaId)>,
 	root_key: AccountId,
@@ -246,7 +252,6 @@ fn testnet_genesis(
 		}),
 		pallet_balances: Some(BalancesConfig {
 			balances: endowed_accounts.iter().cloned().map(|k| (k, INITIAL_BALANCE)).collect(),
-			vesting: vec![],
 		}),
 		pallet_sudo: Some(SudoConfig { key: root_key.clone() }),
 		pallet_aura: Some(AuraConfig {

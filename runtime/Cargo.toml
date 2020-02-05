@@ -42,6 +42,7 @@ orml-currencies = { path = "../orml/currencies", default-features = false }
 orml-prices = { path = "../orml/prices", default-features = false }
 orml-traits = { path = "../orml/traits", default-features = false }
 orml-utilities = { path = "../orml/utilities", default-features = false }
+orml-oracle-rpc-runtime-api = { path = "../orml/oracle/rpc/runtime-api", default-features = false }
 
 synthetic-tokens = { package = "module-synthetic-tokens", path = "../modules/synthetic-tokens", default-features = false }
 synthetic-protocol = { package = "module-synthetic-protocol", path = "../modules/synthetic-protocol", default-features = false }
@@ -91,6 +92,7 @@ std = [
 	"orml-currencies/std",
 	"orml-prices/std",
 	"orml-utilities/std",
+	"orml-oracle-rpc-runtime-api/std",
 	"module-primitives/std",
 	"synthetic-tokens/std",
 	"synthetic-protocol/std",

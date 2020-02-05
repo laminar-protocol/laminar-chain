@@ -2,7 +2,6 @@
 
 use grandpa::{self, FinalityProofProvider as GrandpaFinalityProofProvider};
 use runtime::{self, opaque::Block, GenesisConfig, RuntimeApi};
-use sc_basic_authority;
 use sc_client::LongestChain;
 use sc_executor::native_executor_instance;
 pub use sc_executor::NativeExecutor;
@@ -12,6 +11,8 @@ use sp_consensus_aura::sr25519::AuthorityPair as AuraPair;
 use sp_inherents::InherentDataProviders;
 use std::sync::Arc;
 use std::time::Duration;
+
+use crate::rpc;
 
 // Our native executor instance.
 native_executor_instance!(
@@ -29,9 +30,9 @@ construct_simple_protocol! {
 ///
 /// Use this macro if you don't actually need the full service, but just the builder in order to
 /// be able to perform chain operations.
-#[macro_export]
 macro_rules! new_full_start {
 	($config:expr) => {{
+		type RpcExtension = jsonrpc_core::IoHandler<sc_rpc::Metadata>;
 		let mut import_setup = None;
 		let inherent_data_providers = sp_inherents::InherentDataProviders::new();
 
@@ -43,10 +44,8 @@ macro_rules! new_full_start {
 		.with_select_chain(|_config, backend| Ok(sc_client::LongestChain::new(backend.clone())))?
 		.with_transaction_pool(|config, client, _fetcher| {
 			let pool_api = sc_transaction_pool::FullChainApi::new(client.clone());
-			let pool = sc_transaction_pool::BasicPool::new(config, pool_api);
-			let maintainer = sc_transaction_pool::FullBasicPoolMaintainer::new(pool.pool().clone(), client);
-			let maintainable_pool = sp_transaction_pool::MaintainableTransactionPool::new(pool, maintainer);
-			Ok(maintainable_pool)
+			let pool = sc_transaction_pool::BasicPool::new(config, std::sync::Arc::new(pool_api));
+			Ok(pool)
 		})?
 		.with_import_queue(|_config, client, mut select_chain, transaction_pool| {
 			let select_chain = select_chain
@@ -76,8 +75,8 @@ macro_rules! new_full_start {
 			Ok(import_queue)
 		})?
 		.with_rpc_extensions(
-			|client, pool, _backend, _fetcher, _remote_blockchain| -> Result<super::rpc::RpcExtension, _> {
-				Ok(super::rpc::create_full(client, pool))
+			|client, pool, _backend, fetcher, _remote_blockchain| -> Result<RpcExtension, _> {
+				Ok(crate::rpc::create(client, pool, crate::rpc::LightDeps::none(fetcher)))
 			},
 		)?;
 
@@ -86,9 +85,7 @@ macro_rules! new_full_start {
 }
 
 /// Builds a new service for a full client.
-pub fn new_full<C: Send + Default + 'static>(
-	config: Configuration<C, GenesisConfig>,
-) -> Result<impl AbstractService, ServiceError> {
+pub fn new_full(config: Configuration<GenesisConfig>) -> Result<impl AbstractService, ServiceError> {
 	let is_authority = config.roles.is_authority();
 	let force_authoring = config.force_authoring;
 	let name = config.name.clone();
@@ -113,7 +110,7 @@ pub fn new_full<C: Send + Default + 'static>(
 		.build()?;
 
 	if participates_in_consensus {
-		let proposer = sc_basic_authority::ProposerFactory {
+		let proposer = sc_basic_authorship::ProposerFactory {
 			client: service.client(),
 			transaction_pool: service.transaction_pool(),
 		};
@@ -138,7 +135,7 @@ pub fn new_full<C: Send + Default + 'static>(
 
 		// the AURA authoring task is considered essential, i.e. if it
 		// fails we take down the service with it.
-		service.spawn_essential_task(aura);
+		service.spawn_essential_task("aura", aura);
 	}
 
 	// if the node isn't actively participating in consensus then it doesn't
@@ -162,13 +159,16 @@ pub fn new_full<C: Send + Default + 'static>(
 	match (is_authority, disable_grandpa) {
 		(false, false) => {
 			// start the lightweight GRANDPA observer
-			service.spawn_task(grandpa::run_grandpa_observer(
-				grandpa_config,
-				grandpa_link,
-				service.network(),
-				service.on_exit(),
-				service.spawn_task_handle(),
-			)?);
+			service.spawn_task(
+				"grandpa-observer",
+				grandpa::run_grandpa_observer(
+					grandpa_config,
+					grandpa_link,
+					service.network(),
+					service.on_exit(),
+					service.spawn_task_handle(),
+				)?,
+			);
 		}
 		(true, false) => {
 			// start the full GRANDPA voter
@@ -185,7 +185,7 @@ pub fn new_full<C: Send + Default + 'static>(
 
 			// the GRANDPA voter task is considered infallible, i.e.
 			// if it fails we take down the service with it.
-			service.spawn_essential_task(grandpa::run_grandpa_voter(voter_config)?);
+			service.spawn_essential_task("grandpa", grandpa::run_grandpa_voter(voter_config)?);
 		}
 		(_, true) => {
 			grandpa::setup_disabled_grandpa(service.client(), &inherent_data_providers, service.network())?;
@@ -196,21 +196,22 @@ pub fn new_full<C: Send + Default + 'static>(
 }
 
 /// Builds a new service for a light client.
-pub fn new_light<C: Send + Default + 'static>(
-	config: Configuration<C, GenesisConfig>,
-) -> Result<impl AbstractService, ServiceError> {
+pub fn new_light(config: Configuration<GenesisConfig>) -> Result<impl AbstractService, ServiceError> {
+	type RpcExtension = jsonrpc_core::IoHandler<sc_rpc::Metadata>;
 	let inherent_data_providers = InherentDataProviders::new();
 
 	ServiceBuilder::new_light::<Block, RuntimeApi, Executor>(config)?
 		.with_select_chain(|_config, backend| Ok(LongestChain::new(backend.clone())))?
 		.with_transaction_pool(|config, client, fetcher| {
 			let fetcher = fetcher.ok_or_else(|| "Trying to start light transaction pool without active fetcher")?;
+
 			let pool_api = sc_transaction_pool::LightChainApi::new(client.clone(), fetcher.clone());
-			let pool = sc_transaction_pool::BasicPool::new(config, pool_api);
-			let maintainer =
-				sc_transaction_pool::LightBasicPoolMaintainer::with_defaults(pool.pool().clone(), client, fetcher);
-			let maintainable_pool = sp_transaction_pool::MaintainableTransactionPool::new(pool, maintainer);
-			Ok(maintainable_pool)
+			let pool = sc_transaction_pool::BasicPool::with_revalidation_type(
+				config,
+				Arc::new(pool_api),
+				sc_transaction_pool::RevalidationType::Light,
+			);
+			Ok(pool)
 		})?
 		.with_import_queue_and_fprb(|_config, client, backend, fetcher, _select_chain, _tx_pool| {
 			let fetch_checker = fetcher
@@ -242,11 +243,16 @@ pub fn new_light<C: Send + Default + 'static>(
 			Ok(Arc::new(GrandpaFinalityProofProvider::new(backend, client)) as _)
 		})?
 		.with_rpc_extensions(
-			|client, pool, _backend, fetcher, remote_blockchain| -> Result<super::rpc::RpcExtension, _> {
+			|client, pool, _backend, fetcher, remote_blockchain| -> Result<RpcExtension, _> {
 				let fetcher = fetcher.ok_or_else(|| "Trying to start node RPC without active fetcher")?;
 				let remote_blockchain =
 					remote_blockchain.ok_or_else(|| "Trying to start node RPC without active remote blockchain")?;
-				Ok(super::rpc::create_light(client, remote_blockchain, fetcher, pool))
+
+				let light_deps = rpc::LightDeps {
+					remote_blockchain,
+					fetcher,
+				};
+				Ok(crate::rpc::create(client, pool, Some(light_deps)))
 			},
 		)?
 		.build()

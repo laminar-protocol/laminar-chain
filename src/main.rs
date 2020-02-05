@@ -1,11 +1,16 @@
+//! Substrate Node Template CLI library.
+#![warn(missing_docs)]
+
 mod chain_spec;
-mod cli;
 mod rpc;
+#[macro_use]
 mod service;
+mod cli;
+mod command;
 
-pub use sc_cli::{error, IntoExit, VersionInfo};
+pub use sc_cli::{error, VersionInfo};
 
-fn main() {
+fn main() -> Result<(), error::Error> {
 	let version = VersionInfo {
 		name: "LaminarChain",
 		commit: env!("VERGEN_SHA_SHORT"),
@@ -14,10 +19,8 @@ fn main() {
 		author: "Laminar Developers",
 		description: "laminar-chain",
 		support_url: "https://github.com/laminar-protocol/laminar-chain/issues",
+		copyright_start_year: 2019,
 	};
 
-	if let Err(e) = cli::run(::std::env::args(), cli::Exit, version) {
-		eprintln!("Fatal error: {}\n\n{:?}", e, e);
-		std::process::exit(1)
-	}
+	command::run(version)
 }
