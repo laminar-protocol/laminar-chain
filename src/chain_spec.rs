@@ -216,6 +216,7 @@ fn dev_genesis(
 			members: vec![root_key.clone()],
 			phantom: Default::default(),
 		}),
+		pallet_treasury: Some(Default::default()),
 		orml_tokens: Some(TokensConfig {
 			endowed_accounts: endowed_accounts
 				.iter()
@@ -228,13 +229,6 @@ fn dev_genesis(
 				.collect(),
 		}),
 	}
-}
-
-pub fn load_spec(id: &str) -> Result<Option<ChainSpec>, String> {
-	Ok(match Alternative::from(id) {
-		Some(spec) => Some(spec.load()?),
-		None => None,
-	})
 }
 
 fn testnet_genesis(
@@ -275,6 +269,7 @@ fn testnet_genesis(
 			members: vec![root_key.clone()],
 			phantom: Default::default(),
 		}),
+		pallet_treasury: Some(Default::default()),
 		orml_tokens: Some(TokensConfig {
 			endowed_accounts: endowed_accounts
 				.iter()
@@ -287,4 +282,11 @@ fn testnet_genesis(
 				.collect(),
 		}),
 	}
+}
+
+pub fn load_spec(id: &str) -> Result<Option<ChainSpec>, String> {
+	Ok(match Alternative::from(id) {
+		Some(spec) => Some(spec.load()?),
+		None => None,
+	})
 }
