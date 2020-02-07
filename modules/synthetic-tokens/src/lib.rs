@@ -44,10 +44,10 @@ const COLLATERAL_RATIO_DEFAULT: Permill = Permill::from_percent(10); // TODO: se
 
 decl_storage! {
 	trait Store for Module<T: Trait> as SyntheticTokens {
-		ExtremeRatio get(extreme_ratio): map T::CurrencyId => Option<Permill>;
-		LiquidationRatio get(liquidation_ratio): map T::CurrencyId => Option<Permill>;
-		CollateralRatio get(collateral_ratio): map T::CurrencyId => Option<Permill>;
-		Positions get(positions): map (T::LiquidityPoolId, T::CurrencyId) => Position<T>;
+		ExtremeRatio get(extreme_ratio): map hasher(blake2_256) T::CurrencyId => Option<Permill>;
+		LiquidationRatio get(liquidation_ratio): map hasher(blake2_256) T::CurrencyId => Option<Permill>;
+		CollateralRatio get(collateral_ratio): map hasher(blake2_256) T::CurrencyId => Option<Permill>;
+		Positions get(positions): map hasher(blake2_256) (T::LiquidityPoolId, T::CurrencyId) => Position<T>;
 	}
 }
 

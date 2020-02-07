@@ -41,9 +41,9 @@ pub trait Trait: system::Trait {
 decl_storage! {
 	trait Store for Module<T: Trait> as LiquidityPools {
 		pub NextPoolId get(fn next_pool_id): T::LiquidityPoolId;
-		pub Owners get(fn owners): map T::LiquidityPoolId => Option<T::AccountId>;
-		pub LiquidityPoolOptions get(fn liquidity_pool_options): double_map T::LiquidityPoolId, T::CurrencyId => Option<LiquidityPoolOption>;
-		pub Balances get(fn balances): map T::LiquidityPoolId => T::Balance;
+		pub Owners get(fn owners): map hasher(blake2_256) T::LiquidityPoolId => Option<T::AccountId>;
+		pub LiquidityPoolOptions get(fn liquidity_pool_options): double_map hasher(blake2_256) T::LiquidityPoolId, hasher(blake2_256) T::CurrencyId => Option<LiquidityPoolOption>;
+		pub Balances get(fn balances): map hasher(blake2_256) T::LiquidityPoolId => T::Balance;
 	}
 }
 
