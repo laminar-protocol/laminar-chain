@@ -8,17 +8,18 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+mod constants;
+mod types;
+
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::AuthorityList as GrandpaAuthorityList;
 use sp_api::impl_runtime_apis;
 use sp_core::u32_trait::{_1, _2, _3, _4};
 use sp_core::OpaqueMetadata;
-use sp_runtime::traits::{
-	BlakeTwo256, Block as BlockT, Convert, ConvertInto, IdentifyAccount, OpaqueKeys, StaticLookup, Verify,
-};
+use sp_runtime::traits::{BlakeTwo256, Block as BlockT, Convert, ConvertInto, OpaqueKeys, StaticLookup};
 use sp_runtime::{
 	create_runtime_str, curve::PiecewiseLinear, generic, impl_opaque_keys, transaction_validity::TransactionValidity,
-	ApplyExtrinsicResult, MultiSignature,
+	ApplyExtrinsicResult,
 };
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
@@ -45,34 +46,6 @@ pub use pallet_staking::StakerStatus;
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Percent, Permill};
 
-/// An index to a block.
-pub type BlockNumber = u32;
-
-/// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
-pub type Signature = MultiSignature;
-
-/// Some way of identifying an account on the chain. We intentionally make it equivalent
-/// to the public key of our transaction signing scheme.
-pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
-
-/// The type for looking up accounts. We don't expect more than 4 billion of them, but you
-/// never know...
-pub type AccountIndex = u32;
-
-/// Signed version of Balance
-pub type Amount = i128;
-
-/// Index of a transaction in the chain.
-pub type Index = u32;
-
-/// A hash of some data used by the chain.
-pub type Hash = sp_core::H256;
-
-/// Digest item type.
-pub type DigestItem = generic::DigestItem<Hash>;
-
-pub type Moment = u64;
-
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
@@ -97,6 +70,9 @@ pub mod opaque {
 	}
 }
 
+pub use constants::time::*;
+pub use types::*;
+
 /// This runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("laminar-chain"),
@@ -105,25 +81,6 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_version: 3,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
-};
-
-pub const MILLISECS_PER_BLOCK: Moment = 4000;
-
-pub const SLOT_DURATION: Moment = MILLISECS_PER_BLOCK;
-
-// These time units are defined in number of blocks.
-pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
-pub const HOURS: BlockNumber = MINUTES * 60;
-pub const DAYS: BlockNumber = HOURS * 24;
-
-// 1 in 4 blocks (on average, not counting collisions) will be primary BABE blocks.
-pub const PRIMARY_PROBABILITY: (u64, u64) = (1, 4);
-
-pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 10 * MINUTES;
-pub const EPOCH_DURATION_IN_SLOTS: u64 = {
-	const SLOT_FILL_RATE: f64 = MILLISECS_PER_BLOCK as f64 / SLOT_DURATION as f64;
-
-	(EPOCH_DURATION_IN_BLOCKS as f64 * SLOT_FILL_RATE) as u64
 };
 
 /// The version infromation used to identify this runtime when compiled natively.

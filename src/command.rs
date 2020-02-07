@@ -1,4 +1,3 @@
-// Copyright 2017-2020 Parity Technologies (UK) Ltd.
 // This file is part of Substrate.
 
 // Substrate is free software: you can redistribute it and/or modify
@@ -24,7 +23,7 @@ pub fn run(version: VersionInfo) -> error::Result<()> {
 	let opt = sc_cli::from_args::<Cli>(&version);
 
 	let mut config = sc_service::Configuration::default();
-	config.impl_name = "node-template";
+	config.impl_name = "laminar";
 
 	match opt.subcommand {
 		Some(subcommand) => sc_cli::run_subcommand(
