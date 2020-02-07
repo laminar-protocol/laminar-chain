@@ -100,16 +100,16 @@ pub fn new_full(config: Configuration<GenesisConfig>) -> Result<impl AbstractSer
 
 	let (builder, mut import_setup, inherent_data_providers) = new_full_start!(config);
 
+	let (block_import, grandpa_link, babe_link) = import_setup
+		.take()
+		.expect("Link Half and Block Import are present for Full Services or setup failed before. qed");
+
 	let service = builder
 		.with_network_protocol(|_| Ok(NodeProtocol::new()))?
 		.with_finality_proof_provider(|client, backend| {
 			Ok(Arc::new(GrandpaFinalityProofProvider::new(backend, client)) as _)
 		})?
 		.build()?;
-
-	let (block_import, grandpa_link, babe_link) = import_setup
-		.take()
-		.expect("Link Half and Block Import are present for Full Services or setup failed before. qed");
 
 	if participates_in_consensus {
 		let proposer = sc_basic_authorship::ProposerFactory {
