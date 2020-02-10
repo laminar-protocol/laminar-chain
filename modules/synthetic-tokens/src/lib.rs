@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, Parameter, StorageMap};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, traits::Get, Parameter, StorageMap};
 use frame_system::{self as system, ensure_root};
 use sp_runtime::{
 	traits::{
@@ -11,6 +11,7 @@ use sp_runtime::{
 };
 
 use orml_utilities::FixedU128;
+use sp_std::prelude::Vec;
 
 mod mock;
 mod tests;
@@ -20,6 +21,7 @@ pub trait Trait: frame_system::Trait {
 	type CurrencyId: Parameter + Member + Copy + MaybeSerializeDeserialize;
 	type Balance: Parameter + Member + SimpleArithmetic + Default + Copy + MaybeSerializeDeserialize;
 	type LiquidityPoolId: Parameter + Member + Copy + MaybeSerializeDeserialize;
+	type SyntheticCurrencyIds: Get<Vec<Self::CurrencyId>>;
 	type UpdateOrigin: EnsureOrigin<Self::Origin>;
 }
 
@@ -177,6 +179,14 @@ impl<T: Trait> Module<T> {
 		ratio_to_liquidation_ratio_gap
 			.checked_div(&liquidation_to_extreme_gap)
 			.expect("liquidation_ratio > extreme_ratio; qed")
+	}
+
+	pub fn can_remove(pool_id: T::LiquidityPoolId) -> bool {
+		T::SyntheticCurrencyIds::get()
+			.iter()
+			.map(|currency_id| -> (T::Balance, T::Balance) { Self::get_position(pool_id, *currency_id) })
+			.filter(|x| x.1 > Zero::zero())
+			.count() == 0
 	}
 }
 

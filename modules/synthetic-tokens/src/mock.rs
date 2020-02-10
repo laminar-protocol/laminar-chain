@@ -36,6 +36,7 @@ parameter_types! {
 	pub const MaximumBlockWeight: u32 = 1024;
 	pub const MaximumBlockLength: u32 = 2 * 1024;
 	pub const AvailableBlockRatio: Perbill = Perbill::one();
+	pub const SyntheticCurrencyIds: Vec<CurrencyId> = vec![FEUR];
 }
 
 type AccountId = u64;
@@ -65,6 +66,7 @@ impl Trait for Runtime {
 	type CurrencyId = CurrencyId;
 	type Balance = u64;
 	type LiquidityPoolId = u32;
+	type SyntheticCurrencyIds = SyntheticCurrencyIds;
 	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
 }
 

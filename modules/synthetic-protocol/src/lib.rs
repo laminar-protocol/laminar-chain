@@ -155,6 +155,7 @@ decl_error! {
 		NoBidSpread,
 		NoAskSpread,
 		NoAdditionalCollateralRatio,
+		NotValidSyntheticCurrencyId,
 	}
 }
 
@@ -213,6 +214,11 @@ impl<T: Trait> Module<T> {
 			.expect("ensured enough collateral in liquidity pool; qed");
 
 		let total_collateral = collateral + additional_collateral;
+
+		ensure!(
+			T::SyntheticCurrencyIds::get().contains(&currency_id),
+			Error::<T>::NotValidSyntheticCurrencyId
+		);
 		<SyntheticTokens<T>>::add_position(pool_id, currency_id, total_collateral, synthetic);
 
 		Ok(synthetic)

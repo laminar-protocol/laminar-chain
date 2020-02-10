@@ -423,6 +423,7 @@ impl orml_tokens::Trait for Runtime {
 
 parameter_types! {
 	pub const GetLaminarTokenId: CurrencyId = CurrencyId::LAMI;
+	pub const SyntheticCurrencyIds: Vec<CurrencyId> = vec![CurrencyId::FEUR, CurrencyId::FJPY];
 }
 
 pub type LaminarToken = BasicCurrencyAdapter<Runtime, pallet_balances::Module<Runtime>, Balance>;
@@ -444,6 +445,7 @@ impl synthetic_tokens::Trait for Runtime {
 	type CurrencyId = CurrencyId;
 	type Balance = Balance;
 	type LiquidityPoolId = LiquidityPoolId;
+	type SyntheticCurrencyIds = SyntheticCurrencyIds;
 	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
 }
 
@@ -457,17 +459,7 @@ pub struct PoolManager;
 
 impl LiquidityPoolManager<LiquidityPoolId> for PoolManager {
 	fn can_remove(pool_id: LiquidityPoolId) -> bool {
-		let (_, feur) = SyntheticTokens::get_position(pool_id, CurrencyId::FEUR);
-		if feur > 0 {
-			return false;
-		}
-
-		let (_, fjpy) = SyntheticTokens::get_position(pool_id, CurrencyId::FJPY);
-		if fjpy > 0 {
-			return false;
-		}
-
-		true
+		SyntheticTokens::can_remove(pool_id)
 	}
 }
 
