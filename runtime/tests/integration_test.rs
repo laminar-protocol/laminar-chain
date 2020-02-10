@@ -153,6 +153,10 @@ mod tests {
 		ModuleProtocol::liquidate(origin_of(who.clone()), LIQUIDITY_POOL_ID, CurrencyId::FEUR, amount)
 	}
 
+	fn remove_pool(who: &AccountId) -> DispatchResult {
+		ModuleLiquidityPools::remove_pool(origin_of(who.clone()), LIQUIDITY_POOL_ID)
+	}
+
 	fn dollar(amount: u128) -> u128 {
 		amount.saturating_mul(Price::accuracy())
 	}
@@ -496,6 +500,41 @@ mod tests {
 				assert_eq!(synthetic_balance(&AccountId::from(ALICE)), 0);
 				assert_eq!(collateral_balance(&ModuleTokens::account_id()), 0);
 				assert_eq!(liquidity(), 19554455445544554455447);
+			});
+	}
+
+	#[test]
+	fn test_liquidate_remove() {
+		ExtBuilder::default()
+			.balances(vec![
+				(AccountId::from(POOL), CurrencyId::AUSD, dollar(20_000)),
+				(AccountId::from(ALICE), CurrencyId::AUSD, dollar(10_000)),
+			])
+			.build()
+			.execute_with(|| {
+				assert_ok!(create_pool());
+				assert_ok!(deposit_liquidity(dollar(20_000)));
+				assert_ok!(set_additional_collateral_ratio(Permill::from_percent(10)));
+				assert_ok!(set_spread(Permill::from_percent(1)));
+				assert_ok!(set_oracle_price(vec![
+					// collateral price set to `1` for calculation simplicity.
+					(CurrencyId::AUSD, Price::from_rational(1, 1)),
+					(CurrencyId::FEUR, Price::from_rational(3, 1))
+				]));
+
+				assert_ok!(buy(&AccountId::from(ALICE), dollar(5000)));
+				assert_eq!(synthetic_balance(&AccountId::from(ALICE)), 1650165016501650165016);
+				assert_eq!(
+					remove_pool(&AccountId::from(POOL)),
+					Err(liquidity_pools::Error::<Runtime>::CannotRemovePool.into())
+				);
+
+				assert_ok!(sell(
+					&AccountId::from(ALICE),
+					synthetic_balance(&AccountId::from(ALICE))
+				));
+				assert_eq!(synthetic_balance(&AccountId::from(ALICE)), 0);
+				assert_ok!(remove_pool(&AccountId::from(POOL)));
 			});
 	}
 }

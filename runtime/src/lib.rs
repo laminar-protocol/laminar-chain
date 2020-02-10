@@ -456,7 +456,17 @@ type LiquidityCurrency = orml_currencies::Currency<Runtime, GetLiquidityCurrency
 pub struct PoolManager;
 
 impl LiquidityPoolManager<LiquidityPoolId> for PoolManager {
-	fn can_remove(_pool_id: LiquidityPoolId) -> bool {
+	fn can_remove(pool_id: LiquidityPoolId) -> bool {
+		let (_, feur) = SyntheticTokens::get_position(pool_id, CurrencyId::FEUR);
+		if feur > 0 {
+			return false;
+		}
+
+		let (_, fjpy) = SyntheticTokens::get_position(pool_id, CurrencyId::FJPY);
+		if fjpy > 0 {
+			return false;
+		}
+
 		true
 	}
 }
