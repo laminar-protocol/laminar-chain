@@ -31,7 +31,6 @@ use orml_currencies::BasicCurrencyAdapter;
 use orml_oracle::OperatorProvider;
 
 use module_primitives::{BalancePriceConverter, Price};
-use traits::LiquidityPoolManager;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
@@ -423,6 +422,7 @@ impl orml_tokens::Trait for Runtime {
 
 parameter_types! {
 	pub const GetLaminarTokenId: CurrencyId = CurrencyId::LAMI;
+	pub const SyntheticCurrencyIds: Vec<CurrencyId> = vec![CurrencyId::FEUR, CurrencyId::FJPY];
 }
 
 pub type LaminarToken = BasicCurrencyAdapter<Runtime, pallet_balances::Module<Runtime>, Balance>;
@@ -444,6 +444,7 @@ impl synthetic_tokens::Trait for Runtime {
 	type CurrencyId = CurrencyId;
 	type Balance = Balance;
 	type LiquidityPoolId = LiquidityPoolId;
+	type SyntheticCurrencyIds = SyntheticCurrencyIds;
 	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
 }
 
@@ -453,14 +454,6 @@ parameter_types! {
 
 type LiquidityCurrency = orml_currencies::Currency<Runtime, GetLiquidityCurrencyId>;
 
-pub struct PoolManager;
-
-impl LiquidityPoolManager<LiquidityPoolId> for PoolManager {
-	fn can_remove(_pool_id: LiquidityPoolId) -> bool {
-		true
-	}
-}
-
 impl liquidity_pools::Trait for Runtime {
 	type Event = Event;
 	type MultiCurrency = orml_currencies::Module<Runtime>;
@@ -468,7 +461,7 @@ impl liquidity_pools::Trait for Runtime {
 	type LiquidityPoolId = LiquidityPoolId;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type PoolManager = PoolManager;
+	type PoolManager = SyntheticTokens;
 	type ExistentialDeposit = ExistentialDeposit;
 }
 

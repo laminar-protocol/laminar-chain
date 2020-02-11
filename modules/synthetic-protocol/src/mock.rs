@@ -99,6 +99,7 @@ impl orml_currencies::Trait for Runtime {
 parameter_types! {
 	pub const GetCollateralCurrencyId: CurrencyId = CurrencyId::AUSD;
 	pub const GetSyntheticCurrencyId: CurrencyId = CurrencyId::FEUR;
+	pub const SyntheticCurrencyIds: Vec<CurrencyId> = vec![CurrencyId::FEUR];
 }
 
 pub type CollateralCurrency = orml_currencies::Currency<Runtime, GetCollateralCurrencyId>;
@@ -109,6 +110,7 @@ impl module_synthetic_tokens::Trait for Runtime {
 	type CurrencyId = CurrencyId;
 	type Balance = Balance;
 	type LiquidityPoolId = LiquidityPoolId;
+	type SyntheticCurrencyIds = SyntheticCurrencyIds;
 	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
 }
 pub type SyntheticTokens = module_synthetic_tokens::Module<Runtime>;
