@@ -1770,7 +1770,6 @@ dependencies = [
  "module-primitives 0.0.1",
  "module-synthetic-protocol 0.0.1",
  "module-synthetic-tokens 0.0.1",
- "module-traits 0.0.1",
  "orml-currencies 0.0.1",
  "orml-oracle 0.0.1",
  "orml-oracle-rpc-runtime-api 0.1.0",
@@ -2492,6 +2491,7 @@ version = "0.0.1"
 dependencies = [
  "frame-support 2.0.0 (git+https://github.com/paritytech/substrate.git)",
  "frame-system 2.0.0 (git+https://github.com/paritytech/substrate.git)",
+ "module-traits 0.0.1",
  "orml-traits 0.0.1",
  "orml-utilities 0.0.1",
  "parity-scale-codec 1.1.2 (registry+https://github.com/rust-lang/crates.io-index)",

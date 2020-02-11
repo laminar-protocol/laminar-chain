@@ -31,7 +31,6 @@ use orml_currencies::BasicCurrencyAdapter;
 use orml_oracle::OperatorProvider;
 
 use module_primitives::{BalancePriceConverter, Price};
-use traits::LiquidityPoolManager;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
@@ -455,14 +454,6 @@ parameter_types! {
 
 type LiquidityCurrency = orml_currencies::Currency<Runtime, GetLiquidityCurrencyId>;
 
-pub struct PoolManager;
-
-impl LiquidityPoolManager<LiquidityPoolId> for PoolManager {
-	fn can_remove(pool_id: LiquidityPoolId) -> bool {
-		SyntheticTokens::can_remove(pool_id)
-	}
-}
-
 impl liquidity_pools::Trait for Runtime {
 	type Event = Event;
 	type MultiCurrency = orml_currencies::Module<Runtime>;
@@ -470,7 +461,7 @@ impl liquidity_pools::Trait for Runtime {
 	type LiquidityPoolId = LiquidityPoolId;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type PoolManager = PoolManager;
+	type PoolManager = SyntheticTokens;
 	type ExistentialDeposit = ExistentialDeposit;
 }
 

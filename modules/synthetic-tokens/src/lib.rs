@@ -10,6 +10,7 @@ use sp_runtime::{
 	ModuleId, Permill,
 };
 
+use module_traits::LiquidityPoolManager;
 use orml_utilities::FixedU128;
 use sp_std::prelude::Vec;
 
@@ -180,14 +181,6 @@ impl<T: Trait> Module<T> {
 			.checked_div(&liquidation_to_extreme_gap)
 			.expect("liquidation_ratio > extreme_ratio; qed")
 	}
-
-	pub fn can_remove(pool_id: T::LiquidityPoolId) -> bool {
-		T::SyntheticCurrencyIds::get()
-			.iter()
-			.map(|currency_id| -> (T::Balance, T::Balance) { Self::get_position(pool_id, *currency_id) })
-			.filter(|x| x.1 > Zero::zero())
-			.count() == 0
-	}
 }
 
 impl<T: Trait> Module<T> {
@@ -201,5 +194,14 @@ impl<T: Trait> Module<T> {
 
 	pub fn collateral_ratio_or_default(currency_id: T::CurrencyId) -> Permill {
 		Self::collateral_ratio(currency_id).unwrap_or(COLLATERAL_RATIO_DEFAULT)
+	}
+}
+
+impl<T: Trait> LiquidityPoolManager<T::LiquidityPoolId> for Module<T> {
+	fn can_remove(pool_id: T::LiquidityPoolId) -> bool {
+		T::SyntheticCurrencyIds::get()
+			.iter()
+			.map(|currency_id| -> (T::Balance, T::Balance) { Self::get_position(pool_id, *currency_id) })
+			.all(|x| x.1.is_zero())
 	}
 }

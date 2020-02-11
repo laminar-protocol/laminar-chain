@@ -175,6 +175,11 @@ impl<T: Trait> Module<T> {
 		T::CollateralCurrency::ensure_can_withdraw(who, collateral)?;
 
 		ensure!(
+			T::SyntheticCurrencyIds::get().contains(&currency_id),
+			Error::<T>::NotValidSyntheticCurrencyId
+		);
+
+		ensure!(
 			T::LiquidityPools::is_allowed_position(pool_id, currency_id, Leverage::LongOne),
 			Error::<T>::NotSupportedByLiquidityPool
 		);
@@ -215,10 +220,6 @@ impl<T: Trait> Module<T> {
 
 		let total_collateral = collateral + additional_collateral;
 
-		ensure!(
-			T::SyntheticCurrencyIds::get().contains(&currency_id),
-			Error::<T>::NotValidSyntheticCurrencyId
-		);
 		<SyntheticTokens<T>>::add_position(pool_id, currency_id, total_collateral, synthetic);
 
 		Ok(synthetic)
