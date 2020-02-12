@@ -85,6 +85,10 @@ mod tests {
 		ModuleLiquidityPools::deposit_liquidity(origin_of(AccountId::from(POOL)), LIQUIDITY_POOL_ID, amount)
 	}
 
+	pub fn set_min_additional_collateral_ratio(permill: Permill) -> DispatchResult {
+		ModuleLiquidityPools::set_min_additional_collateral_ratio(<Runtime as system::Trait>::Origin::ROOT, permill)
+	}
+
 	pub fn set_additional_collateral_ratio(permill: Permill) -> DispatchResult {
 		ModuleLiquidityPools::set_additional_collateral_ratio(
 			origin_of(AccountId::from(POOL)),
@@ -172,6 +176,7 @@ mod tests {
 			.execute_with(|| {
 				assert_ok!(create_pool());
 				assert_ok!(deposit_liquidity(dollar(10_000)));
+				assert_ok!(set_min_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(set_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(set_spread(Permill::from_percent(1)));
 				assert_ok!(set_oracle_price(vec![
@@ -228,6 +233,7 @@ mod tests {
 			.execute_with(|| {
 				assert_ok!(create_pool());
 				assert_ok!(deposit_liquidity(dollar(10_000)));
+				assert_ok!(set_min_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(set_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(set_spread(Permill::from_percent(1)));
 				assert_ok!(set_oracle_price(vec![
@@ -273,6 +279,7 @@ mod tests {
 			.execute_with(|| {
 				assert_ok!(create_pool());
 				assert_ok!(deposit_liquidity(dollar(10_000)));
+				assert_ok!(set_min_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(set_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(set_spread(Permill::from_percent(1)));
 				assert_ok!(set_oracle_price(vec![
@@ -319,6 +326,7 @@ mod tests {
 			.execute_with(|| {
 				assert_ok!(create_pool());
 				assert_ok!(deposit_liquidity(dollar(20_000)));
+				assert_ok!(set_min_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(set_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(set_spread(Permill::from_percent(1)));
 				assert_ok!(set_oracle_price(vec![
@@ -398,6 +406,7 @@ mod tests {
 			.execute_with(|| {
 				assert_ok!(create_pool());
 				assert_ok!(deposit_liquidity(dollar(20_000)));
+				assert_ok!(set_min_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(set_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(set_spread(Permill::from_percent(1)));
 				assert_ok!(set_oracle_price(vec![
@@ -436,6 +445,7 @@ mod tests {
 			.execute_with(|| {
 				assert_ok!(create_pool());
 				assert_ok!(deposit_liquidity(dollar(20_000)));
+				assert_ok!(set_min_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(set_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(set_spread(Permill::from_percent(1)));
 				assert_ok!(set_oracle_price(vec![
@@ -471,6 +481,7 @@ mod tests {
 			.execute_with(|| {
 				assert_ok!(create_pool());
 				assert_ok!(deposit_liquidity(dollar(20_000)));
+				assert_ok!(set_min_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(set_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(set_spread(Permill::from_percent(1)));
 				assert_ok!(set_oracle_price(vec![
@@ -514,6 +525,7 @@ mod tests {
 			.execute_with(|| {
 				assert_ok!(create_pool());
 				assert_ok!(deposit_liquidity(dollar(20_000)));
+				assert_ok!(set_min_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(set_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(set_spread(Permill::from_percent(1)));
 				assert_ok!(set_oracle_price(vec![

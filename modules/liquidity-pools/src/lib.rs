@@ -8,11 +8,14 @@ pub use liquidity_pool_option::LiquidityPoolOption;
 
 use codec::FullCodec;
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get, Parameter};
-use frame_system::{self as system, ensure_signed};
+use frame_system::{self as system, ensure_root, ensure_signed};
 use orml_traits::{BasicCurrency, MultiCurrency};
 use primitives::{Leverage, Leverages};
 use sp_runtime::{
-	traits::{AccountIdConversion, CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, One, SimpleArithmetic},
+	traits::{
+		AccountIdConversion, CheckedAdd, CheckedSub, EnsureOrigin, MaybeSerializeDeserialize, Member, One,
+		SimpleArithmetic,
+	},
 	DispatchResult, ModuleId, Permill,
 };
 use sp_std::{prelude::*, result};
@@ -36,6 +39,7 @@ pub trait Trait: system::Trait {
 	type CurrencyId: FullCodec + Parameter + Member + Copy + MaybeSerializeDeserialize;
 	type PoolManager: LiquidityPoolManager<Self::LiquidityPoolId>;
 	type ExistentialDeposit: Get<Self::Balance>;
+	type UpdateOrigin: EnsureOrigin<Self::Origin>;
 }
 
 decl_storage! {
@@ -44,6 +48,7 @@ decl_storage! {
 		pub Owners get(fn owners): map hasher(blake2_256) T::LiquidityPoolId => Option<T::AccountId>;
 		pub LiquidityPoolOptions get(fn liquidity_pool_options): double_map hasher(blake2_256) T::LiquidityPoolId, hasher(blake2_256) T::CurrencyId => Option<LiquidityPoolOption>;
 		pub Balances get(fn balances): map hasher(blake2_256) T::LiquidityPoolId => T::Balance;
+		pub MinAdditionalCollateralRatio get(fn min_additional_collateral_ratio): Option<Permill>;
 	}
 }
 
@@ -70,6 +75,8 @@ decl_event!(
 		SetAdditionalCollateralRatio(AccountId, LiquidityPoolId, CurrencyId, Option<Permill>),
 		/// Set enabled trades (who, pool_id, currency_id, enabled)
 		SetEnabledTrades(AccountId, LiquidityPoolId, CurrencyId, Leverages),
+		/// Set min additional collateral ratio (min_additional_collateral_ratio)
+		SetMinAdditionalCollateralRatio (Permill),
 	}
 );
 
@@ -127,6 +134,14 @@ decl_module! {
 			Self::_set_enabled_trades(&who, pool_id, currency_id, enabled)?;
 			Self::deposit_event(RawEvent::SetEnabledTrades(who, pool_id, currency_id, enabled));
 		}
+
+		pub fn set_min_additional_collateral_ratio(origin, ratio: Permill) {
+			T::UpdateOrigin::try_origin(origin)
+				.map(|_| ())
+				.or_else(ensure_root)?;
+			MinAdditionalCollateralRatio::put(ratio);
+			Self::deposit_event(RawEvent::SetMinAdditionalCollateralRatio(ratio));
+		}
 	}
 }
 
@@ -138,6 +153,7 @@ decl_error! {
 		CannotRemovePool,
 		CannotDepositAmount,
 		CannotWithdrawAmount,
+		NotSetMinAdditionalCollateralRatio,
 	}
 }
 
@@ -300,7 +316,21 @@ impl<T: Trait> Module<T> {
 	) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, who), Error::<T>::NoPermission);
 		let mut pool = Self::liquidity_pool_options(&pool_id, &currency_id).unwrap_or_default();
-		pool.additional_collateral_ratio = ratio;
+		let min_ratio =
+			Self::min_additional_collateral_ratio().ok_or(Error::<T>::NotSetMinAdditionalCollateralRatio)?;
+
+		pool.additional_collateral_ratio =
+			ratio.map_or(
+				Some(min_ratio),
+				|x| {
+					if x < min_ratio {
+						Some(min_ratio)
+					} else {
+						Some(x)
+					}
+				},
+			);
+
 		<LiquidityPoolOptions<T>>::insert(&pool_id, &currency_id, pool);
 		Ok(())
 	}

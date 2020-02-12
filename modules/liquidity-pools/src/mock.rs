@@ -2,7 +2,7 @@
 
 use super::*;
 
-use frame_support::{impl_outer_origin, parameter_types, weights::Weight};
+use frame_support::{impl_outer_origin, ord_parameter_types, parameter_types, weights::Weight};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -12,8 +12,13 @@ use sp_runtime::{
 
 use orml_currencies::Currency;
 use primitives::{Balance, CurrencyId, LiquidityPoolId};
+use system::EnsureSignedBy;
 
 pub type AccountId = u32;
+
+ord_parameter_types! {
+	pub const One: AccountId = 0;
+}
 
 impl_outer_origin! {
 	pub enum Origin for Runtime {}
@@ -93,6 +98,7 @@ impl Trait for Runtime {
 	type CurrencyId = CurrencyId;
 	type PoolManager = PoolManager;
 	type ExistentialDeposit = ExistentialDeposit;
+	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
 }
 pub type ModuleLiquidityPools = Module<Runtime>;
 
