@@ -154,7 +154,7 @@ decl_error! {
 		NotPoolOwner,
 		NoBidSpread,
 		NoAskSpread,
-		NoAdditionalCollateralRatio,
+		NoMinAdditionalCollateralRatio,
 		NotValidSyntheticCurrencyId,
 	}
 }
@@ -425,7 +425,7 @@ impl<T: Trait> Module<T> {
 		collateral: T::Balance,
 	) -> SynthesisResult<T> {
 		let ratio = T::LiquidityPools::get_additional_collateral_ratio(pool_id, currency_id)
-			.ok_or(Error::<T>::NoAdditionalCollateralRatio)?;
+			.ok_or(Error::<T>::NoMinAdditionalCollateralRatio)?;
 		let additional = ratio * collateral;
 
 		collateral

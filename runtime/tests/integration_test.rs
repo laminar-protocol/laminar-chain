@@ -445,8 +445,7 @@ mod tests {
 			.execute_with(|| {
 				assert_ok!(create_pool());
 				assert_ok!(deposit_liquidity(dollar(20_000)));
-				assert_ok!(set_min_additional_collateral_ratio(Permill::from_percent(10)));
-				assert_ok!(set_additional_collateral_ratio(Permill::from_percent(10)));
+				//assert_ok!(set_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(set_spread(Permill::from_percent(1)));
 				assert_ok!(set_oracle_price(vec![
 					// collateral price set to `1` for calculation simplicity.
@@ -454,6 +453,12 @@ mod tests {
 					(CurrencyId::FEUR, Price::from_rational(3, 1))
 				]));
 
+				// can't use assert_noop, because `synthetic_protocol::PriceProvider::get_price` will combine data and write.
+				assert_eq!(
+					buy(&AccountId::from(ALICE), dollar(5000)),
+					Err(synthetic_protocol::Error::<Runtime>::NoMinAdditionalCollateralRatio.into())
+				);
+				assert_ok!(set_min_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(buy(&AccountId::from(ALICE), dollar(5000)));
 
 				assert_ok!(set_oracle_price(vec![(
@@ -536,9 +541,9 @@ mod tests {
 
 				assert_ok!(buy(&AccountId::from(ALICE), dollar(5000)));
 				assert_eq!(synthetic_balance(&AccountId::from(ALICE)), 1650165016501650165016);
-				assert_eq!(
+				assert_noop!(
 					remove_pool(&AccountId::from(POOL)),
-					Err(liquidity_pools::Error::<Runtime>::CannotRemovePool.into())
+					liquidity_pools::Error::<Runtime>::CannotRemovePool
 				);
 
 				assert_ok!(sell(

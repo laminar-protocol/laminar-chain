@@ -219,7 +219,7 @@ fn should_set_additional_collateral_ratio() {
 		);
 		assert_eq!(
 			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_additional_collateral_ratio(0, CurrencyId::FJPY),
-			None
+			Some(Permill::from_percent(120))
 		);
 	})
 }
@@ -231,57 +231,45 @@ fn should_fail_set_additional_collateral_ratio() {
 		assert_eq!(ModuleLiquidityPools::owners(0), Some(ALICE));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
 		assert_eq!(
-			ModuleLiquidityPools::set_additional_collateral_ratio(
-				Origin::signed(ALICE),
-				0,
-				CurrencyId::AUSD,
-				Some(Permill::from_percent(120)),
-			),
-			Err(Error::<Runtime>::NotSetMinAdditionalCollateralRatio.into()),
+			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_additional_collateral_ratio(0, CurrencyId::AUSD),
+			None,
+		);
+
+		assert_ok!(ModuleLiquidityPools::set_additional_collateral_ratio(
+			Origin::signed(ALICE),
+			0,
+			CurrencyId::AUSD,
+			Some(Permill::from_percent(120)),
+		));
+
+		assert_eq!(
+			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_additional_collateral_ratio(0, CurrencyId::AUSD),
+			None,
 		);
 
 		assert_ok!(ModuleLiquidityPools::set_min_additional_collateral_ratio(
 			Origin::ROOT,
-			Permill::from_percent(120)
-		));
-		assert_ok!(ModuleLiquidityPools::set_additional_collateral_ratio(
-			Origin::signed(ALICE),
-			0,
-			CurrencyId::AUSD,
-			None,
+			Permill::from_percent(150)
 		));
 
 		assert_eq!(
 			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_additional_collateral_ratio(0, CurrencyId::AUSD),
-			Some(Permill::from_percent(120))
-		);
-
-		assert_ok!(ModuleLiquidityPools::set_additional_collateral_ratio(
-			Origin::signed(ALICE),
-			0,
-			CurrencyId::AUSD,
-			Some(Permill::from_percent(100)),
-		));
-
-		assert_eq!(
-			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_additional_collateral_ratio(0, CurrencyId::AUSD),
-			Some(Permill::from_percent(120))
-		);
-
-		assert_ok!(ModuleLiquidityPools::set_additional_collateral_ratio(
-			Origin::signed(ALICE),
-			0,
-			CurrencyId::AUSD,
 			Some(Permill::from_percent(150)),
+		);
+
+		assert_ok!(ModuleLiquidityPools::set_min_additional_collateral_ratio(
+			Origin::ROOT,
+			Permill::from_percent(100)
 		));
 
 		assert_eq!(
 			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_additional_collateral_ratio(0, CurrencyId::AUSD),
-			Some(Permill::from_percent(150))
+			Some(Permill::from_percent(120))
 		);
+
 		assert_eq!(
 			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_additional_collateral_ratio(0, CurrencyId::FJPY),
-			None
+			Some(Permill::from_percent(100))
 		);
 	})
 }

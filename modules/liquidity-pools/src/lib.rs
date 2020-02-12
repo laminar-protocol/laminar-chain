@@ -76,7 +76,7 @@ decl_event!(
 		/// Set enabled trades (who, pool_id, currency_id, enabled)
 		SetEnabledTrades(AccountId, LiquidityPoolId, CurrencyId, Leverages),
 		/// Set min additional collateral ratio (min_additional_collateral_ratio)
-		SetMinAdditionalCollateralRatio (Permill),
+		SetMinAdditionalCollateralRatio(Permill),
 	}
 );
 
@@ -153,7 +153,6 @@ decl_error! {
 		CannotRemovePool,
 		CannotDepositAmount,
 		CannotWithdrawAmount,
-		NotSetMinAdditionalCollateralRatio,
 	}
 }
 
@@ -194,9 +193,18 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 		pool_id: Self::LiquidityPoolId,
 		currency_id: Self::CurrencyId,
 	) -> Option<Permill> {
+		let min_ratio = Self::min_additional_collateral_ratio()?;
+
 		Self::liquidity_pool_options(&pool_id, &currency_id)
 			.map(|pool| pool.additional_collateral_ratio)
-			.unwrap_or(None)
+			.map(|ratio| {
+				if ratio < Some(min_ratio) {
+					Some(min_ratio)
+				} else {
+					ratio
+				}
+			})
+			.unwrap_or(Some(min_ratio))
 	}
 
 	fn is_owner(pool_id: Self::LiquidityPoolId, who: &T::AccountId) -> bool {
@@ -316,21 +324,7 @@ impl<T: Trait> Module<T> {
 	) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, who), Error::<T>::NoPermission);
 		let mut pool = Self::liquidity_pool_options(&pool_id, &currency_id).unwrap_or_default();
-		let min_ratio =
-			Self::min_additional_collateral_ratio().ok_or(Error::<T>::NotSetMinAdditionalCollateralRatio)?;
-
-		pool.additional_collateral_ratio =
-			ratio.map_or(
-				Some(min_ratio),
-				|x| {
-					if x < min_ratio {
-						Some(min_ratio)
-					} else {
-						Some(x)
-					}
-				},
-			);
-
+		pool.additional_collateral_ratio = ratio;
 		<LiquidityPoolOptions<T>>::insert(&pool_id, &currency_id, pool);
 		Ok(())
 	}
