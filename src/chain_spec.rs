@@ -1,12 +1,15 @@
 use grandpa_primitives::AuthorityId as GrandpaId;
 use hex_literal::hex;
 use runtime::{
-	opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, CurrencyId, FinancialCouncilMembershipConfig,
-	GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, IndicesConfig, OperatorMembershipConfig,
-	SessionConfig, Signature, StakerStatus, StakingConfig, SudoConfig, SystemConfig, TokensConfig, WASM_BINARY,
+	opaque::Block, opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, CurrencyId,
+	FinancialCouncilMembershipConfig, GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, IndicesConfig,
+	OperatorMembershipConfig, SessionConfig, Signature, StakerStatus, StakingConfig, SudoConfig, SystemConfig,
+	TokensConfig, WASM_BINARY,
 };
+use sc_chain_spec::ChainSpecExtension;
 use sc_service;
 use sc_telemetry::TelemetryEndpoints;
+use serde::{Deserialize, Serialize};
 use serde_json::map::Map;
 use sp_consensus_babe::AuthorityId as BabeId;
 use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
@@ -16,8 +19,21 @@ use sp_runtime::Perbill;
 // Note this is the URL for the telemetry server
 //const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
+/// Node `ChainSpec` extensions.
+///
+/// Additional parameters for some Substrate core modules,
+/// customizable from the chain spec.
+#[derive(Default, Clone, Serialize, Deserialize, ChainSpecExtension)]
+#[serde(rename_all = "camelCase")]
+pub struct Extensions {
+	/// Block numbers with known hashes.
+	pub fork_blocks: sc_client::ForkBlocks<Block>,
+	/// Known bad block hashes.
+	pub bad_blocks: sc_client::BadBlocks<Block>,
+}
+
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
-pub type ChainSpec = sc_service::ChainSpec<GenesisConfig>;
+pub type ChainSpec = sc_service::ChainSpec<GenesisConfig, Extensions>;
 
 /// The chain specification option. This is expected to come in from the CLI and
 /// is little more than one of a number of alternatives which can easily be converted
@@ -171,7 +187,7 @@ impl Alternative {
 					)])),
 					Some("lami-test"),
 					Some(properties),
-					None,
+					Default::default(),
 				)
 			}
 		})
