@@ -4,7 +4,7 @@
 
 use super::*;
 use frame_support::{assert_noop, assert_ok};
-use mock::{alice, bob, ExtBuilder, SyntheticTokens, System, TestEvent, FEUR, ROOT};
+use mock::{alice, bob, ExtBuilder, Runtime, SyntheticTokens, System, TestEvent, FEUR, ROOT};
 use sp_runtime::{traits::BadOrigin, Permill};
 
 macro_rules! assert_noop_root {
@@ -91,7 +91,7 @@ fn liquidation_ratio_or_default() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_eq!(
 			SyntheticTokens::liquidation_ratio_or_default(FEUR),
-			LIQUIDATION_RATIO_DEFAULT
+			<Runtime as Trait>::DefaultLiquidationRatio::get()
 		);
 
 		let ratio = Permill::from_percent(1);
@@ -103,7 +103,10 @@ fn liquidation_ratio_or_default() {
 #[test]
 fn extreme_ratio_or_default() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_eq!(SyntheticTokens::extreme_ratio_or_default(FEUR), EXTREME_RATIO_DEFAULT);
+		assert_eq!(
+			SyntheticTokens::extreme_ratio_or_default(FEUR),
+			<Runtime as Trait>::DefaultExtremeRatio::get()
+		);
 
 		let ratio = Permill::from_percent(1);
 		assert_ok!(SyntheticTokens::set_extreme_ratio(ROOT, FEUR, ratio));
@@ -116,7 +119,7 @@ fn collateral_ratio_or_default() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_eq!(
 			SyntheticTokens::collateral_ratio_or_default(FEUR),
-			COLLATERAL_RATIO_DEFAULT
+			<Runtime as Trait>::DefaultCollateralRatio::get()
 		);
 
 		let ratio = Permill::from_percent(1);
@@ -142,7 +145,10 @@ fn no_incentive_if_equal_or_above_liquidation_ratio() {
 	ExtBuilder::default().build().execute_with(|| {
 		// equal
 		assert_eq!(
-			SyntheticTokens::incentive_ratio(FEUR, plus_one(LIQUIDATION_RATIO_DEFAULT.into())),
+			SyntheticTokens::incentive_ratio(
+				FEUR,
+				plus_one(<Runtime as Trait>::DefaultLiquidationRatio::get().into())
+			),
 			FixedU128::from_parts(0)
 		);
 
@@ -161,7 +167,7 @@ fn full_incentive_if_equal_or_below_extreme_ratio() {
 	ExtBuilder::default().build().execute_with(|| {
 		// equal
 		assert_eq!(
-			SyntheticTokens::incentive_ratio(FEUR, plus_one(EXTREME_RATIO_DEFAULT.into())),
+			SyntheticTokens::incentive_ratio(FEUR, plus_one(<Runtime as Trait>::DefaultExtremeRatio::get().into())),
 			FixedU128::from_rational(1, 1)
 		);
 

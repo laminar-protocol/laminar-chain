@@ -423,6 +423,9 @@ impl orml_tokens::Trait for Runtime {
 parameter_types! {
 	pub const GetLaminarTokenId: CurrencyId = CurrencyId::LAMI;
 	pub const SyntheticCurrencyIds: Vec<CurrencyId> = vec![CurrencyId::FEUR, CurrencyId::FJPY];
+	pub const DefaultExtremeRatio: Permill = Permill::from_percent(1); // TODO: set this
+	pub const DefaultLiquidationRatio: Permill = Permill::from_percent(5); // TODO: set this
+	pub const DefaultCollateralRatio: Permill = Permill::from_percent(10); // TODO: set this
 }
 
 pub type LaminarToken = BasicCurrencyAdapter<Runtime, pallet_balances::Module<Runtime>, Balance>;
@@ -445,6 +448,9 @@ impl synthetic_tokens::Trait for Runtime {
 	type Balance = Balance;
 	type LiquidityPoolId = LiquidityPoolId;
 	type SyntheticCurrencyIds = SyntheticCurrencyIds;
+	type DefaultExtremeRatio = DefaultExtremeRatio;
+	type DefaultLiquidationRatio = DefaultLiquidationRatio;
+	type DefaultCollateralRatio = DefaultCollateralRatio;
 	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
 }
 
