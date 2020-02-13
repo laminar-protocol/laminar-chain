@@ -100,6 +100,9 @@ parameter_types! {
 	pub const GetCollateralCurrencyId: CurrencyId = CurrencyId::AUSD;
 	pub const GetSyntheticCurrencyId: CurrencyId = CurrencyId::FEUR;
 	pub const SyntheticCurrencyIds: Vec<CurrencyId> = vec![CurrencyId::FEUR];
+	pub const DefaultExtremeRatio: Permill = Permill::from_percent(1);
+	pub const DefaultLiquidationRatio: Permill = Permill::from_percent(5);
+	pub const DefaultCollateralRatio: Permill = Permill::from_percent(10);
 }
 
 pub type CollateralCurrency = orml_currencies::Currency<Runtime, GetCollateralCurrencyId>;
@@ -111,6 +114,9 @@ impl module_synthetic_tokens::Trait for Runtime {
 	type Balance = Balance;
 	type LiquidityPoolId = LiquidityPoolId;
 	type SyntheticCurrencyIds = SyntheticCurrencyIds;
+	type DefaultExtremeRatio = DefaultExtremeRatio;
+	type DefaultLiquidationRatio = DefaultLiquidationRatio;
+	type DefaultCollateralRatio = DefaultCollateralRatio;
 	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
 }
 pub type SyntheticTokens = module_synthetic_tokens::Module<Runtime>;

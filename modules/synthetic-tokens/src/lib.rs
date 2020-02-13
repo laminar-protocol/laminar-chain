@@ -22,6 +22,9 @@ pub trait Trait: frame_system::Trait {
 	type CurrencyId: Parameter + Member + Copy + MaybeSerializeDeserialize;
 	type Balance: Parameter + Member + SimpleArithmetic + Default + Copy + MaybeSerializeDeserialize;
 	type LiquidityPoolId: Parameter + Member + Copy + MaybeSerializeDeserialize;
+	type DefaultExtremeRatio: Get<Permill>;
+	type DefaultLiquidationRatio: Get<Permill>;
+	type DefaultCollateralRatio: Get<Permill>;
 	type SyntheticCurrencyIds: Get<Vec<Self::CurrencyId>>;
 	type UpdateOrigin: EnsureOrigin<Self::Origin>;
 }
@@ -40,10 +43,6 @@ impl<T: Trait> Default for Position<T> {
 		}
 	}
 }
-
-const EXTREME_RATIO_DEFAULT: Permill = Permill::from_percent(1); // TODO: set this
-const LIQUIDATION_RATIO_DEFAULT: Permill = Permill::from_percent(5); // TODO: set this
-const COLLATERAL_RATIO_DEFAULT: Permill = Permill::from_percent(10); // TODO: set this
 
 decl_storage! {
 	trait Store for Module<T: Trait> as SyntheticTokens {
@@ -76,6 +75,10 @@ decl_module! {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
+
+		const DefaultExtremeRatio: Permill = T::DefaultExtremeRatio::get();
+		const DefaultLiquidationRatio: Permill = T::DefaultLiquidationRatio::get();
+		const DefaultCollateralRatio: Permill = T::DefaultCollateralRatio::get();
 
 		pub fn set_extreme_ratio(origin, currency_id: T::CurrencyId, ratio: Permill) {
 			T::UpdateOrigin::try_origin(origin)
@@ -185,15 +188,15 @@ impl<T: Trait> Module<T> {
 
 impl<T: Trait> Module<T> {
 	pub fn liquidation_ratio_or_default(currency_id: T::CurrencyId) -> Permill {
-		Self::liquidation_ratio(currency_id).unwrap_or(LIQUIDATION_RATIO_DEFAULT)
+		Self::liquidation_ratio(currency_id).unwrap_or(T::DefaultLiquidationRatio::get())
 	}
 
 	pub fn extreme_ratio_or_default(currency_id: T::CurrencyId) -> Permill {
-		Self::extreme_ratio(currency_id).unwrap_or(EXTREME_RATIO_DEFAULT)
+		Self::extreme_ratio(currency_id).unwrap_or(T::DefaultExtremeRatio::get())
 	}
 
 	pub fn collateral_ratio_or_default(currency_id: T::CurrencyId) -> Permill {
-		Self::collateral_ratio(currency_id).unwrap_or(COLLATERAL_RATIO_DEFAULT)
+		Self::collateral_ratio(currency_id).unwrap_or(T::DefaultCollateralRatio::get())
 	}
 }
 

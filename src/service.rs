@@ -1,20 +1,21 @@
-//! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
+//! Service implementation. Specialized wrapper over substrate service.
+
+use std::sync::Arc;
 
 use grandpa::{self, FinalityProofProvider as GrandpaFinalityProofProvider};
-use runtime::{self, opaque::Block, GenesisConfig, RuntimeApi};
-use sc_client::LongestChain;
+use runtime::{opaque::Block, GenesisConfig, RuntimeApi};
+use sc_client::{self, LongestChain};
 use sc_consensus_babe;
-use sc_executor::native_executor_instance;
-pub use sc_executor::NativeExecutor;
 use sc_network::construct_simple_protocol;
-use sc_service::{error::Error as ServiceError, AbstractService, Configuration, ServiceBuilder};
+use sc_service::{config::Configuration, error::Error as ServiceError, AbstractService, ServiceBuilder};
 use sp_inherents::InherentDataProviders;
-use std::sync::Arc;
-use std::time::Duration;
+
+use sc_executor::native_executor_instance;
 
 use crate::rpc;
 
-// Our native executor instance.
+// Declare an instance of the native executor named `Executor`. Include the wasm binary as the
+// equivalent wasm code.
 native_executor_instance!(
 	pub Executor,
 	runtime::api::dispatch,
@@ -51,13 +52,12 @@ macro_rules! new_full_start {
 			let select_chain = select_chain
 				.take()
 				.ok_or_else(|| sc_service::Error::SelectChainRequired)?;
-
-			let (grandpa_block_import, grandpa_link) =
-				grandpa::block_import::<_, _, _, runtime::RuntimeApi, _>(client.clone(), &*client, select_chain)?;
+			let (grandpa_block_import, grandpa_link) = grandpa::block_import(client.clone(), &*client, select_chain)?;
+			let justification_import = grandpa_block_import.clone();
 
 			let (block_import, babe_link) = sc_consensus_babe::block_import(
 				sc_consensus_babe::Config::get_or_compute(&*client)?,
-				grandpa_block_import.clone(),
+				grandpa_block_import,
 				client.clone(),
 				client.clone(),
 			)?;
@@ -65,7 +65,7 @@ macro_rules! new_full_start {
 			let import_queue = sc_consensus_babe::import_queue(
 				babe_link.clone(),
 				block_import.clone(),
-				Some(Box::new(grandpa_block_import)),
+				Some(Box::new(justification_import)),
 				None,
 				client.clone(),
 				client,
@@ -73,7 +73,6 @@ macro_rules! new_full_start {
 			)?;
 
 			import_setup = Some((block_import, grandpa_link, babe_link));
-
 			Ok(import_queue)
 		})?
 		.with_rpc_extensions(
@@ -86,8 +85,11 @@ macro_rules! new_full_start {
 		}};
 }
 
+/// A specialized configuration object for setting up the node..
+pub type NodeConfiguration = Configuration<GenesisConfig, crate::chain_spec::Extensions>;
+
 /// Builds a new service for a full client.
-pub fn new_full(config: Configuration<GenesisConfig>) -> Result<impl AbstractService, ServiceError> {
+pub fn new_full(config: NodeConfiguration) -> Result<impl AbstractService, ServiceError> {
 	let is_authority = config.roles.is_authority();
 	let force_authoring = config.force_authoring;
 	let name = config.name.clone();
@@ -149,7 +151,7 @@ pub fn new_full(config: Configuration<GenesisConfig>) -> Result<impl AbstractSer
 
 	let grandpa_config = grandpa::Config {
 		// FIXME #1578 make this available through chainspec
-		gossip_duration: Duration::from_millis(333),
+		gossip_duration: std::time::Duration::from_millis(333),
 		justification_period: 512,
 		name: Some(name),
 		observer_enabled: true,
@@ -162,13 +164,7 @@ pub fn new_full(config: Configuration<GenesisConfig>) -> Result<impl AbstractSer
 			// start the lightweight GRANDPA observer
 			service.spawn_task(
 				"grandpa-observer",
-				grandpa::run_grandpa_observer(
-					grandpa_config,
-					grandpa_link,
-					service.network(),
-					service.on_exit(),
-					service.spawn_task_handle(),
-				)?,
+				grandpa::run_grandpa_observer(grandpa_config, grandpa_link, service.network(), service.on_exit())?,
 			);
 		}
 		(true, false) => {
@@ -181,7 +177,6 @@ pub fn new_full(config: Configuration<GenesisConfig>) -> Result<impl AbstractSer
 				on_exit: service.on_exit(),
 				telemetry_on_connect: Some(service.telemetry_on_connect_stream()),
 				voting_rule: grandpa::VotingRulesBuilder::default().build(),
-				executor: service.spawn_task_handle(),
 			};
 
 			// the GRANDPA voter task is considered infallible, i.e.
@@ -197,7 +192,7 @@ pub fn new_full(config: Configuration<GenesisConfig>) -> Result<impl AbstractSer
 }
 
 /// Builds a new service for a light client.
-pub fn new_light(config: Configuration<GenesisConfig>) -> Result<impl AbstractService, ServiceError> {
+pub fn new_light(config: NodeConfiguration) -> Result<impl AbstractService, ServiceError> {
 	type RpcExtension = jsonrpc_core::IoHandler<sc_rpc::Metadata>;
 	let inherent_data_providers = InherentDataProviders::new();
 
