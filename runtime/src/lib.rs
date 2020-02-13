@@ -469,6 +469,7 @@ impl liquidity_pools::Trait for Runtime {
 	type CurrencyId = CurrencyId;
 	type PoolManager = SyntheticTokens;
 	type ExistentialDeposit = ExistentialDeposit;
+	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
 }
 
 parameter_types! {
@@ -516,7 +517,7 @@ construct_runtime!(
 		Prices: orml_prices::{Module, Storage},
 		SyntheticTokens: synthetic_tokens::{Module, Storage, Call, Event<T>},
 		SyntheticProtocol: synthetic_protocol::{Module, Call, Event<T>},
-		LiquidityPools: liquidity_pools::{Module, Storage, Call, Event<T>},
+		LiquidityPools: liquidity_pools::{Module, Storage, Call, Event<T>, Config},
 	}
 );
 
