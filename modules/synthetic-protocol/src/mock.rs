@@ -71,7 +71,7 @@ pub type System = system::Module<Runtime>;
 type Amount = i128;
 
 parameter_types! {
-	pub const ExistentialDeposit: u128 = 0;
+	pub const ExistentialDeposit: u128 = 100;
 }
 
 impl orml_tokens::Trait for Runtime {
@@ -79,7 +79,7 @@ impl orml_tokens::Trait for Runtime {
 	type Balance = Balance;
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
-	type ExistentialDeposit = ();
+	type ExistentialDeposit = ExistentialDeposit;
 	type DustRemoval = ();
 }
 

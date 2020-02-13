@@ -223,6 +223,62 @@ mod tests {
 	}
 
 	#[test]
+	fn test_buy_all_of_collateral() {
+		ExtBuilder::default()
+			.balances(vec![
+				(AccountId::from(POOL), CurrencyId::AUSD, 1000),
+				(AccountId::from(ALICE), CurrencyId::AUSD, 1000),
+			])
+			.build()
+			.execute_with(|| {
+				assert_ok!(create_pool());
+				assert_ok!(deposit_liquidity(1000));
+				assert_ok!(set_additional_collateral_ratio(Permill::from_percent(100)));
+				assert_ok!(set_spread(Permill::from_percent(1)));
+				assert_ok!(set_oracle_price(vec![
+					// collateral price set to `1` for calculation simplicity.
+					(CurrencyId::AUSD, Price::from_rational(1, 1)),
+					(CurrencyId::FEUR, Price::from_rational(1, 1))
+				]));
+
+				assert_eq!(collateral_balance(&AccountId::from(ALICE)), 1000);
+				assert_eq!(collateral_balance(&AccountId::from(POOL)), 0);
+				assert_eq!(liquidity(), 1000);
+				assert_eq!(collateral_balance(&ModuleTokens::account_id()), 0);
+				assert_ok!(buy(&AccountId::from(ALICE), 1000));
+				// synthetic = collateral / ask_price
+				// 990 ≈ 1000 / (1 * (1 + 0.01))
+				assert_eq!(synthetic_balance(&AccountId::from(ALICE)), 990);
+				// balance = balance - (synthetic * ask_price)
+				// 0 ≈ 1000 - (990 * 1.01)
+				assert_eq!(collateral_balance(&AccountId::from(ALICE)), 0);
+				// additional_collateral = (synthetic * price) * (1 + ratio) - collateral
+				// 980  = (990 * 1.0) * (1 + 1) - 1000
+				// 1000 = ALICE -> ModuleTokens
+				// 980 = LiquidityPool -> ModuleTokens
+				assert_eq!(collateral_balance(&ModuleTokens::account_id()), 1980);
+				// collateralise = balance - additional_collateral
+				// 20 = 1000 - 980
+				assert_eq!(liquidity(), 20);
+
+				assert_ok!(sell(&AccountId::from(ALICE), 990));
+				// synthetic balance is 190, below ExistentialDeposit
+				assert_eq!(synthetic_balance(&AccountId::from(ALICE)), 0);
+				// collateral = synthetic * bid_price
+				// 980 = 990 * (1 * (1 - 0.01))
+				assert_eq!(collateral_balance(&AccountId::from(ALICE)), 980);
+				// redeem_collateral = collateral_position - (synthetic * price) * (1 + ratio)
+				// 0 = (0 * 1) * (1 + 0.1)
+				assert_eq!(collateral_balance(&ModuleTokens::account_id()), 0);
+				// 980 = ModuleTokens -> ALICE
+				// 1000 = 1980 - 980
+				// 1000 = ModuleTokens -> LiquidityPool
+				// 1020 = 1000 + 20
+				assert_eq!(liquidity(), 1020);
+			});
+	}
+
+	#[test]
 	fn test_take_profit() {
 		ExtBuilder::default()
 			.balances(vec![

@@ -931,3 +931,27 @@ fn can_liquidate_with_not_allowed_position() {
 			assert_ok!(liquidate(BOB, burned_synthetic));
 		});
 }
+
+#[test]
+fn mint_all_of_collateral() {
+	ExtBuilder::default()
+		.balances(vec![
+			(ALICE, CurrencyId::AUSD, 1000),
+			(MOCK_POOL, CurrencyId::AUSD, 1000),
+		])
+		.synthetic_price(Price::from_rational(1, 1))
+		.one_percent_spread()
+		.additional_collateral_ratio(Permill::from_percent(100))
+		.build()
+		.execute_with(|| {
+			assert_eq!(mock_pool_liquidity(), 1000);
+			assert_eq!(collateral_balance(ALICE), 1000);
+			assert_eq!(synthetic_balance(ALICE), 0);
+
+			assert_ok!(mint_feur(ALICE, 1000));
+			assert_eq!(collateral_balance(ALICE), 0);
+			assert_eq!(synthetic_balance(ALICE), 990);
+			// Balance below ExistentialDeposit(100)
+			assert_eq!(mock_pool_liquidity(), 0);
+		});
+}
