@@ -179,7 +179,7 @@ impl<T: Trait> Module<T> {
 		);
 
 		ensure!(
-			T::LiquidityPools::is_allowed_position(pool_id, currency_id, Leverage::LongOne),
+			T::LiquidityPools::is_allowed_position(pool_id, currency_id, Leverage::LongTwo),
 			Error::<T>::NotSupportedByLiquidityPool
 		);
 
