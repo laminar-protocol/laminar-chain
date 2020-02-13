@@ -192,9 +192,9 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 	fn get_additional_collateral_ratio(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Permill {
 		let min_ratio = Self::min_additional_collateral_ratio();
 
-		Self::liquidity_pool_options(&pool_id, &currency_id)
-			.map_or(min_ratio, |pool| pool.additional_collateral_ratio.unwrap())
-			.max(min_ratio)
+		Self::liquidity_pool_options(&pool_id, &currency_id).map_or(min_ratio, |pool| {
+			pool.additional_collateral_ratio.unwrap_or(min_ratio).max(min_ratio)
+		})
 	}
 
 	fn is_owner(pool_id: Self::LiquidityPoolId, who: &T::AccountId) -> bool {

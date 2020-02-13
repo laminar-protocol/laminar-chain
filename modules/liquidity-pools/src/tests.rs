@@ -239,6 +239,18 @@ fn should_fail_set_additional_collateral_ratio() {
 			Origin::signed(ALICE),
 			0,
 			CurrencyId::AUSD,
+			None,
+		));
+
+		assert_eq!(
+			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_additional_collateral_ratio(0, CurrencyId::AUSD),
+			Permill::from_percent(0),
+		);
+
+		assert_ok!(ModuleLiquidityPools::set_additional_collateral_ratio(
+			Origin::signed(ALICE),
+			0,
+			CurrencyId::AUSD,
 			Some(Permill::from_percent(120)),
 		));
 
