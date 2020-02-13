@@ -13,12 +13,15 @@ name = "laminar"
 path = "src/main.rs"
 
 [dependencies]
-hex-literal = "0.2.1"
-serde_json = "1.0.41"
-jsonrpc-core = "14.0.3"
-
 futures = "0.3.1"
 log = "0.4.8"
+structopt = "0.3.8"
+hex-literal = "0.2.1"
+serde_json = "1.0.41"
+codec = { package = "parity-scale-codec", version = "1.0.0" }
+jsonrpc-core = "14.0.3"
+serde = { version = "1.0.102", features = ["derive"] }
+
 sp-io = { git = "https://github.com/paritytech/substrate.git" }
 sc-cli = { git = "https://github.com/paritytech/substrate.git" }
 sp-core = { git = "https://github.com/paritytech/substrate.git" }
@@ -33,17 +36,22 @@ grandpa = { package = "sc-finality-grandpa", git = "https://github.com/paritytec
 grandpa-primitives = { package = "sp-finality-grandpa", git = "https://github.com/paritytech/substrate.git" }
 sc-client = { git = "https://github.com/paritytech/substrate.git" }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git" }
+sc-basic-authorship = { git = "https://github.com/paritytech/substrate.git"}
 sc-telemetry = { git = "https://github.com/paritytech/substrate.git" }
 sc-rpc = { git = "https://github.com/paritytech/substrate" }
 sp-api = { git = "https://github.com/paritytech/substrate.git" }
 sp-consensus-babe = { git = "https://github.com/paritytech/substrate.git" }
+sc-client-db = { git = "https://github.com/paritytech/substrate.git", default-features = false }
+sc-offchain = { git = "https://github.com/paritytech/substrate.git" }
+sc-chain-spec = { git = "https://github.com/paritytech/substrate.git" }
 sc-consensus-babe = { git = "https://github.com/paritytech/substrate.git" }
-sc-basic-authorship = { git = "https://github.com/paritytech/substrate.git" }
-structopt = "0.3.8"
+sc-client-api = { git = "https://github.com/paritytech/substrate.git" }
+sc-authority-discovery = { git = "https://github.com/paritytech/substrate.git" }
 
 frame-rpc-system = { package = "substrate-frame-rpc-system", git = "https://github.com/paritytech/substrate" }
 pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/substrate" }
 orml-oracle-rpc = { path = "orml/oracle/rpc" }
+orml-utilities = { path = "orml/utilities" }
 
 runtime = { package = "laminar-runtime", path = "runtime" }
 
@@ -62,5 +70,6 @@ members = [
 	"orml/utilities",
 	"orml/currencies",
 	"orml/auction",
+	"orml/vesting",
 ]
 exclude = [ "runtime/wasm" ]
