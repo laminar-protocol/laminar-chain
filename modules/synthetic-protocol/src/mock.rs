@@ -188,11 +188,8 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 		Some(Self::spread())
 	}
 
-	fn get_additional_collateral_ratio(
-		_pool_id: Self::LiquidityPoolId,
-		_currency_id: Self::CurrencyId,
-	) -> Option<Permill> {
-		Some(Self::additional_collateral_ratio())
+	fn get_additional_collateral_ratio(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
+		Self::additional_collateral_ratio()
 	}
 
 	/// ALICE is the mock owner

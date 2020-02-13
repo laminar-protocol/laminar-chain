@@ -16,10 +16,7 @@ pub trait LiquidityPools<AccountId> {
 
 	fn get_bid_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill>;
 	fn get_ask_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill>;
-	fn get_additional_collateral_ratio(
-		pool_id: Self::LiquidityPoolId,
-		currency_id: Self::CurrencyId,
-	) -> Option<Permill>;
+	fn get_additional_collateral_ratio(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Permill;
 
 	fn is_owner(pool_id: Self::LiquidityPoolId, who: &AccountId) -> bool;
 

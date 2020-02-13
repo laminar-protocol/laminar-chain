@@ -2,8 +2,9 @@ use grandpa_primitives::AuthorityId as GrandpaId;
 use hex_literal::hex;
 use runtime::{
 	opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, CurrencyId, FinancialCouncilMembershipConfig,
-	GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, IndicesConfig, OperatorMembershipConfig,
-	SessionConfig, Signature, StakerStatus, StakingConfig, SudoConfig, SystemConfig, TokensConfig, WASM_BINARY,
+	GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, IndicesConfig, LiquidityPoolsConfig,
+	OperatorMembershipConfig, SessionConfig, Signature, StakerStatus, StakingConfig, SudoConfig, SystemConfig,
+	TokensConfig, WASM_BINARY,
 };
 use sc_service;
 use sc_telemetry::TelemetryEndpoints;
@@ -11,7 +12,7 @@ use serde_json::map::Map;
 use sp_consensus_babe::AuthorityId as BabeId;
 use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
-use sp_runtime::Perbill;
+pub use sp_runtime::{Perbill, Permill};
 
 // Note this is the URL for the telemetry server
 //const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -260,6 +261,9 @@ fn dev_genesis(
 				})
 				.collect(),
 		}),
+		liquidity_pools: Some(LiquidityPoolsConfig {
+			min_additional_collateral_ratio: Permill::from_percent(10), // default min additional collateral ratio
+		}),
 	}
 }
 
@@ -326,6 +330,9 @@ fn testnet_genesis(
 					]
 				})
 				.collect(),
+		}),
+		liquidity_pools: Some(LiquidityPoolsConfig {
+			min_additional_collateral_ratio: Permill::from_percent(10), // default min additional collateral ratio
 		}),
 	}
 }

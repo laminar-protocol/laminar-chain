@@ -511,7 +511,7 @@ construct_runtime!(
 		Prices: orml_prices::{Module, Storage},
 		SyntheticTokens: synthetic_tokens::{Module, Storage, Call, Event<T>},
 		SyntheticProtocol: synthetic_protocol::{Module, Call, Event<T>},
-		LiquidityPools: liquidity_pools::{Module, Storage, Call, Event<T>},
+		LiquidityPools: liquidity_pools::{Module, Storage, Call, Event<T>, Config},
 	}
 );
 

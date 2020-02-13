@@ -215,11 +215,11 @@ fn should_set_additional_collateral_ratio() {
 
 		assert_eq!(
 			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_additional_collateral_ratio(0, CurrencyId::AUSD),
-			Some(Permill::from_percent(120))
+			Permill::from_percent(120)
 		);
 		assert_eq!(
 			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_additional_collateral_ratio(0, CurrencyId::FJPY),
-			Some(Permill::from_percent(120))
+			Permill::from_percent(120)
 		);
 	})
 }
@@ -232,7 +232,7 @@ fn should_fail_set_additional_collateral_ratio() {
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
 		assert_eq!(
 			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_additional_collateral_ratio(0, CurrencyId::AUSD),
-			None,
+			Permill::from_percent(0),
 		);
 
 		assert_ok!(ModuleLiquidityPools::set_additional_collateral_ratio(
@@ -244,7 +244,7 @@ fn should_fail_set_additional_collateral_ratio() {
 
 		assert_eq!(
 			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_additional_collateral_ratio(0, CurrencyId::AUSD),
-			None,
+			Permill::from_percent(120),
 		);
 
 		assert_ok!(ModuleLiquidityPools::set_min_additional_collateral_ratio(
@@ -254,7 +254,7 @@ fn should_fail_set_additional_collateral_ratio() {
 
 		assert_eq!(
 			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_additional_collateral_ratio(0, CurrencyId::AUSD),
-			Some(Permill::from_percent(150)),
+			Permill::from_percent(150)
 		);
 
 		assert_ok!(ModuleLiquidityPools::set_min_additional_collateral_ratio(
@@ -264,12 +264,12 @@ fn should_fail_set_additional_collateral_ratio() {
 
 		assert_eq!(
 			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_additional_collateral_ratio(0, CurrencyId::AUSD),
-			Some(Permill::from_percent(120))
+			Permill::from_percent(120)
 		);
 
 		assert_eq!(
 			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_additional_collateral_ratio(0, CurrencyId::FJPY),
-			Some(Permill::from_percent(100))
+			Permill::from_percent(100)
 		);
 	})
 }

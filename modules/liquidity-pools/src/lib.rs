@@ -48,7 +48,7 @@ decl_storage! {
 		pub Owners get(fn owners): map hasher(blake2_256) T::LiquidityPoolId => Option<T::AccountId>;
 		pub LiquidityPoolOptions get(fn liquidity_pool_options): double_map hasher(blake2_256) T::LiquidityPoolId, hasher(blake2_256) T::CurrencyId => Option<LiquidityPoolOption>;
 		pub Balances get(fn balances): map hasher(blake2_256) T::LiquidityPoolId => T::Balance;
-		pub MinAdditionalCollateralRatio get(fn min_additional_collateral_ratio): Option<Permill>;
+		pub MinAdditionalCollateralRatio get(fn min_additional_collateral_ratio) config(): Permill;
 	}
 }
 
@@ -189,22 +189,12 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 		Self::liquidity_pool_options(&pool_id, &currency_id).map(|pool| pool.ask_spread)
 	}
 
-	fn get_additional_collateral_ratio(
-		pool_id: Self::LiquidityPoolId,
-		currency_id: Self::CurrencyId,
-	) -> Option<Permill> {
-		let min_ratio = Self::min_additional_collateral_ratio()?;
+	fn get_additional_collateral_ratio(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Permill {
+		let min_ratio = Self::min_additional_collateral_ratio();
 
 		Self::liquidity_pool_options(&pool_id, &currency_id)
-			.map(|pool| pool.additional_collateral_ratio)
-			.map(|ratio| {
-				if ratio < Some(min_ratio) {
-					Some(min_ratio)
-				} else {
-					ratio
-				}
-			})
-			.unwrap_or(Some(min_ratio))
+			.map_or(min_ratio, |pool| pool.additional_collateral_ratio.unwrap())
+			.max(min_ratio)
 	}
 
 	fn is_owner(pool_id: Self::LiquidityPoolId, who: &T::AccountId) -> bool {
