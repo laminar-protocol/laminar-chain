@@ -61,22 +61,20 @@ impl Convert<Price, Balance> for BalancePriceConverter {
 bitmask! {
 	#[derive(Encode, Decode, Default)]
 	pub mask Leverages: u16 where flags Leverage {
-		LongOne 	= 0b0000000000000001,
-		LongTwo 	= 0b0000000000000010,
-		LongThree 	= 0b0000000000000100,
-		LongFive 	= 0b0000000000001000,
-		LongTen 	= 0b0000000000010000,
-		LongTwenty 	= 0b0000000000100000,
-		LongThirty	= 0b0000000001000000,
-		LongFifty	= 0b0000000010000000,
-		ShortOne 	= 0b0000000100000000,
-		ShortTwo 	= 0b0000001000000000,
-		ShortThree 	= 0b0000010000000000,
-		ShortFive 	= 0b0000100000000000,
-		ShortTen 	= 0b0001000000000000,
-		ShortTwenty = 0b0010000000000000,
-		ShortThirty	= 0b0100000000000000,
-		ShortFifty	= 0b1000000000000000,
+		LongTwo 	= 0b0000000000000001,
+		LongThree 	= 0b0000000000000010,
+		LongFive 	= 0b0000000000000100,
+		LongTen 	= 0b0000000000001000,
+		LongTwenty 	= 0b0000000000010000,
+		LongThirty	= 0b0000000000100000,
+		LongFifty	= 0b0000000001000000,
+		ShortTwo 	= 0b0000000100000000,
+		ShortThree 	= 0b0000001000000000,
+		ShortFive 	= 0b0000010000000000,
+		ShortTen 	= 0b0000100000000000,
+		ShortTwenty	= 0b0001000000000000,
+		ShortThirty	= 0b0010000000000000,
+		ShortFifty	= 0b0100000000000000,
 	}
 }
 
@@ -88,22 +86,19 @@ impl Leverage {
 
 	#[allow(dead_code)]
 	fn is_short(&self) -> bool {
-		*self >= Leverage::ShortOne
+		*self >= Leverage::ShortTwo
 	}
 
 	#[allow(dead_code)]
 	fn value(&self) -> u8 {
-		let long_val = if self.is_long() { **self } else { ((**self) >> 8) };
-		match long_val {
-			0b0000000000000001 => 1,
-			0b0000000000000010 => 2,
-			0b0000000000000100 => 3,
-			0b0000000000001000 => 5,
-			0b0000000000010000 => 10,
-			0b0000000000100000 => 20,
-			0b0000000001000000 => 30,
-			0b0000000010000000 => 50,
-			_ => 0, // should never happen
+		match *self {
+			Leverage::LongTwo | Leverage::ShortTwo => 2,
+			Leverage::LongThree | Leverage::ShortThree => 3,
+			Leverage::LongFive | Leverage::ShortFive => 5,
+			Leverage::LongTen | Leverage::ShortTen => 10,
+			Leverage::LongTwenty | Leverage::ShortTwenty => 20,
+			Leverage::LongThirty | Leverage::ShortThirty => 30,
+			Leverage::LongFifty | Leverage::ShortFifty => 50,
 		}
 	}
 }
@@ -119,49 +114,62 @@ impl core::fmt::Debug for Leverages {
 mod tests {
 	use super::*;
 
+	const SHORTS: [Leverage; 7] = [
+		Leverage::ShortTwo,
+		Leverage::ShortThree,
+		Leverage::ShortFive,
+		Leverage::ShortTen,
+		Leverage::ShortTwenty,
+		Leverage::ShortThirty,
+		Leverage::ShortFifty,
+	];
+
+	const LONGS: [Leverage; 7] = [
+		Leverage::LongTwo,
+		Leverage::LongThree,
+		Leverage::LongFive,
+		Leverage::LongTen,
+		Leverage::LongTwenty,
+		Leverage::LongThirty,
+		Leverage::LongFifty,
+	];
+
 	#[test]
-	fn is_long_should_work() {
-		assert_eq!(Leverage::LongOne.is_long(), true);
-		assert_eq!(Leverage::LongTwo.is_long(), true);
-		assert_eq!(Leverage::LongThree.is_long(), true);
-		assert_eq!(Leverage::LongFive.is_long(), true);
-		assert_eq!(Leverage::LongTen.is_long(), true);
-		assert_eq!(Leverage::LongTwenty.is_long(), true);
-		assert_eq!(Leverage::LongThirty.is_long(), true);
-		assert_eq!(Leverage::LongFifty.is_long(), true);
-		assert_eq!(Leverage::ShortOne.is_long(), false);
-		assert_eq!(Leverage::ShortTwo.is_long(), false);
-		assert_eq!(Leverage::ShortThree.is_long(), false);
-		assert_eq!(Leverage::ShortFive.is_long(), false);
-		assert_eq!(Leverage::ShortTen.is_long(), false);
-		assert_eq!(Leverage::ShortTwenty.is_long(), false);
-		assert_eq!(Leverage::ShortThirty.is_long(), false);
-		assert_eq!(Leverage::ShortFifty.is_long(), false);
+	fn check_leverages_all_value() {
+		assert_eq!(*Leverages::all(), 0b0111111101111111);
+		assert_eq!(
+			*LONGS.iter().fold(Leverages::none(), |acc, i| (acc | *i)),
+			0b0000000001111111
+		);
+		assert_eq!(
+			*SHORTS.iter().fold(Leverages::none(), |acc, i| (acc | *i)),
+			0b0111111100000000
+		);
+
+		let mut merged = LONGS.clone().to_vec();
+		merged.append(&mut SHORTS.clone().to_vec());
+
+		assert_eq!(
+			merged.iter().fold(Leverages::none(), |acc, i| (acc | *i)),
+			Leverages::all()
+		);
 	}
 
 	#[test]
-	fn is_short_should_work() {
-		assert_eq!(Leverage::LongOne.is_short(), false);
-		assert_eq!(Leverage::LongTwo.is_short(), false);
-		assert_eq!(Leverage::LongThree.is_short(), false);
-		assert_eq!(Leverage::LongFive.is_short(), false);
-		assert_eq!(Leverage::LongTen.is_short(), false);
-		assert_eq!(Leverage::LongTwenty.is_short(), false);
-		assert_eq!(Leverage::LongThirty.is_short(), false);
-		assert_eq!(Leverage::LongFifty.is_short(), false);
-		assert_eq!(Leverage::ShortOne.is_short(), true);
-		assert_eq!(Leverage::ShortTwo.is_short(), true);
-		assert_eq!(Leverage::ShortThree.is_short(), true);
-		assert_eq!(Leverage::ShortFive.is_short(), true);
-		assert_eq!(Leverage::ShortTen.is_short(), true);
-		assert_eq!(Leverage::ShortTwenty.is_short(), true);
-		assert_eq!(Leverage::ShortThirty.is_short(), true);
-		assert_eq!(Leverage::ShortFifty.is_short(), true);
+	fn long_short_should_work() {
+		for leverage in SHORTS.iter() {
+			assert_eq!(leverage.is_short(), true);
+			assert_eq!(leverage.is_long(), false);
+		}
+
+		for leverage in LONGS.iter() {
+			assert_eq!(leverage.is_short(), false);
+			assert_eq!(leverage.is_long(), true);
+		}
 	}
 
 	#[test]
 	fn value_should_work() {
-		assert_eq!(Leverage::LongOne.value(), 1);
 		assert_eq!(Leverage::LongTwo.value(), 2);
 		assert_eq!(Leverage::LongThree.value(), 3);
 		assert_eq!(Leverage::LongFive.value(), 5);
@@ -169,7 +177,6 @@ mod tests {
 		assert_eq!(Leverage::LongTwenty.value(), 20);
 		assert_eq!(Leverage::LongThirty.value(), 30);
 		assert_eq!(Leverage::LongFifty.value(), 50);
-		assert_eq!(Leverage::ShortOne.value(), 1);
 		assert_eq!(Leverage::ShortTwo.value(), 2);
 		assert_eq!(Leverage::ShortThree.value(), 3);
 		assert_eq!(Leverage::ShortFive.value(), 5);
