@@ -214,6 +214,13 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 		Self::is_enabled(pool_id, currency_id, leverage)
 	}
 
+	fn can_mint(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> bool {
+		match Self::liquidity_pool_options(&pool_id, &currency_id) {
+			Some(pool) => pool.enabled != Leverages::none(),
+			None => false,
+		}
+	}
+
 	/// Check collateral balance of `pool_id`.
 	fn liquidity(pool_id: Self::LiquidityPoolId) -> Self::Balance {
 		Self::balances(&pool_id)

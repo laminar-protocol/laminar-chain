@@ -211,6 +211,10 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 		Self::is_allowed()
 	}
 
+	fn can_mint(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> bool {
+		Self::is_allowed()
+	}
+
 	fn liquidity(pool_id: Self::LiquidityPoolId) -> Self::Balance {
 		CollateralCurrency::balance(&pool_id)
 	}
