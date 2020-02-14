@@ -113,6 +113,14 @@ decl_module! {
 		pub fn withdraw_liquidity(origin, pool_id: T::LiquidityPoolId, amount: T::Balance) {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
+
+			let new_balance = Self::balances(&pool_id).checked_sub(&amount).ok_or(Error::<T>::CannotWithdrawAmount)?;
+
+			// check minimum balance
+			if new_balance < T::ExistentialDeposit::get() {
+				return Err(Error::<T>::CannotWithdrawExistentialDeposit.into());
+			}
+
 			Self::_withdraw_liquidity(&who, pool_id, amount)?;
 			Self::deposit_event(RawEvent::WithdrawLiquidity(who, pool_id, amount));
 		}
@@ -153,6 +161,7 @@ decl_error! {
 		CannotRemovePool,
 		CannotDepositAmount,
 		CannotWithdrawAmount,
+		CannotWithdrawExistentialDeposit,
 	}
 }
 
@@ -275,13 +284,9 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _withdraw_liquidity(who: &T::AccountId, pool_id: T::LiquidityPoolId, amount: T::Balance) -> DispatchResult {
-		let balance = Self::balances(&pool_id);
-		let new_balance = balance.checked_sub(&amount).ok_or(Error::<T>::CannotWithdrawAmount)?;
-
-		// check minimum balance
-		if new_balance < T::ExistentialDeposit::get() {
-			return Err(Error::<T>::CannotWithdrawAmount.into());
-		}
+		let new_balance = Self::balances(&pool_id)
+			.checked_sub(&amount)
+			.ok_or(Error::<T>::CannotWithdrawAmount)?;
 
 		// transfer amount to account
 		T::LiquidityCurrency::transfer(&Self::account_id(), who, amount)?;
