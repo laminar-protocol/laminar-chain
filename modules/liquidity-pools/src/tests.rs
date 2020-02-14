@@ -146,7 +146,7 @@ fn should_fail_withdraw_liquidity() {
 
 		assert_eq!(
 			ModuleLiquidityPools::withdraw_liquidity(Origin::signed(ALICE), 0, 1000),
-			Err(Error::<Runtime>::CannotWithdrawAmount.into()),
+			Err(Error::<Runtime>::CannotWithdrawExistentialDeposit.into()),
 		);
 
 		assert_eq!(ModuleLiquidityPools::balances(&0), 1000);

@@ -118,7 +118,7 @@ decl_module! {
 
 			// check minimum balance
 			if new_balance < T::ExistentialDeposit::get() {
-				return Err(Error::<T>::CannotWithdrawAmount.into());
+				return Err(Error::<T>::CannotWithdrawExistentialDeposit.into());
 			}
 
 			Self::_withdraw_liquidity(&who, pool_id, amount)?;
@@ -161,6 +161,7 @@ decl_error! {
 		CannotRemovePool,
 		CannotDepositAmount,
 		CannotWithdrawAmount,
+		CannotWithdrawExistentialDeposit,
 	}
 }
 
