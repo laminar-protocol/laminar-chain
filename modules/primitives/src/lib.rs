@@ -59,7 +59,7 @@ impl Convert<Price, Balance> for BalancePriceConverter {
 }
 
 bitmask! {
-	#[derive(Default)]
+	#[derive(Encode, Decode, Default)]
 	pub mask Leverages: u16 where flags Leverage {
 		LongTwo 	= 0b0000000000000001,
 		LongThree 	= 0b0000000000000010,
@@ -78,51 +78,19 @@ bitmask! {
 	}
 }
 
-impl Encode for Leverages {
-	fn size_hint(&self) -> usize {
-		16
-	}
-
-	fn encode(&self) -> Vec<u8> {
-		let mut r: Vec<u8> = Vec::with_capacity(self.size_hint());
-		for i in 0..self.size_hint() {
-			if self.mask & (1 << i as u16) != 0 {
-				r.push(i as u8);
-			}
-		}
-		r
-	}
-}
-
-impl Decode for Leverages {
-	fn decode<I: Input>(value: &mut I) -> Result<Self, Error> {
-		let mut leverages = Leverages::none();
-		for _ in 0..value.remaining_len()?.unwrap_or(0) {
-			if let Ok(byte) = value.read_byte() {
-				if let Ok(decoded) = Leverage::decode(&mut &[byte][..]) {
-					leverages.set(decoded);
-				}
-			}
-		}
-		Ok(leverages)
-	}
-}
-
 impl Encode for Leverage {
 	fn size_hint(&self) -> usize {
 		1
 	}
 
 	fn encode(&self) -> Vec<u8> {
-		let mut r: Vec<u8> = Vec::with_capacity(self.size_hint());
-		r.push(u16::trailing_zeros(**self) as u8);
-		r
+		vec![u16::trailing_zeros(**self) as u8]
 	}
 }
 
 impl Decode for Leverage {
 	fn decode<I: Input>(value: &mut I) -> Result<Self, Error> {
-		let trailing_zeros = value.read_byte()? as u16;
+		let trailing_zeros = value.read_byte()?;
 		if trailing_zeros >= 16 {
 			return Err(Error::from("overflow"));
 		}
@@ -214,11 +182,11 @@ mod tests {
 			0b0111111100000000
 		);
 
-		let mut merged = LONGS.clone().to_vec();
-		merged.append(&mut SHORTS.clone().to_vec());
+		let mut all = LONGS.clone().to_vec();
+		all.extend_from_slice(&SHORTS);
 
 		assert_eq!(
-			merged.iter().fold(Leverages::none(), |acc, i| (acc | *i)),
+			all.iter().fold(Leverages::none(), |acc, i| (acc | *i)),
 			Leverages::all()
 		);
 	}
@@ -256,19 +224,18 @@ mod tests {
 
 	#[test]
 	fn encode_decode_should_work() {
-		let mut merged = LONGS.clone().to_vec();
-		merged.append(&mut SHORTS.clone().to_vec());
-		for leverage in merged {
+		let mut all = LONGS.clone().to_vec();
+		all.extend_from_slice(&SHORTS);
+		for leverage in all {
 			let encoded = leverage.encode();
 			let decoded = Leverage::decode(&mut &encoded[..]).unwrap();
 			assert_eq!(leverage, decoded);
 		}
 
 		assert_eq!(Leverage::LongFifty, Leverage::decode(&mut &[6][..]).unwrap());
-		assert_eq!(
-			Leverages::from(Leverage::LongFifty | Leverage::ShortFifty),
-			Leverages::decode(&mut &[6, 14][..]).unwrap()
-		);
+
+		let fifty = Leverages::from(Leverage::LongFifty | Leverage::ShortFifty);
+		assert_eq!(fifty, Leverages::decode(&mut &fifty.encode()[..]).unwrap());
 
 		let none_encoded = Leverages::none().encode();
 		assert_eq!(Leverages::decode(&mut &none_encoded[..]).unwrap(), Leverages::none());
