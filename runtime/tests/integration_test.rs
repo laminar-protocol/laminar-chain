@@ -118,6 +118,7 @@ mod tests {
 	}
 
 	fn buy(who: &AccountId, amount: Balance) -> DispatchResult {
+		assert_ok!(synthetic_enabled(true));
 		ModuleProtocol::mint(
 			origin_of(who.clone()),
 			LIQUIDITY_POOL_ID,
@@ -143,6 +144,15 @@ mod tests {
 
 	fn synthetic_balance(who: &AccountId) -> Balance {
 		<Runtime as synthetic_protocol::Trait>::MultiCurrency::balance(CurrencyId::FEUR, &who)
+	}
+
+	fn synthetic_enabled(enabled: bool) -> DispatchResult {
+		ModuleLiquidityPools::set_synthetic_enabled(
+			origin_of(AccountId::from(POOL)),
+			LIQUIDITY_POOL_ID,
+			CurrencyId::FEUR,
+			enabled,
+		)
 	}
 
 	fn liquidity() -> Balance {
