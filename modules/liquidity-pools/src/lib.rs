@@ -77,6 +77,8 @@ decl_event!(
 		SetEnabledTrades(AccountId, LiquidityPoolId, CurrencyId, Leverages),
 		/// Set min additional collateral ratio (min_additional_collateral_ratio)
 		SetMinAdditionalCollateralRatio(Permill),
+		/// Set synthetic enabled (who, pool_id, currency_id, enabled)
+		SetSyntheticEnabled(AccountId, LiquidityPoolId, CurrencyId, bool),
 	}
 );
 
@@ -150,6 +152,12 @@ decl_module! {
 			MinAdditionalCollateralRatio::put(ratio);
 			Self::deposit_event(RawEvent::SetMinAdditionalCollateralRatio(ratio));
 		}
+
+		pub fn set_synthetic_enabled(origin, pool_id: T::LiquidityPoolId, currency_id: T::CurrencyId, enabled: bool) {
+			let who = ensure_signed(origin)?;
+			Self::_set_synthetic_enabled(&who, pool_id, currency_id, enabled)?;
+			Self::deposit_event(RawEvent::SetSyntheticEnabled(who, pool_id, currency_id, enabled));
+		}
 	}
 }
 
@@ -179,7 +187,7 @@ impl<T: Trait> Module<T> {
 
 	pub fn is_enabled(pool_id: T::LiquidityPoolId, currency_id: T::CurrencyId, leverage: Leverage) -> bool {
 		match Self::liquidity_pool_options(&pool_id, &currency_id) {
-			Some(pool) => pool.enabled.contains(leverage),
+			Some(pool) => pool.enabled_trades.contains(leverage),
 			None => false,
 		}
 	}
@@ -216,7 +224,7 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 
 	fn can_mint(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> bool {
 		match Self::liquidity_pool_options(&pool_id, &currency_id) {
-			Some(pool) => pool.enabled != Leverages::none(),
+			Some(pool) => pool.synthetic_enabled,
 			None => false,
 		}
 	}
@@ -339,7 +347,20 @@ impl<T: Trait> Module<T> {
 	) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, who), Error::<T>::NoPermission);
 		let mut pool = Self::liquidity_pool_options(&pool_id, &currency_id).unwrap_or_default();
-		pool.enabled = enabled;
+		pool.enabled_trades = enabled;
+		<LiquidityPoolOptions<T>>::insert(&pool_id, &currency_id, pool);
+		Ok(())
+	}
+
+	fn _set_synthetic_enabled(
+		who: &T::AccountId,
+		pool_id: T::LiquidityPoolId,
+		currency_id: T::CurrencyId,
+		enabled: bool,
+	) -> DispatchResult {
+		ensure!(Self::is_owner(pool_id, who), Error::<T>::NoPermission);
+		let mut pool = Self::liquidity_pool_options(&pool_id, &currency_id).unwrap_or_default();
+		pool.synthetic_enabled = enabled;
 		<LiquidityPoolOptions<T>>::insert(&pool_id, &currency_id, pool);
 		Ok(())
 	}
