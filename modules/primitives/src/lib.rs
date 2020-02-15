@@ -2,7 +2,7 @@
 
 use codec::{Decode, Encode, Error, Input};
 use sp_runtime::{traits::Convert, RuntimeDebug};
-use sp_std::vec;
+use sp_std::{prelude::*, vec};
 
 #[macro_use]
 extern crate bitmask;
