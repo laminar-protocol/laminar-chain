@@ -21,6 +21,8 @@ pub enum CurrencyId {
 	AUSD,
 	FEUR,
 	FJPY,
+	FBTC,
+	FETH,
 }
 
 // TODO: set the actual accuracy
