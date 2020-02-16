@@ -1,7 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, Error, Input};
 use sp_runtime::{traits::Convert, RuntimeDebug};
+use sp_std::{prelude::*, vec};
 
 #[macro_use]
 extern crate bitmask;
@@ -78,6 +79,42 @@ bitmask! {
 	}
 }
 
+impl Encode for Leverage {
+	fn size_hint(&self) -> usize {
+		1
+	}
+
+	fn encode(&self) -> Vec<u8> {
+		vec![u16::trailing_zeros(**self) as u8]
+	}
+}
+
+impl Decode for Leverage {
+	fn decode<I: Input>(value: &mut I) -> Result<Self, Error> {
+		let trailing_zeros = value.read_byte()?;
+		if trailing_zeros >= 16 {
+			return Err(Error::from("overflow"));
+		}
+		match trailing_zeros {
+			0 => Ok(Leverage::LongTwo),
+			1 => Ok(Leverage::LongThree),
+			2 => Ok(Leverage::LongFive),
+			3 => Ok(Leverage::LongTen),
+			4 => Ok(Leverage::LongTwenty),
+			5 => Ok(Leverage::LongThirty),
+			6 => Ok(Leverage::LongFifty),
+			8 => Ok(Leverage::ShortTwo),
+			9 => Ok(Leverage::ShortThree),
+			10 => Ok(Leverage::ShortFive),
+			11 => Ok(Leverage::ShortTen),
+			12 => Ok(Leverage::ShortTwenty),
+			13 => Ok(Leverage::ShortThirty),
+			14 => Ok(Leverage::ShortFifty),
+			_ => Err(Error::from("unknown value")),
+		}
+	}
+}
+
 impl Leverage {
 	#[allow(dead_code)]
 	fn is_long(&self) -> bool {
@@ -146,11 +183,11 @@ mod tests {
 			0b0111111100000000
 		);
 
-		let mut merged = LONGS.clone().to_vec();
-		merged.append(&mut SHORTS.clone().to_vec());
+		let mut all = LONGS.clone().to_vec();
+		all.extend_from_slice(&SHORTS);
 
 		assert_eq!(
-			merged.iter().fold(Leverages::none(), |acc, i| (acc | *i)),
+			all.iter().fold(Leverages::none(), |acc, i| (acc | *i)),
 			Leverages::all()
 		);
 	}
@@ -184,5 +221,27 @@ mod tests {
 		assert_eq!(Leverage::ShortTwenty.value(), 20);
 		assert_eq!(Leverage::ShortThirty.value(), 30);
 		assert_eq!(Leverage::ShortFifty.value(), 50);
+	}
+
+	#[test]
+	fn encode_decode_should_work() {
+		let mut all = LONGS.clone().to_vec();
+		all.extend_from_slice(&SHORTS);
+		for leverage in all {
+			let encoded = leverage.encode();
+			let decoded = Leverage::decode(&mut &encoded[..]).unwrap();
+			assert_eq!(leverage, decoded);
+		}
+
+		assert_eq!(Leverage::LongFifty, Leverage::decode(&mut &[6][..]).unwrap());
+
+		let fifty = Leverages::from(Leverage::LongFifty | Leverage::ShortFifty);
+		assert_eq!(fifty, Leverages::decode(&mut &fifty.encode()[..]).unwrap());
+
+		let none_encoded = Leverages::none().encode();
+		assert_eq!(Leverages::decode(&mut &none_encoded[..]).unwrap(), Leverages::none());
+
+		let all_encoded = Leverages::all().encode();
+		assert_eq!(Leverages::decode(&mut &all_encoded[..]).unwrap(), Leverages::all());
 	}
 }
