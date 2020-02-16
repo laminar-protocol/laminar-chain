@@ -22,6 +22,8 @@ pub trait LiquidityPools<AccountId> {
 
 	fn is_allowed_position(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId, leverage: Leverage) -> bool;
 
+	fn can_mint(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> bool;
+
 	/// Return collateral balance of `pool_id`.
 	fn liquidity(pool_id: Self::LiquidityPoolId) -> Self::Balance;
 	/// Deposit some amount of collateral to `pool_id`, from `source`.

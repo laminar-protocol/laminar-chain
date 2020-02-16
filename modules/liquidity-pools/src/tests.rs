@@ -83,7 +83,8 @@ fn should_disable_pool() {
 				bid_spread: Permill::zero(),
 				ask_spread: Permill::zero(),
 				additional_collateral_ratio: None,
-				enabled: Leverage::ShortTen | Leverage::LongFive,
+				enabled_trades: Leverage::ShortTen | Leverage::LongFive,
+				synthetic_enabled: false,
 			})
 		);
 		assert_ok!(ModuleLiquidityPools::disable_pool(Origin::signed(ALICE), 0));
@@ -171,7 +172,8 @@ fn should_set_spread() {
 			bid_spread: Permill::one(),
 			ask_spread: Permill::one(),
 			additional_collateral_ratio: None,
-			enabled: Leverages::none(),
+			enabled_trades: Leverages::none(),
+			synthetic_enabled: false,
 		};
 
 		assert_eq!(
@@ -211,7 +213,8 @@ fn should_set_additional_collateral_ratio() {
 			bid_spread: Permill::zero(),
 			ask_spread: Permill::zero(),
 			additional_collateral_ratio: Some(Permill::from_percent(120)),
-			enabled: Leverages::none(),
+			enabled_trades: Leverages::none(),
+			synthetic_enabled: false,
 		};
 
 		assert_eq!(
@@ -309,7 +312,8 @@ fn should_set_enabled_trades() {
 			bid_spread: Permill::zero(),
 			ask_spread: Permill::zero(),
 			additional_collateral_ratio: None,
-			enabled: Leverage::ShortTen | Leverage::LongFive,
+			enabled_trades: Leverage::ShortTen | Leverage::LongFive,
+			synthetic_enabled: false,
 		};
 
 		assert_eq!(
@@ -317,4 +321,32 @@ fn should_set_enabled_trades() {
 			Some(pool_option)
 		);
 	})
+}
+
+#[test]
+fn should_set_synthetic_enabled() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
+		assert_eq!(ModuleLiquidityPools::owners(0), Some(ALICE));
+		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
+		assert_ok!(ModuleLiquidityPools::set_synthetic_enabled(
+			Origin::signed(ALICE),
+			0,
+			CurrencyId::AUSD,
+			true,
+		));
+
+		let pool_option = LiquidityPoolOption {
+			bid_spread: Permill::zero(),
+			ask_spread: Permill::zero(),
+			additional_collateral_ratio: None,
+			enabled_trades: Leverages::none(),
+			synthetic_enabled: true,
+		};
+
+		assert_eq!(
+			ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD),
+			Some(pool_option)
+		);
+	});
 }
