@@ -74,6 +74,8 @@ decl_module! {
 
 		fn deposit_event() = default;
 
+		const GetCollateralCurrencyId: T::CurrencyId = T::GetCollateralCurrencyId::get();
+
 		pub fn mint(
 			origin,
 			pool_id: T::LiquidityPoolId,
