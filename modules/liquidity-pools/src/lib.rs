@@ -88,6 +88,8 @@ decl_module! {
 
 		fn deposit_event() = default;
 
+		const ExistentialDeposit: T::Balance = T::ExistentialDeposit::get();
+
 		pub fn create_pool(origin) {
 			let who = ensure_signed(origin)?;
 			let pool_id = Self::_create_pool(&who)?;

@@ -79,6 +79,7 @@ decl_module! {
 		const DefaultExtremeRatio: Permill = T::DefaultExtremeRatio::get();
 		const DefaultLiquidationRatio: Permill = T::DefaultLiquidationRatio::get();
 		const DefaultCollateralRatio: Permill = T::DefaultCollateralRatio::get();
+		const SyntheticCurrencyIds: Vec<T::CurrencyId> = T::SyntheticCurrencyIds::get();
 
 		pub fn set_extreme_ratio(origin, currency_id: T::CurrencyId, ratio: Permill) {
 			T::UpdateOrigin::try_origin(origin)
