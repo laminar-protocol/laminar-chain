@@ -7,5 +7,6 @@ pub struct LiquidityPoolOption {
 	pub bid_spread: Permill,
 	pub ask_spread: Permill,
 	pub additional_collateral_ratio: Option<Permill>,
-	pub enabled: Leverages,
+	pub enabled_trades: Leverages,
+	pub synthetic_enabled: bool,
 }

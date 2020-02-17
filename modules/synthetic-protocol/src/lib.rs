@@ -15,7 +15,6 @@ use orml_prices::Price;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
 use orml_utilities::FixedU128;
 
-use module_primitives::Leverage;
 use module_traits::LiquidityPools;
 
 mod mock;
@@ -181,7 +180,7 @@ impl<T: Trait> Module<T> {
 		);
 
 		ensure!(
-			T::LiquidityPools::is_allowed_position(pool_id, currency_id, Leverage::LongOne),
+			T::LiquidityPools::can_mint(pool_id, currency_id),
 			Error::<T>::NotSupportedByLiquidityPool
 		);
 
