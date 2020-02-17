@@ -32,6 +32,7 @@ mod synthetic_protocol {
 
 impl_outer_event! {
 	pub enum TestEvent for Runtime {
+		frame_system<T>,
 		orml_tokens<T>, orml_currencies<T>,
 		module_synthetic_tokens<T>, synthetic_protocol<T>,
 	}
@@ -65,6 +66,9 @@ impl frame_system::Trait for Runtime {
 	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
 	type ModuleToIndex = ();
+	type OnNewAccount = ();
+	type OnReapAccount = ();
+	type AccountData = ();
 }
 pub type System = system::Module<Runtime>;
 

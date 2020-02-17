@@ -223,7 +223,11 @@ fn dev_genesis(
 			changes_trie_config: Default::default(),
 		}),
 		pallet_indices: Some(IndicesConfig {
-			ids: endowed_accounts.clone(),
+			indices: endowed_accounts
+				.iter()
+				.enumerate()
+				.map(|(index, x)| (index as u32, (*x).clone()))
+				.collect::<Vec<_>>(),
 		}),
 		pallet_balances: Some(BalancesConfig {
 			balances: endowed_accounts.iter().cloned().map(|k| (k, INITIAL_BALANCE)).collect(),
@@ -293,7 +297,11 @@ fn testnet_genesis(
 			changes_trie_config: Default::default(),
 		}),
 		pallet_indices: Some(IndicesConfig {
-			ids: endowed_accounts.clone(),
+			indices: endowed_accounts
+				.iter()
+				.enumerate()
+				.map(|(index, x)| (index as u32, (*x).clone()))
+				.collect::<Vec<_>>(),
 		}),
 		pallet_balances: Some(BalancesConfig {
 			balances: endowed_accounts.iter().cloned().map(|k| (k, INITIAL_BALANCE)).collect(),

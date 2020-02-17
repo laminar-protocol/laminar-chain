@@ -53,6 +53,9 @@ impl system::Trait for Runtime {
 	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
 	type ModuleToIndex = ();
+	type OnNewAccount = ();
+	type OnReapAccount = ();
+	type AccountData = ();
 }
 
 parameter_types! {
