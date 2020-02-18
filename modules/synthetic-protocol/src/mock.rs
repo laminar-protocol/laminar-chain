@@ -12,7 +12,7 @@ use system::EnsureSignedBy;
 use orml_currencies::Currency;
 
 use module_primitives::{BalancePriceConverter, LiquidityPoolId};
-use module_traits::LiquidityPools;
+use module_traits::{LiquidityPools, SyntheticProtocolLiquidityPools};
 
 use super::*;
 
@@ -113,10 +113,10 @@ impl module_synthetic_tokens::Trait for Runtime {
 	type CurrencyId = CurrencyId;
 	type Balance = Balance;
 	type LiquidityPoolId = LiquidityPoolId;
-	type SyntheticCurrencyIds = SyntheticCurrencyIds;
 	type DefaultExtremeRatio = DefaultExtremeRatio;
 	type DefaultLiquidationRatio = DefaultLiquidationRatio;
 	type DefaultCollateralRatio = DefaultCollateralRatio;
+	type SyntheticCurrencyIds = SyntheticCurrencyIds;
 	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
 }
 pub type SyntheticTokens = module_synthetic_tokens::Module<Runtime>;
@@ -194,8 +194,8 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 		Some(Self::spread())
 	}
 
-	fn get_additional_collateral_ratio(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
-		Self::additional_collateral_ratio()
+	fn ensure_liquidity(_pool_id: Self::LiquidityPoolId) -> bool {
+		unimplemented!()
 	}
 
 	/// ALICE is the mock owner
@@ -208,10 +208,6 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 		_currency_id: Self::CurrencyId,
 		_leverage: Leverage,
 	) -> bool {
-		Self::is_allowed()
-	}
-
-	fn can_mint(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> bool {
 		Self::is_allowed()
 	}
 
@@ -228,6 +224,16 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 	}
 }
 
+impl SyntheticProtocolLiquidityPools<AccountId> for MockLiquidityPools {
+	fn get_additional_collateral_ratio(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
+		Self::additional_collateral_ratio()
+	}
+
+	fn can_mint(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> bool {
+		Self::is_allowed()
+	}
+}
+
 impl Trait for Runtime {
 	type Event = TestEvent;
 	type MultiCurrency = orml_currencies::Module<Runtime>;
@@ -235,6 +241,7 @@ impl Trait for Runtime {
 	type GetCollateralCurrencyId = GetCollateralCurrencyId;
 	type PriceProvider = MockPrices;
 	type LiquidityPools = MockLiquidityPools;
+	type SyntheticProtocolLiquidityPools = MockLiquidityPools;
 	type BalanceToPrice = BalancePriceConverter;
 	type PriceToBalance = BalancePriceConverter;
 }

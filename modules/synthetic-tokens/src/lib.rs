@@ -201,11 +201,15 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> LiquidityPoolManager<T::LiquidityPoolId> for Module<T> {
+impl<T: Trait> LiquidityPoolManager<T::LiquidityPoolId, T::Balance> for Module<T> {
 	fn can_remove(pool_id: T::LiquidityPoolId) -> bool {
 		T::SyntheticCurrencyIds::get()
 			.iter()
 			.map(|currency_id| -> (T::Balance, T::Balance) { Self::get_position(pool_id, *currency_id) })
 			.all(|x| x.1.is_zero())
+	}
+
+	fn get_required_deposit(_pool: <T as Trait>::LiquidityPoolId) -> <T as Trait>::Balance {
+		unimplemented!()
 	}
 }

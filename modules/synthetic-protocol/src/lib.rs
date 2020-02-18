@@ -15,7 +15,7 @@ use orml_prices::Price;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
 use orml_utilities::FixedU128;
 
-use module_traits::LiquidityPools;
+use module_traits::{LiquidityPools, SyntheticProtocolLiquidityPools};
 
 mod mock;
 mod tests;
@@ -27,6 +27,12 @@ pub trait Trait: module_synthetic_tokens::Trait {
 	type GetCollateralCurrencyId: Get<Self::CurrencyId>;
 	type PriceProvider: PriceProvider<Self::CurrencyId, Price>;
 	type LiquidityPools: LiquidityPools<
+		Self::AccountId,
+		CurrencyId = Self::CurrencyId,
+		Balance = Self::Balance,
+		LiquidityPoolId = Self::LiquidityPoolId,
+	>;
+	type SyntheticProtocolLiquidityPools: SyntheticProtocolLiquidityPools<
 		Self::AccountId,
 		CurrencyId = Self::CurrencyId,
 		Balance = Self::Balance,
@@ -180,7 +186,7 @@ impl<T: Trait> Module<T> {
 		);
 
 		ensure!(
-			T::LiquidityPools::can_mint(pool_id, currency_id),
+			T::SyntheticProtocolLiquidityPools::can_mint(pool_id, currency_id),
 			Error::<T>::NotSupportedByLiquidityPool
 		);
 
@@ -424,7 +430,7 @@ impl<T: Trait> Module<T> {
 		currency_id: T::CurrencyId,
 		collateral: T::Balance,
 	) -> SynthesisResult<T> {
-		let ratio = T::LiquidityPools::get_additional_collateral_ratio(pool_id, currency_id);
+		let ratio = T::SyntheticProtocolLiquidityPools::get_additional_collateral_ratio(pool_id, currency_id);
 		let additional = ratio * collateral;
 
 		collateral

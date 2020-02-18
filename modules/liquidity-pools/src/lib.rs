@@ -19,7 +19,7 @@ use sp_runtime::{
 	DispatchResult, ModuleId, Permill,
 };
 use sp_std::{prelude::*, result};
-use traits::{LiquidityPoolManager, LiquidityPools};
+use traits::{LiquidityPoolManager, LiquidityPools, SyntheticProtocolLiquidityPools};
 
 const MODULE_ID: ModuleId = ModuleId(*b"lami/lp_");
 
@@ -37,7 +37,7 @@ pub trait Trait: system::Trait {
 		+ MaybeSerializeDeserialize;
 	type Balance: Parameter + Member + SimpleArithmetic + Default + Copy + MaybeSerializeDeserialize;
 	type CurrencyId: FullCodec + Parameter + Member + Copy + MaybeSerializeDeserialize;
-	type PoolManager: LiquidityPoolManager<Self::LiquidityPoolId>;
+	type PoolManager: LiquidityPoolManager<Self::LiquidityPoolId, Self::Balance>;
 	type ExistentialDeposit: Get<Self::Balance>;
 	type UpdateOrigin: EnsureOrigin<Self::Origin>;
 }
@@ -208,12 +208,8 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 		Self::liquidity_pool_options(&pool_id, &currency_id).map(|pool| pool.ask_spread)
 	}
 
-	fn get_additional_collateral_ratio(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Permill {
-		let min_ratio = Self::min_additional_collateral_ratio();
-
-		Self::liquidity_pool_options(&pool_id, &currency_id).map_or(min_ratio, |pool| {
-			pool.additional_collateral_ratio.unwrap_or(min_ratio).max(min_ratio)
-		})
+	fn ensure_liquidity(_pool_id: Self::LiquidityPoolId) -> bool {
+		unimplemented!()
 	}
 
 	fn is_owner(pool_id: Self::LiquidityPoolId, who: &T::AccountId) -> bool {
@@ -222,13 +218,6 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 
 	fn is_allowed_position(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId, leverage: Leverage) -> bool {
 		Self::is_enabled(pool_id, currency_id, leverage)
-	}
-
-	fn can_mint(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> bool {
-		match Self::liquidity_pool_options(&pool_id, &currency_id) {
-			Some(pool) => pool.synthetic_enabled,
-			None => false,
-		}
 	}
 
 	/// Check collateral balance of `pool_id`.
@@ -252,6 +241,20 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 		amount: Self::Balance,
 	) -> DispatchResult {
 		Self::_withdraw_liquidity(dest, pool_id, amount)
+	}
+}
+
+impl<T: Trait> SyntheticProtocolLiquidityPools<T::AccountId> for Module<T> {
+	fn get_additional_collateral_ratio(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Permill {
+		let min_ratio = Self::min_additional_collateral_ratio();
+
+		Self::liquidity_pool_options(&pool_id, &currency_id).map_or(min_ratio, |pool| {
+			pool.additional_collateral_ratio.unwrap_or(min_ratio).max(min_ratio)
+		})
+	}
+
+	fn can_mint(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> bool {
+		Self::liquidity_pool_options(&pool_id, &currency_id).map_or(false, |pool| pool.synthetic_enabled)
 	}
 }
 

@@ -8,7 +8,7 @@ use crate::{
 use frame_support::assert_ok;
 use primitives::{CurrencyId, Leverage, Leverages};
 use sp_runtime::Permill;
-use traits::LiquidityPools;
+use traits::{LiquidityPools, SyntheticProtocolLiquidityPools};
 
 #[test]
 fn is_owner_should_work() {
@@ -223,11 +223,17 @@ fn should_set_additional_collateral_ratio() {
 		);
 
 		assert_eq!(
-			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_additional_collateral_ratio(0, CurrencyId::AUSD),
+			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::get_additional_collateral_ratio(
+				0,
+				CurrencyId::AUSD
+			),
 			Permill::from_percent(120)
 		);
 		assert_eq!(
-			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_additional_collateral_ratio(0, CurrencyId::FJPY),
+			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::get_additional_collateral_ratio(
+				0,
+				CurrencyId::FJPY
+			),
 			Permill::from_percent(120)
 		);
 	})
@@ -240,7 +246,10 @@ fn should_fail_set_additional_collateral_ratio() {
 		assert_eq!(ModuleLiquidityPools::owners(0), Some(ALICE));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
 		assert_eq!(
-			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_additional_collateral_ratio(0, CurrencyId::AUSD),
+			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::get_additional_collateral_ratio(
+				0,
+				CurrencyId::AUSD
+			),
 			Permill::from_percent(0),
 		);
 
@@ -252,7 +261,10 @@ fn should_fail_set_additional_collateral_ratio() {
 		));
 
 		assert_eq!(
-			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_additional_collateral_ratio(0, CurrencyId::AUSD),
+			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::get_additional_collateral_ratio(
+				0,
+				CurrencyId::AUSD
+			),
 			Permill::from_percent(0),
 		);
 
@@ -264,7 +276,10 @@ fn should_fail_set_additional_collateral_ratio() {
 		));
 
 		assert_eq!(
-			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_additional_collateral_ratio(0, CurrencyId::AUSD),
+			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::get_additional_collateral_ratio(
+				0,
+				CurrencyId::AUSD
+			),
 			Permill::from_percent(120),
 		);
 
@@ -274,7 +289,10 @@ fn should_fail_set_additional_collateral_ratio() {
 		));
 
 		assert_eq!(
-			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_additional_collateral_ratio(0, CurrencyId::AUSD),
+			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::get_additional_collateral_ratio(
+				0,
+				CurrencyId::AUSD
+			),
 			Permill::from_percent(150)
 		);
 
@@ -284,12 +302,18 @@ fn should_fail_set_additional_collateral_ratio() {
 		));
 
 		assert_eq!(
-			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_additional_collateral_ratio(0, CurrencyId::AUSD),
+			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::get_additional_collateral_ratio(
+				0,
+				CurrencyId::AUSD
+			),
 			Permill::from_percent(120)
 		);
 
 		assert_eq!(
-			<ModuleLiquidityPools as LiquidityPools<AccountId>>::get_additional_collateral_ratio(0, CurrencyId::FJPY),
+			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::get_additional_collateral_ratio(
+				0,
+				CurrencyId::FJPY
+			),
 			Permill::from_percent(100)
 		);
 	})
@@ -329,6 +353,10 @@ fn should_set_synthetic_enabled() {
 		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_eq!(ModuleLiquidityPools::owners(0), Some(ALICE));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
+		assert_eq!(
+			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::can_mint(0, CurrencyId::AUSD),
+			false
+		);
 		assert_ok!(ModuleLiquidityPools::set_synthetic_enabled(
 			Origin::signed(ALICE),
 			0,
@@ -347,6 +375,11 @@ fn should_set_synthetic_enabled() {
 		assert_eq!(
 			ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD),
 			Some(pool_option)
+		);
+
+		assert_eq!(
+			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::can_mint(0, CurrencyId::AUSD),
+			true
 		);
 	});
 }
