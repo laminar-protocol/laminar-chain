@@ -227,7 +227,7 @@ fn dev_genesis(
 				.iter()
 				.enumerate()
 				.map(|(index, x)| (index as u32, (*x).clone()))
-				.collect::<Vec<_>>(),
+				.collect(),
 		}),
 		pallet_balances: Some(BalancesConfig {
 			balances: endowed_accounts.iter().cloned().map(|k| (k, INITIAL_BALANCE)).collect(),
@@ -236,7 +236,7 @@ fn dev_genesis(
 			keys: initial_authorities
 				.iter()
 				.map(|x| (x.0.clone(), session_keys(x.2.clone(), x.3.clone())))
-				.collect::<Vec<_>>(),
+				.collect(),
 		}),
 		pallet_staking: Some(StakingConfig {
 			current_era: 0,
@@ -301,7 +301,7 @@ fn testnet_genesis(
 				.iter()
 				.enumerate()
 				.map(|(index, x)| (index as u32, (*x).clone()))
-				.collect::<Vec<_>>(),
+				.collect(),
 		}),
 		pallet_balances: Some(BalancesConfig {
 			balances: endowed_accounts.iter().cloned().map(|k| (k, INITIAL_BALANCE)).collect(),
@@ -310,7 +310,7 @@ fn testnet_genesis(
 			keys: initial_authorities
 				.iter()
 				.map(|x| (x.0.clone(), session_keys(x.2.clone(), x.3.clone())))
-				.collect::<Vec<_>>(),
+				.collect(),
 		}),
 		pallet_staking: Some(StakingConfig {
 			current_era: 0,

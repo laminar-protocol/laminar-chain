@@ -7,12 +7,12 @@ mod tests {
 	pub use laminar_runtime::{
 		AccountId,
 		CurrencyId::{self, AUSD, FEUR, FJPY},
-		LiquidityPoolId, Runtime,
+		LiquidityPoolId, MinimumCount, Runtime,
 	};
 	pub use module_primitives::{Balance, Leverage, Leverages};
 	pub use orml_prices::Price;
 	use orml_traits::{BasicCurrency, MultiCurrency};
-	pub use sp_runtime::{traits::Zero, DispatchResult, Perbill, Permill};
+	pub use sp_runtime::{traits::OnFinalize, traits::Zero, DispatchResult, Perbill, Permill};
 
 	pub fn origin_of(who: &AccountId) -> <Runtime as system::Trait>::Origin {
 		<Runtime as system::Trait>::Origin::signed((*who).clone())
@@ -41,12 +41,6 @@ mod tests {
 			AccountId::from([107u8; 32]),
 			AccountId::from([108u8; 32]),
 			AccountId::from([109u8; 32]),
-			AccountId::from([110u8; 32]),
-			AccountId::from([111u8; 32]),
-			AccountId::from([112u8; 32]),
-			AccountId::from([113u8; 32]),
-			AccountId::from([114u8; 32]),
-			AccountId::from([115u8; 32]),
 		];
 	}
 
@@ -78,7 +72,7 @@ mod tests {
 			.unwrap();
 
 			pallet_collective::GenesisConfig::<Runtime, pallet_collective::Instance3> {
-				members: OracleList::get().iter().map(|oracle| (*oracle).clone()).collect(),
+				members: OracleList::get(),
 				phantom: Default::default(),
 			}
 			.assimilate_storage(&mut t)
@@ -128,13 +122,14 @@ mod tests {
 		)
 	}
 
-	fn set_oracle_price(oracles: &mut Vec<AccountId>, prices: Vec<(CurrencyId, Price)>) -> DispatchResult {
-		prices.iter().for_each(|(c, p)| {
-			for _ in 1..=3 {
-				let oracle = (*oracles).pop().unwrap();
-				assert_ok!(ModuleOracle::feed_value(origin_of(&oracle), *c, *p));
-			}
-		});
+	fn set_oracle_price(prices: Vec<(CurrencyId, Price)>) -> DispatchResult {
+		ModuleOracle::on_finalize(0);
+		for i in 1..=MinimumCount::get() {
+			assert_ok!(ModuleOracle::feed_values(
+				origin_of(&OracleList::get()[i as usize]),
+				prices.clone()
+			));
+		}
 		Ok(())
 	}
 
@@ -203,7 +198,6 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				let mut oracles = OracleList::get().clone();
 				assert_ok!(create_pool());
 				assert_ok!(set_enabled_trades(FEUR));
 				assert_ok!(synthetic_enabled(FEUR, true));
@@ -211,14 +205,11 @@ mod tests {
 				assert_ok!(set_min_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(set_additional_collateral_ratio(FEUR, Permill::from_percent(10)));
 				assert_ok!(set_spread(FEUR, Permill::from_percent(1)));
-				assert_ok!(set_oracle_price(
-					&mut oracles,
-					vec![
-						// collateral price set to `1` for calculation simplicity.
-						(AUSD, Price::from_rational(1, 1)),
-						(FEUR, Price::from_rational(3, 1))
-					]
-				));
+				assert_ok!(set_oracle_price(vec![
+					// collateral price set to `1` for calculation simplicity.
+					(AUSD, Price::from_rational(1, 1)),
+					(FEUR, Price::from_rational(3, 1))
+				]));
 
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
@@ -263,21 +254,17 @@ mod tests {
 			.balances(vec![(POOL::get(), AUSD, 1000), (ALICE::get(), AUSD, 1000)])
 			.build()
 			.execute_with(|| {
-				let mut oracles = OracleList::get().clone();
 				assert_ok!(create_pool());
 				assert_ok!(set_enabled_trades(FEUR));
 				assert_ok!(synthetic_enabled(FEUR, true));
 				assert_ok!(deposit_liquidity(1000));
 				assert_ok!(set_additional_collateral_ratio(FEUR, Permill::from_percent(100)));
 				assert_ok!(set_spread(FEUR, Permill::from_percent(1)));
-				assert_ok!(set_oracle_price(
-					&mut oracles,
-					vec![
-						// collateral price set to `1` for calculation simplicity.
-						(AUSD, Price::from_rational(1, 1)),
-						(FEUR, Price::from_rational(1, 1))
-					]
-				));
+				assert_ok!(set_oracle_price(vec![
+					// collateral price set to `1` for calculation simplicity.
+					(AUSD, Price::from_rational(1, 1)),
+					(FEUR, Price::from_rational(1, 1))
+				]));
 
 				assert_eq!(collateral_balance(&ALICE::get()), 1000);
 				assert_eq!(collateral_balance(&POOL::get()), 0);
@@ -325,7 +312,6 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				let mut oracles = OracleList::get().clone();
 				assert_ok!(create_pool());
 				assert_ok!(set_enabled_trades(FEUR));
 				assert_ok!(synthetic_enabled(FEUR, true));
@@ -333,14 +319,11 @@ mod tests {
 				assert_ok!(set_min_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(set_additional_collateral_ratio(FEUR, Permill::from_percent(10)));
 				assert_ok!(set_spread(FEUR, Permill::from_percent(1)));
-				assert_ok!(set_oracle_price(
-					&mut oracles,
-					vec![
-						// collateral price set to `1` for calculation simplicity.
-						(AUSD, Price::from_rational(1, 1)),
-						(FEUR, Price::from_rational(3, 1))
-					]
-				));
+				assert_ok!(set_oracle_price(vec![
+					// collateral price set to `1` for calculation simplicity.
+					(AUSD, Price::from_rational(1, 1)),
+					(FEUR, Price::from_rational(3, 1))
+				]));
 
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
@@ -355,10 +338,7 @@ mod tests {
 				//assert_eq!(liquidity(), dollar(9555));
 				assert_eq!(liquidity(), 9554455445544554455447);
 
-				assert_ok!(set_oracle_price(
-					&mut oracles,
-					vec![(FEUR, Price::from_rational(31, 10))]
-				));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(31, 10))]));
 
 				assert_ok!(sell(&ALICE::get(), FEUR, synthetic_balance(&ALICE::get(), FEUR)));
 				assert_eq!(synthetic_balance(&ALICE::get(), FEUR), 0);
@@ -377,7 +357,6 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				let mut oracles = OracleList::get().clone();
 				assert_ok!(create_pool());
 				assert_ok!(set_enabled_trades(FEUR));
 				assert_ok!(synthetic_enabled(FEUR, true));
@@ -385,14 +364,11 @@ mod tests {
 				assert_ok!(set_min_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(set_additional_collateral_ratio(FEUR, Permill::from_percent(10)));
 				assert_ok!(set_spread(FEUR, Permill::from_percent(1)));
-				assert_ok!(set_oracle_price(
-					&mut oracles,
-					vec![
-						// collateral price set to `1` for calculation simplicity.
-						(AUSD, Price::from_rational(1, 1)),
-						(FEUR, Price::from_rational(3, 1))
-					]
-				));
+				assert_ok!(set_oracle_price(vec![
+					// collateral price set to `1` for calculation simplicity.
+					(AUSD, Price::from_rational(1, 1)),
+					(FEUR, Price::from_rational(3, 1))
+				]));
 
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
@@ -407,13 +383,13 @@ mod tests {
 				//assert_eq!(liquidity(), dollar(9555));
 				assert_eq!(liquidity(), 9554455445544554455447);
 
-				assert_ok!(set_oracle_price(&mut oracles, vec![(FEUR, Price::from_rational(2, 1))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(2, 1))]));
 
 				assert_ok!(sell(&ALICE::get(), FEUR, synthetic_balance(&ALICE::get(), FEUR)));
 				assert_eq!(synthetic_balance(&ALICE::get(), FEUR), 0);
-				assert_eq!(collateral_balance(&ALICE::get()), 9900990099009900990097);
+				assert_eq!(collateral_balance(&ALICE::get()), 8267326732673267326731);
 				assert_eq!(synthetic_collateral_balance(), 0);
-				assert_eq!(liquidity(), 10099009900990099009903);
+				assert_eq!(liquidity(), 11732673267326732673269);
 			});
 	}
 
@@ -427,7 +403,6 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				let mut oracles = OracleList::get().clone();
 				assert_ok!(create_pool());
 				assert_ok!(set_enabled_trades(FEUR));
 				assert_ok!(synthetic_enabled(FEUR, true));
@@ -435,14 +410,11 @@ mod tests {
 				assert_ok!(set_min_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(set_additional_collateral_ratio(FEUR, Permill::from_percent(10)));
 				assert_ok!(set_spread(FEUR, Permill::from_percent(1)));
-				assert_ok!(set_oracle_price(
-					&mut oracles,
-					vec![
-						// collateral price set to `1` for calculation simplicity.
-						(AUSD, Price::from_rational(1, 1)),
-						(FEUR, Price::from_rational(3, 1))
-					]
-				));
+				assert_ok!(set_oracle_price(vec![
+					// collateral price set to `1` for calculation simplicity.
+					(AUSD, Price::from_rational(1, 1)),
+					(FEUR, Price::from_rational(3, 1))
+				]));
 
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
@@ -464,40 +436,40 @@ mod tests {
 				assert_eq!(synthetic_collateral_balance(), 10891089108910891089106);
 				assert_eq!(liquidity(), 19108910891089108910894);
 
-				assert_ok!(set_oracle_price(&mut oracles, vec![(FEUR, Price::from_rational(2, 1))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(2, 1))]));
 
 				// ALICE buy synthetic and BOB sell synthetic
 				assert_ok!(buy(&ALICE::get(), FEUR, dollar(2000)));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(3000));
-				assert_eq!(synthetic_balance(&ALICE::get(), FEUR), 2310231023102310231022);
+				assert_eq!(synthetic_balance(&ALICE::get(), FEUR), 2640264026402640264025);
 				assert_eq!(synthetic_collateral_balance(), 13069306930693069306926);
 				assert_eq!(liquidity(), 18930693069306930693074);
 				assert_ok!(sell(&BOB::get(), FEUR, dollar(1000)));
-				assert_eq!(collateral_balance(&BOB::get()), 7970000000000000000000);
+				assert_eq!(collateral_balance(&BOB::get()), 6980000000000000000000);
 				assert_eq!(synthetic_balance(&BOB::get(), FEUR), 650165016501650165016);
-				assert_eq!(synthetic_collateral_balance(), 9769306930693069306925);
-				assert_eq!(liquidity(), 19260693069306930693075);
+				assert_eq!(synthetic_collateral_balance(), 7238943894389438943890);
+				assert_eq!(liquidity(), 22781056105610561056110);
 
 				// ALICE sell synthetic and BOB buy synthetic
 				assert_ok!(sell(&ALICE::get(), FEUR, dollar(1000)));
-				assert_eq!(collateral_balance(&ALICE::get()), 5970000000000000000000);
-				assert_eq!(synthetic_balance(&ALICE::get(), FEUR), 1310231023102310231022);
-				assert_eq!(synthetic_collateral_balance(), 6469306930693069306925);
-				assert_eq!(liquidity(), 19590693069306930693075);
+				assert_eq!(collateral_balance(&ALICE::get()), 4980000000000000000000);
+				assert_eq!(synthetic_balance(&ALICE::get(), FEUR), 1640264026402640264025);
+				assert_eq!(synthetic_collateral_balance(), 5038943894389438943890);
+				assert_eq!(liquidity(), 23001056105610561056110);
 				assert_ok!(buy(&BOB::get(), FEUR, dollar(2000)));
-				assert_eq!(collateral_balance(&BOB::get()), 5970000000000000000000);
-				assert_eq!(synthetic_balance(&BOB::get(), FEUR), 1310231023102310231022);
-				assert_eq!(synthetic_collateral_balance(), 8647524752475247524745);
-				assert_eq!(liquidity(), 19412475247524752475255);
+				assert_eq!(collateral_balance(&BOB::get()), 4980000000000000000000);
+				assert_eq!(synthetic_balance(&BOB::get(), FEUR), 1640264026402640264025);
+				assert_eq!(synthetic_collateral_balance(), 7217161716171617161710);
+				assert_eq!(liquidity(), 22822838283828382838290);
 
 				assert_ok!(sell(&ALICE::get(), FEUR, synthetic_balance(&ALICE::get(), FEUR)));
 				assert_ok!(sell(&BOB::get(), FEUR, synthetic_balance(&BOB::get(), FEUR)));
 				assert_eq!(synthetic_balance(&ALICE::get(), FEUR), 0);
-				assert_eq!(collateral_balance(&ALICE::get()), 9861386138613861386135);
+				assert_eq!(collateral_balance(&ALICE::get()), 8227722772277227722769);
 				assert_eq!(synthetic_balance(&BOB::get(), FEUR), 0);
-				assert_eq!(collateral_balance(&BOB::get()), 9861386138613861386135);
+				assert_eq!(collateral_balance(&BOB::get()), 8227722772277227722769);
 				assert_eq!(synthetic_collateral_balance(), 0);
-				assert_eq!(liquidity(), 20277227722772277227730);
+				assert_eq!(liquidity(), 23544554455445544554462);
 			});
 	}
 
@@ -511,7 +483,6 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				let mut oracles = OracleList::get().clone();
 				assert_ok!(create_pool());
 				assert_ok!(set_enabled_trades(FEUR));
 				assert_ok!(set_enabled_trades(FJPY));
@@ -523,15 +494,12 @@ mod tests {
 				assert_ok!(set_additional_collateral_ratio(FJPY, Permill::from_percent(10)));
 				assert_ok!(set_spread(FEUR, Permill::from_percent(1)));
 				assert_ok!(set_spread(FJPY, Permill::from_percent(1)));
-				assert_ok!(set_oracle_price(
-					&mut oracles,
-					vec![
-						// collateral price set to `1` for calculation simplicity.
-						(AUSD, Price::from_rational(1, 1)),
-						(FEUR, Price::from_rational(3, 1)),
-						(FJPY, Price::from_rational(4, 1))
-					]
-				));
+				assert_ok!(set_oracle_price(vec![
+					// collateral price set to `1` for calculation simplicity.
+					(AUSD, Price::from_rational(1, 1)),
+					(FEUR, Price::from_rational(3, 1)),
+					(FJPY, Price::from_rational(4, 1))
+				]));
 
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
@@ -553,8 +521,8 @@ mod tests {
 				assert_eq!(liquidity(), 39108910891089108910894);
 
 				// change price
-				assert_ok!(set_oracle_price(&mut oracles, vec![(FEUR, Price::from_rational(2, 1))]));
-				assert_ok!(set_oracle_price(&mut oracles, vec![(FJPY, Price::from_rational(5, 1))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(2, 1))]));
+				assert_ok!(set_oracle_price(vec![(FJPY, Price::from_rational(5, 1))]));
 
 				// ALICE buy synthetic FJPY and BOB sell FEUR
 				assert_ok!(buy(&ALICE::get(), FJPY, dollar(2000)));
@@ -565,35 +533,35 @@ mod tests {
 
 				assert_ok!(buy(&BOB::get(), FEUR, dollar(2000)));
 				assert_eq!(collateral_balance(&BOB::get()), dollar(3000));
-				assert_eq!(synthetic_balance(&BOB::get(), FEUR), 660066006600660066006);
+				assert_eq!(synthetic_balance(&BOB::get(), FEUR), 990099009900990099009);
 				assert_eq!(synthetic_collateral_balance(), 15247524752475247524742);
 				assert_eq!(liquidity(), 38752475247524752475258);
 
 				// ALICE sell synthetic FEUR and BOB sell synthetic FJPY
 				assert_ok!(sell(&ALICE::get(), FEUR, dollar(100)));
-				assert_eq!(collateral_balance(&ALICE::get()), 3297000000000000000000);
+				assert_eq!(collateral_balance(&ALICE::get()), 3198000000000000000000);
 				assert_eq!(synthetic_balance(&ALICE::get(), FEUR), 1550165016501650165016);
-				assert_eq!(synthetic_collateral_balance(), 14917524752475247524742);
-				assert_eq!(liquidity(), 38785475247524752475258);
+				assert_eq!(synthetic_collateral_balance(), 13212343234323432343224);
+				assert_eq!(liquidity(), 40589656765676567656776);
 
 				assert_ok!(sell(&BOB::get(), FJPY, dollar(100)));
 				assert_eq!(collateral_balance(&BOB::get()), 3495000000000000000000);
 				assert_eq!(synthetic_balance(&BOB::get(), FJPY), 1137623762376237623762);
-				assert_eq!(synthetic_collateral_balance(), 14422524752475247524742);
-				assert_eq!(liquidity(), 38785475247524752475258);
+				assert_eq!(synthetic_collateral_balance(), 12717343234323432343224);
+				assert_eq!(liquidity(), 40589656765676567656776);
 
 				// ALICE sell synthetic FJPY and BOB sell synthetic FEUR
 				assert_ok!(sell(&ALICE::get(), FJPY, dollar(100)));
-				assert_eq!(collateral_balance(&ALICE::get()), 3792000000000000000000);
+				assert_eq!(collateral_balance(&ALICE::get()), 3693000000000000000000);
 				assert_eq!(synthetic_balance(&ALICE::get(), FJPY), 296039603960396039603);
-				assert_eq!(synthetic_collateral_balance(), 13927524752475247524742);
-				assert_eq!(liquidity(), 38785475247524752475258);
+				assert_eq!(synthetic_collateral_balance(), 12222343234323432343224);
+				assert_eq!(liquidity(), 40589656765676567656776);
 
 				assert_ok!(sell(&BOB::get(), FEUR, dollar(100)));
-				assert_eq!(collateral_balance(&BOB::get()), 3792000000000000000000);
-				assert_eq!(synthetic_balance(&BOB::get(), FEUR), 560066006600660066006);
-				assert_eq!(synthetic_collateral_balance(), 13597524752475247524742);
-				assert_eq!(liquidity(), 38818475247524752475258);
+				assert_eq!(collateral_balance(&BOB::get()), 3693000000000000000000);
+				assert_eq!(synthetic_balance(&BOB::get(), FEUR), 890099009900990099009);
+				assert_eq!(synthetic_collateral_balance(), 12002343234323432343224);
+				assert_eq!(liquidity(), 40611656765676567656776);
 			});
 	}
 
@@ -606,7 +574,6 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				let mut oracles = OracleList::get().clone();
 				assert_ok!(create_pool());
 				assert_ok!(set_enabled_trades(FEUR));
 				assert_ok!(synthetic_enabled(FEUR, true));
@@ -614,21 +581,15 @@ mod tests {
 				assert_ok!(set_min_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(set_additional_collateral_ratio(FEUR, Permill::from_percent(10)));
 				assert_ok!(set_spread(FEUR, Permill::from_percent(1)));
-				assert_ok!(set_oracle_price(
-					&mut oracles,
-					vec![
-						// collateral price set to `1` for calculation simplicity.
-						(AUSD, Price::from_rational(1, 1)),
-						(FEUR, Price::from_rational(3, 1))
-					]
-				));
+				assert_ok!(set_oracle_price(vec![
+					// collateral price set to `1` for calculation simplicity.
+					(AUSD, Price::from_rational(1, 1)),
+					(FEUR, Price::from_rational(3, 1))
+				]));
 
 				assert_ok!(buy(&ALICE::get(), FEUR, dollar(5000)));
 
-				assert_ok!(set_oracle_price(
-					&mut oracles,
-					vec![(FEUR, Price::from_rational(300, 90))]
-				));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(300, 90))]));
 
 				assert_ok!(liquidate(&ALICE::get(), FEUR, synthetic_balance(&ALICE::get(), FEUR)));
 				assert_eq!(liquidity(), 19554455445544554455447);
@@ -648,7 +609,6 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				let mut oracles = OracleList::get().clone();
 				assert_ok!(create_pool());
 				assert_ok!(set_enabled_trades(FEUR));
 				assert_ok!(synthetic_enabled(FEUR, true));
@@ -656,21 +616,15 @@ mod tests {
 				assert_ok!(set_min_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(set_additional_collateral_ratio(FEUR, Permill::from_percent(1)));
 				assert_ok!(set_spread(FEUR, Permill::from_percent(1)));
-				assert_ok!(set_oracle_price(
-					&mut oracles,
-					vec![
-						// collateral price set to `1` for calculation simplicity.
-						(AUSD, Price::from_rational(1, 1)),
-						(FEUR, Price::from_rational(3, 1))
-					]
-				));
+				assert_ok!(set_oracle_price(vec![
+					// collateral price set to `1` for calculation simplicity.
+					(AUSD, Price::from_rational(1, 1)),
+					(FEUR, Price::from_rational(3, 1))
+				]));
 
 				assert_ok!(buy(&ALICE::get(), FEUR, dollar(5000)));
 
-				assert_ok!(set_oracle_price(
-					&mut oracles,
-					vec![(FEUR, Price::from_rational(300, 90))]
-				));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(300, 90))]));
 
 				assert_ok!(liquidate(&ALICE::get(), FEUR, 1));
 				assert_ok!(add_collateral(&POOL::get(), FEUR, dollar(20_000)));
@@ -690,7 +644,6 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				let mut oracles = OracleList::get().clone();
 				assert_ok!(create_pool());
 				assert_ok!(set_enabled_trades(FEUR));
 				assert_ok!(synthetic_enabled(FEUR, true));
@@ -698,21 +651,15 @@ mod tests {
 				assert_ok!(set_min_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(set_additional_collateral_ratio(FEUR, Permill::from_percent(10)));
 				assert_ok!(set_spread(FEUR, Permill::from_percent(1)));
-				assert_ok!(set_oracle_price(
-					&mut oracles,
-					vec![
-						// collateral price set to `1` for calculation simplicity.
-						(AUSD, Price::from_rational(1, 1)),
-						(FEUR, Price::from_rational(3, 1))
-					]
-				));
+				assert_ok!(set_oracle_price(vec![
+					// collateral price set to `1` for calculation simplicity.
+					(AUSD, Price::from_rational(1, 1)),
+					(FEUR, Price::from_rational(3, 1))
+				]));
 
 				assert_ok!(buy(&ALICE::get(), FEUR, dollar(5000)));
 
-				assert_ok!(set_oracle_price(
-					&mut oracles,
-					vec![(FEUR, Price::from_rational(300, 90))]
-				));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(300, 90))]));
 
 				assert_ok!(liquidate(&ALICE::get(), FEUR, dollar(800)));
 				assert_eq!(collateral_balance(&ALICE::get()), 7640000000000000000000);
@@ -737,7 +684,6 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				let mut oracles = OracleList::get().clone();
 				assert_ok!(create_pool());
 				assert_ok!(set_enabled_trades(FEUR));
 				assert_ok!(synthetic_enabled(FEUR, true));
@@ -745,14 +691,11 @@ mod tests {
 				assert_ok!(set_min_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(set_additional_collateral_ratio(FEUR, Permill::from_percent(10)));
 				assert_ok!(set_spread(FEUR, Permill::from_percent(1)));
-				assert_ok!(set_oracle_price(
-					&mut oracles,
-					vec![
-						// collateral price set to `1` for calculation simplicity.
-						(AUSD, Price::from_rational(1, 1)),
-						(FEUR, Price::from_rational(3, 1))
-					]
-				));
+				assert_ok!(set_oracle_price(vec![
+					// collateral price set to `1` for calculation simplicity.
+					(AUSD, Price::from_rational(1, 1)),
+					(FEUR, Price::from_rational(3, 1))
+				]));
 
 				assert_ok!(buy(&ALICE::get(), FEUR, dollar(5000)));
 				assert_eq!(synthetic_balance(&ALICE::get(), FEUR), 1650165016501650165016);
