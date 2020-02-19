@@ -4,9 +4,7 @@ use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, traits::Get, Parameter, StorageMap};
 use frame_system::{self as system, ensure_root};
 use sp_runtime::{
-	traits::{
-		AccountIdConversion, EnsureOrigin, MaybeSerializeDeserialize, Member, Saturating, SimpleArithmetic, Zero,
-	},
+	traits::{AccountIdConversion, AtLeast32Bit, EnsureOrigin, MaybeSerializeDeserialize, Member, Saturating, Zero},
 	ModuleId, Permill,
 };
 
@@ -20,7 +18,7 @@ mod tests;
 pub trait Trait: frame_system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 	type CurrencyId: Parameter + Member + Copy + MaybeSerializeDeserialize;
-	type Balance: Parameter + Member + SimpleArithmetic + Default + Copy + MaybeSerializeDeserialize;
+	type Balance: Parameter + Member + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 	type LiquidityPoolId: Parameter + Member + Copy + MaybeSerializeDeserialize;
 	type DefaultExtremeRatio: Get<Permill>;
 	type DefaultLiquidationRatio: Get<Permill>;

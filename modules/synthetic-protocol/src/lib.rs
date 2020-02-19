@@ -3,7 +3,7 @@
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedSub, Convert, Saturating, Zero},
-	DispatchError, DispatchResult, Permill,
+	DispatchError, DispatchResult, PerThing, Permill,
 };
 use sp_std::{convert::TryInto, result};
 // FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
