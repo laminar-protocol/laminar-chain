@@ -54,7 +54,7 @@ impl system::Trait for Runtime {
 	type Version = ();
 	type ModuleToIndex = ();
 	type OnNewAccount = ();
-	type OnReapAccount = ();
+	type OnKilledAccount = ();
 	type AccountData = ();
 }
 

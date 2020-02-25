@@ -67,7 +67,7 @@ impl frame_system::Trait for Runtime {
 	type Version = ();
 	type ModuleToIndex = ();
 	type OnNewAccount = ();
-	type OnReapAccount = ();
+	type OnKilledAccount = ();
 	type AccountData = ();
 }
 pub type System = system::Module<Runtime>;
