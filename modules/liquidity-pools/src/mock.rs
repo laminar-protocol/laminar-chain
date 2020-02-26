@@ -86,9 +86,12 @@ impl orml_tokens::Trait for Runtime {
 
 pub struct PoolManager;
 
-impl LiquidityPoolManager<LiquidityPoolId> for PoolManager {
+impl LiquidityPoolManager<LiquidityPoolId, Balance> for PoolManager {
 	fn can_remove(_pool_id: LiquidityPoolId) -> bool {
 		true
+	}
+	fn get_required_deposit(_pool: LiquidityPoolId) -> Balance {
+		unimplemented!()
 	}
 }
 

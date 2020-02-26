@@ -495,6 +495,7 @@ impl synthetic_protocol::Trait for Runtime {
 	type GetCollateralCurrencyId = GetCollateralCurrencyId;
 	type PriceProvider = orml_prices::Module<Runtime>;
 	type LiquidityPools = liquidity_pools::Module<Runtime>;
+	type SyntheticProtocolLiquidityPools = liquidity_pools::Module<Runtime>;
 	type BalanceToPrice = BalancePriceConverter;
 	type PriceToBalance = BalancePriceConverter;
 }

@@ -1,11 +1,12 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::FullCodec;
+use codec::{Decode, Encode, FullCodec};
 use frame_support::Parameter;
 use primitives::Leverage;
+use sp_arithmetic::Fixed64;
 use sp_runtime::{
 	traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member},
-	DispatchResult, Permill,
+	DispatchResult, Permill, RuntimeDebug,
 };
 use sp_std::fmt::Debug;
 
@@ -16,13 +17,12 @@ pub trait LiquidityPools<AccountId> {
 
 	fn get_bid_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill>;
 	fn get_ask_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill>;
-	fn get_additional_collateral_ratio(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Permill;
+
+	fn ensure_liquidity(pool_id: Self::LiquidityPoolId) -> bool;
 
 	fn is_owner(pool_id: Self::LiquidityPoolId, who: &AccountId) -> bool;
 
 	fn is_allowed_position(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId, leverage: Leverage) -> bool;
-
-	fn can_mint(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> bool;
 
 	/// Return collateral balance of `pool_id`.
 	fn liquidity(pool_id: Self::LiquidityPoolId) -> Self::Balance;
@@ -32,6 +32,27 @@ pub trait LiquidityPools<AccountId> {
 	fn withdraw_liquidity(dest: &AccountId, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult;
 }
 
-pub trait LiquidityPoolManager<LiquidityPoolId> {
+pub trait LiquidityPoolManager<LiquidityPoolId, Balance> {
 	fn can_remove(pool: LiquidityPoolId) -> bool;
+	fn get_required_deposit(pool: LiquidityPoolId) -> Balance;
+}
+
+pub trait SyntheticProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
+	fn get_additional_collateral_ratio(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Permill;
+	fn can_mint(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> bool;
+}
+
+pub trait MarginProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
+	fn get_swap_rate(pair: TradingPair) -> Fixed64; // TODO: replace Fixed64 with Fixed128 https://github.com/laminar-protocol/open-runtime-module-library/issues/82
+	fn get_accumulated_swap_rate(pair: TradingPair) -> Fixed64; // TODO: replace Fixed64 with Fixed128 https://github.com/laminar-protocol/open-runtime-module-library/issues/82
+	fn can_open_position(pair: TradingPair, leverage: Leverage, leveraged_amount: Self::Balance) -> bool;
+}
+
+#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct TradingPair {}
+
+#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct SwapPeriod<Moment> {
+	pub period: Moment,
+	pub start: Moment,
 }
