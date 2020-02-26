@@ -6,26 +6,11 @@ use grandpa::{self, FinalityProofProvider as GrandpaFinalityProofProvider};
 use runtime::{opaque::Block, GenesisConfig, RuntimeApi};
 use sc_client::{self, LongestChain};
 use sc_consensus_babe;
-use sc_network::construct_simple_protocol;
 use sc_service::{config::Configuration, error::Error as ServiceError, AbstractService, ServiceBuilder};
 use sp_inherents::InherentDataProviders;
 
-use sc_executor::native_executor_instance;
-
+use crate::executor::Executor;
 use crate::rpc;
-
-// Declare an instance of the native executor named `Executor`. Include the wasm binary as the
-// equivalent wasm code.
-native_executor_instance!(
-	pub Executor,
-	runtime::api::dispatch,
-	runtime::native_version,
-);
-
-construct_simple_protocol! {
-	/// Demo protocol attachment for substrate.
-	pub struct NodeProtocol where Block = Block { }
-}
 
 /// Starts a `ServiceBuilder` for a full service.
 ///
@@ -40,7 +25,7 @@ macro_rules! new_full_start {
 		let builder = sc_service::ServiceBuilder::new_full::<
 			runtime::opaque::Block,
 			runtime::RuntimeApi,
-			crate::service::Executor,
+			crate::executor::Executor,
 		>($config)?
 		.with_select_chain(|_config, backend| Ok(sc_client::LongestChain::new(backend.clone())))?
 		.with_transaction_pool(|config, client, _fetcher| {
@@ -59,7 +44,6 @@ macro_rules! new_full_start {
 				sc_consensus_babe::Config::get_or_compute(&*client)?,
 				grandpa_block_import,
 				client.clone(),
-				client.clone(),
 			)?;
 
 			let import_queue = sc_consensus_babe::import_queue(
@@ -67,7 +51,6 @@ macro_rules! new_full_start {
 				block_import.clone(),
 				Some(Box::new(justification_import)),
 				None,
-				client.clone(),
 				client,
 				inherent_data_providers.clone(),
 			)?;
@@ -75,11 +58,27 @@ macro_rules! new_full_start {
 			import_setup = Some((block_import, grandpa_link, babe_link));
 			Ok(import_queue)
 		})?
-		.with_rpc_extensions(
-			|client, pool, _backend, fetcher, _remote_blockchain| -> Result<RpcExtension, _> {
-				Ok(crate::rpc::create(client, pool, crate::rpc::LightDeps::none(fetcher)))
-			},
-		)?;
+		.with_rpc_extensions(|builder| -> Result<RpcExtension, _> {
+			let babe_link = import_setup
+				.as_ref()
+				.map(|s| &s.2)
+				.expect("BabeLink is present for full services or set up failed; qed.");
+			let deps = crate::rpc::FullDeps {
+				client: builder.client().clone(),
+				pool: builder.pool(),
+				select_chain: builder
+					.select_chain()
+					.cloned()
+					.expect("SelectChain is present for full services or set up failed; qed."),
+				babe: crate::rpc::BabeDeps {
+					keystore: builder.keystore(),
+					babe_config: sc_consensus_babe::BabeLink::config(babe_link).clone(),
+					shared_epoch_changes: sc_consensus_babe::BabeLink::epoch_changes(babe_link).clone(),
+				},
+			};
+
+			Ok(crate::rpc::create_full(deps))
+		})?;
 
 		(builder, import_setup, inherent_data_providers)
 		}};
@@ -107,7 +106,6 @@ pub fn new_full(config: NodeConfiguration) -> Result<impl AbstractService, Servi
 		.expect("Link Half and Block Import are present for Full Services or setup failed before. qed");
 
 	let service = builder
-		.with_network_protocol(|_| Ok(NodeProtocol::new()))?
 		.with_finality_proof_provider(|client, backend| {
 			Ok(Arc::new(GrandpaFinalityProofProvider::new(backend, client)) as _)
 		})?
@@ -154,38 +152,34 @@ pub fn new_full(config: NodeConfiguration) -> Result<impl AbstractService, Servi
 		gossip_duration: std::time::Duration::from_millis(333),
 		justification_period: 512,
 		name: Some(name),
-		observer_enabled: true,
+		observer_enabled: false,
 		keystore,
 		is_authority,
 	};
 
-	match (is_authority, disable_grandpa) {
-		(false, false) => {
-			// start the lightweight GRANDPA observer
-			service.spawn_task(
-				"grandpa-observer",
-				grandpa::run_grandpa_observer(grandpa_config, grandpa_link, service.network(), service.on_exit())?,
-			);
-		}
-		(true, false) => {
-			// start the full GRANDPA voter
-			let voter_config = grandpa::GrandpaParams {
-				config: grandpa_config,
-				link: grandpa_link,
-				network: service.network(),
-				inherent_data_providers: inherent_data_providers.clone(),
-				on_exit: service.on_exit(),
-				telemetry_on_connect: Some(service.telemetry_on_connect_stream()),
-				voting_rule: grandpa::VotingRulesBuilder::default().build(),
-			};
+	let enable_grandpa = !disable_grandpa;
+	if enable_grandpa {
+		// start the full GRANDPA voter
+		// NOTE: non-authorities could run the GRANDPA observer protocol, but at
+		// this point the full voter should provide better guarantees of block
+		// and vote data availability than the observer. The observer has not
+		// been tested extensively yet and having most nodes in a network run it
+		// could lead to finality stalls.
+		let grandpa_config = grandpa::GrandpaParams {
+			config: grandpa_config,
+			link: grandpa_link,
+			network: service.network(),
+			inherent_data_providers: inherent_data_providers.clone(),
+			on_exit: service.on_exit(),
+			telemetry_on_connect: Some(service.telemetry_on_connect_stream()),
+			voting_rule: grandpa::VotingRulesBuilder::default().build(),
+		};
 
-			// the GRANDPA voter task is considered infallible, i.e.
-			// if it fails we take down the service with it.
-			service.spawn_essential_task("grandpa", grandpa::run_grandpa_voter(voter_config)?);
-		}
-		(_, true) => {
-			grandpa::setup_disabled_grandpa(service.client(), &inherent_data_providers, service.network())?;
-		}
+		// the GRANDPA voter task is considered infallible, i.e.
+		// if it fails we take down the service with it.
+		service.spawn_essential_task("grandpa-voter", grandpa::run_grandpa_voter(grandpa_config)?);
+	} else {
+		grandpa::setup_disabled_grandpa(service.client(), &inherent_data_providers, service.network())?;
 	}
 
 	Ok(service)
@@ -226,7 +220,6 @@ pub fn new_light(config: NodeConfiguration) -> Result<impl AbstractService, Serv
 				sc_consensus_babe::Config::get_or_compute(&*client)?,
 				grandpa_block_import,
 				client.clone(),
-				client.clone(),
 			)?;
 
 			let import_queue = sc_consensus_babe::import_queue(
@@ -235,28 +228,30 @@ pub fn new_light(config: NodeConfiguration) -> Result<impl AbstractService, Serv
 				None,
 				Some(Box::new(finality_proof_import)),
 				client.clone(),
-				client,
 				inherent_data_providers.clone(),
 			)?;
 
 			Ok((import_queue, finality_proof_request_builder))
 		})?
-		.with_network_protocol(|_| Ok(NodeProtocol::new()))?
 		.with_finality_proof_provider(|client, backend| {
 			Ok(Arc::new(GrandpaFinalityProofProvider::new(backend, client)) as _)
 		})?
-		.with_rpc_extensions(
-			|client, pool, _backend, fetcher, remote_blockchain| -> Result<RpcExtension, _> {
-				let fetcher = fetcher.ok_or_else(|| "Trying to start node RPC without active fetcher")?;
-				let remote_blockchain =
-					remote_blockchain.ok_or_else(|| "Trying to start node RPC without active remote blockchain")?;
+		.with_rpc_extensions(|builder| -> Result<RpcExtension, _> {
+			let fetcher = builder
+				.fetcher()
+				.ok_or_else(|| "Trying to start node RPC without active fetcher")?;
+			let remote_blockchain = builder
+				.remote_backend()
+				.ok_or_else(|| "Trying to start node RPC without active remote blockchain")?;
 
-				let light_deps = rpc::LightDeps {
-					remote_blockchain,
-					fetcher,
-				};
-				Ok(crate::rpc::create(client, pool, Some(light_deps)))
-			},
-		)?
+			let light_deps = rpc::LightDeps {
+				remote_blockchain,
+				fetcher,
+				client: builder.client().clone(),
+				pool: builder.pool(),
+			};
+
+			Ok(rpc::create_light(light_deps))
+		})?
 		.build()
 }

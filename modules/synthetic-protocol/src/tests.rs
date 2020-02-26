@@ -146,6 +146,28 @@ fn mint_fails_if_pool_has_no_liquidity() {
 }
 
 #[test]
+fn mint_fails_if_currency_is_not_supported() {
+	ExtBuilder::default()
+		.one_million_for_alice_n_mock_pool()
+		.synthetic_price_three()
+		.one_percent_spread()
+		.ten_percent_additional_collateral_ratio()
+		.build()
+		.execute_with(|| {
+			assert_noop!(
+				SyntheticProtocol::mint(
+					origin_of(ALICE),
+					MOCK_POOL,
+					CurrencyId::LAMI,
+					ONE_MILL,
+					Permill::from_percent(10),
+				),
+				Error::<Runtime>::NotValidSyntheticCurrencyId
+			);
+		});
+}
+
+#[test]
 fn mint_does_correct_math() {
 	ExtBuilder::default()
 		.one_million_for_alice_n_mock_pool()
@@ -327,6 +349,28 @@ fn redeem_fails_if_not_enough_locked_collateral() {
 			assert_noop!(
 				redeem_ausd(ALICE, SyntheticCurrency::balance(&ALICE)),
 				Error::<Runtime>::NotEnoughLockedCollateralAvailable,
+			);
+		});
+}
+
+#[test]
+fn redeem_fails_if_currency_is_not_supported() {
+	ExtBuilder::default()
+		.one_million_for_alice_n_mock_pool()
+		.synthetic_price_three()
+		.one_percent_spread()
+		.ten_percent_additional_collateral_ratio()
+		.build()
+		.execute_with(|| {
+			assert_noop!(
+				SyntheticProtocol::redeem(
+					origin_of(ALICE),
+					MOCK_POOL,
+					CurrencyId::LAMI,
+					ONE_MILL,
+					Permill::from_percent(10),
+				),
+				Error::<Runtime>::NotValidSyntheticCurrencyId,
 			);
 		});
 }
@@ -589,6 +633,22 @@ fn liquidate_fails_if_still_in_safe_position() {
 }
 
 #[test]
+fn liquidate_fails_if_currency_is_not_supported() {
+	ExtBuilder::default()
+		.one_million_for_alice_n_mock_pool()
+		.synthetic_price_three()
+		.one_percent_spread()
+		.ten_percent_additional_collateral_ratio()
+		.build()
+		.execute_with(|| {
+			assert_noop!(
+				SyntheticProtocol::liquidate(origin_of(ALICE), MOCK_POOL, CurrencyId::LAMI, ONE_MILL,),
+				Error::<Runtime>::NotValidSyntheticCurrencyId,
+			);
+		});
+}
+
+#[test]
 fn liquidate_does_correct_math() {
 	ExtBuilder::default()
 		.one_million_for_alice_n_mock_pool()
@@ -722,6 +782,22 @@ fn add_collateral_fails_if_balance_too_low() {
 }
 
 #[test]
+fn add_collateral_fails_if_currency_is_not_supported() {
+	ExtBuilder::default()
+		.one_million_for_alice_n_mock_pool()
+		.synthetic_price_three()
+		.one_percent_spread()
+		.ten_percent_additional_collateral_ratio()
+		.build()
+		.execute_with(|| {
+			assert_noop!(
+				SyntheticProtocol::add_collateral(origin_of(ALICE), MOCK_POOL, CurrencyId::LAMI, ONE_MILL),
+				Error::<Runtime>::NotValidSyntheticCurrencyId
+			);
+		});
+}
+
+#[test]
 fn add_collateral_works() {
 	ExtBuilder::default()
 		.one_million_for_alice_n_mock_pool()
@@ -815,6 +891,22 @@ fn withdraw_collateral_fails_if_not_enough_locked_collateral() {
 			assert_noop!(
 				withdraw_collateral(ALICE),
 				Error::<Runtime>::NotEnoughLockedCollateralAvailable
+			);
+		});
+}
+
+#[test]
+fn withdraw_collateral_fails_if_currency_is_not_supported() {
+	ExtBuilder::default()
+		.one_million_for_alice_n_mock_pool()
+		.synthetic_price_three()
+		.one_percent_spread()
+		.ten_percent_additional_collateral_ratio()
+		.build()
+		.execute_with(|| {
+			assert_noop!(
+				SyntheticProtocol::withdraw_collateral(origin_of(ALICE), MOCK_POOL, CurrencyId::LAMI),
+				Error::<Runtime>::NotValidSyntheticCurrencyId
 			);
 		});
 }

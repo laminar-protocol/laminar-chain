@@ -13,8 +13,7 @@ use orml_traits::{BasicCurrency, MultiCurrency};
 use primitives::{Leverage, Leverages};
 use sp_runtime::{
 	traits::{
-		AccountIdConversion, CheckedAdd, CheckedSub, EnsureOrigin, MaybeSerializeDeserialize, Member, One,
-		SimpleArithmetic,
+		AccountIdConversion, AtLeast32Bit, CheckedAdd, CheckedSub, EnsureOrigin, MaybeSerializeDeserialize, Member, One,
 	},
 	DispatchResult, ModuleId, Permill,
 };
@@ -33,9 +32,9 @@ pub trait Trait: system::Trait {
 		+ Copy
 		+ Ord
 		+ Default
-		+ SimpleArithmetic
+		+ AtLeast32Bit
 		+ MaybeSerializeDeserialize;
-	type Balance: Parameter + Member + SimpleArithmetic + Default + Copy + MaybeSerializeDeserialize;
+	type Balance: Parameter + Member + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 	type CurrencyId: FullCodec + Parameter + Member + Copy + MaybeSerializeDeserialize;
 	type PoolManager: LiquidityPoolManager<Self::LiquidityPoolId, Self::Balance>;
 	type ExistentialDeposit: Get<Self::Balance>;

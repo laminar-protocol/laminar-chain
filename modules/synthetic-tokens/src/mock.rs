@@ -20,6 +20,7 @@ mod synthetic_tokens {
 
 impl_outer_event! {
 	pub enum TestEvent for Runtime {
+		frame_system<T>,
 		synthetic_tokens<T>,
 	}
 }
@@ -60,6 +61,9 @@ impl frame_system::Trait for Runtime {
 	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
 	type ModuleToIndex = ();
+	type OnNewAccount = ();
+	type OnKilledAccount = ();
+	type AccountData = ();
 }
 pub type System = system::Module<Runtime>;
 

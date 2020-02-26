@@ -3,7 +3,7 @@
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedSub, Convert, Saturating, Zero},
-	DispatchError, DispatchResult, Permill,
+	DispatchError, DispatchResult, PerThing, Permill,
 };
 use sp_std::{convert::TryInto, result};
 // FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
@@ -178,8 +178,6 @@ impl<T: Trait> Module<T> {
 		collateral: T::Balance,
 		max_slippage: Permill,
 	) -> SynthesisResult<T> {
-		T::CollateralCurrency::ensure_can_withdraw(who, collateral)?;
-
 		ensure!(
 			T::SyntheticCurrencyIds::get().contains(&currency_id),
 			Error::<T>::NotValidSyntheticCurrencyId
@@ -189,6 +187,8 @@ impl<T: Trait> Module<T> {
 			T::SyntheticProtocolLiquidityPools::can_mint(pool_id, currency_id),
 			Error::<T>::NotSupportedByLiquidityPool
 		);
+
+		T::CollateralCurrency::ensure_can_withdraw(who, collateral)?;
 
 		let price =
 			T::PriceProvider::get_price(T::GetCollateralCurrencyId::get(), currency_id).ok_or(Error::<T>::NoPrice)?;
@@ -238,6 +238,11 @@ impl<T: Trait> Module<T> {
 		synthetic: T::Balance,
 		max_slippage: Permill,
 	) -> SynthesisResult<T> {
+		ensure!(
+			T::SyntheticCurrencyIds::get().contains(&currency_id),
+			Error::<T>::NotValidSyntheticCurrencyId
+		);
+
 		T::MultiCurrency::ensure_can_withdraw(currency_id, who, synthetic)?;
 
 		let price =
@@ -284,6 +289,11 @@ impl<T: Trait> Module<T> {
 		currency_id: T::CurrencyId,
 		synthetic: T::Balance,
 	) -> SynthesisResult<T> {
+		ensure!(
+			T::SyntheticCurrencyIds::get().contains(&currency_id),
+			Error::<T>::NotValidSyntheticCurrencyId
+		);
+
 		T::MultiCurrency::ensure_can_withdraw(currency_id, who, synthetic)?;
 
 		let price =
@@ -325,6 +335,11 @@ impl<T: Trait> Module<T> {
 		currency_id: T::CurrencyId,
 		collateral: T::Balance,
 	) -> DispatchResult {
+		ensure!(
+			T::SyntheticCurrencyIds::get().contains(&currency_id),
+			Error::<T>::NotValidSyntheticCurrencyId
+		);
+
 		T::CollateralCurrency::ensure_can_withdraw(who, collateral)?;
 
 		T::LiquidityPools::deposit_liquidity(who, pool_id, collateral).expect("ensured enough balance; qed");
@@ -341,6 +356,11 @@ impl<T: Trait> Module<T> {
 		pool_id: T::LiquidityPoolId,
 		currency_id: T::CurrencyId,
 	) -> SynthesisResult<T> {
+		ensure!(
+			T::SyntheticCurrencyIds::get().contains(&currency_id),
+			Error::<T>::NotValidSyntheticCurrencyId
+		);
+
 		ensure!(T::LiquidityPools::is_owner(pool_id, who), Error::<T>::NotPoolOwner);
 
 		let price =

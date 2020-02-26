@@ -223,7 +223,11 @@ fn dev_genesis(
 			changes_trie_config: Default::default(),
 		}),
 		pallet_indices: Some(IndicesConfig {
-			ids: endowed_accounts.clone(),
+			indices: endowed_accounts
+				.iter()
+				.enumerate()
+				.map(|(index, x)| (index as u32, (*x).clone()))
+				.collect(),
 		}),
 		pallet_balances: Some(BalancesConfig {
 			balances: endowed_accounts.iter().cloned().map(|k| (k, INITIAL_BALANCE)).collect(),
@@ -231,7 +235,7 @@ fn dev_genesis(
 		pallet_session: Some(SessionConfig {
 			keys: initial_authorities
 				.iter()
-				.map(|x| (x.0.clone(), session_keys(x.2.clone(), x.3.clone())))
+				.map(|x| (x.0.clone(), x.0.clone(), session_keys(x.2.clone(), x.3.clone())))
 				.collect::<Vec<_>>(),
 		}),
 		pallet_staking: Some(StakingConfig {
@@ -293,7 +297,11 @@ fn testnet_genesis(
 			changes_trie_config: Default::default(),
 		}),
 		pallet_indices: Some(IndicesConfig {
-			ids: endowed_accounts.clone(),
+			indices: endowed_accounts
+				.iter()
+				.enumerate()
+				.map(|(index, x)| (index as u32, (*x).clone()))
+				.collect(),
 		}),
 		pallet_balances: Some(BalancesConfig {
 			balances: endowed_accounts.iter().cloned().map(|k| (k, INITIAL_BALANCE)).collect(),
@@ -301,7 +309,7 @@ fn testnet_genesis(
 		pallet_session: Some(SessionConfig {
 			keys: initial_authorities
 				.iter()
-				.map(|x| (x.0.clone(), session_keys(x.2.clone(), x.3.clone())))
+				.map(|x| (x.0.clone(), x.0.clone(), session_keys(x.2.clone(), x.3.clone())))
 				.collect::<Vec<_>>(),
 		}),
 		pallet_staking: Some(StakingConfig {

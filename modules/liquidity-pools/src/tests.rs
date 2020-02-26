@@ -7,7 +7,7 @@ use crate::{
 
 use frame_support::assert_ok;
 use primitives::{CurrencyId, Leverage, Leverages};
-use sp_runtime::Permill;
+use sp_runtime::{PerThing, Permill};
 use traits::{LiquidityPools, SyntheticProtocolLiquidityPools};
 
 #[test]
