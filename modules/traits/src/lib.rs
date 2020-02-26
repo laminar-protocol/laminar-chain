@@ -1,16 +1,12 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-mod swap_period;
-mod trading_pair;
-pub use swap_period::SwapPeriod;
-use trading_pair::TradingPair;
-
-use codec::FullCodec;
+use codec::{Decode, Encode, FullCodec};
 use frame_support::Parameter;
 use primitives::Leverage;
+use sp_arithmetic::Fixed64;
 use sp_runtime::{
 	traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member},
-	DispatchResult, Percent, Permill,
+	DispatchResult, Permill, RuntimeDebug,
 };
 use sp_std::fmt::Debug;
 
@@ -47,7 +43,16 @@ pub trait SyntheticProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> 
 }
 
 pub trait MarginProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
-	fn get_swap_rate(pair: TradingPair) -> Percent;
-	fn get_accumulated_swap_rate(pair: TradingPair) -> Percent;
+	fn get_swap_rate(pair: TradingPair) -> Fixed64; // TODO: replace Fixed64 with Fixed128 https://github.com/laminar-protocol/open-runtime-module-library/issues/82
+	fn get_accumulated_swap_rate(pair: TradingPair) -> Fixed64; // TODO: replace Fixed64 with Fixed128 https://github.com/laminar-protocol/open-runtime-module-library/issues/82
 	fn can_open_position(pair: TradingPair, leverage: Leverage, leveraged_amount: Self::Balance) -> bool;
+}
+
+#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct TradingPair {}
+
+#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct SwapPeriod<Moment> {
+	pub period: Moment,
+	pub start: Moment,
 }
