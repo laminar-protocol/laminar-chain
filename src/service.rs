@@ -204,12 +204,8 @@ pub fn new_light(config: NodeConfiguration) -> Result<impl AbstractService, Serv
 			let fetch_checker = fetcher
 				.map(|fetcher| fetcher.checker().clone())
 				.ok_or_else(|| "Trying to start light import queue without active fetch checker")?;
-			let grandpa_block_import = grandpa::light_block_import::<_, _, _>(
-				client.clone(),
-				backend,
-				&*client.clone(),
-				Arc::new(fetch_checker),
-			)?;
+			let grandpa_block_import =
+				grandpa::light_block_import(client.clone(), backend, &*client.clone(), Arc::new(fetch_checker))?;
 			let finality_proof_import = grandpa_block_import.clone();
 			let finality_proof_request_builder = finality_proof_import.create_finality_proof_request_builder();
 
