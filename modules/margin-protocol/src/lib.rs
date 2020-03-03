@@ -1,9 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::{Decode, Encode, EncodeLike};
-use core::fmt;
+use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage};
-use sp_runtime::RuntimeDebug;
+use sp_runtime::{DispatchResult, RuntimeDebug};
 // FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
 // would cause compiling error in `decl_module!` and `construct_runtime!`
 // #3295 https://github.com/paritytech/substrate/issues/3295
@@ -76,8 +75,18 @@ decl_storage! {
 decl_event! {
 	pub enum Event<T> where
 		<T as frame_system::Trait>::AccountId,
+		LiquidityPoolId = LiquidityPoolIdOf<T>,
+		TradingPair = TradingPairOf<T>,
+		Amount = BalanceOf<T>
 	{
-		Dummy(AccountId),
+		/// Position opened: (who, pool_id, trading_pair, leverage, leveraged_amount, price)
+		PositionOpened(AccountId, LiquidityPoolId, TradingPair, Leverage, Amount, Price),
+		/// Position closed: (who, position_id, price)
+		PositionClosed(AccountId, PositionId, Price),
+		/// Deposited: (who, amount)
+		Deposited(AccountId, Amount),
+		/// Withdrew: (who, amount)
+		Withdrew(AccountId, Amount),
 	}
 }
 
@@ -91,14 +100,61 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		pub fn open_position(origin, pool: LiquidityPoolIdOf<T>, pair: TradingPairOf<T>, leverage: Leverage, leveraged_amount: BalanceOf<T>, price: Price) {}
+		pub fn open_position(origin, pool: LiquidityPoolIdOf<T>, pair: TradingPairOf<T>, leverage: Leverage, leveraged_amount: BalanceOf<T>, price: Price) {
+			let who = ensure_signed(origin)?;
+			Self::_open_position(&who, pool, pair, leverage, leveraged_amount, price)?;
 
-		pub fn close_position(origin, position_id: PositionId, price: Price) {}
+			Self::deposit_event(RawEvent::PositionOpened(who, pool, pair, leverage, leveraged_amount, price));
+		}
 
-		pub fn deposit(origin, amount: BalanceOf<T>) {}
+		pub fn close_position(origin, position_id: PositionId, price: Price) {
+			let who = ensure_signed(origin)?;
+			Self::_close_position(&who, position_id, price)?;
 
-		pub fn withdraw(origin, amount: BalanceOf<T>) {}
+			Self::deposit_event(RawEvent::PositionClosed(who, position_id, price));
+		}
+
+		pub fn deposit(origin, amount: BalanceOf<T>) {
+			let who = ensure_signed(origin)?;
+			Self::_deposit(&who, amount)?;
+
+			Self::deposit_event(RawEvent::Deposited(who, amount));
+		}
+
+		pub fn withdraw(origin, amount: BalanceOf<T>) {
+			let who = ensure_signed(origin)?;
+			Self::_withdraw(&who, amount)?;
+
+			Self::deposit_event(RawEvent::Withdrew(who, amount));
+		}
 	}
 }
 
-impl<T: Trait> Module<T> {}
+impl<T: Trait> Module<T> {
+	fn _open_position(
+		who: &T::AccountId,
+		pool: LiquidityPoolIdOf<T>,
+		pair: TradingPairOf<T>,
+		leverage: Leverage,
+		leveraged_amount: BalanceOf<T>,
+		price: Price,
+	) -> DispatchResult {
+		// TODO: implementation
+		unimplemented!()
+	}
+
+	fn _close_position(who: &T::AccountId, position_id: PositionId, price: Price) -> DispatchResult {
+		// TODO: implementation
+		unimplemented!()
+	}
+
+	fn _deposit(who: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
+		// TODO: implementation
+		unimplemented!()
+	}
+
+	fn _withdraw(who: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
+		// TODO: implementation
+		unimplemented!()
+	}
+}
