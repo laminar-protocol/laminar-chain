@@ -5,7 +5,7 @@ use frame_support::Parameter;
 use primitives::Leverage;
 use sp_arithmetic::Fixed64;
 use sp_runtime::{
-	traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member},
+	traits::{AtLeast32Bit, MaybeSerializeDeserialize},
 	DispatchResult, Permill, RuntimeDebug,
 };
 use sp_std::fmt::Debug;
@@ -13,7 +13,7 @@ use sp_std::fmt::Debug;
 pub trait LiquidityPools<AccountId> {
 	type LiquidityPoolId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug;
 	type CurrencyId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug;
-	type Balance: Parameter + Member + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
+	type Balance: Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
 	fn get_bid_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill>;
 	fn get_ask_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill>;
