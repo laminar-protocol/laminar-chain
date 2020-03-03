@@ -9,9 +9,10 @@ codec = { package = "parity-scale-codec", version = "1.0.0", default-features = 
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate.git", default-features = false }
 frame-support = { git = "https://github.com/paritytech/substrate.git", default-features = false }
-sp-arithmetic = { git = "https://github.com/paritytech/substrate.git", default-features = false }
 
 primitives = { package = "module-primitives", path = "../primitives", default-features = false }
+
+orml-utilities = { path = "../../orml/utilities", default-features = false }
 
 [features]
 default = ["std"]
@@ -21,5 +22,5 @@ std = [
 	"sp-std/std",
 	"frame-support/std",
 	"primitives/std",
-	"sp-arithmetic/std",
+	"orml-utilities/std",
 ]
