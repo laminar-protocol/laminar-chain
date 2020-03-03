@@ -6,19 +6,25 @@ mod tests;
 
 pub use liquidity_pool_option::LiquidityPoolOption;
 
-use codec::FullCodec;
+use codec::{Decode, Encode, FullCodec};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get, Parameter};
 use frame_system::{self as system, ensure_root, ensure_signed};
 use orml_traits::{BasicCurrency, MultiCurrency};
+use orml_utilities::Fixed128;
 use primitives::{Leverage, Leverages};
 use sp_runtime::{
 	traits::{
 		AccountIdConversion, AtLeast32Bit, CheckedAdd, CheckedSub, EnsureOrigin, MaybeSerializeDeserialize, Member, One,
 	},
-	DispatchResult, ModuleId, Permill,
+	DispatchResult, ModuleId, Permill, RuntimeDebug,
 };
 use sp_std::{prelude::*, result};
-use traits::{LiquidityPoolManager, LiquidityPools, SyntheticProtocolLiquidityPools};
+use traits::{
+	LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools, SyntheticProtocolLiquidityPools, TradingPair,
+};
+
+#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct AccumulatedSwapRate {}
 
 const MODULE_ID: ModuleId = ModuleId(*b"lami/lp_");
 
@@ -48,6 +54,9 @@ decl_storage! {
 		pub LiquidityPoolOptions get(fn liquidity_pool_options): double_map hasher(blake2_256) T::LiquidityPoolId, hasher(blake2_256) T::CurrencyId => Option<LiquidityPoolOption>;
 		pub Balances get(fn balances): map hasher(blake2_256) T::LiquidityPoolId => T::Balance;
 		pub MinAdditionalCollateralRatio get(fn min_additional_collateral_ratio) config(): Permill;
+		pub SwapRates get(fn swap_rate): double_map hasher(blake2_256) T::LiquidityPoolId, hasher(blake2_256) (T::CurrencyId, T::CurrencyId) => Fixed128;
+		pub AccumulatedSwapRates get(fn accumulated_swap_rate): double_map hasher(blake2_256) T::LiquidityPoolId, hasher(blake2_256) (T::CurrencyId, T::CurrencyId) => Fixed128;
+		pub MaxSpread get(fn max_spread): map hasher(blake2_256) T::CurrencyId => Permill;
 	}
 }
 
@@ -159,6 +168,10 @@ decl_module! {
 			Self::_set_synthetic_enabled(&who, pool_id, currency_id, enabled)?;
 			Self::deposit_event(RawEvent::SetSyntheticEnabled(who, pool_id, currency_id, enabled));
 		}
+
+		pub fn update_swap(_origin, _pool_id: T::LiquidityPoolId, _pair: (T::CurrencyId, T::CurrencyId), _rate: Fixed128) {
+			unimplemented!()
+		}
 	}
 }
 
@@ -180,17 +193,12 @@ impl<T: Trait> Module<T> {
 	}
 
 	pub fn is_owner(pool_id: T::LiquidityPoolId, who: &T::AccountId) -> bool {
-		match Self::owners(pool_id) {
-			Some(id) => &id == who,
-			None => false,
-		}
+		Self::owners(pool_id).map_or(false, |id| &id == who)
 	}
 
 	pub fn is_enabled(pool_id: T::LiquidityPoolId, currency_id: T::CurrencyId, leverage: Leverage) -> bool {
-		match Self::liquidity_pool_options(&pool_id, &currency_id) {
-			Some(pool) => pool.enabled_trades.contains(leverage),
-			None => false,
-		}
+		Self::liquidity_pool_options(&pool_id, &currency_id)
+			.map_or(false, |pool| pool.enabled_trades.contains(leverage))
 	}
 }
 
@@ -254,6 +262,20 @@ impl<T: Trait> SyntheticProtocolLiquidityPools<T::AccountId> for Module<T> {
 
 	fn can_mint(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> bool {
 		Self::liquidity_pool_options(&pool_id, &currency_id).map_or(false, |pool| pool.synthetic_enabled)
+	}
+}
+
+impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
+	fn get_swap_rate(_pair: TradingPair) -> Fixed128 {
+		unimplemented!()
+	}
+
+	fn get_accumulated_swap_rate(_pair: TradingPair) -> Fixed128 {
+		unimplemented!()
+	}
+
+	fn can_open_position(_pair: TradingPair, _leverage: Leverage, _leveraged_amount: Self::Balance) -> bool {
+		unimplemented!()
 	}
 }
 

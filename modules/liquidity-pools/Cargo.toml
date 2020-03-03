@@ -20,6 +20,7 @@ primitives = { package = "module-primitives", path = "../primitives", default-fe
 orml-currencies = { path = "../../orml/currencies", default-features = false }
 orml-traits = { path = "../../orml/traits", default-features = false }
 orml-tokens = { path = "../../orml/tokens", default-features = false }
+orml-utilities = { path = "../../orml/utilities", default-features = false }
 
 [dev-dependencies]
 sp-core = { git = "https://github.com/paritytech/substrate.git", default-features = false }
@@ -39,4 +40,5 @@ std = [
 	"orml-currencies/std",
 	"orml-traits/std",
 	"orml-tokens/std",
+	"orml-utilities/std",
 ]
