@@ -31,13 +31,14 @@ pub trait Trait: frame_system::Trait {
 	type PriceProvider: PriceProvider<CurrencyIdOf<Self>, Price>;
 }
 
-#[derive(Encode, Decode, EncodeLike, Copy, Clone, RuntimeDebug, Eq, PartialEq)]
-pub struct TradingPair<T: Trait> {
-	base: CurrencyIdOf<T>,
-	quote: CurrencyIdOf<T>,
+#[derive(Encode, Decode, Copy, Clone, RuntimeDebug, Eq, PartialEq)]
+pub struct TradingPair<CurrencyId> {
+	base: CurrencyId,
+	quote: CurrencyId,
 }
+pub type TradingPairOf<T> = TradingPair<CurrencyIdOf<T>>;
 
-impl<T: Trait> TradingPair<T> {
+impl<CurrencyId> TradingPair<CurrencyId> {
 	fn normalize() {
 		// TODO: make the smaller priced currency id as base
 		unimplemented!()
@@ -50,7 +51,7 @@ pub type PositionId = u64;
 pub struct Position<T: Trait> {
 	owner: T::AccountId,
 	pool: LiquidityPoolIdOf<T>,
-	pair: TradingPair<T>,
+	pair: TradingPairOf<T>,
 	leverage: Leverage,
 	leveraged_holding: BalanceOf<T>,
 	leveraged_debits: BalanceOf<T>,
@@ -66,8 +67,8 @@ decl_storage! {
 		NextPositionId get(next_position_id): PositionId;
 		Positions get(positions): map hasher(blake2_256) PositionId => Option<Position<T>>;
 		PositionsByUser get(positions_by_user): double_map hasher(blake2_256) T::AccountId, hasher(blake2_256) LiquidityPoolIdOf<T> => Vec<PositionId>;
-		PositionsByPool get(positions_by_pool): double_map hasher(blake2_256) LiquidityPoolIdOf<T>, hasher(blake2_256) (TradingPair<T>, PositionId) => Option<()>;
-		// SwapPeriods get(swap_periods): map hasher(black2_256) TradingPair<T> => Option<SwapPeriod>;
+		PositionsByPool get(positions_by_pool): double_map hasher(blake2_256) LiquidityPoolIdOf<T>, hasher(blake2_256) (TradingPairOf<T>, PositionId) => Option<()>;
+		// SwapPeriods get(swap_periods): map hasher(black2_256) TradingPairOf<T> => Option<SwapPeriod>;
 		Balances get(balances): map hasher(blake2_256) T::AccountId => BalanceOf<T>;
 	}
 }
@@ -90,8 +91,7 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		// pub fn open_position(origin, pool: LiquidityPoolIdOf<T>, pair: TradingPair<T>, leverage: Leverage, leveraged_amount: BalanceOf<T>, price: Price) {}
-		pub fn test(origin, pair: TradingPair<T>) {}
+		pub fn open_position(origin, pool: LiquidityPoolIdOf<T>, pair: TradingPairOf<T>, leverage: Leverage, leveraged_amount: BalanceOf<T>, price: Price) {}
 
 		pub fn close_position(origin, position_id: PositionId, price: Price) {}
 
