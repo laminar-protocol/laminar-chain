@@ -2,6 +2,7 @@
 
 use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage};
+use sp_arithmetic::Permill;
 use sp_runtime::{DispatchResult, RuntimeDebug};
 // FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
 // would cause compiling error in `decl_module!` and `construct_runtime!`
@@ -11,7 +12,7 @@ use frame_system::ensure_signed;
 use orml_traits::{MultiCurrency, PriceProvider};
 use orml_utilities::Fixed128;
 use primitives::{Leverage, Price};
-use traits::{LiquidityPools, MarginProtocolLiquidityPools};
+use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools};
 
 type BalanceOf<T> = <<T as Trait>::MultiCurrency as MultiCurrency<<T as frame_system::Trait>::AccountId>>::Balance;
 type CurrencyIdOf<T> =
@@ -61,6 +62,12 @@ pub struct Position<T: Trait> {
 //TODO: set this value
 const MAX_POSITIONS_COUNT: u16 = u16::max_value();
 
+#[derive(Encode, Decode, Copy, Clone, RuntimeDebug, Eq, PartialEq)]
+pub struct RiskThreshold {
+	margin_call: Permill,
+	stop_out: Permill,
+}
+
 decl_storage! {
 	trait Store for Module<T: Trait> as MarginProtocol {
 		NextPositionId get(next_position_id): PositionId;
@@ -69,6 +76,12 @@ decl_storage! {
 		PositionsByPool get(positions_by_pool): double_map hasher(blake2_256) LiquidityPoolIdOf<T>, hasher(blake2_256) (TradingPairOf<T>, PositionId) => Option<()>;
 		// SwapPeriods get(swap_periods): map hasher(black2_256) TradingPairOf<T> => Option<SwapPeriod>;
 		Balances get(balances): map hasher(blake2_256) T::AccountId => BalanceOf<T>;
+		MinLiquidationPercent get(min_liquidation_percent): map hasher(blake2_256) TradingPairOf<T> => Fixed128;
+		MarginCalledTraders get(margin_called_traders): map hasher(blake2_256) T::AccountId => Option<()>;
+		MarginCalledLiquidityPools get(margin_called_liquidity_pools): map hasher(blake2_256) LiquidityPoolIdOf<T> => Option<()>;
+		TraderRiskThreshold get(trader_risk_threshold): map hasher(blake2_256) TradingPairOf<T> => Option<RiskThreshold>;
+		LiquidityPoolENPThreshold get(liquidity_pool_enp_threshold): map hasher(blake2_256) TradingPairOf<T> => Option<RiskThreshold>;
+		LiquidityPoolELLThreshold get(liquidity_pool_ell_threshold): map hasher(blake2_256) TradingPairOf<T> => Option<RiskThreshold>;
 	}
 }
 
@@ -127,6 +140,14 @@ decl_module! {
 
 			Self::deposit_event(RawEvent::Withdrew(who, amount));
 		}
+
+		// TODO: implementations
+		pub fn trader_margin_call(origin, who: T::AccountId) {}
+		pub fn trader_become_safe(origin, who: T::AccountId) {}
+		pub fn trader_liquidate(origin, who: T::AccountId) {}
+		pub fn liquidity_pool_margin_call(origin, pool: LiquidityPoolIdOf<T>) {}
+		pub fn liquidity_pool_become_safe(origin, pool: LiquidityPoolIdOf<T>) {}
+		pub fn liquidity_pool_liquidate(origin, pool: LiquidityPoolIdOf<T>) {}
 	}
 }
 
@@ -155,6 +176,17 @@ impl<T: Trait> Module<T> {
 
 	fn _withdraw(who: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
 		// TODO: implementation
+		unimplemented!()
+	}
+}
+
+//TODO: implementations, prevent open new position for margin called pools
+impl<T: Trait> LiquidityPoolManager<LiquidityPoolIdOf<T>, BalanceOf<T>> for Module<T> {
+	fn can_remove(pool: LiquidityPoolIdOf<T>) -> bool {
+		unimplemented!()
+	}
+
+	fn get_required_deposit(pool: LiquidityPoolIdOf<T>) -> BalanceOf<T> {
 		unimplemented!()
 	}
 }
