@@ -25,6 +25,7 @@ std = [
 	"serde",
 	"codec/std",
 	"sp-runtime/std",
+	"sp-arithmetic/std",
 	"frame-support/std",
 	"frame-system/std",
 	"orml-traits/std",
