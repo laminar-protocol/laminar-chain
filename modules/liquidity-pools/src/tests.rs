@@ -2,10 +2,10 @@
 
 use crate::{
 	mock::{new_test_ext, AccountId, ModuleLiquidityPools, Origin, Runtime, ALICE, BOB},
-	Error, LiquidityPoolOption,
+	Error, Fixed128, LiquidityPoolOption,
 };
 
-use frame_support::assert_ok;
+use frame_support::{assert_noop, assert_ok};
 use primitives::{CurrencyId, Leverage, Leverages};
 use sp_runtime::{PerThing, Permill};
 use traits::{LiquidityPools, SyntheticProtocolLiquidityPools};
@@ -380,6 +380,21 @@ fn should_set_synthetic_enabled() {
 		assert_eq!(
 			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::can_mint(0, CurrencyId::AUSD),
 			true
+		);
+	});
+}
+
+#[test]
+fn should_update_swap() {
+	new_test_ext().execute_with(|| {
+		let pair = (CurrencyId::LAMI, CurrencyId::AUSD);
+		let rate = Fixed128::from_natural(1);
+		let bad_rate = Fixed128::from_natural(3);
+		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
+		assert_ok!(ModuleLiquidityPools::update_swap(Origin::signed(ALICE), 0, pair, rate));
+		assert_noop!(
+			ModuleLiquidityPools::update_swap(Origin::signed(ALICE), 0, pair, bad_rate),
+			Error::<Runtime>::SwapRateTooHigh
 		);
 	});
 }

@@ -62,6 +62,7 @@ parameter_types! {
 	pub const ExistentialDeposit: u128 = 50;
 	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::LAMI;
 	pub const GetLiquidityCurrencyId: CurrencyId = CurrencyId::AUSD;
+	pub const MaxSwap: Fixed128 = Fixed128::from_natural(2);
 }
 
 type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
@@ -105,6 +106,7 @@ impl Trait for Runtime {
 	type PoolManager = PoolManager;
 	type ExistentialDeposit = ExistentialDeposit;
 	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
+	type MaxSwap = MaxSwap;
 }
 pub type ModuleLiquidityPools = Module<Runtime>;
 

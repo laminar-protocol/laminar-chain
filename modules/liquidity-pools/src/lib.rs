@@ -9,6 +9,7 @@ pub use liquidity_pool_option::LiquidityPoolOption;
 use codec::{Decode, Encode, FullCodec};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get, Parameter};
 use frame_system::{self as system, ensure_root, ensure_signed};
+use margin_protocol::TradingPair;
 use orml_traits::{BasicCurrency, MultiCurrency};
 use orml_utilities::Fixed128;
 use primitives::{Leverage, Leverages};
@@ -19,9 +20,7 @@ use sp_runtime::{
 	DispatchResult, ModuleId, Permill, RuntimeDebug,
 };
 use sp_std::{prelude::*, result};
-use traits::{
-	LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools, SyntheticProtocolLiquidityPools, TradingPair,
-};
+use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools, SyntheticProtocolLiquidityPools};
 
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct AccumulatedSwapRate {}
@@ -45,6 +44,7 @@ pub trait Trait: system::Trait {
 	type PoolManager: LiquidityPoolManager<Self::LiquidityPoolId, Self::Balance>;
 	type ExistentialDeposit: Get<Self::Balance>;
 	type UpdateOrigin: EnsureOrigin<Self::Origin>;
+	type MaxSwap: Get<Fixed128>;
 }
 
 decl_storage! {
@@ -87,6 +87,8 @@ decl_event!(
 		SetMinAdditionalCollateralRatio(Permill),
 		/// Set synthetic enabled (who, pool_id, currency_id, enabled)
 		SetSyntheticEnabled(AccountId, LiquidityPoolId, CurrencyId, bool),
+		/// Swap rate updated (who, pool_id, currency_id, currency_id, rate)
+		SwapRateUpdated(AccountId, LiquidityPoolId, CurrencyId, CurrencyId, Fixed128),
 	}
 );
 
@@ -169,8 +171,12 @@ decl_module! {
 			Self::deposit_event(RawEvent::SetSyntheticEnabled(who, pool_id, currency_id, enabled));
 		}
 
-		pub fn update_swap(_origin, _pool_id: T::LiquidityPoolId, _pair: (T::CurrencyId, T::CurrencyId), _rate: Fixed128) {
-			unimplemented!()
+		pub fn update_swap(origin, pool_id: T::LiquidityPoolId, pair: (T::CurrencyId, T::CurrencyId), rate: Fixed128) {
+			let who = ensure_signed(origin)?;
+			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
+			ensure!(rate <= T::MaxSwap::get(), Error::<T>::SwapRateTooHigh);
+			<SwapRates<T>>::insert(pool_id, pair, rate);
+			Self::deposit_event(RawEvent::SwapRateUpdated(who, pool_id, pair.0, pair.1, rate));
 		}
 	}
 }
@@ -184,6 +190,7 @@ decl_error! {
 		CannotDepositAmount,
 		CannotWithdrawAmount,
 		CannotWithdrawExistentialDeposit,
+		SwapRateTooHigh,
 	}
 }
 
@@ -265,16 +272,22 @@ impl<T: Trait> SyntheticProtocolLiquidityPools<T::AccountId> for Module<T> {
 	}
 }
 
+type CurrencyIdOf<T> =
+	<<T as Trait>::MultiCurrency as MultiCurrency<<T as frame_system::Trait>::AccountId>>::CurrencyId;
+
+type TradingPairOf<T> = TradingPair<CurrencyIdOf<T>>;
+
 impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
-	fn get_swap_rate(_pair: TradingPair) -> Fixed128 {
+	type TradingPair = TradingPairOf<T>;
+	fn get_swap_rate(_pair: Self::TradingPair) -> Fixed128 {
 		unimplemented!()
 	}
 
-	fn get_accumulated_swap_rate(_pair: TradingPair) -> Fixed128 {
+	fn get_accumulated_swap_rate(_pair: Self::TradingPair) -> Fixed128 {
 		unimplemented!()
 	}
 
-	fn can_open_position(_pair: TradingPair, _leverage: Leverage, _leveraged_amount: Self::Balance) -> bool {
+	fn can_open_position(_pair: Self::TradingPair, _leverage: Leverage, _leveraged_amount: Self::Balance) -> bool {
 		unimplemented!()
 	}
 }

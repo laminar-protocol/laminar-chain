@@ -43,13 +43,11 @@ pub trait SyntheticProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> 
 }
 
 pub trait MarginProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
-	fn get_swap_rate(pair: TradingPair) -> Fixed128;
-	fn get_accumulated_swap_rate(pair: TradingPair) -> Fixed128;
-	fn can_open_position(pair: TradingPair, leverage: Leverage, leveraged_amount: Self::Balance) -> bool;
+	type TradingPair;
+	fn get_swap_rate(pair: Self::TradingPair) -> Fixed128;
+	fn get_accumulated_swap_rate(pair: Self::TradingPair) -> Fixed128;
+	fn can_open_position(pair: Self::TradingPair, leverage: Leverage, leveraged_amount: Self::Balance) -> bool;
 }
-
-#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
-pub struct TradingPair {}
 
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct SwapPeriod<Moment> {
