@@ -3,7 +3,7 @@
 use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage};
 use sp_arithmetic::Permill;
-use sp_runtime::{DispatchResult, RuntimeDebug};
+use sp_runtime::{traits::StaticLookup, DispatchResult, RuntimeDebug};
 // FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
 // would cause compiling error in `decl_module!` and `construct_runtime!`
 // #3295 https://github.com/paritytech/substrate/issues/3295
@@ -13,6 +13,9 @@ use orml_traits::{MultiCurrency, PriceProvider};
 use orml_utilities::Fixed128;
 use primitives::{Leverage, Price};
 use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools};
+
+mod mock;
+mod tests;
 
 type BalanceOf<T> = <<T as Trait>::MultiCurrency as MultiCurrency<<T as frame_system::Trait>::AccountId>>::Balance;
 type CurrencyIdOf<T> =
@@ -113,7 +116,7 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		pub fn open_position(origin, pool: LiquidityPoolIdOf<T>, pair: TradingPairOf<T>, leverage: Leverage, leveraged_amount: BalanceOf<T>, price: Price) {
+		pub fn open_position(origin, pool: LiquidityPoolIdOf<T>, pair: TradingPairOf<T>, leverage: Leverage, #[compact] leveraged_amount: BalanceOf<T>, price: Price) {
 			let who = ensure_signed(origin)?;
 			Self::_open_position(&who, pool, pair, leverage, leveraged_amount, price)?;
 
@@ -127,14 +130,14 @@ decl_module! {
 			Self::deposit_event(RawEvent::PositionClosed(who, position_id, price));
 		}
 
-		pub fn deposit(origin, amount: BalanceOf<T>) {
+		pub fn deposit(origin, #[compact] amount: BalanceOf<T>) {
 			let who = ensure_signed(origin)?;
 			Self::_deposit(&who, amount)?;
 
 			Self::deposit_event(RawEvent::Deposited(who, amount));
 		}
 
-		pub fn withdraw(origin, amount: BalanceOf<T>) {
+		pub fn withdraw(origin, #[compact] amount: BalanceOf<T>) {
 			let who = ensure_signed(origin)?;
 			Self::_withdraw(&who, amount)?;
 
@@ -142,9 +145,9 @@ decl_module! {
 		}
 
 		// TODO: implementations
-		pub fn trader_margin_call(origin, who: T::AccountId) {}
-		pub fn trader_become_safe(origin, who: T::AccountId) {}
-		pub fn trader_liquidate(origin, who: T::AccountId) {}
+		pub fn trader_margin_call(origin, who: <T::Lookup as StaticLookup>::Source) {}
+		pub fn trader_become_safe(origin, who: <T::Lookup as StaticLookup>::Source) {}
+		pub fn trader_liquidate(origin, who: <T::Lookup as StaticLookup>::Source) {}
 		pub fn liquidity_pool_margin_call(origin, pool: LiquidityPoolIdOf<T>) {}
 		pub fn liquidity_pool_become_safe(origin, pool: LiquidityPoolIdOf<T>) {}
 		pub fn liquidity_pool_liquidate(origin, pool: LiquidityPoolIdOf<T>) {}
