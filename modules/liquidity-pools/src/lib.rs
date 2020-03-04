@@ -272,10 +272,7 @@ impl<T: Trait> SyntheticProtocolLiquidityPools<T::AccountId> for Module<T> {
 	}
 }
 
-type CurrencyIdOf<T> =
-	<<T as Trait>::MultiCurrency as MultiCurrency<<T as frame_system::Trait>::AccountId>>::CurrencyId;
-
-type TradingPairOf<T> = TradingPair<CurrencyIdOf<T>>;
+type TradingPairOf<T> = TradingPair<<T as Trait>::CurrencyId>;
 
 impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
 	type TradingPair = TradingPairOf<T>;
