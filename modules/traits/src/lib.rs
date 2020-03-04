@@ -43,13 +43,12 @@ pub trait SyntheticProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> 
 }
 
 pub trait MarginProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
-	fn get_swap_rate(pair: TradingPair) -> Fixed64; // TODO: replace Fixed64 with Fixed128 https://github.com/laminar-protocol/open-runtime-module-library/issues/82
-	fn get_accumulated_swap_rate(pair: TradingPair) -> Fixed64; // TODO: replace Fixed64 with Fixed128 https://github.com/laminar-protocol/open-runtime-module-library/issues/82
-	fn can_open_position(pair: TradingPair, leverage: Leverage, leveraged_amount: Self::Balance) -> bool;
-}
+	type TradingPair;
 
-#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
-pub struct TradingPair {}
+	fn get_swap_rate(pair: Self::TradingPair) -> Fixed64; // TODO: replace Fixed64 with Fixed128 https://github.com/laminar-protocol/open-runtime-module-library/issues/82
+	fn get_accumulated_swap_rate(pair: Self::TradingPair) -> Fixed64; // TODO: replace Fixed64 with Fixed128 https://github.com/laminar-protocol/open-runtime-module-library/issues/82
+	fn can_open_position(pair: Self::TradingPair, leverage: Leverage, leveraged_amount: Self::Balance) -> bool;
+}
 
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct SwapPeriod<Moment> {

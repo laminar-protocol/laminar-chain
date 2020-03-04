@@ -30,6 +30,7 @@ pub trait Trait: frame_system::Trait {
 		Self::AccountId,
 		CurrencyId = CurrencyIdOf<Self>,
 		Balance = BalanceOf<Self>,
+		TradingPair = TradingPairOf<Self>,
 	>;
 	type PriceProvider: PriceProvider<CurrencyIdOf<Self>, Price>;
 }
