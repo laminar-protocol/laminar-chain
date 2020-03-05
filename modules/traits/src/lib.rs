@@ -5,7 +5,7 @@ use frame_support::Parameter;
 use primitives::Leverage;
 use sp_arithmetic::Fixed64;
 use sp_runtime::{
-	traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member},
+	traits::{AtLeast32Bit, MaybeSerializeDeserialize},
 	DispatchResult, Permill, RuntimeDebug,
 };
 use sp_std::fmt::Debug;
@@ -13,7 +13,7 @@ use sp_std::fmt::Debug;
 pub trait LiquidityPools<AccountId> {
 	type LiquidityPoolId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug;
 	type CurrencyId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug;
-	type Balance: Parameter + Member + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
+	type Balance: Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
 	fn get_bid_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill>;
 	fn get_ask_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill>;
@@ -43,13 +43,12 @@ pub trait SyntheticProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> 
 }
 
 pub trait MarginProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
-	fn get_swap_rate(pair: TradingPair) -> Fixed64; // TODO: replace Fixed64 with Fixed128 https://github.com/laminar-protocol/open-runtime-module-library/issues/82
-	fn get_accumulated_swap_rate(pair: TradingPair) -> Fixed64; // TODO: replace Fixed64 with Fixed128 https://github.com/laminar-protocol/open-runtime-module-library/issues/82
-	fn can_open_position(pair: TradingPair, leverage: Leverage, leveraged_amount: Self::Balance) -> bool;
-}
+	type TradingPair;
 
-#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
-pub struct TradingPair {}
+	fn get_swap_rate(pair: Self::TradingPair) -> Fixed64; // TODO: replace Fixed64 with Fixed128 https://github.com/laminar-protocol/open-runtime-module-library/issues/82
+	fn get_accumulated_swap_rate(pair: Self::TradingPair) -> Fixed64; // TODO: replace Fixed64 with Fixed128 https://github.com/laminar-protocol/open-runtime-module-library/issues/82
+	fn can_open_position(pair: Self::TradingPair, leverage: Leverage, leveraged_amount: Self::Balance) -> bool;
+}
 
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct SwapPeriod<Moment> {
