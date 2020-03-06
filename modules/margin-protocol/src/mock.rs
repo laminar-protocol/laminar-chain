@@ -9,6 +9,7 @@ use sp_arithmetic::Fixed64;
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
 use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
+use traits::LiquidityPools;
 
 use super::*;
 
@@ -144,7 +145,7 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 	}
 }
 impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
-	type TradingPair = TradingPairOf<Runtime>;
+	type TradingPair = TradingPair;
 
 	fn get_swap_rate(pair: Self::TradingPair) -> Fixed64 {
 		unimplemented!()
