@@ -15,15 +15,13 @@ use orml_utilities::Fixed128;
 use primitives::{Leverage, Leverages};
 use sp_runtime::{
 	traits::{
-		AccountIdConversion, AtLeast32Bit, CheckedAdd, CheckedSub, EnsureOrigin, MaybeSerializeDeserialize, Member, One,
+		AccountIdConversion, AtLeast32Bit, CheckedAdd, CheckedSub, EnsureOrigin, MaybeSerializeDeserialize, Member,
+		One, Saturating,
 	},
-	DispatchResult, ModuleId, Permill, RuntimeDebug,
+	DispatchResult, ModuleId, PerThing, Permill, RuntimeDebug,
 };
 use sp_std::{prelude::*, result};
 use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools, SyntheticProtocolLiquidityPools};
-
-#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
-pub struct AccumulatedSwapRate {}
 
 const MODULE_ID: ModuleId = ModuleId(*b"lami/lp_");
 
@@ -77,7 +75,7 @@ decl_event!(
 		DepositLiquidity(AccountId, LiquidityPoolId, Balance),
 		/// Withdraw liquidity (who, pool_id, amount)
 		WithdrawLiquidity(AccountId, LiquidityPoolId, Balance),
-		/// Set spread (who, pool_id, currency_id, ask, bid)
+		/// Set spread (who, pool_id, currency_id, bid, ask)
 		SetSpread(AccountId, LiquidityPoolId, CurrencyId, Permill, Permill),
 		/// Set additional collateral ratio (who, pool_id, currency_id, ratio)
 		SetAdditionalCollateralRatio(AccountId, LiquidityPoolId, CurrencyId, Option<Permill>),
@@ -87,8 +85,12 @@ decl_event!(
 		SetMinAdditionalCollateralRatio(Permill),
 		/// Set synthetic enabled (who, pool_id, currency_id, enabled)
 		SetSyntheticEnabled(AccountId, LiquidityPoolId, CurrencyId, bool),
-		/// Swap rate updated (who, pool_id, currency_id, currency_id, rate)
+		/// Swap rate updated (who, pool_id, currency_id, currency_id, swap_rate)
 		SwapRateUpdated(AccountId, LiquidityPoolId, CurrencyId, CurrencyId, Fixed128),
+		/// Accumulated swap rate updated (pool_id, currency_id, currency_id, accumulated_swap_rate)
+		AccumulatedSwapRateUpdated(LiquidityPoolId, CurrencyId, CurrencyId, Fixed128),
+		/// Max Spread updated (currency_id, spread)
+		MaxSpreadUpdated(CurrencyId, Permill),
 	}
 );
 
@@ -139,10 +141,10 @@ decl_module! {
 			Self::deposit_event(RawEvent::WithdrawLiquidity(who, pool_id, amount));
 		}
 
-		pub fn set_spread(origin, pool_id: T::LiquidityPoolId, currency_id: T::CurrencyId, ask: Permill, bid: Permill) {
+		pub fn set_spread(origin, pool_id: T::LiquidityPoolId, currency_id: T::CurrencyId, bid: Permill, ask: Permill) {
 			let who = ensure_signed(origin)?;
-			Self::_set_spread(&who, pool_id, currency_id, ask, bid)?;
-			Self::deposit_event(RawEvent::SetSpread(who, pool_id, currency_id, ask, bid));
+			Self::_set_spread(&who, pool_id, currency_id, bid, ask)?;
+			Self::deposit_event(RawEvent::SetSpread(who, pool_id, currency_id, bid, ask));
 		}
 
 		pub fn set_additional_collateral_ratio(origin, pool_id: T::LiquidityPoolId, currency_id: T::CurrencyId, ratio: Option<Permill>) {
@@ -178,6 +180,14 @@ decl_module! {
 			<SwapRates<T>>::insert(pool_id, pair, rate);
 			Self::deposit_event(RawEvent::SwapRateUpdated(who, pool_id, pair.0, pair.1, rate));
 		}
+
+		pub fn set_max_spread(origin, currency_id: T::CurrencyId, max_spread: Permill) {
+			T::UpdateOrigin::try_origin(origin)
+				.map(|_| ())
+				.or_else(ensure_root)?;
+			<MaxSpread<T>>::insert(currency_id, max_spread);
+			Self::deposit_event(RawEvent::MaxSpreadUpdated(currency_id, max_spread));
+		}
 	}
 }
 
@@ -191,6 +201,7 @@ decl_error! {
 		CannotWithdrawAmount,
 		CannotWithdrawExistentialDeposit,
 		SwapRateTooHigh,
+		SpreadTooHigh,
 	}
 }
 
@@ -206,6 +217,22 @@ impl<T: Trait> Module<T> {
 	pub fn is_enabled(pool_id: T::LiquidityPoolId, currency_id: T::CurrencyId, leverage: Leverage) -> bool {
 		Self::liquidity_pool_options(&pool_id, &currency_id)
 			.map_or(false, |pool| pool.enabled_trades.contains(leverage))
+	}
+
+	/// Accumulated swap rate
+	/// FIXME: update/remove method
+	///
+	/// NOTE: This procedure needs to be called by the system every x blocks. Purpose of this method is testing accumulated rate
+	pub fn accumulate_swap_rate(pool_id: T::LiquidityPoolId, pair: (T::CurrencyId, T::CurrencyId)) {
+		let rate = Self::swap_rate(&pool_id, &pair);
+		let accumulated_rate = Self::accumulated_swap_rate(&pool_id, &pair).saturating_add(rate);
+		<AccumulatedSwapRates<T>>::insert(&pool_id, &pair, accumulated_rate);
+		Self::deposit_event(RawEvent::AccumulatedSwapRateUpdated(
+			pool_id,
+			pair.0,
+			pair.1,
+			accumulated_rate,
+		))
 	}
 }
 
@@ -276,16 +303,22 @@ type TradingPairOf<T> = TradingPair<<T as Trait>::CurrencyId>;
 
 impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
 	type TradingPair = TradingPairOf<T>;
-	fn get_swap_rate(_pair: Self::TradingPair) -> Fixed128 {
-		unimplemented!()
+	fn get_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128 {
+		Self::swap_rate(pool_id, (pair.base, pair.quote))
 	}
 
-	fn get_accumulated_swap_rate(_pair: Self::TradingPair) -> Fixed128 {
-		unimplemented!()
+	fn get_accumulated_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128 {
+		Self::accumulated_swap_rate(pool_id, (pair.base, pair.quote))
 	}
 
-	fn can_open_position(_pair: Self::TradingPair, _leverage: Leverage, _leveraged_amount: Self::Balance) -> bool {
-		unimplemented!()
+	fn can_open_position(
+		pool_id: Self::LiquidityPoolId,
+		pair: Self::TradingPair,
+		leverage: Leverage,
+		_leveraged_amount: Self::Balance,
+	) -> bool {
+		// FIXME: this implementation may change
+		Self::is_enabled(pool_id, pair.base, leverage) && Self::is_enabled(pool_id, pair.quote, leverage)
 	}
 }
 
@@ -320,6 +353,8 @@ impl<T: Trait> Module<T> {
 		<Balances<T>>::remove(&pool_id);
 		<Owners<T>>::remove(&pool_id);
 		<LiquidityPoolOptions<T>>::remove_prefix(&pool_id);
+		<SwapRates<T>>::remove_prefix(&pool_id);
+		<AccumulatedSwapRates<T>>::remove_prefix(&pool_id);
 
 		Ok(())
 	}
@@ -351,10 +386,14 @@ impl<T: Trait> Module<T> {
 		who: &T::AccountId,
 		pool_id: T::LiquidityPoolId,
 		currency_id: T::CurrencyId,
-		ask: Permill,
 		bid: Permill,
+		ask: Permill,
 	) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, who), Error::<T>::NoPermission);
+		let max_spread = Self::max_spread(currency_id);
+		if !max_spread.is_zero() {
+			ensure!(ask <= max_spread && bid <= max_spread, Error::<T>::SpreadTooHigh);
+		}
 		let mut pool = Self::liquidity_pool_options(&pool_id, &currency_id).unwrap_or_default();
 		pool.bid_spread = bid;
 		pool.ask_spread = ask;

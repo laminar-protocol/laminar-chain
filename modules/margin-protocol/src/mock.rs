@@ -146,15 +146,20 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
 	type TradingPair = TradingPairOf<Runtime>;
 
-	fn get_swap_rate(pair: Self::TradingPair) -> Fixed128 {
+	fn get_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128 {
 		unimplemented!()
 	}
 
-	fn get_accumulated_swap_rate(pair: Self::TradingPair) -> Fixed128 {
+	fn get_accumulated_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128 {
 		unimplemented!()
 	}
 
-	fn can_open_position(pair: Self::TradingPair, leverage: Leverage, leveraged_amount: Self::Balance) -> bool {
+	fn can_open_position(
+		pool_id: Self::LiquidityPoolId,
+		pair: Self::TradingPair,
+		leverage: Leverage,
+		leveraged_amount: Self::Balance,
+	) -> bool {
 		unimplemented!()
 	}
 }

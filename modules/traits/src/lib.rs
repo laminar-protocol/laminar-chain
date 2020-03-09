@@ -44,9 +44,14 @@ pub trait SyntheticProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> 
 
 pub trait MarginProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
 	type TradingPair;
-	fn get_swap_rate(pair: Self::TradingPair) -> Fixed128;
-	fn get_accumulated_swap_rate(pair: Self::TradingPair) -> Fixed128;
-	fn can_open_position(pair: Self::TradingPair, leverage: Leverage, leveraged_amount: Self::Balance) -> bool;
+	fn get_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128;
+	fn get_accumulated_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128;
+	fn can_open_position(
+		pool_id: Self::LiquidityPoolId,
+		pair: Self::TradingPair,
+		leverage: Leverage,
+		leveraged_amount: Self::Balance,
+	) -> bool;
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
