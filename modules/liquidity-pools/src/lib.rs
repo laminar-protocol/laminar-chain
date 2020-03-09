@@ -299,10 +299,8 @@ impl<T: Trait> SyntheticProtocolLiquidityPools<T::AccountId> for Module<T> {
 	}
 }
 
-type TradingPairOf<T> = TradingPair<<T as Trait>::CurrencyId>;
-
 impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
-	type TradingPair = TradingPairOf<T>;
+	type TradingPair = TradingPair<T::CurrencyId>;
 	fn get_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128 {
 		Self::swap_rate(pool_id, (pair.base, pair.quote))
 	}

@@ -9,6 +9,7 @@ use primitives::{Balance, CurrencyId, LiquidityPoolId};
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
 use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
+use traits::LiquidityPools;
 
 use super::*;
 
@@ -144,7 +145,7 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 	}
 }
 impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
-	type TradingPair = TradingPairOf<Runtime>;
+	type TradingPair = TradingPair<Self::CurrencyId>;
 
 	fn get_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128 {
 		unimplemented!()
@@ -168,6 +169,8 @@ impl Trait for Runtime {
 	type Event = TestEvent;
 	type MultiCurrency = OrmlTokens;
 	type LiquidityPools = MockLiquidityPools;
+	type Balance = Balance;
+	type CurrencyId = CurrencyId;
 	type PriceProvider = MockPrices;
 }
 

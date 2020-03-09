@@ -1,9 +1,12 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::{Decode, Encode};
-use frame_support::{decl_error, decl_event, decl_module, decl_storage};
+use codec::{Decode, Encode, FullCodec};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, Parameter};
 use sp_arithmetic::Permill;
-use sp_runtime::{traits::StaticLookup, DispatchResult, RuntimeDebug};
+use sp_runtime::{
+	traits::{AtLeast32Bit, MaybeSerializeDeserialize, StaticLookup},
+	DispatchResult, RuntimeDebug,
+};
 // FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
 // would cause compiling error in `decl_module!` and `construct_runtime!`
 // #3295 https://github.com/paritytech/substrate/issues/3295
@@ -11,29 +14,26 @@ use frame_system as system;
 use frame_system::ensure_signed;
 use orml_traits::{MultiCurrency, PriceProvider};
 use orml_utilities::Fixed128;
-use primitives::{Leverage, Price};
+use primitives::{Leverage, LiquidityPoolId, Price};
+use sp_runtime::traits::Member;
 use sp_std::prelude::*;
-use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools};
+use traits::{LiquidityPoolManager, MarginProtocolLiquidityPools};
 
 mod mock;
 mod tests;
 
-type BalanceOf<T> = <<T as Trait>::MultiCurrency as MultiCurrency<<T as frame_system::Trait>::AccountId>>::Balance;
-type CurrencyIdOf<T> =
-	<<T as Trait>::MultiCurrency as MultiCurrency<<T as frame_system::Trait>::AccountId>>::CurrencyId;
-type LiquidityPoolIdOf<T> =
-	<<T as Trait>::LiquidityPools as LiquidityPools<<T as frame_system::Trait>::AccountId>>::LiquidityPoolId;
-
 pub trait Trait: frame_system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
-	type MultiCurrency: MultiCurrency<Self::AccountId>;
+	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Self::Balance, CurrencyId = Self::CurrencyId>;
 	type LiquidityPools: MarginProtocolLiquidityPools<
 		Self::AccountId,
-		CurrencyId = CurrencyIdOf<Self>,
-		Balance = BalanceOf<Self>,
-		TradingPair = TradingPairOf<Self>,
+		CurrencyId = Self::CurrencyId,
+		Balance = Self::Balance,
+		TradingPair = TradingPair<Self::CurrencyId>,
 	>;
-	type PriceProvider: PriceProvider<CurrencyIdOf<Self>, Price>;
+	type Balance: Parameter + Member + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
+	type CurrencyId: FullCodec + Parameter + Member + Copy + MaybeSerializeDeserialize;
+	type PriceProvider: PriceProvider<Self::CurrencyId, Price>;
 }
 
 #[derive(Encode, Decode, Copy, Clone, RuntimeDebug, Eq, PartialEq)]
@@ -41,7 +41,6 @@ pub struct TradingPair<CurrencyId> {
 	pub base: CurrencyId,
 	pub quote: CurrencyId,
 }
-pub type TradingPairOf<T> = TradingPair<CurrencyIdOf<T>>;
 
 impl<CurrencyId> TradingPair<CurrencyId> {
 	fn normalize() {
@@ -55,13 +54,13 @@ pub type PositionId = u64;
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq)]
 pub struct Position<T: Trait> {
 	owner: T::AccountId,
-	pool: LiquidityPoolIdOf<T>,
-	pair: TradingPairOf<T>,
+	pool: LiquidityPoolId,
+	pair: TradingPair<T::CurrencyId>,
 	leverage: Leverage,
-	leveraged_holding: BalanceOf<T>,
-	leveraged_debits: BalanceOf<T>,
+	leveraged_holding: T::Balance,
+	leveraged_debits: T::Balance,
 	open_accumulated_swap_rate: Fixed128,
-	open_margin: BalanceOf<T>,
+	open_margin: T::Balance,
 }
 
 //TODO: set this value
@@ -77,25 +76,25 @@ decl_storage! {
 	trait Store for Module<T: Trait> as MarginProtocol {
 		NextPositionId get(next_position_id): PositionId;
 		Positions get(positions): map hasher(blake2_256) PositionId => Option<Position<T>>;
-		PositionsByUser get(positions_by_user): double_map hasher(blake2_256) T::AccountId, hasher(blake2_256) LiquidityPoolIdOf<T> => Vec<PositionId>;
-		PositionsByPool get(positions_by_pool): double_map hasher(blake2_256) LiquidityPoolIdOf<T>, hasher(blake2_256) (TradingPairOf<T>, PositionId) => Option<()>;
-		// SwapPeriods get(swap_periods): map hasher(black2_256) TradingPairOf<T> => Option<SwapPeriod>;
-		Balances get(balances): map hasher(blake2_256) T::AccountId => BalanceOf<T>;
-		MinLiquidationPercent get(min_liquidation_percent): map hasher(blake2_256) TradingPairOf<T> => Fixed128;
+		PositionsByUser get(positions_by_user): double_map hasher(blake2_256) T::AccountId, hasher(blake2_256) LiquidityPoolId => Vec<PositionId>;
+		PositionsByPool get(positions_by_pool): double_map hasher(blake2_256) LiquidityPoolId, hasher(blake2_256) (TradingPair<T::CurrencyId>, PositionId) => Option<()>;
+		// SwapPeriods get(swap_periods): map hasher(black2_256) TradingPair => Option<SwapPeriod>;
+		Balances get(balances): map hasher(blake2_256) T::AccountId => T::Balance;
+		MinLiquidationPercent get(min_liquidation_percent): map hasher(blake2_256) TradingPair<T::CurrencyId> => Fixed128;
 		MarginCalledTraders get(margin_called_traders): map hasher(blake2_256) T::AccountId => Option<()>;
-		MarginCalledLiquidityPools get(margin_called_liquidity_pools): map hasher(blake2_256) LiquidityPoolIdOf<T> => Option<()>;
-		TraderRiskThreshold get(trader_risk_threshold): map hasher(blake2_256) TradingPairOf<T> => Option<RiskThreshold>;
-		LiquidityPoolENPThreshold get(liquidity_pool_enp_threshold): map hasher(blake2_256) TradingPairOf<T> => Option<RiskThreshold>;
-		LiquidityPoolELLThreshold get(liquidity_pool_ell_threshold): map hasher(blake2_256) TradingPairOf<T> => Option<RiskThreshold>;
+		MarginCalledLiquidityPools get(margin_called_liquidity_pools): map hasher(blake2_256) LiquidityPoolId => Option<()>;
+		TraderRiskThreshold get(trader_risk_threshold): map hasher(blake2_256) TradingPair<T::CurrencyId> => Option<RiskThreshold>;
+		LiquidityPoolENPThreshold get(liquidity_pool_enp_threshold): map hasher(blake2_256) TradingPair<T::CurrencyId> => Option<RiskThreshold>;
+		LiquidityPoolELLThreshold get(liquidity_pool_ell_threshold): map hasher(blake2_256) TradingPair<T::CurrencyId> => Option<RiskThreshold>;
 	}
 }
 
 decl_event! {
 	pub enum Event<T> where
 		<T as frame_system::Trait>::AccountId,
-		LiquidityPoolId = LiquidityPoolIdOf<T>,
-		TradingPair = TradingPairOf<T>,
-		Amount = BalanceOf<T>
+		LiquidityPoolId = LiquidityPoolId,
+		TradingPair = TradingPair<<T as Trait>::CurrencyId>,
+		Amount = <T as Trait>::Balance
 	{
 		/// Position opened: (who, pool_id, trading_pair, leverage, leveraged_amount, price)
 		PositionOpened(AccountId, LiquidityPoolId, TradingPair, Leverage, Amount, Price),
@@ -118,7 +117,7 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		pub fn open_position(origin, pool: LiquidityPoolIdOf<T>, pair: TradingPairOf<T>, leverage: Leverage, #[compact] leveraged_amount: BalanceOf<T>, price: Price) {
+		pub fn open_position(origin, pool: LiquidityPoolId, pair: TradingPair<T::CurrencyId>, leverage: Leverage, #[compact] leveraged_amount: T::Balance, price: Price) {
 			let who = ensure_signed(origin)?;
 			Self::_open_position(&who, pool, pair, leverage, leveraged_amount, price)?;
 
@@ -132,14 +131,14 @@ decl_module! {
 			Self::deposit_event(RawEvent::PositionClosed(who, position_id, price));
 		}
 
-		pub fn deposit(origin, #[compact] amount: BalanceOf<T>) {
+		pub fn deposit(origin, #[compact] amount: T::Balance) {
 			let who = ensure_signed(origin)?;
 			Self::_deposit(&who, amount)?;
 
 			Self::deposit_event(RawEvent::Deposited(who, amount));
 		}
 
-		pub fn withdraw(origin, #[compact] amount: BalanceOf<T>) {
+		pub fn withdraw(origin, #[compact] amount: T::Balance) {
 			let who = ensure_signed(origin)?;
 			Self::_withdraw(&who, amount)?;
 
@@ -150,19 +149,19 @@ decl_module! {
 		pub fn trader_margin_call(origin, who: <T::Lookup as StaticLookup>::Source) {}
 		pub fn trader_become_safe(origin, who: <T::Lookup as StaticLookup>::Source) {}
 		pub fn trader_liquidate(origin, who: <T::Lookup as StaticLookup>::Source) {}
-		pub fn liquidity_pool_margin_call(origin, pool: LiquidityPoolIdOf<T>) {}
-		pub fn liquidity_pool_become_safe(origin, pool: LiquidityPoolIdOf<T>) {}
-		pub fn liquidity_pool_liquidate(origin, pool: LiquidityPoolIdOf<T>) {}
+		pub fn liquidity_pool_margin_call(origin, pool: LiquidityPoolId) {}
+		pub fn liquidity_pool_become_safe(origin, pool: LiquidityPoolId) {}
+		pub fn liquidity_pool_liquidate(origin, pool: LiquidityPoolId) {}
 	}
 }
 
 impl<T: Trait> Module<T> {
 	fn _open_position(
 		who: &T::AccountId,
-		pool: LiquidityPoolIdOf<T>,
-		pair: TradingPairOf<T>,
+		pool: LiquidityPoolId,
+		pair: TradingPair<T::CurrencyId>,
 		leverage: Leverage,
-		leveraged_amount: BalanceOf<T>,
+		leveraged_amount: T::Balance,
 		price: Price,
 	) -> DispatchResult {
 		// TODO: implementation
@@ -174,24 +173,24 @@ impl<T: Trait> Module<T> {
 		unimplemented!()
 	}
 
-	fn _deposit(who: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
+	fn _deposit(who: &T::AccountId, amount: T::Balance) -> DispatchResult {
 		// TODO: implementation
 		unimplemented!()
 	}
 
-	fn _withdraw(who: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
+	fn _withdraw(who: &T::AccountId, amount: T::Balance) -> DispatchResult {
 		// TODO: implementation
 		unimplemented!()
 	}
 }
 
 //TODO: implementations, prevent open new position for margin called pools
-impl<T: Trait> LiquidityPoolManager<LiquidityPoolIdOf<T>, BalanceOf<T>> for Module<T> {
-	fn can_remove(pool: LiquidityPoolIdOf<T>) -> bool {
+impl<T: Trait> LiquidityPoolManager<LiquidityPoolId, T::Balance> for Module<T> {
+	fn can_remove(pool: LiquidityPoolId) -> bool {
 		unimplemented!()
 	}
 
-	fn get_required_deposit(pool: LiquidityPoolIdOf<T>) -> BalanceOf<T> {
+	fn get_required_deposit(pool: LiquidityPoolId) -> T::Balance {
 		unimplemented!()
 	}
 }
