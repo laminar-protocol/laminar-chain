@@ -479,8 +479,6 @@ impl liquidity_pools::Trait for Runtime {
 	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type LiquidityCurrency = LiquidityCurrency;
 	type LiquidityPoolId = LiquidityPoolId;
-	type Balance = Balance;
-	type CurrencyId = CurrencyId;
 	type PoolManager = SyntheticTokens;
 	type ExistentialDeposit = ExistentialDeposit;
 	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;

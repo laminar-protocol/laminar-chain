@@ -101,8 +101,6 @@ impl Trait for Runtime {
 	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type LiquidityCurrency = LiquidityCurrency;
 	type LiquidityPoolId = LiquidityPoolId;
-	type Balance = Balance;
-	type CurrencyId = CurrencyId;
 	type PoolManager = PoolManager;
 	type ExistentialDeposit = ExistentialDeposit;
 	type UpdateOrigin = EnsureSignedBy<One, AccountId>;

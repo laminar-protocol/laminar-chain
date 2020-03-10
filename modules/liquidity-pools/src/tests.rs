@@ -8,8 +8,25 @@ use sp_std::num::NonZeroI128;
 
 use frame_support::{assert_noop, assert_ok};
 use primitives::{CurrencyId, Leverage, Leverages};
+use sp_runtime::traits::OnInitialize;
 use sp_runtime::{PerThing, Permill};
 use traits::{LiquidityPools, MarginProtocolLiquidityPools, SyntheticProtocolLiquidityPools};
+
+fn swap_rate(pair: (CurrencyId, CurrencyId)) -> Fixed128 {
+	let trading_pair = TradingPair {
+		base: pair.0,
+		quote: pair.1,
+	};
+	<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_swap_rate(0, trading_pair)
+}
+
+fn accumulated_rate(pair: (CurrencyId, CurrencyId)) -> Fixed128 {
+	let trading_pair = TradingPair {
+		base: pair.0,
+		quote: pair.1,
+	};
+	<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_accumulated_swap_rate(0, trading_pair)
+}
 
 #[test]
 fn is_owner_should_work() {
@@ -62,7 +79,7 @@ fn is_enabled_should_work() {
 fn should_create_pool() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(ModuleLiquidityPools::owners(0), Some(ALICE));
+		assert_eq!(ModuleLiquidityPools::owners(0), Some((ALICE, 0)));
 		assert_eq!(ModuleLiquidityPools::next_pool_id(), 1);
 	});
 }
@@ -122,7 +139,7 @@ fn should_deposit_liquidity() {
 fn should_withdraw_liquidity() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(ModuleLiquidityPools::owners(0), Some(ALICE));
+		assert_eq!(ModuleLiquidityPools::owners(0), Some((ALICE, 0)));
 		assert_eq!(ModuleLiquidityPools::balances(&0), 0);
 		assert_ok!(ModuleLiquidityPools::deposit_liquidity(Origin::signed(ALICE), 0, 1000));
 		assert_eq!(ModuleLiquidityPools::balances(&0), 1000);
@@ -159,7 +176,7 @@ fn should_fail_withdraw_liquidity() {
 fn should_set_spread() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(ModuleLiquidityPools::owners(0), Some(ALICE));
+		assert_eq!(ModuleLiquidityPools::owners(0), Some((ALICE, 0)));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
 		assert_ok!(ModuleLiquidityPools::set_spread(
 			Origin::signed(ALICE),
@@ -197,7 +214,7 @@ fn should_set_spread() {
 fn should_set_max_spread() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(ModuleLiquidityPools::owners(0), Some(ALICE));
+		assert_eq!(ModuleLiquidityPools::owners(0), Some((ALICE, 0)));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
 		// no max spread
 		assert_ok!(ModuleLiquidityPools::set_spread(
@@ -251,7 +268,7 @@ fn should_set_max_spread() {
 fn should_set_additional_collateral_ratio() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(ModuleLiquidityPools::owners(0), Some(ALICE));
+		assert_eq!(ModuleLiquidityPools::owners(0), Some((ALICE, 0)));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
 		assert_ok!(ModuleLiquidityPools::set_min_additional_collateral_ratio(
 			Origin::ROOT,
@@ -298,7 +315,7 @@ fn should_set_additional_collateral_ratio() {
 fn should_fail_set_additional_collateral_ratio() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(ModuleLiquidityPools::owners(0), Some(ALICE));
+		assert_eq!(ModuleLiquidityPools::owners(0), Some((ALICE, 0)));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
 		assert_eq!(
 			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::get_additional_collateral_ratio(
@@ -378,7 +395,7 @@ fn should_fail_set_additional_collateral_ratio() {
 fn should_set_enabled_trades() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(ModuleLiquidityPools::owners(0), Some(ALICE));
+		assert_eq!(ModuleLiquidityPools::owners(0), Some((ALICE, 0)));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
 		assert_ok!(ModuleLiquidityPools::set_enabled_trades(
 			Origin::signed(ALICE),
@@ -406,7 +423,7 @@ fn should_set_enabled_trades() {
 fn should_set_synthetic_enabled() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(ModuleLiquidityPools::owners(0), Some(ALICE));
+		assert_eq!(ModuleLiquidityPools::owners(0), Some((ALICE, 0)));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
 		assert_eq!(
 			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::can_mint(0, CurrencyId::AUSD),
@@ -476,28 +493,18 @@ fn should_get_swap() {
 fn should_get_accumulated_swap() {
 	new_test_ext().execute_with(|| {
 		let pair = (CurrencyId::AUSD, CurrencyId::FEUR);
-		let trading_pair = TradingPair {
-			base: pair.0,
-			quote: pair.1,
-		};
-		let rate = Fixed128::from_rational(1, NonZeroI128::new(10).unwrap());
+		let rate = Fixed128::from_rational(1, NonZeroI128::new(10).unwrap()); // 10%
+
+		assert_ok!(ModuleLiquidityPools::set_accumulate(Origin::ROOT, pair, 1, 0));
 		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_ok!(ModuleLiquidityPools::update_swap(Origin::signed(ALICE), 0, pair, rate));
 		assert_eq!(
-			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_accumulated_swap_rate(
-				0,
-				trading_pair
-			),
-			Fixed128::from_natural(0)
+			accumulated_rate(pair),
+			Fixed128::from_natural(0) // 0%
 		);
-		ModuleLiquidityPools::accumulate_swap_rate(0, pair);
-		assert_eq!(
-			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_accumulated_swap_rate(
-				0,
-				trading_pair
-			),
-			rate
-		);
+
+		<ModuleLiquidityPools as OnInitialize<u64>>::on_initialize(1);
+		assert_eq!(accumulated_rate(pair), rate);
 	});
 }
 
@@ -548,62 +555,30 @@ fn can_open_position() {
 fn should_update_accumulated_rate() {
 	new_test_ext().execute_with(|| {
 		let pair = (CurrencyId::AUSD, CurrencyId::FEUR);
-		let trading_pair = TradingPair {
-			base: pair.0,
-			quote: pair.1,
-		};
-		let rate = Fixed128::from_rational(1, NonZeroI128::new(10).unwrap());
+		let rate = Fixed128::from_rational(23, NonZeroI128::new(1000).unwrap()); // 2.3%
+
+		assert_ok!(ModuleLiquidityPools::set_accumulate(Origin::ROOT, pair, 1, 0));
 		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_ok!(ModuleLiquidityPools::update_swap(Origin::signed(ALICE), 0, pair, rate));
-		assert_eq!(
-			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_swap_rate(0, trading_pair),
-			rate
-		);
-		assert_eq!(
-			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_accumulated_swap_rate(
-				0,
-				trading_pair
-			),
-			Fixed128::from_natural(0)
-		);
-		ModuleLiquidityPools::accumulate_swap_rate(0, pair);
-		assert_eq!(
-			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_accumulated_swap_rate(
-				0,
-				trading_pair
-			),
-			Fixed128::from_rational(1, NonZeroI128::new(10).unwrap())
-		);
+		assert_eq!(swap_rate(pair), rate);
 
-		ModuleLiquidityPools::accumulate_swap_rate(0, pair);
-		ModuleLiquidityPools::accumulate_swap_rate(0, pair);
-		assert_eq!(
-			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_accumulated_swap_rate(
-				0,
-				trading_pair
-			),
-			Fixed128::from_rational(3, NonZeroI128::new(10).unwrap())
-		);
+		let acc = Fixed128::from_natural(0); // 0%
+		assert_eq!(accumulated_rate(pair), acc);
 
-		let new_rate = Fixed128::from_rational(2, NonZeroI128::new(10).unwrap());
-		assert_ok!(ModuleLiquidityPools::update_swap(
-			Origin::signed(ALICE),
-			0,
-			pair,
-			new_rate
-		));
-		assert_eq!(
-			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_swap_rate(0, trading_pair),
-			new_rate
-		);
+		<ModuleLiquidityPools as OnInitialize<u64>>::on_initialize(1);
+		let acc = Fixed128::from_rational(23, NonZeroI128::new(1000).unwrap()); // 2.3%
+		assert_eq!(accumulated_rate(pair), acc);
 
-		ModuleLiquidityPools::accumulate_swap_rate(0, pair);
-		assert_eq!(
-			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_accumulated_swap_rate(
-				0,
-				trading_pair
-			),
-			Fixed128::from_rational(5, NonZeroI128::new(10).unwrap())
-		);
+		<ModuleLiquidityPools as OnInitialize<u64>>::on_initialize(2);
+		let acc = Fixed128::from_rational(46529, NonZeroI128::new(1000000).unwrap()); // 4.6529%
+		assert_eq!(accumulated_rate(pair), acc);
+
+		<ModuleLiquidityPools as OnInitialize<u64>>::on_initialize(3);
+		let acc = Fixed128::from_rational(70599167i128, NonZeroI128::new(1000000000).unwrap()); // 7.0599%
+		assert_eq!(accumulated_rate(pair), acc);
+
+		<ModuleLiquidityPools as OnInitialize<u64>>::on_initialize(4);
+		let acc = Fixed128::from_rational(95222947841i128, NonZeroI128::new(1000000000000).unwrap()); // 9.5223%
+		assert_eq!(accumulated_rate(pair), acc);
 	});
 }

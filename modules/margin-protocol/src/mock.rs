@@ -145,7 +145,7 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 	}
 }
 impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
-	type TradingPair = TradingPair<Self::CurrencyId>;
+	type TradingPair = TradingPair;
 
 	fn get_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128 {
 		unimplemented!()
@@ -169,8 +169,6 @@ impl Trait for Runtime {
 	type Event = TestEvent;
 	type MultiCurrency = OrmlTokens;
 	type LiquidityPools = MockLiquidityPools;
-	type Balance = Balance;
-	type CurrencyId = CurrencyId;
 	type PriceProvider = MockPrices;
 }
 
