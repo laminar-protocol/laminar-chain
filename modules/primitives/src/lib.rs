@@ -61,6 +61,14 @@ impl Convert<Price, Balance> for BalancePriceConverter {
 	}
 }
 
+pub fn balance_from_price(price: Price) -> Balance {
+	<BalancePriceConverter as Convert<Price, Balance>>::convert(price)
+}
+
+pub fn price_from_balance(balance: Balance) -> Price {
+	<BalancePriceConverter as Convert<Balance, Price>>::convert(balance)
+}
+
 bitmask! {
 	#[derive(Encode, Decode, Default)]
 	pub mask Leverages: u16 where flags Leverage {

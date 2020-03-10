@@ -3,7 +3,7 @@
 use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage};
 use sp_arithmetic::Permill;
-use sp_runtime::{traits::StaticLookup, DispatchResult, RuntimeDebug};
+use sp_runtime::{traits::StaticLookup, DispatchError, DispatchResult, RuntimeDebug};
 // FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
 // would cause compiling error in `decl_module!` and `construct_runtime!`
 // #3295 https://github.com/paritytech/substrate/issues/3295
@@ -11,8 +11,9 @@ use frame_system as system;
 use frame_system::ensure_signed;
 use orml_traits::{MultiCurrency, PriceProvider};
 use orml_utilities::Fixed128;
-use primitives::{Balance, CurrencyId, Leverage, LiquidityPoolId, Price};
-use traits::{LiquidityPoolManager, MarginProtocolLiquidityPools};
+use primitives::{price_from_balance, Balance, CurrencyId, Leverage, LiquidityPoolId, Price};
+use sp_std::result;
+use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools};
 
 mod mock;
 mod tests;
@@ -24,6 +25,7 @@ pub trait Trait: frame_system::Trait {
 		Self::AccountId,
 		CurrencyId = CurrencyId,
 		Balance = Balance,
+		LiquidityPoolId = LiquidityPoolId,
 		TradingPair = TradingPair,
 	>;
 	type PriceProvider: PriceProvider<CurrencyId, Price>;
@@ -101,7 +103,12 @@ decl_event! {
 }
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {}
+	pub enum Error for Module<T: Trait> {
+		NoPrice,
+		NoAskSpread,
+		MarketPriceTooHigh,
+		NumOverflow,
+	}
 }
 
 decl_module! {
@@ -148,6 +155,8 @@ decl_module! {
 	}
 }
 
+// Dispatchable functions impl
+
 impl<T: Trait> Module<T> {
 	fn _open_position(
 		who: &T::AccountId,
@@ -158,7 +167,13 @@ impl<T: Trait> Module<T> {
 		price: Price,
 	) -> DispatchResult {
 		// TODO: implementation
-		unimplemented!()
+		// ensure enough usd
+		let ask_price = Self::_ask_price_in_usd(pool, pair.quote, price)?;
+		let open_margin = price_from_balance(leveraged_amount)
+			.checked_div(&ask_price)
+			.ok_or(Error::<T>::NumOverflow)?;
+
+		Ok(())
 	}
 
 	fn _close_position(who: &T::AccountId, position_id: PositionId, price: Price) -> DispatchResult {
@@ -174,6 +189,31 @@ impl<T: Trait> Module<T> {
 	fn _withdraw(who: &T::AccountId, amount: Balance) -> DispatchResult {
 		// TODO: implementation
 		unimplemented!()
+	}
+}
+
+// Price helpers
+impl<T: Trait> Module<T> {
+	/// ask_price_in_usd =
+	fn _ask_price_in_usd(
+		pool: LiquidityPoolId,
+		currency_id: CurrencyId,
+		max_price: Price,
+	) -> result::Result<Price, DispatchError> {
+		let oracle_price = T::PriceProvider::get_price(CurrencyId::AUSD, currency_id).ok_or(Error::<T>::NoPrice)?;
+		let ask_spread: Price = T::LiquidityPools::get_ask_spread(pool, currency_id)
+			.ok_or(Error::<T>::NoAskSpread)?
+			.into();
+		let market_price: Price = ask_spread
+			.checked_mul(&oracle_price)
+			.expect("ask spread < 1; qed")
+			.checked_add(&oracle_price)
+			.ok_or(Error::<T>::NumOverflow)?;
+		if market_price > max_price {
+			Ok(market_price)
+		} else {
+			Err(Error::<T>::MarketPriceTooHigh.into())
+		}
 	}
 }
 
