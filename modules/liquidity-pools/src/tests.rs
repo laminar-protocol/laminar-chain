@@ -12,20 +12,12 @@ use sp_runtime::traits::OnInitialize;
 use sp_runtime::{PerThing, Permill};
 use traits::{LiquidityPools, MarginProtocolLiquidityPools, SyntheticProtocolLiquidityPools};
 
-fn swap_rate(pair: (CurrencyId, CurrencyId)) -> Fixed128 {
-	let trading_pair = TradingPair {
-		base: pair.0,
-		quote: pair.1,
-	};
-	<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_swap_rate(0, trading_pair)
+fn swap_rate(pair: TradingPair) -> Fixed128 {
+	<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_swap_rate(0, pair)
 }
 
-fn accumulated_rate(pair: (CurrencyId, CurrencyId)) -> Fixed128 {
-	let trading_pair = TradingPair {
-		base: pair.0,
-		quote: pair.1,
-	};
-	<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_accumulated_swap_rate(0, trading_pair)
+fn accumulated_rate(pair: TradingPair) -> Fixed128 {
+	<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_accumulated_swap_rate(0, pair)
 }
 
 #[test]
@@ -459,7 +451,10 @@ fn should_set_synthetic_enabled() {
 #[test]
 fn should_update_swap() {
 	new_test_ext().execute_with(|| {
-		let pair = (CurrencyId::LAMI, CurrencyId::AUSD);
+		let pair = TradingPair {
+			base: CurrencyId::LAMI,
+			quote: CurrencyId::AUSD,
+		};
 		let rate = Fixed128::from_natural(1);
 		let bad_rate = Fixed128::from_natural(3);
 		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
@@ -474,16 +469,15 @@ fn should_update_swap() {
 #[test]
 fn should_get_swap() {
 	new_test_ext().execute_with(|| {
-		let pair = (CurrencyId::LAMI, CurrencyId::AUSD);
-		let trading_pair = TradingPair {
-			base: pair.0,
-			quote: pair.1,
+		let pair = TradingPair {
+			base: CurrencyId::LAMI,
+			quote: CurrencyId::AUSD,
 		};
 		let rate = Fixed128::from_natural(1);
 		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_ok!(ModuleLiquidityPools::update_swap(Origin::signed(ALICE), 0, pair, rate));
 		assert_eq!(
-			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_swap_rate(0, trading_pair),
+			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_swap_rate(0, pair),
 			rate
 		);
 	});
@@ -492,7 +486,10 @@ fn should_get_swap() {
 #[test]
 fn should_get_accumulated_swap() {
 	new_test_ext().execute_with(|| {
-		let pair = (CurrencyId::AUSD, CurrencyId::FEUR);
+		let pair = TradingPair {
+			base: CurrencyId::AUSD,
+			quote: CurrencyId::FEUR,
+		};
 		let rate = Fixed128::from_rational(1, NonZeroI128::new(10).unwrap()); // 10%
 
 		assert_ok!(ModuleLiquidityPools::set_accumulate(Origin::ROOT, pair, 1, 0));
@@ -554,7 +551,10 @@ fn can_open_position() {
 #[test]
 fn should_update_accumulated_rate() {
 	new_test_ext().execute_with(|| {
-		let pair = (CurrencyId::AUSD, CurrencyId::FEUR);
+		let pair = TradingPair {
+			base: CurrencyId::AUSD,
+			quote: CurrencyId::FEUR,
+		};
 		let rate = Fixed128::from_rational(23, NonZeroI128::new(1000).unwrap()); // 2.3%
 
 		assert_ok!(ModuleLiquidityPools::set_accumulate(Origin::ROOT, pair, 1, 0));

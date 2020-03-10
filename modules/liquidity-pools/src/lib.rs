@@ -55,10 +55,10 @@ decl_storage! {
 		pub LiquidityPoolOptions get(fn liquidity_pool_options): double_map hasher(blake2_256) T::LiquidityPoolId, hasher(blake2_256) CurrencyId => Option<LiquidityPoolOption>;
 		pub Balances get(fn balances): map hasher(blake2_256) T::LiquidityPoolId => Balance;
 		pub MinAdditionalCollateralRatio get(fn min_additional_collateral_ratio) config(): Permill;
-		pub SwapRates get(fn swap_rate): double_map hasher(blake2_256) T::LiquidityPoolId, hasher(blake2_256) (CurrencyId, CurrencyId) => Fixed128;
-		pub AccumulatedSwapRates get(fn accumulated_swap_rate): double_map hasher(blake2_256) T::LiquidityPoolId, hasher(blake2_256) (CurrencyId, CurrencyId) => Fixed128;
+		pub SwapRates get(fn swap_rate): double_map hasher(blake2_256) T::LiquidityPoolId, hasher(blake2_256) TradingPair => Fixed128;
+		pub AccumulatedSwapRates get(fn accumulated_swap_rate): double_map hasher(blake2_256) T::LiquidityPoolId, hasher(blake2_256) TradingPair => Fixed128;
 		pub MaxSpread get(fn max_spread): map hasher(blake2_256) CurrencyId => Permill;
-		pub Accumulates get(fn accumulate): map hasher(blake2_256) (CurrencyId, CurrencyId) => Option<(Accumulate<T::BlockNumber>, (CurrencyId, CurrencyId))>;
+		pub Accumulates get(fn accumulate): map hasher(blake2_256) TradingPair => Option<(Accumulate<T::BlockNumber>, TradingPair)>;
 	}
 }
 
@@ -88,14 +88,14 @@ decl_event!(
 		SetMinAdditionalCollateralRatio(Permill),
 		/// Set synthetic enabled (who, pool_id, currency_id, enabled)
 		SetSyntheticEnabled(AccountId, LiquidityPoolId, CurrencyId, bool),
-		/// Swap rate updated (who, pool_id, base, quote, swap_rate)
-		SwapRateUpdated(AccountId, LiquidityPoolId, CurrencyId, CurrencyId, Fixed128),
-		/// Accumulated swap rate updated (pool_id, base, quote, accumulated_swap_rate)
-		AccumulatedSwapRateUpdated(LiquidityPoolId, CurrencyId, CurrencyId, Fixed128),
+		/// Swap rate updated (who, pool_id, pair, swap_rate)
+		SwapRateUpdated(AccountId, LiquidityPoolId, TradingPair, Fixed128),
+		/// Accumulated swap rate updated (pool_id, pair, accumulated_swap_rate)
+		AccumulatedSwapRateUpdated(LiquidityPoolId, TradingPair, Fixed128),
 		/// Max spread updated (currency_id, spread)
 		MaxSpreadUpdated(CurrencyId, Permill),
-		/// Set accumulate (base, quote, frequency, offset)
-		SetAccumulate(CurrencyId, CurrencyId, BlockNumber, BlockNumber),
+		/// Set accumulate (pair, frequency, offset)
+		SetAccumulate(TradingPair, BlockNumber, BlockNumber),
 	}
 );
 
@@ -178,12 +178,12 @@ decl_module! {
 			Self::deposit_event(RawEvent::SetSyntheticEnabled(who, pool_id, currency_id, enabled));
 		}
 
-		pub fn update_swap(origin, pool_id: T::LiquidityPoolId, pair: (CurrencyId, CurrencyId), rate: Fixed128) {
+		pub fn update_swap(origin, pool_id: T::LiquidityPoolId, pair: TradingPair, rate: Fixed128) {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
 			ensure!(rate <= T::MaxSwap::get(), Error::<T>::SwapRateTooHigh);
 			<SwapRates<T>>::insert(pool_id, pair, rate);
-			Self::deposit_event(RawEvent::SwapRateUpdated(who, pool_id, pair.0, pair.1, rate));
+			Self::deposit_event(RawEvent::SwapRateUpdated(who, pool_id, pair, rate));
 		}
 
 		pub fn set_max_spread(origin, currency_id: CurrencyId, max_spread: Permill) {
@@ -194,13 +194,13 @@ decl_module! {
 			Self::deposit_event(RawEvent::MaxSpreadUpdated(currency_id, max_spread));
 		}
 
-		pub fn set_accumulate(origin, pair: (CurrencyId, CurrencyId), frequency: T::BlockNumber, offset: T::BlockNumber) {
+		pub fn set_accumulate(origin, pair: TradingPair, frequency: T::BlockNumber, offset: T::BlockNumber) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
 			let accumulate = Accumulate { frequency, offset };
 			<Accumulates<T>>::insert(pair, (accumulate, pair));
-			Self::deposit_event(RawEvent::SetAccumulate(pair.0, pair.1, frequency, offset));
+			Self::deposit_event(RawEvent::SetAccumulate(pair, frequency, offset));
 		}
 
 		fn on_initialize(n: T::BlockNumber) {
@@ -308,11 +308,11 @@ impl<T: Trait> SyntheticProtocolLiquidityPools<T::AccountId> for Module<T> {
 impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
 	type TradingPair = TradingPair;
 	fn get_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128 {
-		Self::swap_rate(pool_id, (pair.base, pair.quote))
+		Self::swap_rate(pool_id, pair)
 	}
 
 	fn get_accumulated_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128 {
-		Self::accumulated_swap_rate(pool_id, (pair.base, pair.quote))
+		Self::accumulated_swap_rate(pool_id, pair)
 	}
 
 	fn can_open_position(
@@ -444,7 +444,7 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	fn _accumulate_rates(pair: (CurrencyId, CurrencyId)) {
+	fn _accumulate_rates(pair: TradingPair) {
 		for pool_id in <Owners<T>>::iter().map(|(_, pool_id)| pool_id) {
 			let rate = Self::swap_rate(pool_id, pair);
 			let accumulated = Self::accumulated_swap_rate(pool_id, pair);
@@ -455,7 +455,7 @@ impl<T: Trait> Module<T> {
 				.saturating_mul(one.saturating_add(rate))
 				.saturating_sub(one);
 			<AccumulatedSwapRates<T>>::insert(pool_id, pair, acc_rate);
-			Self::deposit_event(RawEvent::AccumulatedSwapRateUpdated(pool_id, pair.0, pair.1, acc_rate))
+			Self::deposit_event(RawEvent::AccumulatedSwapRateUpdated(pool_id, pair, acc_rate))
 		}
 	}
 }
