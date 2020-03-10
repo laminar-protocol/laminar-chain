@@ -10,7 +10,7 @@ use sp_runtime::{traits::StaticLookup, DispatchError, DispatchResult, RuntimeDeb
 use frame_system as system;
 use frame_system::ensure_signed;
 use orml_traits::{MultiCurrency, PriceProvider};
-use orml_utilities::Fixed128;
+use orml_utilities::{Fixed128, FixedU128};
 use primitives::{price_from_balance, Balance, CurrencyId, Leverage, LiquidityPoolId, Price};
 use sp_std::result;
 use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools};
@@ -214,6 +214,49 @@ impl<T: Trait> Module<T> {
 		} else {
 			Err(Error::<T>::MarketPriceTooHigh.into())
 		}
+	}
+}
+
+// Trader helpers
+impl<T: Trait> Module<T> {
+	/// Unrealized profit and loss.
+	fn _unrealized_pl(who: &T::AccountId) {
+		unimplemented!()
+	}
+
+	/// Sum of all open margin under a given trader.
+	fn _margin_held(who: &T::AccountId) {
+		unimplemented!()
+	}
+
+	/// Free balance: the balance available for withdraw.
+	///
+	/// free_balance = balance - margin_held
+	fn _free_balance(who: &T::AccountId) {
+		unimplemented!()
+	}
+
+	/// Free margin: the margin available for opening new positions.
+	///
+	/// free_margin = balance + unrealized_pl - margin_held
+	fn _free_margin(who: &T::AccountId) {
+		unimplemented!()
+	}
+
+	/// Accumulated swap of all open positions of a given trader.
+	fn _accumulated_swap(who: &T::AccountId) {
+		unimplemented!()
+	}
+
+	/// equity = balance + unrealized_pl + accumulated swap
+	fn _equity(who: &T::AccountId) {
+		unimplemented!()
+	}
+
+	/// Margin level of a given user. If `new_position` is `None`, return the margin level based on current positions,
+	/// else based on current positions plus this new one.
+	fn _margin_level(who: &T::AccountId, new_position: Option<Position<T>>) -> FixedU128 {
+		unimplemented!()
 	}
 }
 
