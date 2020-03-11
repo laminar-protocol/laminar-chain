@@ -12,7 +12,7 @@ use frame_system::ensure_signed;
 use orml_traits::{MultiCurrency, PriceProvider};
 use orml_utilities::{Fixed128, FixedU128};
 use primitives::{price_from_balance, Balance, CurrencyId, Leverage, LiquidityPoolId, Price};
-use sp_std::result;
+use sp_std::{prelude::*, result};
 use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools};
 
 mod mock;
@@ -33,8 +33,8 @@ pub trait Trait: frame_system::Trait {
 
 #[derive(Encode, Decode, Copy, Clone, RuntimeDebug, Eq, PartialEq)]
 pub struct TradingPair {
-	base: CurrencyId,
-	quote: CurrencyId,
+	pub base: CurrencyId,
+	pub quote: CurrencyId,
 }
 
 impl TradingPair {

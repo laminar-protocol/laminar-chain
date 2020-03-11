@@ -157,6 +157,13 @@ impl core::fmt::Debug for Leverages {
 	}
 }
 
+#[cfg(not(feature = "std"))]
+impl core::fmt::Debug for Leverage {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+		write!(f, "Leverage {:?}", self)
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
