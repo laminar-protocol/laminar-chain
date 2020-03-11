@@ -224,6 +224,7 @@ decl_error! {
 		CannotWithdrawExistentialDeposit,
 		SwapRateTooHigh,
 		SpreadTooHigh,
+		PoolNotExists,
 	}
 }
 
@@ -364,6 +365,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _deposit_liquidity(who: &T::AccountId, pool_id: T::LiquidityPoolId, amount: Balance) -> DispatchResult {
+		ensure!(<Owners<T>>::contains_key(&pool_id), Error::<T>::PoolNotExists);
 		let balance = Self::balances(&pool_id);
 		let new_balance = balance.checked_add(amount).ok_or(Error::<T>::CannotDepositAmount)?;
 		// transfer amount to this pool
