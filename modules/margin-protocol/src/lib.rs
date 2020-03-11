@@ -232,6 +232,9 @@ impl<T: Trait> Module<T> {
 
 // Trader helpers
 impl<T: Trait> Module<T> {
+	/// Unrealized profit and loss of a position.
+	///
+	/// unrealized_pl_of_position = (curr_price - open_price) * leveraged_held
 	fn _unrealized_pl_of_position(position: &Position<T>) -> Fixed128Result {
 		// open_price = leveraged_debits / leveraged_held
 		let open_price = position
@@ -248,7 +251,8 @@ impl<T: Trait> Module<T> {
 		Ok(position.leveraged_held.saturating_mul(price_delta))
 	}
 
-	/// Unrealized profit and loss of a given trader.
+	/// Unrealized profit and loss of a given trader. It is the sum of unrealized profit and loss of all positions
+	/// opened by a trader.
 	fn _unrealized_pl_of_trader(who: &T::AccountId) -> Fixed128Result {
 		<PositionsByUser<T>>::iter_prefix(who)
 			.flatten()
