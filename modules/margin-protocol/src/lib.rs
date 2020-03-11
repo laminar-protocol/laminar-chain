@@ -12,7 +12,7 @@ use frame_system::ensure_signed;
 use orml_traits::{MultiCurrency, PriceProvider};
 use orml_utilities::{Fixed128, FixedU128};
 use primitives::{
-	arithmetic::{fixed_128_from_fixed_u128, u128_from_fixed_128},
+	arithmetic::{fixed_128_from_fixed_u128, fixed_128_from_u128, u128_from_fixed_128},
 	Balance, CurrencyId, Leverage, LiquidityPoolId, Price,
 };
 use sp_std::{prelude::*, result};
@@ -74,7 +74,7 @@ decl_storage! {
 	trait Store for Module<T: Trait> as MarginProtocol {
 		NextPositionId get(next_position_id): PositionId;
 		Positions get(positions): map hasher(blake2_256) PositionId => Option<Position<T>>;
-		PositionsByUser get(positions_by_user): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) LiquidityPoolId => Vec<PositionId>;
+		PositionsByTrader get(positions_by_trader): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) LiquidityPoolId => Vec<PositionId>;
 		PositionsByPool get(positions_by_pool): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) (TradingPair, PositionId) => Option<()>;
 		// SwapPeriods get(swap_periods): map hasher(black2_256) TradingPair => Option<SwapPeriod>;
 		Balances get(balances): map hasher(blake2_256) T::AccountId => Balance;
@@ -254,7 +254,7 @@ impl<T: Trait> Module<T> {
 	/// Unrealized profit and loss of a given trader. It is the sum of unrealized profit and loss of all positions
 	/// opened by a trader.
 	fn _unrealized_pl_of_trader(who: &T::AccountId) -> Fixed128Result {
-		<PositionsByUser<T>>::iter_prefix(who)
+		<PositionsByTrader<T>>::iter_prefix(who)
 			.flatten()
 			.filter_map(|position_id| Self::positions(position_id))
 			.try_fold(Fixed128::zero(), |acc, p| {
@@ -265,7 +265,7 @@ impl<T: Trait> Module<T> {
 
 	/// Sum of all open margin of a given trader.
 	fn _margin_held(who: &T::AccountId) -> Balance {
-		<PositionsByUser<T>>::iter_prefix(who)
+		<PositionsByTrader<T>>::iter_prefix(who)
 			.flatten()
 			.filter_map(|position_id| Self::positions(position_id))
 			.map(|p| p.open_margin)
@@ -290,13 +290,23 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// Accumulated swap of all open positions of a given trader.
-	fn _accumulated_swap(who: &T::AccountId) {
-		unimplemented!()
+	fn _accumulated_swap_rate(who: &T::AccountId) -> Fixed128 {
+		<PositionsByTrader<T>>::iter_prefix(who)
+			.flatten()
+			.filter_map(|position_id| Self::positions(position_id))
+			.fold(Fixed128::zero(), |acc, p| {
+				let swap_rate = T::LiquidityPools::get_accumulated_swap_rate(p.pool, p.pair)
+					.saturating_sub(p.open_accumulated_swap_rate);
+				acc.saturating_add(swap_rate)
+			})
 	}
 
 	/// equity = balance + unrealized_pl + accumulated swap
-	fn _equity(who: &T::AccountId) {
-		unimplemented!()
+	fn _equity(who: &T::AccountId) -> Fixed128Result {
+		let unrealized = Self::_unrealized_pl_of_trader(who)?;
+		Ok(fixed_128_from_u128(Self::balances(who))
+			.saturating_add(unrealized)
+			.saturating_add(Self::_accumulated_swap_rate(who)))
 	}
 
 	/// Margin level of a given user. If `new_position` is `None`, return the margin level based on current positions,

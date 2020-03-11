@@ -13,3 +13,7 @@ pub fn fixed_128_from_fixed_u128(f: FixedU128) -> Fixed128 {
 pub fn u128_from_fixed_128(f: Fixed128) -> u128 {
 	f.deconstruct().unique_saturated_into()
 }
+
+pub fn fixed_128_from_u128(u: u128) -> Fixed128 {
+	Fixed128::from_parts(u.unique_saturated_into())
+}
