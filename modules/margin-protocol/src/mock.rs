@@ -4,8 +4,8 @@
 
 use frame_support::{impl_outer_event, impl_outer_origin, ord_parameter_types, parameter_types};
 use frame_system as system;
+use orml_utilities::Fixed128;
 use primitives::{Balance, CurrencyId, LiquidityPoolId};
-use sp_arithmetic::Fixed64;
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
 use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
@@ -147,15 +147,20 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
 	type TradingPair = TradingPair;
 
-	fn get_swap_rate(pair: Self::TradingPair) -> Fixed64 {
+	fn get_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128 {
 		unimplemented!()
 	}
 
-	fn get_accumulated_swap_rate(pair: Self::TradingPair) -> Fixed64 {
+	fn get_accumulated_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128 {
 		unimplemented!()
 	}
 
-	fn can_open_position(pair: Self::TradingPair, leverage: Leverage, leveraged_amount: Self::Balance) -> bool {
+	fn can_open_position(
+		pool_id: Self::LiquidityPoolId,
+		pair: Self::TradingPair,
+		leverage: Leverage,
+		leveraged_amount: Self::Balance,
+	) -> bool {
 		unimplemented!()
 	}
 }

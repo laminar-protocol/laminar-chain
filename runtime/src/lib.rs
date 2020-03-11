@@ -29,6 +29,7 @@ use sp_version::RuntimeVersion;
 pub use module_primitives::{CurrencyId, LiquidityPoolId};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_oracle::OperatorProvider;
+use orml_utilities::Fixed128;
 
 use module_primitives::{BalancePriceConverter, Price};
 
@@ -192,9 +193,9 @@ parameter_types! {
 impl pallet_balances::Trait for Runtime {
 	/// The type for recording an account's balance.
 	type Balance = Balance;
+	type DustRemoval = ();
 	/// The ubiquitous event type.
 	type Event = Event;
-	type DustRemoval = ();
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 }
@@ -298,17 +299,17 @@ impl pallet_treasury::Trait for Runtime {
 	type Currency = Balances;
 	type ApproveOrigin = pallet_collective::EnsureMembers<_4, AccountId, GeneralCouncilInstance>;
 	type RejectOrigin = pallet_collective::EnsureMembers<_2, AccountId, GeneralCouncilInstance>;
+	type Tippers = GeneralCouncilProvider;
+	type TipCountdown = TipCountdown;
+	type TipFindersFee = TipFindersFee;
+	type TipReportDepositBase = TipReportDepositBase;
+	type TipReportDepositPerByte = TipReportDepositPerByte;
 	type Event = Event;
 	type ProposalRejection = ();
 	type ProposalBond = ProposalBond;
 	type ProposalBondMinimum = ProposalBondMinimum;
 	type SpendPeriod = SpendPeriod;
 	type Burn = Burn;
-	type Tippers = GeneralCouncilProvider;
-	type TipCountdown = TipCountdown;
-	type TipFindersFee = TipFindersFee;
-	type TipReportDepositBase = TipReportDepositBase;
-	type TipReportDepositPerByte = TipReportDepositPerByte;
 }
 
 parameter_types! {
@@ -316,13 +317,13 @@ parameter_types! {
 }
 
 impl pallet_session::Trait for Runtime {
-	type SessionManager = Staking;
-	type SessionHandler = <opaque::SessionKeys as OpaqueKeys>::KeyTypeIdProviders;
-	type ShouldEndSession = Babe;
 	type Event = Event;
-	type Keys = opaque::SessionKeys;
 	type ValidatorId = <Self as system::Trait>::AccountId;
 	type ValidatorIdOf = pallet_staking::StashOf<Self>;
+	type ShouldEndSession = Babe;
+	type SessionManager = Staking;
+	type SessionHandler = <opaque::SessionKeys as OpaqueKeys>::KeyTypeIdProviders;
+	type Keys = opaque::SessionKeys;
 	type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
 }
 
@@ -459,15 +460,16 @@ impl synthetic_tokens::Trait for Runtime {
 	type CurrencyId = CurrencyId;
 	type Balance = Balance;
 	type LiquidityPoolId = LiquidityPoolId;
-	type SyntheticCurrencyIds = SyntheticCurrencyIds;
 	type DefaultExtremeRatio = DefaultExtremeRatio;
 	type DefaultLiquidationRatio = DefaultLiquidationRatio;
 	type DefaultCollateralRatio = DefaultCollateralRatio;
+	type SyntheticCurrencyIds = SyntheticCurrencyIds;
 	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
 }
 
 parameter_types! {
 	pub const GetLiquidityCurrencyId: CurrencyId = CurrencyId::AUSD;
+	pub const MaxSwap: Fixed128 = Fixed128::from_natural(2);
 }
 
 type LiquidityCurrency = orml_currencies::Currency<Runtime, GetLiquidityCurrencyId>;
@@ -477,11 +479,10 @@ impl liquidity_pools::Trait for Runtime {
 	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type LiquidityCurrency = LiquidityCurrency;
 	type LiquidityPoolId = LiquidityPoolId;
-	type Balance = Balance;
-	type CurrencyId = CurrencyId;
 	type PoolManager = SyntheticTokens;
 	type ExistentialDeposit = ExistentialDeposit;
 	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
+	type MaxSwap = MaxSwap;
 }
 
 parameter_types! {

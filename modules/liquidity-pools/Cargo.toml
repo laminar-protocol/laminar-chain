@@ -16,10 +16,12 @@ frame-system = { git = "https://github.com/paritytech/substrate.git", default-fe
 
 traits = { package = "module-traits", path = "../traits", default-features = false }
 primitives = { package = "module-primitives", path = "../primitives", default-features = false }
+margin-protocol = { package = "module-margin-protocol", path = "../margin-protocol", default-features = false }
 
 orml-currencies = { path = "../../orml/currencies", default-features = false }
 orml-traits = { path = "../../orml/traits", default-features = false }
 orml-tokens = { path = "../../orml/tokens", default-features = false }
+orml-utilities = { path = "../../orml/utilities", default-features = false }
 
 [dev-dependencies]
 sp-core = { git = "https://github.com/paritytech/substrate.git", default-features = false }
@@ -36,7 +38,9 @@ std = [
 	"frame-system/std",
 	"traits/std",
 	"primitives/std",
+	"margin-protocol/std",
 	"orml-currencies/std",
 	"orml-traits/std",
 	"orml-tokens/std",
+	"orml-utilities/std",
 ]

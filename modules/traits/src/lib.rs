@@ -2,8 +2,8 @@
 
 use codec::{Decode, Encode, FullCodec};
 use frame_support::Parameter;
+use orml_utilities::Fixed128;
 use primitives::Leverage;
-use sp_arithmetic::Fixed64;
 use sp_runtime::{
 	traits::{AtLeast32Bit, MaybeSerializeDeserialize},
 	DispatchResult, Permill, RuntimeDebug,
@@ -44,10 +44,14 @@ pub trait SyntheticProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> 
 
 pub trait MarginProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
 	type TradingPair;
-
-	fn get_swap_rate(pair: Self::TradingPair) -> Fixed64; // TODO: replace Fixed64 with Fixed128 https://github.com/laminar-protocol/open-runtime-module-library/issues/82
-	fn get_accumulated_swap_rate(pair: Self::TradingPair) -> Fixed64; // TODO: replace Fixed64 with Fixed128 https://github.com/laminar-protocol/open-runtime-module-library/issues/82
-	fn can_open_position(pair: Self::TradingPair, leverage: Leverage, leveraged_amount: Self::Balance) -> bool;
+	fn get_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128;
+	fn get_accumulated_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128;
+	fn can_open_position(
+		pool_id: Self::LiquidityPoolId,
+		pair: Self::TradingPair,
+		leverage: Leverage,
+		leveraged_amount: Self::Balance,
+	) -> bool;
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
