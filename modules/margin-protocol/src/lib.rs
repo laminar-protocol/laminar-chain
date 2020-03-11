@@ -2,7 +2,7 @@
 
 use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage};
-use sp_arithmetic::Permill;
+use sp_arithmetic::{traits::Saturating, Permill};
 use sp_runtime::{traits::StaticLookup, DispatchError, DispatchResult, RuntimeDebug};
 // FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
 // would cause compiling error in `decl_module!` and `construct_runtime!`
@@ -11,7 +11,10 @@ use frame_system as system;
 use frame_system::ensure_signed;
 use orml_traits::{MultiCurrency, PriceProvider};
 use orml_utilities::{Fixed128, FixedU128};
-use primitives::{price_from_balance, Balance, CurrencyId, Leverage, LiquidityPoolId, Price};
+use primitives::{
+	arithmetic::{fixed_128_from_fixed_u128, u128_from_fixed_128},
+	Balance, CurrencyId, Leverage, LiquidityPoolId, Price,
+};
 use sp_std::{prelude::*, result};
 use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools};
 
@@ -52,8 +55,8 @@ pub struct Position<T: Trait> {
 	pool: LiquidityPoolId,
 	pair: TradingPair,
 	leverage: Leverage,
-	leveraged_holding: Balance,
-	leveraged_debits: Balance,
+	leveraged_held: Fixed128,
+	leveraged_debits: Fixed128,
 	open_accumulated_swap_rate: Fixed128,
 	open_margin: Balance,
 }
@@ -71,8 +74,8 @@ decl_storage! {
 	trait Store for Module<T: Trait> as MarginProtocol {
 		NextPositionId get(next_position_id): PositionId;
 		Positions get(positions): map hasher(blake2_256) PositionId => Option<Position<T>>;
-		PositionsByUser get(positions_by_user): double_map hasher(blake2_256) T::AccountId, hasher(blake2_256) LiquidityPoolId => Vec<PositionId>;
-		PositionsByPool get(positions_by_pool): double_map hasher(blake2_256) LiquidityPoolId, hasher(blake2_256) (TradingPair, PositionId) => Option<()>;
+		PositionsByUser get(positions_by_user): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) LiquidityPoolId => Vec<PositionId>;
+		PositionsByPool get(positions_by_pool): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) (TradingPair, PositionId) => Option<()>;
 		// SwapPeriods get(swap_periods): map hasher(black2_256) TradingPair => Option<SwapPeriod>;
 		Balances get(balances): map hasher(blake2_256) T::AccountId => Balance;
 		MinLiquidationPercent get(min_liquidation_percent): map hasher(blake2_256) TradingPair => Fixed128;
@@ -167,13 +170,7 @@ impl<T: Trait> Module<T> {
 		price: Price,
 	) -> DispatchResult {
 		// TODO: implementation
-		// ensure enough usd
-		let ask_price = Self::_ask_price_in_usd(pool, pair.quote, price)?;
-		let open_margin = price_from_balance(leveraged_amount)
-			.checked_div(&ask_price)
-			.ok_or(Error::<T>::NumOverflow)?;
-
-		Ok(())
+		unimplemented!()
 	}
 
 	fn _close_position(who: &T::AccountId, position_id: PositionId, price: Price) -> DispatchResult {
@@ -192,55 +189,100 @@ impl<T: Trait> Module<T> {
 	}
 }
 
+type PriceResult = result::Result<Price, DispatchError>;
+type Fixed128Result = result::Result<Fixed128, DispatchError>;
+type BalanceResult = result::Result<Balance, DispatchError>;
+
 // Price helpers
 impl<T: Trait> Module<T> {
-	/// ask_price_in_usd =
-	fn _ask_price_in_usd(
-		pool: LiquidityPoolId,
-		currency_id: CurrencyId,
-		max_price: Price,
-	) -> result::Result<Price, DispatchError> {
-		let oracle_price = T::PriceProvider::get_price(CurrencyId::AUSD, currency_id).ok_or(Error::<T>::NoPrice)?;
-		let ask_spread: Price = T::LiquidityPools::get_ask_spread(pool, currency_id)
+	/// The price from oracle.
+	fn _price(base: CurrencyId, quote: CurrencyId) -> PriceResult {
+		T::PriceProvider::get_price(base, quote).ok_or(Error::<T>::NoPrice.into())
+	}
+
+	/// ask_price = price * (1 + ask_spread)
+	fn _ask_price(pool: LiquidityPoolId, held: CurrencyId, debit: CurrencyId, max: Option<Price>) -> PriceResult {
+		let price = Self::_price(debit, held)?;
+		//FIXME: liquidity pools should provide spread based on trading pair
+		let spread: Price = T::LiquidityPools::get_ask_spread(pool, held)
 			.ok_or(Error::<T>::NoAskSpread)?
 			.into();
-		let market_price: Price = ask_spread
-			.checked_mul(&oracle_price)
-			.expect("ask spread < 1; qed")
-			.checked_add(&oracle_price)
-			.ok_or(Error::<T>::NumOverflow)?;
-		if market_price > max_price {
-			Ok(market_price)
-		} else {
-			Err(Error::<T>::MarketPriceTooHigh.into())
+		let ask_price: Price = Price::from_natural(1).saturating_add(spread).saturating_mul(price);
+
+		if let Some(m) = max {
+			if ask_price > m {
+				return Err(Error::<T>::MarketPriceTooHigh.into());
+			}
 		}
+
+		Ok(ask_price)
+	}
+
+	/// bid_price = price * (1 - bid_spread)
+	fn _bid_price(pool: LiquidityPoolId, held: CurrencyId, debit: CurrencyId) -> PriceResult {
+		let price = Self::_price(debit, held)?;
+		//FIXME: liquidity pools should provide spread based on trading pair
+		let spread: Price = T::LiquidityPools::get_bid_spread(pool, held)
+			.ok_or(Error::<T>::NoAskSpread)?
+			.into();
+
+		Ok(Price::from_natural(1).saturating_sub(spread).saturating_mul(price))
 	}
 }
 
 // Trader helpers
 impl<T: Trait> Module<T> {
-	/// Unrealized profit and loss.
-	fn _unrealized_pl(who: &T::AccountId) {
-		unimplemented!()
+	fn _unrealized_pl_of_position(position: &Position<T>) -> Fixed128Result {
+		// open_price = leveraged_debits / leveraged_held
+		let open_price = position
+			.leveraged_debits
+			.checked_div(&position.leveraged_held)
+			.expect("ensured safe on open position")
+			.saturating_abs();
+		let curr_price = {
+			let p = Self::_bid_price(position.pool, position.pair.quote, position.pair.base)?;
+			fixed_128_from_fixed_u128(p)
+		};
+		let price_delta = curr_price.saturating_sub(open_price);
+
+		Ok(position.leveraged_held.saturating_mul(price_delta))
 	}
 
-	/// Sum of all open margin under a given trader.
-	fn _margin_held(who: &T::AccountId) {
-		unimplemented!()
+	/// Unrealized profit and loss of a given trader.
+	fn _unrealized_pl_of_trader(who: &T::AccountId) -> Fixed128Result {
+		<PositionsByUser<T>>::iter_prefix(who)
+			.flatten()
+			.filter_map(|position_id| Self::positions(position_id))
+			.try_fold(Fixed128::zero(), |acc, p| {
+				let unrealized = Self::_unrealized_pl_of_position(&p)?;
+				Ok(acc.saturating_add(unrealized))
+			})
+	}
+
+	/// Sum of all open margin of a given trader.
+	fn _margin_held(who: &T::AccountId) -> Balance {
+		<PositionsByUser<T>>::iter_prefix(who)
+			.flatten()
+			.filter_map(|position_id| Self::positions(position_id))
+			.map(|p| p.open_margin)
+			.sum()
 	}
 
 	/// Free balance: the balance available for withdraw.
 	///
 	/// free_balance = balance - margin_held
-	fn _free_balance(who: &T::AccountId) {
-		unimplemented!()
+	fn _free_balance(who: &T::AccountId) -> Balance {
+		Self::balances(who).saturating_sub(Self::_margin_held(who))
 	}
 
 	/// Free margin: the margin available for opening new positions.
 	///
 	/// free_margin = balance + unrealized_pl - margin_held
-	fn _free_margin(who: &T::AccountId) {
-		unimplemented!()
+	fn _free_margin(who: &T::AccountId) -> BalanceResult {
+		let unrealized = Self::_unrealized_pl_of_trader(who)?;
+		Ok(Self::balances(who)
+			.saturating_add(u128_from_fixed_128(unrealized))
+			.saturating_sub(Self::_margin_held(who)))
 	}
 
 	/// Accumulated swap of all open positions of a given trader.

@@ -74,5 +74,7 @@ members = [
 	"orml/utilities",
 	"orml/vesting",
 	"runtime",
+	"orml/schedule-update",
+	"orml/gradually-update",
 ]
 exclude = [ "runtime/wasm" ]

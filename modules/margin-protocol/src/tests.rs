@@ -4,7 +4,7 @@
 
 use super::*;
 use frame_support::{assert_noop, assert_ok};
-use mock::ExtBuilder;
+use mock::{ExtBuilder, Runtime};
 
 #[test]
 fn test() {

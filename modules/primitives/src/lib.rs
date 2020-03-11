@@ -10,6 +10,8 @@ extern crate bitmask;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
+pub mod arithmetic;
+
 pub use orml_prices::Price;
 
 pub type LiquidityPoolId = u32;
@@ -59,14 +61,6 @@ impl Convert<Price, Balance> for BalancePriceConverter {
 			deconstructed.saturating_mul(BALANCE_ACCURACY / price_accuracy)
 		}
 	}
-}
-
-pub fn balance_from_price(price: Price) -> Balance {
-	<BalancePriceConverter as Convert<Price, Balance>>::convert(price)
-}
-
-pub fn price_from_balance(balance: Balance) -> Price {
-	<BalancePriceConverter as Convert<Balance, Price>>::convert(balance)
 }
 
 bitmask! {
