@@ -297,7 +297,8 @@ impl<T: Trait> Module<T> {
 			.fold(Fixed128::zero(), |acc, p| {
 				let swap_rate = T::LiquidityPools::get_accumulated_swap_rate(p.pool, p.pair)
 					.saturating_sub(p.open_accumulated_swap_rate);
-				acc.saturating_add(swap_rate)
+				let swap_fee = p.leveraged_held.saturating_abs().saturating_mul(swap_rate);
+				acc.saturating_add(swap_fee)
 			})
 	}
 
