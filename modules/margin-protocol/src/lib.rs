@@ -115,7 +115,7 @@ decl_error! {
 		NoPrice,
 		NoAskSpread,
 		MarketPriceTooHigh,
-		NumOverflow,
+		NumOutOfBound,
 	}
 }
 
@@ -239,7 +239,7 @@ impl<T: Trait> Module<T> {
 			let p = Self::_price(CurrencyId::AUSD, currency_id)?;
 			fixed_128_from_fixed_u128(p)
 		};
-		amount.checked_mul(&price).ok_or(Error::<T>::NumOverflow.into())
+		amount.checked_mul(&price).ok_or(Error::<T>::NumOutOfBound.into())
 	}
 }
 
@@ -265,7 +265,7 @@ impl<T: Trait> Module<T> {
 		let unrealized = position
 			.leveraged_held
 			.checked_mul(&price_delta)
-			.ok_or(Error::<T>::NumOverflow)?;
+			.ok_or(Error::<T>::NumOutOfBound)?;
 		Self::_usd_value(position.pair.quote, unrealized)
 	}
 
@@ -277,7 +277,7 @@ impl<T: Trait> Module<T> {
 			.filter_map(|position_id| Self::positions(position_id))
 			.try_fold(Fixed128::zero(), |acc, p| {
 				let unrealized = Self::_unrealized_pl_of_position(&p)?;
-				acc.checked_add(&unrealized).ok_or(Error::<T>::NumOverflow.into())
+				acc.checked_add(&unrealized).ok_or(Error::<T>::NumOutOfBound.into())
 			})
 	}
 
@@ -307,14 +307,14 @@ impl<T: Trait> Module<T> {
 			.try_fold(Fixed128::zero(), |acc, p| {
 				let rate = T::LiquidityPools::get_accumulated_swap_rate(p.pool, p.pair)
 					.checked_sub(&p.open_accumulated_swap_rate)
-					.ok_or(Error::<T>::NumOverflow)?;
+					.ok_or(Error::<T>::NumOutOfBound)?;
 				let rate_amount = p
 					.leveraged_held
 					.saturating_abs()
 					.checked_mul(&rate)
-					.ok_or(Error::<T>::NumOverflow)?;
+					.ok_or(Error::<T>::NumOutOfBound)?;
 				let usd_value = Self::_usd_value(p.pair.quote, rate_amount)?;
-				acc.checked_add(&usd_value).ok_or(Error::<T>::NumOverflow.into())
+				acc.checked_add(&usd_value).ok_or(Error::<T>::NumOutOfBound.into())
 			})
 	}
 
@@ -323,11 +323,11 @@ impl<T: Trait> Module<T> {
 		let unrealized = Self::_unrealized_pl_of_trader(who)?;
 		let with_unrealized = fixed_128_from_u128(Self::balances(who))
 			.checked_add(&unrealized)
-			.ok_or(Error::<T>::NumOverflow)?;
+			.ok_or(Error::<T>::NumOutOfBound)?;
 		let accumulated_swap_rate = Self::_accumulated_swap_rate(who)?;
 		with_unrealized
 			.checked_sub(&accumulated_swap_rate)
-			.ok_or(Error::<T>::NumOverflow.into())
+			.ok_or(Error::<T>::NumOutOfBound.into())
 	}
 
 	/// Margin level of a given user. If `new_position` is `None`, return the margin level based on current positions,
@@ -339,7 +339,8 @@ impl<T: Trait> Module<T> {
 			.filter_map(|position_id| Self::positions(position_id))
 			.chain(new_position.map_or(vec![], |p| vec![p]))
 			.try_fold(Fixed128::zero(), |acc, p| {
-				acc.checked_add(&p.leveraged_held_in_usd).ok_or(Error::<T>::NumOverflow)
+				acc.checked_add(&p.leveraged_held_in_usd)
+					.ok_or(Error::<T>::NumOutOfBound)
 			})?;
 		Ok(equity
 			.checked_div(&leveraged_held_in_usd)
