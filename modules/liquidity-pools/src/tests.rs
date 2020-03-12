@@ -126,7 +126,7 @@ fn should_deposit_liquidity() {
 		assert_eq!(<ModuleLiquidityPools as LiquidityPools<AccountId>>::liquidity(0), 1000);
 		assert_noop!(
 			ModuleLiquidityPools::deposit_liquidity(Origin::signed(ALICE), 1, 1000),
-			Error::<Runtime>::PoolNotExists
+			Error::<Runtime>::PoolNotFound
 		);
 	})
 }
