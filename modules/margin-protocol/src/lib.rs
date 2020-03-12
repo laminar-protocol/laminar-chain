@@ -75,12 +75,14 @@ pub struct RiskThreshold {
 	stop_out: Permill,
 }
 
+//TODO: Refactor `PositionsByPool` to `double_map LiquidityPoolId, (TradingPair, PositionId) => Option<()>`
+// once iteration on key and values of `StorageDoubleMap` ready.
 decl_storage! {
 	trait Store for Module<T: Trait> as MarginProtocol {
 		NextPositionId get(next_position_id): PositionId;
 		Positions get(positions): map hasher(blake2_256) PositionId => Option<Position<T>>;
 		PositionsByTrader get(positions_by_trader): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) LiquidityPoolId => Vec<PositionId>;
-		PositionsByPool get(positions_by_pool): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) (TradingPair, PositionId) => Option<()>;
+		PositionsByPool get(positions_by_pool): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => Vec<PositionId>;
 		// SwapPeriods get(swap_periods): map hasher(black2_256) TradingPair => Option<SwapPeriod>;
 		Balances get(balances): map hasher(blake2_256) T::AccountId => Balance;
 		MinLiquidationPercent get(min_liquidation_percent): map hasher(blake2_256) TradingPair => Fixed128;
@@ -365,9 +367,20 @@ impl<T: Trait> Module<T> {
 			fixed_128_from_u128(l)
 		};
 
-		// TODO: iterate all positions in pool, get all unrealized_po and accumulated_swap_rate
+		// -all_unrealized_pl + all_accumulated_swap_rate
+		let unrealized_pl_and_rate = PositionsByPool::iter_prefix(pool)
+			.flatten()
+			.filter_map(|position_id| Self::positions(position_id))
+			.try_fold::<_, _, Fixed128Result>(Fixed128::zero(), |acc, p| {
+				let rate = Self::_accumulated_swap_rate_of_position(&p)?;
+				let unrealized = Self::_unrealized_pl_of_position(&p)?;
+				let sum = rate.checked_sub(&unrealized).ok_or(Error::<T>::NumOutOfBound)?;
+				acc.checked_add(&sum).ok_or(Error::<T>::NumOutOfBound.into())
+			})?;
 
-		unimplemented!()
+		liquidity
+			.checked_add(&unrealized_pl_and_rate)
+			.ok_or(Error::<T>::NumOutOfBound.into())
 	}
 
 	/// Equity to Net Position Ratio (ENP) of a liquidity pool.
