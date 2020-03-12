@@ -342,15 +342,20 @@ impl<T: Trait> Module<T> {
 	/// Margin level of a given user. If `new_position` is `None`, return the margin level based on current positions,
 	/// else based on current positions plus this new one.
 	fn _margin_level(who: &T::AccountId, new_position: Option<Position<T>>) -> Fixed128Result {
-		let equity = Self::_equity_of_trader(who)?;
-		let leveraged_held_in_usd = <PositionsByTrader<T>>::iter_prefix(who)
+		let mut leveraged_held_in_usd = <PositionsByTrader<T>>::iter_prefix(who)
 			.flatten()
 			.filter_map(|position_id| Self::positions(position_id))
-			.chain(new_position.map_or(vec![], |p| vec![p]))
 			.try_fold(Fixed128::zero(), |acc, p| {
 				acc.checked_add(&p.leveraged_held_in_usd.saturating_abs())
 					.ok_or(Error::<T>::NumOutOfBound)
 			})?;
+		if let Some(n) = new_position {
+			leveraged_held_in_usd = leveraged_held_in_usd
+				.checked_add(&n.leveraged_held_in_usd.saturating_abs())
+				.ok_or(Error::<T>::NumOutOfBound)?;
+		}
+
+		let equity = Self::_equity_of_trader(who)?;
 		Ok(equity
 			.checked_div(&leveraged_held_in_usd)
 			// if no leveraged held, margin level is max
