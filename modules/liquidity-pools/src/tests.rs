@@ -124,6 +124,10 @@ fn should_deposit_liquidity() {
 		assert_ok!(ModuleLiquidityPools::deposit_liquidity(Origin::signed(ALICE), 0, 1000));
 		assert_eq!(ModuleLiquidityPools::balances(&0), 1000);
 		assert_eq!(<ModuleLiquidityPools as LiquidityPools<AccountId>>::liquidity(0), 1000);
+		assert_noop!(
+			ModuleLiquidityPools::deposit_liquidity(Origin::signed(ALICE), 1, 1000),
+			Error::<Runtime>::PoolNotFound
+		);
 	})
 }
 
