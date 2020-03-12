@@ -60,7 +60,7 @@ pub struct Position<T: Trait> {
 	leverage: Leverage,
 	leveraged_held: Fixed128,
 	leveraged_debits: Fixed128,
-	/// USD value of leveraged held abs on open position.
+	/// USD value of leveraged held on open position.
 	leveraged_held_in_usd: Fixed128,
 	open_accumulated_swap_rate: Fixed128,
 	open_margin: Balance,
@@ -299,32 +299,39 @@ impl<T: Trait> Module<T> {
 			.expect("ensured enough open margin on open position; qed")
 	}
 
+	/// Accumulated swap rate of a position(USD value).
+	///
+	/// accumulated_swap_rate_of_position = (current_accumulated - open_accumulated) * leveraged_held * price
+	fn _accumulated_swap_rate_of_position(position: &Position<T>) -> Fixed128Result {
+		let rate = T::LiquidityPools::get_accumulated_swap_rate(position.pool, position.pair)
+			.checked_sub(&position.open_accumulated_swap_rate)
+			.ok_or(Error::<T>::NumOutOfBound)?;
+		let rate_amount = position
+			.leveraged_held
+			.saturating_abs()
+			.checked_mul(&rate)
+			.ok_or(Error::<T>::NumOutOfBound)?;
+		Self::_usd_value(position.pair.quote, rate_amount)
+	}
+
 	/// Accumulated swap of all open positions of a given trader(USD value).
-	fn _accumulated_swap_rate(who: &T::AccountId) -> Fixed128Result {
+	fn _accumulated_swap_rate_of_trader(who: &T::AccountId) -> Fixed128Result {
 		<PositionsByTrader<T>>::iter_prefix(who)
 			.flatten()
 			.filter_map(|position_id| Self::positions(position_id))
 			.try_fold(Fixed128::zero(), |acc, p| {
-				let rate = T::LiquidityPools::get_accumulated_swap_rate(p.pool, p.pair)
-					.checked_sub(&p.open_accumulated_swap_rate)
-					.ok_or(Error::<T>::NumOutOfBound)?;
-				let rate_amount = p
-					.leveraged_held
-					.saturating_abs()
-					.checked_mul(&rate)
-					.ok_or(Error::<T>::NumOutOfBound)?;
-				let usd_value = Self::_usd_value(p.pair.quote, rate_amount)?;
-				acc.checked_add(&usd_value).ok_or(Error::<T>::NumOutOfBound.into())
+				let rate_of_p = Self::_accumulated_swap_rate_of_position(&p)?;
+				acc.checked_add(&rate_of_p).ok_or(Error::<T>::NumOutOfBound.into())
 			})
 	}
 
-	/// equity = balance + unrealized_pl - accumulated_swap_rate
-	fn _equity(who: &T::AccountId) -> Fixed128Result {
+	/// equity_of_trader = balance + unrealized_pl - accumulated_swap_rate
+	fn _equity_of_trader(who: &T::AccountId) -> Fixed128Result {
 		let unrealized = Self::_unrealized_pl_of_trader(who)?;
 		let with_unrealized = fixed_128_from_u128(Self::balances(who))
 			.checked_add(&unrealized)
 			.ok_or(Error::<T>::NumOutOfBound)?;
-		let accumulated_swap_rate = Self::_accumulated_swap_rate(who)?;
+		let accumulated_swap_rate = Self::_accumulated_swap_rate_of_trader(who)?;
 		with_unrealized
 			.checked_sub(&accumulated_swap_rate)
 			.ok_or(Error::<T>::NumOutOfBound.into())
@@ -333,19 +340,44 @@ impl<T: Trait> Module<T> {
 	/// Margin level of a given user. If `new_position` is `None`, return the margin level based on current positions,
 	/// else based on current positions plus this new one.
 	fn _margin_level(who: &T::AccountId, new_position: Option<Position<T>>) -> Fixed128Result {
-		let equity = Self::_equity(who)?;
+		let equity = Self::_equity_of_trader(who)?;
 		let leveraged_held_in_usd = <PositionsByTrader<T>>::iter_prefix(who)
 			.flatten()
 			.filter_map(|position_id| Self::positions(position_id))
 			.chain(new_position.map_or(vec![], |p| vec![p]))
 			.try_fold(Fixed128::zero(), |acc, p| {
-				acc.checked_add(&p.leveraged_held_in_usd)
+				acc.checked_add(&p.leveraged_held_in_usd.saturating_abs())
 					.ok_or(Error::<T>::NumOutOfBound)
 			})?;
 		Ok(equity
 			.checked_div(&leveraged_held_in_usd)
 			// if no leveraged held, margin level is max
 			.unwrap_or(Fixed128::max_value()))
+	}
+}
+
+// Liquidity pool helpers
+impl<T: Trait> Module<T> {
+	/// equity_of_pool = liquidity - all_unrealized_pl + all_accumulated_swap_rate
+	fn _equity_of_pool(pool: LiquidityPoolId) -> Fixed128Result {
+		let liquidity = {
+			let l = <T::LiquidityPools as LiquidityPools<T::AccountId>>::liquidity(pool);
+			fixed_128_from_u128(l)
+		};
+
+		// TODO: iterate all positions in pool, get all unrealized_po and accumulated_swap_rate
+
+		unimplemented!()
+	}
+
+	/// Equity to Net Position Ratio (ENP) of a liquidity pool.
+	fn _enp(pool: LiquidityPoolId) -> Fixed128Result {
+		unimplemented!()
+	}
+
+	/// Equity to Longest Leg Ratio (ELL) of a liquidity pool.
+	fn _ell(pool: LiquidityPoolId) -> Fixed128Result {
+		unimplemented!()
 	}
 }
 
