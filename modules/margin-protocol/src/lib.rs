@@ -18,7 +18,7 @@ use primitives::{
 	arithmetic::{fixed_128_from_fixed_u128, fixed_128_from_u128},
 	Balance, CurrencyId, Leverage, LiquidityPoolId, Price,
 };
-use sp_std::{prelude::*, result};
+use sp_std::{cmp, prelude::*, result};
 use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools};
 
 mod mock;
@@ -385,12 +385,48 @@ impl<T: Trait> Module<T> {
 
 	/// Equity to Net Position Ratio (ENP) of a liquidity pool.
 	fn _enp(pool: LiquidityPoolId) -> Fixed128Result {
-		unimplemented!()
+		let equity = Self::_equity_of_pool(pool)?;
+		let net_position = PositionsByPool::iter_prefix(pool)
+			.flatten()
+			.filter_map(|position_id| Self::positions(position_id))
+			.fold(Fixed128::zero(), |acc, p| {
+				acc.checked_add(&p.leveraged_held_in_usd)
+					.expect("ensured safe on open position; qed")
+			});
+		Ok(equity
+			.checked_div(&net_position)
+			// if `net_position` is zero, ENP is max
+			.unwrap_or(Fixed128::max_value()))
 	}
 
 	/// Equity to Longest Leg Ratio (ELL) of a liquidity pool.
 	fn _ell(pool: LiquidityPoolId) -> Fixed128Result {
-		unimplemented!()
+		let equity = Self::_equity_of_pool(pool)?;
+		let (positive_leg, non_positive_leg) = PositionsByPool::iter_prefix(pool)
+			.flatten()
+			.filter_map(|position_id| Self::positions(position_id))
+			.fold((Fixed128::zero(), Fixed128::zero()), |(positive, non_positive), p| {
+				if p.leveraged_held_in_usd.is_positive() {
+					(
+						positive
+							.checked_add(&p.leveraged_held_in_usd)
+							.expect("ensured safe on open position; qed"),
+						non_positive,
+					)
+				} else {
+					(
+						positive,
+						non_positive
+							.checked_add(&p.leveraged_held_in_usd)
+							.expect("ensured safe on open position; qed"),
+					)
+				}
+			});
+		let longest_leg = cmp::max(positive_leg, non_positive_leg.saturating_abs());
+		Ok(equity
+			.checked_div(&longest_leg)
+			// if `longest_leg` is zero, ELL is max
+			.unwrap_or(Fixed128::max_value()))
 	}
 }
 
