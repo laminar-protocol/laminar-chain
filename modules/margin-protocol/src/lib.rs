@@ -15,7 +15,7 @@ use frame_system::ensure_signed;
 use orml_traits::{MultiCurrency, PriceProvider};
 use orml_utilities::{Fixed128, FixedU128};
 use primitives::{
-	arithmetic::{fixed_128_from_fixed_u128, fixed_128_from_u128, u128_from_fixed_128},
+	arithmetic::{fixed_128_from_fixed_u128, fixed_128_from_u128},
 	Balance, CurrencyId, Leverage, LiquidityPoolId, Price,
 };
 use sp_std::{prelude::*, result};
@@ -233,15 +233,23 @@ impl<T: Trait> Module<T> {
 
 		Ok(Price::from_natural(1).saturating_sub(spread).saturating_mul(price))
 	}
+
+	fn _usd_value(currency_id: CurrencyId, amount: Fixed128) -> Fixed128Result {
+		let price = {
+			let p = Self::_price(CurrencyId::AUSD, currency_id)?;
+			fixed_128_from_fixed_u128(p)
+		};
+		amount.checked_mul(&price).ok_or(Error::<T>::NumOverflow.into())
+	}
 }
 
 // Trader helpers
 impl<T: Trait> Module<T> {
-	/// Unrealized profit and loss of a position.
+	/// Unrealized profit and loss of a position(USD value).
 	///
 	/// unrealized_pl_of_position = (curr_price - open_price) * leveraged_held
 	fn _unrealized_pl_of_position(position: &Position<T>) -> Fixed128Result {
-		// open_price = leveraged_debits / leveraged_held
+		// open_price = abs(leveraged_debits / leveraged_held)
 		let open_price = position
 			.leveraged_debits
 			.checked_div(&position.leveraged_held)
@@ -251,12 +259,17 @@ impl<T: Trait> Module<T> {
 			let p = Self::_bid_price(position.pool, position.pair.quote, position.pair.base)?;
 			fixed_128_from_fixed_u128(p)
 		};
-		let price_delta = curr_price.saturating_sub(open_price);
-
-		Ok(position.leveraged_held.saturating_mul(price_delta))
+		let price_delta = curr_price
+			.checked_sub(&open_price)
+			.expect("Non-negative integers sub can't overflow; qed");
+		let unrealized = position
+			.leveraged_held
+			.checked_mul(&price_delta)
+			.ok_or(Error::<T>::NumOverflow)?;
+		Self::_usd_value(position.pair.quote, unrealized)
 	}
 
-	/// Unrealized profit and loss of a given trader. It is the sum of unrealized profit and loss of all positions
+	/// Unrealized profit and loss of a given trader(USD value). It is the sum of unrealized profit and loss of all positions
 	/// opened by a trader.
 	fn _unrealized_pl_of_trader(who: &T::AccountId) -> Fixed128Result {
 		<PositionsByTrader<T>>::iter_prefix(who)
@@ -264,7 +277,7 @@ impl<T: Trait> Module<T> {
 			.filter_map(|position_id| Self::positions(position_id))
 			.try_fold(Fixed128::zero(), |acc, p| {
 				let unrealized = Self::_unrealized_pl_of_position(&p)?;
-				Ok(acc.saturating_add(unrealized))
+				acc.checked_add(&unrealized).ok_or(Error::<T>::NumOverflow.into())
 			})
 	}
 
@@ -281,38 +294,40 @@ impl<T: Trait> Module<T> {
 	///
 	/// free_balance = balance - margin_held
 	fn _free_balance(who: &T::AccountId) -> Balance {
-		Self::balances(who).saturating_sub(Self::_margin_held(who))
+		Self::balances(who)
+			.checked_sub(Self::_margin_held(who))
+			.expect("ensured enough open margin on open position; qed")
 	}
 
-	/// Free margin: the margin available for opening new positions.
-	///
-	/// free_margin = balance + unrealized_pl - margin_held
-	fn _free_margin(who: &T::AccountId) -> BalanceResult {
-		let unrealized = Self::_unrealized_pl_of_trader(who)?;
-		Ok(Self::balances(who)
-			.saturating_add(u128_from_fixed_128(unrealized))
-			.saturating_sub(Self::_margin_held(who)))
-	}
-
-	/// Accumulated swap of all open positions of a given trader.
-	fn _accumulated_swap_rate(who: &T::AccountId) -> Fixed128 {
+	/// Accumulated swap of all open positions of a given trader(USD value).
+	fn _accumulated_swap_rate(who: &T::AccountId) -> Fixed128Result {
 		<PositionsByTrader<T>>::iter_prefix(who)
 			.flatten()
 			.filter_map(|position_id| Self::positions(position_id))
-			.fold(Fixed128::zero(), |acc, p| {
-				let swap_rate = T::LiquidityPools::get_accumulated_swap_rate(p.pool, p.pair)
-					.saturating_sub(p.open_accumulated_swap_rate);
-				let swap_fee = p.leveraged_held.saturating_abs().saturating_mul(swap_rate);
-				acc.saturating_add(swap_fee)
+			.try_fold(Fixed128::zero(), |acc, p| {
+				let rate = T::LiquidityPools::get_accumulated_swap_rate(p.pool, p.pair)
+					.checked_sub(&p.open_accumulated_swap_rate)
+					.ok_or(Error::<T>::NumOverflow)?;
+				let rate_amount = p
+					.leveraged_held
+					.saturating_abs()
+					.checked_mul(&rate)
+					.ok_or(Error::<T>::NumOverflow)?;
+				let usd_value = Self::_usd_value(p.pair.quote, rate_amount)?;
+				acc.checked_add(&usd_value).ok_or(Error::<T>::NumOverflow.into())
 			})
 	}
 
-	/// equity = balance + unrealized_pl + accumulated swap
+	/// equity = balance + unrealized_pl - accumulated_swap_rate
 	fn _equity(who: &T::AccountId) -> Fixed128Result {
 		let unrealized = Self::_unrealized_pl_of_trader(who)?;
-		Ok(fixed_128_from_u128(Self::balances(who))
-			.saturating_add(unrealized)
-			.saturating_add(Self::_accumulated_swap_rate(who)))
+		let with_unrealized = fixed_128_from_u128(Self::balances(who))
+			.checked_add(&unrealized)
+			.ok_or(Error::<T>::NumOverflow)?;
+		let accumulated_swap_rate = Self::_accumulated_swap_rate(who)?;
+		with_unrealized
+			.checked_sub(&accumulated_swap_rate)
+			.ok_or(Error::<T>::NumOverflow.into())
 	}
 
 	/// Margin level of a given user. If `new_position` is `None`, return the margin level based on current positions,
