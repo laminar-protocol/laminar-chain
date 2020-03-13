@@ -21,6 +21,9 @@ use primitives::{
 use sp_std::{cmp, prelude::*, result};
 use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools};
 
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
+
 mod mock;
 mod tests;
 
@@ -52,7 +55,7 @@ impl TradingPair {
 
 pub type PositionId = u64;
 
-#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq)]
+#[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq)]
 pub struct Position<T: Trait> {
 	owner: T::AccountId,
 	pool: LiquidityPoolId,
@@ -69,7 +72,8 @@ pub struct Position<T: Trait> {
 //TODO: set this value
 const MAX_POSITIONS_COUNT: u16 = u16::max_value();
 
-#[derive(Encode, Decode, Copy, Clone, RuntimeDebug, Eq, PartialEq)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, Copy, Clone, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct RiskThreshold {
 	margin_call: Permill,
 	stop_out: Permill,
@@ -88,9 +92,9 @@ decl_storage! {
 		MinLiquidationPercent get(min_liquidation_percent): map hasher(blake2_256) TradingPair => Fixed128;
 		MarginCalledTraders get(margin_called_traders): map hasher(blake2_256) T::AccountId => Option<()>;
 		MarginCalledLiquidityPools get(margin_called_liquidity_pools): map hasher(blake2_256) LiquidityPoolId => Option<()>;
-		TraderRiskThreshold get(trader_risk_threshold): map hasher(blake2_256) TradingPair => Option<RiskThreshold>;
-		LiquidityPoolENPThreshold get(liquidity_pool_enp_threshold): map hasher(blake2_256) TradingPair => Option<RiskThreshold>;
-		LiquidityPoolELLThreshold get(liquidity_pool_ell_threshold): map hasher(blake2_256) TradingPair => Option<RiskThreshold>;
+		TraderRiskThreshold get(trader_risk_threshold) config(): RiskThreshold;
+		LiquidityPoolENPThreshold get(liquidity_pool_enp_threshold) config(): RiskThreshold;
+		LiquidityPoolELLThreshold get(liquidity_pool_ell_threshold) config(): RiskThreshold;
 	}
 }
 
@@ -118,6 +122,10 @@ decl_error! {
 		NoAskSpread,
 		MarketPriceTooHigh,
 		NumOutOfBound,
+		UnsafeTrader,
+		TraderWouldBeUnsafe,
+		UnsafePool,
+		PoolWouldBeUnsafe,
 	}
 }
 
@@ -176,7 +184,16 @@ impl<T: Trait> Module<T> {
 		leveraged_amount: Balance,
 		price: Price,
 	) -> DispatchResult {
-		// TODO: implementation
+		// 	owner: T::AccountId,
+		// pool: LiquidityPoolId,
+		// pair: TradingPair,
+		// leverage: Leverage,
+		// leveraged_held: Fixed128,
+		// leveraged_debits: Fixed128,
+		// /// USD value of leveraged held on open position.
+		// leveraged_held_in_usd: Fixed128,
+		// open_accumulated_swap_rate: Fixed128,
+		// open_margin: Balance,
 		unimplemented!()
 	}
 
@@ -358,6 +375,25 @@ impl<T: Trait> Module<T> {
 			// if no leveraged held, margin level is max
 			.unwrap_or(Fixed128::max_value()))
 	}
+
+	/// Ensure a trader is safe, based on opened positions, or plus a new one to open.
+	///
+	/// Return `Ok` if ensured safe, or `Err` if not.
+	fn _ensure_trader_safe(who: &T::AccountId, new_position: Option<Position<T>>) -> DispatchResult {
+		let has_new = new_position.is_some();
+		let margin_level = Self::_margin_level(who, new_position.clone())?;
+		let not_safe = margin_level <= Self::trader_risk_threshold().margin_call.into();
+		if not_safe {
+			let err = if has_new {
+				Error::<T>::TraderWouldBeUnsafe
+			} else {
+				Error::<T>::UnsafeTrader
+			};
+			Err(err.into())
+		} else {
+			Ok(())
+		}
+	}
 }
 
 // Liquidity pool helpers
@@ -385,58 +421,77 @@ impl<T: Trait> Module<T> {
 			.ok_or(Error::<T>::NumOutOfBound.into())
 	}
 
-	/// Equity to Net Position Ratio (ENP) of a liquidity pool.
-	///
-	/// If `new_position` is `None`, return the ENP based on current positions,
+	/// ENP and ELL. If `new_position` is `None`, return the ENP & ELL based on current positions,
 	/// else based on current positions plus this new one.
-	fn _enp(pool: LiquidityPoolId, new_position: Option<Position<T>>) -> Fixed128Result {
+	///
+	/// ENP - Equity to Net Position ratio of a liquidity pool.
+	/// ELL - Equity to Longest Leg ratio of a liquidity pool.
+	fn _enp_and_ell(
+		pool: LiquidityPoolId,
+		new_position: Option<Position<T>>,
+	) -> result::Result<(Fixed128, Fixed128), DispatchError> {
 		let equity = Self::_equity_of_pool(pool)?;
-		let net_position = PositionsByPool::iter_prefix(pool)
+		let (net, positive, non_positive) = PositionsByPool::iter_prefix(pool)
 			.flatten()
 			.filter_map(|position_id| Self::positions(position_id))
 			.chain(new_position.map_or(vec![], |p| vec![p]))
-			.fold(Fixed128::zero(), |acc, p| {
-				acc.checked_add(&p.leveraged_held_in_usd)
-					.expect("ensured safe on open position; qed")
-			});
-		Ok(equity
-			.checked_div(&net_position)
-			// if `net_position` is zero, ENP is max
-			.unwrap_or(Fixed128::max_value()))
-	}
+			.fold(
+				(Fixed128::zero(), Fixed128::zero(), Fixed128::zero()),
+				|(net, positive, non_positive), p| {
+					let new_net = net
+						.checked_add(&p.leveraged_held_in_usd)
+						.expect("ensured safe on open position; qed");
+					if p.leveraged_held_in_usd.is_positive() {
+						(
+							new_net,
+							positive
+								.checked_add(&p.leveraged_held_in_usd)
+								.expect("ensured safe on open position; qed"),
+							non_positive,
+						)
+					} else {
+						(
+							new_net,
+							positive,
+							non_positive
+								.checked_add(&p.leveraged_held_in_usd)
+								.expect("ensured safe on open position; qed"),
+						)
+					}
+				},
+			);
 
-	/// Equity to Longest Leg Ratio (ELL) of a liquidity pool.
-	///
-	/// If `new_position` is `None`, return the ELL based on current positions,
-	/// else based on current positions plus this new one.
-	fn _ell(pool: LiquidityPoolId, new_position: Option<Position<T>>) -> Fixed128Result {
-		let equity = Self::_equity_of_pool(pool)?;
-		let (positive_leg, non_positive_leg) = PositionsByPool::iter_prefix(pool)
-			.flatten()
-			.filter_map(|position_id| Self::positions(position_id))
-			.chain(new_position.map_or(vec![], |p| vec![p]))
-			.fold((Fixed128::zero(), Fixed128::zero()), |(positive, non_positive), p| {
-				if p.leveraged_held_in_usd.is_positive() {
-					(
-						positive
-							.checked_add(&p.leveraged_held_in_usd)
-							.expect("ensured safe on open position; qed"),
-						non_positive,
-					)
-				} else {
-					(
-						positive,
-						non_positive
-							.checked_add(&p.leveraged_held_in_usd)
-							.expect("ensured safe on open position; qed"),
-					)
-				}
-			});
-		let longest_leg = cmp::max(positive_leg, non_positive_leg.saturating_abs());
-		Ok(equity
+		let enp = equity
+			.checked_div(&net)
+			// if `net_position` is zero, ENP is max
+			.unwrap_or(Fixed128::max_value());
+		let longest_leg = cmp::max(positive, non_positive.saturating_abs());
+		let ell = equity
 			.checked_div(&longest_leg)
 			// if `longest_leg` is zero, ELL is max
-			.unwrap_or(Fixed128::max_value()))
+			.unwrap_or(Fixed128::max_value());
+
+		Ok((enp, ell))
+	}
+
+	/// Ensure a liquidity pool is safe, based on opened positions, or plus a new one to open.
+	///
+	/// Return `Ok` if ensured safe, or `Err` if not.
+	fn _ensure_pool_safe(pool: LiquidityPoolId, new_position: Option<Position<T>>) -> DispatchResult {
+		let has_new = new_position.is_some();
+		let (enp, ell) = Self::_enp_and_ell(pool, new_position)?;
+		let not_safe = enp <= Self::liquidity_pool_enp_threshold().margin_call.into()
+			|| ell <= Self::liquidity_pool_ell_threshold().margin_call.into();
+		if not_safe {
+			let err = if has_new {
+				Error::<T>::PoolWouldBeUnsafe
+			} else {
+				Error::<T>::UnsafePool
+			};
+			Err(err.into())
+		} else {
+			Ok(())
+		}
 	}
 }
 
