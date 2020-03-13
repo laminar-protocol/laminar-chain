@@ -266,7 +266,11 @@ impl<T: Trait> Module<T> {
 			.expect("ensured safe on open position")
 			.saturating_abs();
 		let curr_price = {
-			let p = Self::_bid_price(position.pool, position.pair.quote, position.pair.base)?;
+			let p = if position.leverage.is_long() {
+				Self::_bid_price(position.pool, position.pair.quote, position.pair.base)?
+			} else {
+				Self::_ask_price(position.pool, position.pair.quote, position.pair.base, None)?
+			};
 			fixed_128_from_fixed_u128(p)
 		};
 		let price_delta = curr_price
