@@ -184,16 +184,6 @@ impl<T: Trait> Module<T> {
 		leveraged_amount: Balance,
 		price: Price,
 	) -> DispatchResult {
-		// 	owner: T::AccountId,
-		// pool: LiquidityPoolId,
-		// pair: TradingPair,
-		// leverage: Leverage,
-		// leveraged_held: Fixed128,
-		// leveraged_debits: Fixed128,
-		// /// USD value of leveraged held on open position.
-		// leveraged_held_in_usd: Fixed128,
-		// open_accumulated_swap_rate: Fixed128,
-		// open_margin: Balance,
 		unimplemented!()
 	}
 
@@ -253,6 +243,7 @@ impl<T: Trait> Module<T> {
 		Ok(Price::from_natural(1).saturating_sub(spread).saturating_mul(price))
 	}
 
+	/// usd_value = amount * price
 	fn _usd_value(currency_id: CurrencyId, amount: Fixed128) -> Fixed128Result {
 		let price = {
 			let p = Self::_price(CurrencyId::AUSD, currency_id)?;
