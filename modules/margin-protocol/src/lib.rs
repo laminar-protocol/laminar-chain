@@ -121,6 +121,7 @@ decl_error! {
 		NoPrice,
 		NoAskSpread,
 		MarketPriceTooHigh,
+		MarketPriceTooLow,
 		NumOutOfBound,
 		UnsafeTrader,
 		TraderWouldBeUnsafe,
@@ -233,14 +234,20 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// bid_price = price * (1 - bid_spread)
-	fn _bid_price(pool: LiquidityPoolId, held: CurrencyId, debit: CurrencyId) -> PriceResult {
+	fn _bid_price(pool: LiquidityPoolId, held: CurrencyId, debit: CurrencyId, min: Option<Price>) -> PriceResult {
 		let price = Self::_price(debit, held)?;
 		//FIXME: liquidity pools should provide spread based on trading pair
 		let spread: Price = T::LiquidityPools::get_bid_spread(pool, held)
 			.ok_or(Error::<T>::NoAskSpread)?
 			.into();
+		let bid_price = Price::from_natural(1).saturating_sub(spread).saturating_mul(price);
+		if let Some(m) = min {
+			if bid_price < m {
+				return Err(Error::<T>::MarketPriceTooLow.into());
+			}
+		}
 
-		Ok(Price::from_natural(1).saturating_sub(spread).saturating_mul(price))
+		Ok(bid_price)
 	}
 
 	/// usd_value = amount * price
@@ -267,7 +274,7 @@ impl<T: Trait> Module<T> {
 			.saturating_abs();
 		let curr_price = {
 			let p = if position.leverage.is_long() {
-				Self::_bid_price(position.pool, position.pair.quote, position.pair.base)?
+				Self::_bid_price(position.pool, position.pair.quote, position.pair.base, None)?
 			} else {
 				Self::_ask_price(position.pool, position.pair.quote, position.pair.base, None)?
 			};
