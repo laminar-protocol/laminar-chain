@@ -11,7 +11,7 @@ use frame_system as system;
 use frame_system::ensure_signed;
 use orml_traits::{MultiCurrency, PriceProvider};
 use orml_utilities::Fixed128;
-use primitives::{Balance, CurrencyId, Leverage, LiquidityPoolId, Price};
+use primitives::{Balance, CurrencyId, Leverage, LiquidityPoolId, Price, TradingPair};
 use sp_std::prelude::*;
 use traits::{LiquidityPoolManager, MarginProtocolLiquidityPools};
 
@@ -28,19 +28,6 @@ pub trait Trait: frame_system::Trait {
 		TradingPair = TradingPair,
 	>;
 	type PriceProvider: PriceProvider<CurrencyId, Price>;
-}
-
-#[derive(Encode, Decode, Copy, Clone, RuntimeDebug, Eq, PartialEq)]
-pub struct TradingPair {
-	pub base: CurrencyId,
-	pub quote: CurrencyId,
-}
-
-impl TradingPair {
-	fn normalize() {
-		// TODO: make the smaller priced currency id as base
-		unimplemented!()
-	}
 }
 
 pub type PositionId = u64;
