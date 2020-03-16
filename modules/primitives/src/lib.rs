@@ -10,6 +10,8 @@ extern crate bitmask;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
+pub mod arithmetic;
+
 pub use orml_prices::Price;
 
 pub type LiquidityPoolId = u32;
@@ -118,18 +120,15 @@ impl Decode for Leverage {
 }
 
 impl Leverage {
-	#[allow(dead_code)]
-	fn is_long(&self) -> bool {
+	pub fn is_long(&self) -> bool {
 		!self.is_short()
 	}
 
-	#[allow(dead_code)]
-	fn is_short(&self) -> bool {
+	pub fn is_short(&self) -> bool {
 		*self >= Leverage::ShortTwo
 	}
 
-	#[allow(dead_code)]
-	fn value(&self) -> u8 {
+	pub fn value(&self) -> u8 {
 		match *self {
 			Leverage::LongTwo | Leverage::ShortTwo => 2,
 			Leverage::LongThree | Leverage::ShortThree => 3,

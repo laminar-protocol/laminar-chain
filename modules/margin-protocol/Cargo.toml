@@ -7,9 +7,8 @@ edition = "2018"
 [dependencies]
 serde = { version = "1.0.101", optional = true }
 codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false }
-
-sp-arithmetic = { version = "2.0.0-alpha.3", default-features = false }
 sp-runtime = { version = "2.0.0-alpha.3", default-features = false }
+sp-arithmetic = { version = "2.0.0-alpha.3", default-features = false }
 sp-std = { version = "2.0.0-alpha.3", default-features = false }
 
 frame-support = { version = "2.0.0-alpha.3", default-features = false }
@@ -31,9 +30,9 @@ default = ["std"]
 std = [
 	"serde",
 	"codec/std",
-	"sp-std/std",
 	"sp-runtime/std",
 	"sp-arithmetic/std",
+	"sp-std/std",
 	"frame-support/std",
 	"frame-system/std",
 	"orml-traits/std",
