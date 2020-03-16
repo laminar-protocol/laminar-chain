@@ -258,20 +258,27 @@ impl<T: Trait> Module<T> {
 		let margin_level = Self::_margin_level(who, None)?;
 
 		if margin_level <= threshold.stop_out.into() {
-			// TODO use for_each
 			if <MarginCalledTraders<T>>::contains_key(who) {
-				let _ = <PositionsByTrader<T>>::iter_prefix(who).try_for_each(|user_position_ids| {
-					user_position_ids.iter().try_for_each(|position_id| {
-						let position = <Positions<T>>::get(position_id).ok_or(Error::<T>::NoPosition)?;
-						let bid_price = Self::_bid_price(position.pool, position.pair.quote, position.pair.base, None)?;
-						Self::_close_position(who, *position_id, bid_price)
+				// Close position as much as possible
+				<PositionsByTrader<T>>::iter_prefix(who).for_each(|user_position_ids| {
+					user_position_ids.iter().for_each(|position_id| {
+						if let Some(position) = <Positions<T>>::get(position_id) {
+							if let Ok(bid_price) =
+								Self::_bid_price(position.pool, position.pair.quote, position.pair.base, None)
+							{
+								let _ = Self::_close_position(who, *position_id, bid_price);
+							}
+						}
 					})
 				});
 			}
 		}
 
-		if <MarginCalledTraders<T>>::contains_key(who) {
-			<MarginCalledTraders<T>>::remove(who);
+		let margin_level = Self::_margin_level(who, None)?;
+		if margin_level > threshold.margin_call.into() {
+			if <MarginCalledTraders<T>>::contains_key(who) {
+				<MarginCalledTraders<T>>::remove(who);
+			}
 		}
 		Ok(())
 	}
