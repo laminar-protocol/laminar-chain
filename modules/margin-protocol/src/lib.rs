@@ -3,7 +3,7 @@
 use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage};
 use sp_arithmetic::{
-	traits::{Bounded, Saturating},
+	traits::{Bounded, Saturating, Zero},
 	Permill,
 };
 use sp_runtime::{traits::StaticLookup, DispatchError, DispatchResult, RuntimeDebug};
@@ -313,11 +313,11 @@ impl<T: Trait> Module<T> {
 
 	/// Free balance: the balance available for withdraw.
 	///
-	/// free_balance = balance - margin_held
+	/// free_balance = max(balance - margin_held, zero)
 	fn _free_balance(who: &T::AccountId) -> Balance {
 		Self::balances(who)
 			.checked_sub(Self::_margin_held(who))
-			.expect("ensured enough open margin on open position; qed")
+			.unwrap_or(Zero::zero())
 	}
 
 	/// Accumulated swap rate of a position(USD value).
