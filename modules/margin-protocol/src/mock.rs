@@ -7,7 +7,7 @@ use frame_system as system;
 use orml_utilities::Fixed128;
 use primitives::{Balance, CurrencyId, LiquidityPoolId};
 use sp_core::H256;
-use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
+use sp_runtime::{testing::Header, traits::IdentityLookup, PerThing, Perbill};
 use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
 use traits::LiquidityPools;
 
@@ -105,31 +105,44 @@ impl PriceProvider<CurrencyId, Price> for MockPrices {
 	}
 }
 
+thread_local! {
+	static SPREAD: RefCell<Permill> = RefCell::new(Permill::zero());
+}
+
 //TODO: implementation based on unit test requirements
 pub struct MockLiquidityPools;
+impl MockLiquidityPools {
+	pub fn spread() -> Permill {
+		SPREAD.with(|v| *v.borrow_mut())
+	}
+
+	pub fn set_mock_spread(spread: Permill) {
+		SPREAD.with(|v| *v.borrow_mut() = spread);
+	}
+}
 impl LiquidityPools<AccountId> for MockLiquidityPools {
 	type LiquidityPoolId = LiquidityPoolId;
 	type CurrencyId = CurrencyId;
 	type Balance = Balance;
 
 	fn get_bid_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill> {
-		unimplemented!()
+		Some(Self::spread())
 	}
 
 	fn get_ask_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill> {
-		unimplemented!()
+		Some(Self::spread())
 	}
 
 	fn ensure_liquidity(pool_id: Self::LiquidityPoolId) -> bool {
-		unimplemented!()
+		true
 	}
 
 	fn is_owner(pool_id: Self::LiquidityPoolId, who: &u64) -> bool {
-		unimplemented!()
+		true
 	}
 
 	fn is_allowed_position(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId, leverage: Leverage) -> bool {
-		unimplemented!()
+		true
 	}
 
 	fn liquidity(pool_id: Self::LiquidityPoolId) -> Self::Balance {
@@ -171,16 +184,25 @@ impl Trait for Runtime {
 	type LiquidityPools = MockLiquidityPools;
 	type PriceProvider = MockPrices;
 }
+pub type MarginProtocol = Module<Runtime>;
+
+pub const ALICE: AccountId = 0;
+pub const MOCK_POOL: LiquidityPoolId = 100;
 
 //TODO: more fields based on unit test requirements
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
+	spread: Permill,
+	prices: Vec<(CurrencyId, Price)>,
 }
 
 impl Default for ExtBuilder {
+	/// Spread - 1/1000
 	fn default() -> Self {
 		Self {
 			endowed_accounts: vec![],
+			spread: Permill::from_rational_approximation(1, 1000u32),
+			prices: vec![(CurrencyId::AUSD, FixedU128::from_rational(1, 1))],
 		}
 	}
 }
@@ -191,7 +213,28 @@ impl ExtBuilder {
 		self
 	}
 
+	pub fn spread(mut self, spread: Permill) -> Self {
+		self.spread = spread;
+		self
+	}
+
+	/// `price`: rational(x, y)
+	pub fn price(mut self, currency_id: CurrencyId, price: (u128, u128)) -> Self {
+		self.prices
+			.push((currency_id, FixedU128::from_rational(price.0, price.1)));
+		self
+	}
+
+	fn set_mocks(&self) {
+		self.prices
+			.iter()
+			.for_each(|(c, p)| MockPrices::set_mock_price(*c, Some(*p)));
+		MockLiquidityPools::set_mock_spread(self.spread);
+	}
+
 	pub fn build(self) -> sp_io::TestExternalities {
+		self.set_mocks();
+
 		let mut t = frame_system::GenesisConfig::default()
 			.build_storage::<Runtime>()
 			.unwrap();

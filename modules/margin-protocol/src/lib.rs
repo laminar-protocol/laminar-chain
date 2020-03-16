@@ -264,7 +264,7 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Module<T> {
 	/// Unrealized profit and loss of a position(USD value).
 	///
-	/// unrealized_pl_of_position = (curr_price - open_price) * leveraged_held
+	/// unrealized_pl_of_position = (curr_price - open_price) * leveraged_held * price
 	fn _unrealized_pl_of_position(position: &Position<T>) -> Fixed128Result {
 		// open_price = abs(leveraged_debits / leveraged_held)
 		let open_price = position
@@ -287,7 +287,7 @@ impl<T: Trait> Module<T> {
 			.leveraged_held
 			.checked_mul(&price_delta)
 			.ok_or(Error::<T>::NumOutOfBound)?;
-		Self::_usd_value(position.pair.quote, unrealized)
+		Self::_usd_value(position.pair.base, unrealized)
 	}
 
 	/// Unrealized profit and loss of a given trader(USD value). It is the sum of unrealized profit and loss of all positions
