@@ -16,7 +16,7 @@ use orml_traits::{MultiCurrency, PriceProvider};
 use orml_utilities::{Fixed128, FixedU128};
 use primitives::{
 	arithmetic::{fixed_128_from_fixed_u128, fixed_128_from_u128},
-	Balance, CurrencyId, Leverage, LiquidityPoolId, Price,
+	Balance, CurrencyId, Leverage, LiquidityPoolId, Price, TradingPair,
 };
 use sp_std::{cmp, prelude::*, result};
 use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools};
@@ -38,19 +38,6 @@ pub trait Trait: frame_system::Trait {
 		TradingPair = TradingPair,
 	>;
 	type PriceProvider: PriceProvider<CurrencyId, Price>;
-}
-
-#[derive(Encode, Decode, Copy, Clone, RuntimeDebug, Eq, PartialEq)]
-pub struct TradingPair {
-	pub base: CurrencyId,
-	pub quote: CurrencyId,
-}
-
-impl TradingPair {
-	fn normalize() {
-		// TODO: make the smaller priced currency id as base
-		unimplemented!()
-	}
 }
 
 pub type PositionId = u64;
@@ -219,9 +206,15 @@ impl<T: Trait> Module<T> {
 	fn _ask_price(pool: LiquidityPoolId, held: CurrencyId, debit: CurrencyId, max: Option<Price>) -> PriceResult {
 		let price = Self::_price(debit, held)?;
 		//FIXME: liquidity pools should provide spread based on trading pair
-		let spread: Price = T::LiquidityPools::get_ask_spread(pool, held)
-			.ok_or(Error::<T>::NoAskSpread)?
-			.into();
+		let spread: Price = T::LiquidityPools::get_ask_spread(
+			pool,
+			TradingPair {
+				quote: held,
+				base: debit,
+			},
+		)
+		.ok_or(Error::<T>::NoAskSpread)?
+		.into();
 		let ask_price: Price = Price::from_natural(1).saturating_add(spread).saturating_mul(price);
 
 		if let Some(m) = max {
@@ -237,9 +230,15 @@ impl<T: Trait> Module<T> {
 	fn _bid_price(pool: LiquidityPoolId, held: CurrencyId, debit: CurrencyId, min: Option<Price>) -> PriceResult {
 		let price = Self::_price(debit, held)?;
 		//FIXME: liquidity pools should provide spread based on trading pair
-		let spread: Price = T::LiquidityPools::get_bid_spread(pool, held)
-			.ok_or(Error::<T>::NoAskSpread)?
-			.into();
+		let spread: Price = T::LiquidityPools::get_bid_spread(
+			pool,
+			TradingPair {
+				quote: held,
+				base: debit,
+			},
+		)
+		.ok_or(Error::<T>::NoAskSpread)?
+		.into();
 		let bid_price = Price::from_natural(1).saturating_sub(spread).saturating_mul(price);
 		if let Some(m) = min {
 			if bid_price < m {

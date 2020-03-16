@@ -5,7 +5,7 @@
 use frame_support::{impl_outer_event, impl_outer_origin, ord_parameter_types, parameter_types};
 use frame_system as system;
 use orml_utilities::Fixed128;
-use primitives::{Balance, CurrencyId, LiquidityPoolId};
+use primitives::{Balance, CurrencyId, LiquidityPoolId, TradingPair};
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
 use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
@@ -112,23 +112,11 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 	type CurrencyId = CurrencyId;
 	type Balance = Balance;
 
-	fn get_bid_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill> {
-		unimplemented!()
-	}
-
-	fn get_ask_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill> {
-		unimplemented!()
-	}
-
 	fn ensure_liquidity(pool_id: Self::LiquidityPoolId) -> bool {
 		unimplemented!()
 	}
 
 	fn is_owner(pool_id: Self::LiquidityPoolId, who: &u64) -> bool {
-		unimplemented!()
-	}
-
-	fn is_allowed_position(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId, leverage: Leverage) -> bool {
 		unimplemented!()
 	}
 
@@ -147,6 +135,18 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
 	type TradingPair = TradingPair;
 
+	fn is_allowed_position(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair, leverage: Leverage) -> bool {
+		unimplemented!()
+	}
+
+	fn get_bid_spread(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Option<Permill> {
+		unimplemented!()
+	}
+
+	fn get_ask_spread(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Option<Permill> {
+		unimplemented!()
+	}
+
 	fn get_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128 {
 		unimplemented!()
 	}
@@ -159,7 +159,7 @@ impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
 		pool_id: Self::LiquidityPoolId,
 		pair: Self::TradingPair,
 		leverage: Leverage,
-		leveraged_amount: Self::Balance,
+		leveraged_amount: Balance,
 	) -> bool {
 		unimplemented!()
 	}

@@ -2,8 +2,8 @@ use hex_literal::hex;
 use runtime::{
 	opaque::Block, opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, CurrencyId,
 	FinancialCouncilMembershipConfig, GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, IndicesConfig,
-	LiquidityPoolsConfig, OperatorMembershipConfig, SessionConfig, Signature, StakerStatus, StakingConfig, SudoConfig,
-	SystemConfig, TokensConfig, WASM_BINARY,
+	OperatorMembershipConfig, SessionConfig, Signature, StakerStatus, StakingConfig, SudoConfig,
+	SyntheticLiquidityPoolsConfig, SystemConfig, TokensConfig, WASM_BINARY,
 };
 use sc_chain_spec::ChainSpecExtension;
 use sc_service;
@@ -280,7 +280,7 @@ fn dev_genesis(
 				})
 				.collect(),
 		}),
-		liquidity_pools: Some(LiquidityPoolsConfig {
+		synthetic_liquidity_pools: Some(SyntheticLiquidityPoolsConfig {
 			min_additional_collateral_ratio: Permill::from_percent(10), // default min additional collateral ratio
 		}),
 	}
@@ -354,7 +354,7 @@ fn testnet_genesis(
 				})
 				.collect(),
 		}),
-		liquidity_pools: Some(LiquidityPoolsConfig {
+		synthetic_liquidity_pools: Some(SyntheticLiquidityPoolsConfig {
 			min_additional_collateral_ratio: Permill::from_percent(10), // default min additional collateral ratio
 		}),
 	}

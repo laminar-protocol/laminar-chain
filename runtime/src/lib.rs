@@ -474,7 +474,7 @@ parameter_types! {
 
 type LiquidityCurrency = orml_currencies::Currency<Runtime, GetLiquidityCurrencyId>;
 
-impl liquidity_pools::Trait for Runtime {
+impl margin_liquidity_pools::Trait for Runtime {
 	type Event = Event;
 	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type LiquidityCurrency = LiquidityCurrency;
@@ -483,6 +483,16 @@ impl liquidity_pools::Trait for Runtime {
 	type ExistentialDeposit = ExistentialDeposit;
 	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
 	type MaxSwap = MaxSwap;
+}
+
+impl synthetic_liquidity_pools::Trait for Runtime {
+	type Event = Event;
+	type MultiCurrency = orml_currencies::Module<Runtime>;
+	type LiquidityCurrency = LiquidityCurrency;
+	type LiquidityPoolId = LiquidityPoolId;
+	type PoolManager = SyntheticTokens;
+	type ExistentialDeposit = ExistentialDeposit;
+	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
 }
 
 parameter_types! {
@@ -495,8 +505,8 @@ impl synthetic_protocol::Trait for Runtime {
 	type CollateralCurrency = CollateralCurrency;
 	type GetCollateralCurrencyId = GetCollateralCurrencyId;
 	type PriceProvider = orml_prices::Module<Runtime>;
-	type LiquidityPools = liquidity_pools::Module<Runtime>;
-	type SyntheticProtocolLiquidityPools = liquidity_pools::Module<Runtime>;
+	type LiquidityPools = synthetic_liquidity_pools::Module<Runtime>;
+	type SyntheticProtocolLiquidityPools = synthetic_liquidity_pools::Module<Runtime>;
 	type BalanceToPrice = BalancePriceConverter;
 	type PriceToBalance = BalancePriceConverter;
 }
@@ -531,7 +541,8 @@ construct_runtime!(
 		Prices: orml_prices::{Module, Storage},
 		SyntheticTokens: synthetic_tokens::{Module, Storage, Call, Event<T>},
 		SyntheticProtocol: synthetic_protocol::{Module, Call, Event<T>},
-		LiquidityPools: liquidity_pools::{Module, Storage, Call, Event<T>, Config},
+		MarginLiquidityPools: margin_liquidity_pools::{Module, Storage, Call, Event<T>},
+		SyntheticLiquidityPools: synthetic_liquidity_pools::{Module, Storage, Call, Event<T>, Config},
 	}
 );
 
