@@ -274,7 +274,7 @@ fn equity_of_trader_works() {
 }
 
 #[test]
-fn margin_level_with_no_new_position_should_work() {
+fn margin_level_without_new_position_works() {
 	ExtBuilder::default()
 		.price(CurrencyId::FEUR, (12, 10))
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
@@ -291,5 +291,89 @@ fn margin_level_with_no_new_position_should_work() {
 				// 19.44%
 				Ok(Fixed128::from_parts(195426060513372176))
 			);
+		});
+}
+
+#[test]
+fn margin_level_with_new_position_works() {
+	ExtBuilder::default().build().execute_with(|| {
+		<Balances<Runtime>>::insert(ALICE, balance_from_natural_currency(120_000_00));
+		assert_eq!(
+			MarginProtocol::_margin_level(&ALICE, Some(eur_usd_long_1())),
+			// 120_000_00 / 120_420_30 = 0.996509724689275811
+			Ok(Fixed128::from_parts(996509724689275811))
+		);
+	});
+}
+
+#[test]
+fn margin_level_without_any_opened_position_is_max() {
+	ExtBuilder::default().build().execute_with(|| {
+		<Balances<Runtime>>::insert(ALICE, 1);
+		assert_eq!(MarginProtocol::_margin_level(&ALICE, None), Ok(Fixed128::max_value()));
+	});
+}
+
+#[test]
+fn ensure_trader_safe_works() {
+	let margin_call_100_percent = RiskThreshold {
+		margin_call: Permill::one(),
+		stop_out: Permill::zero(),
+	};
+	let margin_call_99_percent = RiskThreshold {
+		margin_call: Permill::from_percent(99),
+		stop_out: Permill::zero(),
+	};
+
+	ExtBuilder::default()
+		.spread(Permill::zero())
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.price(CurrencyId::FEUR, (1, 1))
+		.trader_risk_threshold(margin_call_100_percent)
+		.build()
+		.execute_with(|| {
+			<Balances<Runtime>>::insert(ALICE, balance_from_natural_currency(100));
+			let position: Position<Runtime> = Position {
+				owner: ALICE,
+				pool: MOCK_POOL,
+				pair: EUR_USD_PAIR,
+				leverage: Leverage::LongTwo,
+				leveraged_held: fixed128_from_natural_currency(100),
+				leveraged_debits: fixed128_from_natural_currency(100),
+				leveraged_held_in_usd: fixed128_from_natural_currency(100),
+				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				open_margin: balance_from_natural_currency(100),
+			};
+			assert_eq!(
+				MarginProtocol::_margin_level(&ALICE, Some(position.clone())),
+				Ok(Fixed128::from_natural(1))
+			);
+
+			// 100% == 100%, unsafe
+			assert_noop!(
+				MarginProtocol::_ensure_trader_safe(&ALICE, Some(position.clone())),
+				Error::<Runtime>::TraderWouldBeUnsafe
+			);
+			// 100% > 99%, safe
+			TraderRiskThreshold::put(margin_call_99_percent);
+			assert_ok!(MarginProtocol::_ensure_trader_safe(&ALICE, Some(position.clone())));
+
+			<Positions<Runtime>>::insert(0, position);
+			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
+			assert_eq!(
+				MarginProtocol::_margin_level(&ALICE, None),
+				Ok(Fixed128::from_natural(1))
+			);
+
+			TraderRiskThreshold::put(margin_call_100_percent);
+
+			// 100% == 100%, unsafe
+			assert_noop!(
+				MarginProtocol::_ensure_trader_safe(&ALICE, None),
+				Error::<Runtime>::UnsafeTrader
+			);
+			// 100% > 99%, safe
+			TraderRiskThreshold::put(margin_call_99_percent);
+			assert_ok!(MarginProtocol::_ensure_trader_safe(&ALICE, None));
 		});
 }

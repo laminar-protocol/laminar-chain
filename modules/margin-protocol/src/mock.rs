@@ -204,6 +204,9 @@ pub struct ExtBuilder {
 	spread: Permill,
 	prices: Vec<(CurrencyId, Price)>,
 	swap_rates: Vec<(TradingPair, Fixed128)>,
+	trader_risk_threshold: RiskThreshold,
+	liquidity_pool_enp_threshold: RiskThreshold,
+	liquidity_pool_ell_threshold: RiskThreshold,
 }
 
 impl Default for ExtBuilder {
@@ -214,6 +217,9 @@ impl Default for ExtBuilder {
 			spread: Permill::from_rational_approximation(1, 1000u32),
 			prices: vec![(CurrencyId::AUSD, FixedU128::from_rational(1, 1))],
 			swap_rates: vec![],
+			trader_risk_threshold: RiskThreshold::default(),
+			liquidity_pool_enp_threshold: RiskThreshold::default(),
+			liquidity_pool_ell_threshold: RiskThreshold::default(),
 		}
 	}
 }
@@ -241,6 +247,21 @@ impl ExtBuilder {
 		self
 	}
 
+	pub fn trader_risk_threshold(mut self, threshold: RiskThreshold) -> Self {
+		self.trader_risk_threshold = threshold;
+		self
+	}
+
+	pub fn liquidity_pool_enp_threshold(mut self, threshold: RiskThreshold) -> Self {
+		self.liquidity_pool_enp_threshold = threshold;
+		self
+	}
+
+	pub fn liquidity_pool_ell_threshold(mut self, threshold: RiskThreshold) -> Self {
+		self.liquidity_pool_ell_threshold = threshold;
+		self
+	}
+
 	fn set_mocks(&self) {
 		self.prices
 			.iter()
@@ -260,6 +281,14 @@ impl ExtBuilder {
 
 		orml_tokens::GenesisConfig::<Runtime> {
 			endowed_accounts: self.endowed_accounts,
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		GenesisConfig {
+			trader_risk_threshold: self.trader_risk_threshold,
+			liquidity_pool_enp_threshold: self.liquidity_pool_enp_threshold,
+			liquidity_pool_ell_threshold: self.liquidity_pool_ell_threshold,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
