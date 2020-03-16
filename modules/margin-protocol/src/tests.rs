@@ -272,3 +272,24 @@ fn equity_of_trader_works() {
 			);
 		});
 }
+
+#[test]
+fn margin_level_with_no_new_position_should_work() {
+	ExtBuilder::default()
+		.price(CurrencyId::FEUR, (12, 10))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.build()
+		.execute_with(|| {
+			<Balances<Runtime>>::insert(ALICE, balance_from_natural_currency(120_000_00));
+			<Positions<Runtime>>::insert(0, eur_usd_long_1());
+			<Positions<Runtime>>::insert(1, eur_usd_long_2());
+			<Positions<Runtime>>::insert(2, eur_usd_short_1());
+			<Positions<Runtime>>::insert(3, eur_usd_short_2());
+			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0, 1, 2, 3]);
+			assert_eq!(
+				MarginProtocol::_margin_level(&ALICE, None),
+				// 19.44%
+				Ok(Fixed128::from_parts(195426060513372176))
+			);
+		});
+}
