@@ -1,28 +1,23 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::{Decode, Encode, FullCodec};
+use codec::FullCodec;
 use frame_support::Parameter;
 use orml_utilities::Fixed128;
-use primitives::Leverage;
+use primitives::{Balance, Leverage, TradingPair};
 use sp_runtime::{
 	traits::{AtLeast32Bit, MaybeSerializeDeserialize},
-	DispatchResult, Permill, RuntimeDebug,
+	DispatchResult, Permill,
 };
-use sp_std::fmt::Debug;
+use sp_std::{fmt::Debug, prelude::*};
 
 pub trait LiquidityPools<AccountId> {
 	type LiquidityPoolId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug;
 	type CurrencyId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug;
 	type Balance: Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
-	fn get_bid_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill>;
-	fn get_ask_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill>;
-
 	fn ensure_liquidity(pool_id: Self::LiquidityPoolId) -> bool;
 
 	fn is_owner(pool_id: Self::LiquidityPoolId, who: &AccountId) -> bool;
-
-	fn is_allowed_position(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId, leverage: Leverage) -> bool;
 
 	/// Return collateral balance of `pool_id`.
 	fn liquidity(pool_id: Self::LiquidityPoolId) -> Self::Balance;
@@ -38,12 +33,17 @@ pub trait LiquidityPoolManager<LiquidityPoolId, Balance> {
 }
 
 pub trait SyntheticProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
+	fn get_bid_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill>;
+	fn get_ask_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill>;
 	fn get_additional_collateral_ratio(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Permill;
 	fn can_mint(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> bool;
 }
 
 pub trait MarginProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
 	type TradingPair;
+	fn is_allowed_position(pool_id: Self::LiquidityPoolId, pair: TradingPair, leverage: Leverage) -> bool;
+	fn get_bid_spread(pool_id: Self::LiquidityPoolId, pair: TradingPair) -> Option<Permill>;
+	fn get_ask_spread(pool_id: Self::LiquidityPoolId, pair: TradingPair) -> Option<Permill>;
 	fn get_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128;
 	/// Accumulated swap rate, with USD account currency.
 	fn get_accumulated_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128;
@@ -51,12 +51,6 @@ pub trait MarginProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
 		pool_id: Self::LiquidityPoolId,
 		pair: Self::TradingPair,
 		leverage: Leverage,
-		leveraged_amount: Self::Balance,
+		leveraged_amount: Balance,
 	) -> bool;
-}
-
-#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
-pub struct SwapPeriod<Moment> {
-	pub period: Moment,
-	pub start: Moment,
 }

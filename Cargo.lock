@@ -1781,8 +1781,9 @@ dependencies = [
  "frame-support 2.0.0-alpha.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-system 2.0.0-alpha.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-system-rpc-runtime-api 2.0.0-alpha.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "module-liquidity-pools 0.0.1",
+ "module-margin-liquidity-pools 0.0.1",
  "module-primitives 0.0.1",
+ "module-synthetic-liquidity-pools 0.0.1",
  "module-synthetic-protocol 0.0.1",
  "module-synthetic-tokens 0.0.1",
  "orml-currencies 0.0.1",
@@ -2423,7 +2424,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "module-liquidity-pools"
+name = "module-margin-liquidity-pools"
 version = "0.0.1"
 dependencies = [
  "frame-support 2.0.0-alpha.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2473,6 +2474,27 @@ dependencies = [
  "parity-scale-codec 1.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-arithmetic 2.0.0-alpha.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-runtime 2.0.0-alpha.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-std 2.0.0-alpha.3 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "module-synthetic-liquidity-pools"
+version = "0.0.1"
+dependencies = [
+ "frame-support 2.0.0-alpha.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-system 2.0.0-alpha.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "module-margin-protocol 0.0.1",
+ "module-primitives 0.0.1",
+ "module-traits 0.0.1",
+ "orml-currencies 0.0.1",
+ "orml-tokens 0.0.1",
+ "orml-traits 0.0.1",
+ "orml-utilities 0.0.1",
+ "parity-scale-codec 1.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-core 2.0.0-alpha.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-io 2.0.0-alpha.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-runtime 2.0.0-alpha.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-std 2.0.0-alpha.3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]

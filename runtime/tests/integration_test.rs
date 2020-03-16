@@ -9,7 +9,7 @@ mod tests {
 		CurrencyId::{self, AUSD, FEUR, FJPY},
 		LiquidityPoolId, MinimumCount, Runtime,
 	};
-	pub use module_primitives::{Balance, Leverage, Leverages};
+	pub use module_primitives::{Balance, Leverage, Leverages, TradingPair};
 	pub use orml_prices::Price;
 	use orml_traits::{BasicCurrency, MultiCurrency};
 	pub use sp_runtime::{traits::OnFinalize, traits::Zero, DispatchResult, Perbill, Permill};
@@ -21,9 +21,15 @@ mod tests {
 	pub type ModuleProtocol = synthetic_protocol::Module<Runtime>;
 	pub type ModuleTokens = synthetic_tokens::Module<Runtime>;
 	pub type ModuleOracle = orml_oracle::Module<Runtime>;
-	pub type ModuleLiquidityPools = liquidity_pools::Module<Runtime>;
+	pub type MarginLiquidityPools = margin_liquidity_pools::Module<Runtime>;
+	pub type SyntheticLiquidityPools = synthetic_liquidity_pools::Module<Runtime>;
 
 	const LIQUIDITY_POOL_ID: LiquidityPoolId = 0;
+
+	const PAIR: TradingPair = TradingPair {
+		base: CurrencyId::AUSD,
+		quote: CurrencyId::FEUR,
+	};
 
 	parameter_types! {
 		pub const POOL: AccountId = AccountId::from([0u8; 32]);
@@ -83,28 +89,24 @@ mod tests {
 	}
 
 	pub fn create_pool() -> DispatchResult {
-		ModuleLiquidityPools::create_pool(origin_of(&POOL::get()))
+		MarginLiquidityPools::create_pool(origin_of(&POOL::get()))
+			.and_then(|()| SyntheticLiquidityPools::create_pool(origin_of(&POOL::get())))
 	}
 
-	pub fn set_enabled_trades(currency_id: CurrencyId) -> DispatchResult {
-		ModuleLiquidityPools::set_enabled_trades(
-			origin_of(&POOL::get()),
-			LIQUIDITY_POOL_ID,
-			currency_id,
-			Leverages::all(),
-		)
+	pub fn set_enabled_trades() -> DispatchResult {
+		MarginLiquidityPools::set_enabled_trades(origin_of(&POOL::get()), LIQUIDITY_POOL_ID, PAIR, Leverages::all())
 	}
 
 	pub fn deposit_liquidity(amount: Balance) -> DispatchResult {
-		ModuleLiquidityPools::deposit_liquidity(origin_of(&POOL::get()), LIQUIDITY_POOL_ID, amount)
+		SyntheticLiquidityPools::deposit_liquidity(origin_of(&POOL::get()), LIQUIDITY_POOL_ID, amount)
 	}
 
 	pub fn set_min_additional_collateral_ratio(permill: Permill) -> DispatchResult {
-		ModuleLiquidityPools::set_min_additional_collateral_ratio(<Runtime as system::Trait>::Origin::ROOT, permill)
+		SyntheticLiquidityPools::set_min_additional_collateral_ratio(<Runtime as system::Trait>::Origin::ROOT, permill)
 	}
 
 	pub fn set_additional_collateral_ratio(currency_id: CurrencyId, permill: Permill) -> DispatchResult {
-		ModuleLiquidityPools::set_additional_collateral_ratio(
+		SyntheticLiquidityPools::set_additional_collateral_ratio(
 			origin_of(&POOL::get()),
 			LIQUIDITY_POOL_ID,
 			currency_id,
@@ -113,12 +115,16 @@ mod tests {
 	}
 
 	pub fn set_spread(currency_id: CurrencyId, permill: Permill) -> DispatchResult {
-		ModuleLiquidityPools::set_spread(
-			origin_of(&POOL::get()),
-			LIQUIDITY_POOL_ID,
-			currency_id,
-			permill,
-			permill,
+		MarginLiquidityPools::set_spread(origin_of(&POOL::get()), LIQUIDITY_POOL_ID, PAIR, permill, permill).and_then(
+			|()| {
+				SyntheticLiquidityPools::set_spread(
+					origin_of(&POOL::get()),
+					LIQUIDITY_POOL_ID,
+					currency_id,
+					permill,
+					permill,
+				)
+			},
 		)
 	}
 
@@ -166,11 +172,11 @@ mod tests {
 	}
 
 	fn synthetic_enabled(currency_id: CurrencyId, enabled: bool) -> DispatchResult {
-		ModuleLiquidityPools::set_synthetic_enabled(origin_of(&POOL::get()), LIQUIDITY_POOL_ID, currency_id, enabled)
+		SyntheticLiquidityPools::set_synthetic_enabled(origin_of(&POOL::get()), LIQUIDITY_POOL_ID, currency_id, enabled)
 	}
 
 	fn liquidity() -> Balance {
-		ModuleLiquidityPools::balances(LIQUIDITY_POOL_ID)
+		SyntheticLiquidityPools::balances(LIQUIDITY_POOL_ID)
 	}
 
 	fn add_collateral(who: &AccountId, currency_id: CurrencyId, amount: Balance) -> DispatchResult {
@@ -182,7 +188,7 @@ mod tests {
 	}
 
 	fn remove_pool(who: &AccountId) -> DispatchResult {
-		ModuleLiquidityPools::remove_pool(origin_of(who), LIQUIDITY_POOL_ID)
+		SyntheticLiquidityPools::remove_pool(origin_of(who), LIQUIDITY_POOL_ID)
 	}
 
 	fn dollar(amount: u128) -> u128 {
@@ -199,7 +205,7 @@ mod tests {
 			.build()
 			.execute_with(|| {
 				assert_ok!(create_pool());
-				assert_ok!(set_enabled_trades(FEUR));
+				assert_ok!(set_enabled_trades());
 				assert_ok!(synthetic_enabled(FEUR, true));
 				assert_ok!(deposit_liquidity(dollar(10_000)));
 				assert_ok!(set_min_additional_collateral_ratio(Permill::from_percent(10)));
@@ -255,7 +261,7 @@ mod tests {
 			.build()
 			.execute_with(|| {
 				assert_ok!(create_pool());
-				assert_ok!(set_enabled_trades(FEUR));
+				assert_ok!(set_enabled_trades());
 				assert_ok!(synthetic_enabled(FEUR, true));
 				assert_ok!(deposit_liquidity(1000));
 				assert_ok!(set_additional_collateral_ratio(FEUR, Permill::from_percent(100)));
@@ -313,7 +319,7 @@ mod tests {
 			.build()
 			.execute_with(|| {
 				assert_ok!(create_pool());
-				assert_ok!(set_enabled_trades(FEUR));
+				assert_ok!(set_enabled_trades());
 				assert_ok!(synthetic_enabled(FEUR, true));
 				assert_ok!(deposit_liquidity(dollar(10_000)));
 				assert_ok!(set_min_additional_collateral_ratio(Permill::from_percent(10)));
@@ -358,7 +364,7 @@ mod tests {
 			.build()
 			.execute_with(|| {
 				assert_ok!(create_pool());
-				assert_ok!(set_enabled_trades(FEUR));
+				assert_ok!(set_enabled_trades());
 				assert_ok!(synthetic_enabled(FEUR, true));
 				assert_ok!(deposit_liquidity(dollar(10_000)));
 				assert_ok!(set_min_additional_collateral_ratio(Permill::from_percent(10)));
@@ -404,7 +410,7 @@ mod tests {
 			.build()
 			.execute_with(|| {
 				assert_ok!(create_pool());
-				assert_ok!(set_enabled_trades(FEUR));
+				assert_ok!(set_enabled_trades());
 				assert_ok!(synthetic_enabled(FEUR, true));
 				assert_ok!(deposit_liquidity(dollar(20_000)));
 				assert_ok!(set_min_additional_collateral_ratio(Permill::from_percent(10)));
@@ -484,8 +490,8 @@ mod tests {
 			.build()
 			.execute_with(|| {
 				assert_ok!(create_pool());
-				assert_ok!(set_enabled_trades(FEUR));
-				assert_ok!(set_enabled_trades(FJPY));
+				assert_ok!(set_enabled_trades());
+				assert_ok!(set_enabled_trades());
 				assert_ok!(synthetic_enabled(FEUR, true));
 				assert_ok!(synthetic_enabled(FJPY, true));
 				assert_ok!(deposit_liquidity(dollar(40_000)));
@@ -575,7 +581,7 @@ mod tests {
 			.build()
 			.execute_with(|| {
 				assert_ok!(create_pool());
-				assert_ok!(set_enabled_trades(FEUR));
+				assert_ok!(set_enabled_trades());
 				assert_ok!(synthetic_enabled(FEUR, true));
 				assert_ok!(deposit_liquidity(dollar(20_000)));
 				assert_ok!(set_min_additional_collateral_ratio(Permill::from_percent(10)));
@@ -610,7 +616,7 @@ mod tests {
 			.build()
 			.execute_with(|| {
 				assert_ok!(create_pool());
-				assert_ok!(set_enabled_trades(FEUR));
+				assert_ok!(set_enabled_trades());
 				assert_ok!(synthetic_enabled(FEUR, true));
 				assert_ok!(deposit_liquidity(dollar(20_000)));
 				assert_ok!(set_min_additional_collateral_ratio(Permill::from_percent(10)));
@@ -645,7 +651,7 @@ mod tests {
 			.build()
 			.execute_with(|| {
 				assert_ok!(create_pool());
-				assert_ok!(set_enabled_trades(FEUR));
+				assert_ok!(set_enabled_trades());
 				assert_ok!(synthetic_enabled(FEUR, true));
 				assert_ok!(deposit_liquidity(dollar(20_000)));
 				assert_ok!(set_min_additional_collateral_ratio(Permill::from_percent(10)));
@@ -685,7 +691,7 @@ mod tests {
 			.build()
 			.execute_with(|| {
 				assert_ok!(create_pool());
-				assert_ok!(set_enabled_trades(FEUR));
+				assert_ok!(set_enabled_trades());
 				assert_ok!(synthetic_enabled(FEUR, true));
 				assert_ok!(deposit_liquidity(dollar(20_000)));
 				assert_ok!(set_min_additional_collateral_ratio(Permill::from_percent(10)));
@@ -701,7 +707,7 @@ mod tests {
 				assert_eq!(synthetic_balance(&ALICE::get(), FEUR), 1650165016501650165016);
 				assert_noop!(
 					remove_pool(&POOL::get()),
-					liquidity_pools::Error::<Runtime>::CannotRemovePool
+					synthetic_liquidity_pools::Error::<Runtime>::CannotRemovePool
 				);
 
 				assert_ok!(sell(&ALICE::get(), FEUR, synthetic_balance(&ALICE::get(), FEUR)));
