@@ -165,6 +165,11 @@ impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
 	}
 }
 
+pub type MarginProtocol = Module<Runtime>;
+
+pub const ALICE: AccountId = 0;
+pub const MOCK_POOL: LiquidityPoolId = 100;
+
 impl Trait for Runtime {
 	type Event = TestEvent;
 	type MultiCurrency = OrmlTokens;

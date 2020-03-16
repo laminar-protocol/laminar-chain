@@ -134,7 +134,9 @@ decl_error! {
 		UnsafePool,
 		PoolWouldBeUnsafe,
 		NoTraderRiskThreshold,
-		NoPosition,
+		CannotTraderMarginCall,
+		CannotTraderBecomeSafe,
+		CannotTraderLiquidate,
 	}
 }
 
@@ -236,6 +238,8 @@ impl<T: Trait> Module<T> {
 
 			if margin_level <= threshold.margin_call.into() {
 				<MarginCalledTraders<T>>::insert(who, ());
+			} else {
+				return Err(Error::<T>::CannotTraderMarginCall.into());
 			}
 		}
 		Ok(())
@@ -248,6 +252,8 @@ impl<T: Trait> Module<T> {
 
 			if margin_level > threshold.margin_call.into() {
 				<MarginCalledTraders<T>>::remove(who);
+			} else {
+				return Err(Error::<T>::CannotTraderBecomeSafe.into());
 			}
 		}
 		Ok(())
@@ -260,6 +266,7 @@ impl<T: Trait> Module<T> {
 		if margin_level <= threshold.stop_out.into() {
 			if <MarginCalledTraders<T>>::contains_key(who) {
 				// Close position as much as possible
+				// TODO: print error log
 				<PositionsByTrader<T>>::iter_prefix(who).for_each(|user_position_ids| {
 					user_position_ids.iter().for_each(|position_id| {
 						if let Some(position) = <Positions<T>>::get(position_id) {
@@ -271,15 +278,18 @@ impl<T: Trait> Module<T> {
 						}
 					})
 				});
+
+				let margin_level = Self::_margin_level(who, None)?;
+				if margin_level > threshold.margin_call.into() {
+					if <MarginCalledTraders<T>>::contains_key(who) {
+						<MarginCalledTraders<T>>::remove(who);
+					}
+				}
 			}
+		} else {
+			return Err(Error::<T>::CannotTraderLiquidate.into());
 		}
 
-		let margin_level = Self::_margin_level(who, None)?;
-		if margin_level > threshold.margin_call.into() {
-			if <MarginCalledTraders<T>>::contains_key(who) {
-				<MarginCalledTraders<T>>::remove(who);
-			}
-		}
 		Ok(())
 	}
 }
