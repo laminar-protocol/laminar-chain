@@ -198,8 +198,11 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 		Some(Self::spread())
 	}
 
-	fn ensure_liquidity(_pool_id: Self::LiquidityPoolId) -> bool {
-		unimplemented!()
+	fn ensure_liquidity(pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
+		Self::liquidity(pool_id)
+			.checked_sub(amount)
+			.ok_or(Error::<Runtime>::BalanceTooLow)?;
+		Ok(())
 	}
 
 	/// ALICE is the mock owner

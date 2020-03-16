@@ -128,6 +128,11 @@ fn should_deposit_liquidity() {
 			ModuleLiquidityPools::deposit_liquidity(Origin::signed(ALICE), 1, 1000),
 			Error::<Runtime>::PoolNotFound
 		);
+
+		assert_noop!(
+			ModuleLiquidityPools::deposit_liquidity(Origin::signed(BOB), 0, 1000),
+			Error::<Runtime>::NoPermission
+		);
 	})
 }
 
@@ -162,6 +167,11 @@ fn should_fail_withdraw_liquidity() {
 		assert_eq!(
 			ModuleLiquidityPools::withdraw_liquidity(Origin::signed(ALICE), 0, 1000),
 			Err(Error::<Runtime>::CannotWithdrawExistentialDeposit.into()),
+		);
+
+		assert_eq!(
+			ModuleLiquidityPools::withdraw_liquidity(Origin::signed(BOB), 0, 1000),
+			Err(Error::<Runtime>::NoPermission.into()),
 		);
 
 		assert_eq!(ModuleLiquidityPools::balances(&0), 1000);

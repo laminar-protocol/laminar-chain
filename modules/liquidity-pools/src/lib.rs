@@ -127,6 +127,8 @@ decl_module! {
 
 		pub fn deposit_liquidity(origin, pool_id: T::LiquidityPoolId, amount: Balance) {
 			let who = ensure_signed(origin)?;
+			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
+
 			Self::_deposit_liquidity(&who, pool_id, amount)?;
 			Self::deposit_event(RawEvent::DepositLiquidity(who, pool_id, amount));
 		}
@@ -256,8 +258,11 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 		Self::liquidity_pool_options(&pool_id, &currency_id).map(|pool| pool.ask_spread)
 	}
 
-	fn ensure_liquidity(_pool_id: Self::LiquidityPoolId) -> bool {
-		unimplemented!()
+	fn ensure_liquidity(pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
+		let new_balance = Self::balances(&pool_id)
+			.checked_sub(amount)
+			.ok_or(Error::<T>::CannotWithdrawAmount)?;
+		Ok(())
 	}
 
 	fn is_owner(pool_id: Self::LiquidityPoolId, who: &T::AccountId) -> bool {
@@ -376,6 +381,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _withdraw_liquidity(who: &T::AccountId, pool_id: T::LiquidityPoolId, amount: Balance) -> DispatchResult {
+		ensure!(<Owners<T>>::contains_key(&pool_id), Error::<T>::PoolNotFound);
 		let new_balance = Self::balances(&pool_id)
 			.checked_sub(amount)
 			.ok_or(Error::<T>::CannotWithdrawAmount)?;

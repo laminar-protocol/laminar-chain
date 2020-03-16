@@ -120,7 +120,7 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 		unimplemented!()
 	}
 
-	fn ensure_liquidity(pool_id: Self::LiquidityPoolId) -> bool {
+	fn ensure_liquidity(_pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
 		unimplemented!()
 	}
 
