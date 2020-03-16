@@ -161,11 +161,11 @@ impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
 		unimplemented!()
 	}
 
-	fn get_bid_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill> {
+	fn get_bid_spread(_pool_id: Self::LiquidityPoolId, _pair: Self::TradingPair) -> Option<Permill> {
 		Some(Self::spread())
 	}
 
-	fn get_ask_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill> {
+	fn get_ask_spread(_pool_id: Self::LiquidityPoolId, _pair: Self::TradingPair) -> Option<Permill> {
 		Some(Self::spread())
 	}
 
