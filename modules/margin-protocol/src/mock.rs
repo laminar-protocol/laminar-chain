@@ -107,6 +107,7 @@ impl PriceProvider<CurrencyId, Price> for MockPrices {
 
 thread_local! {
 	static SPREAD: RefCell<Permill> = RefCell::new(Permill::zero());
+	static ACC_SWAP_RATES: RefCell<BTreeMap<TradingPair, Fixed128>> = RefCell::new(BTreeMap::new());
 }
 
 //TODO: implementation based on unit test requirements
@@ -118,6 +119,14 @@ impl MockLiquidityPools {
 
 	pub fn set_mock_spread(spread: Permill) {
 		SPREAD.with(|v| *v.borrow_mut() = spread);
+	}
+
+	pub fn accumulated_swap_rate(pair: TradingPair) -> Fixed128 {
+		ACC_SWAP_RATES.with(|v| v.borrow_mut().get(&pair).map(|r| *r)).unwrap()
+	}
+
+	pub fn set_mock_accumulated_swap_rate(pair: TradingPair, rate: Fixed128) {
+		ACC_SWAP_RATES.with(|v| v.borrow_mut().insert(pair, rate));
 	}
 }
 impl LiquidityPools<AccountId> for MockLiquidityPools {
@@ -165,7 +174,7 @@ impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
 	}
 
 	fn get_accumulated_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128 {
-		unimplemented!()
+		Self::accumulated_swap_rate(pair)
 	}
 
 	fn can_open_position(
@@ -194,6 +203,7 @@ pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	spread: Permill,
 	prices: Vec<(CurrencyId, Price)>,
+	swap_rates: Vec<(TradingPair, Fixed128)>,
 }
 
 impl Default for ExtBuilder {
@@ -203,6 +213,7 @@ impl Default for ExtBuilder {
 			endowed_accounts: vec![],
 			spread: Permill::from_rational_approximation(1, 1000u32),
 			prices: vec![(CurrencyId::AUSD, FixedU128::from_rational(1, 1))],
+			swap_rates: vec![],
 		}
 	}
 }
@@ -225,11 +236,19 @@ impl ExtBuilder {
 		self
 	}
 
+	pub fn accumulated_swap_rate(mut self, pair: TradingPair, rate: Fixed128) -> Self {
+		self.swap_rates.push((pair, rate));
+		self
+	}
+
 	fn set_mocks(&self) {
 		self.prices
 			.iter()
 			.for_each(|(c, p)| MockPrices::set_mock_price(*c, Some(*p)));
 		MockLiquidityPools::set_mock_spread(self.spread);
+		self.swap_rates
+			.iter()
+			.for_each(|(p, r)| MockLiquidityPools::set_mock_accumulated_swap_rate(*p, *r));
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {

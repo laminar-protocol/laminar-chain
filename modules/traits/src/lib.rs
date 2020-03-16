@@ -45,6 +45,7 @@ pub trait SyntheticProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> 
 pub trait MarginProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
 	type TradingPair;
 	fn get_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128;
+	/// Accumulated swap rate, with USD account currency.
 	fn get_accumulated_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128;
 	fn can_open_position(
 		pool_id: Self::LiquidityPoolId,
