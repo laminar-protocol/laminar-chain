@@ -396,7 +396,8 @@ impl<T: Trait> Module<T> {
 		price: Price,
 		max_slippage: Permill,
 	) -> result::Result<Price, DispatchError> {
-		let ask_spread = T::LiquidityPools::get_ask_spread(pool_id, currency_id).ok_or(Error::<T>::NoAskSpread)?;
+		let ask_spread =
+			T::SyntheticProtocolLiquidityPools::get_ask_spread(pool_id, currency_id).ok_or(Error::<T>::NoAskSpread)?;
 
 		if ask_spread.deconstruct() > max_slippage.deconstruct() {
 			return Err(Error::<T>::SlippageTooHigh.into());
@@ -415,7 +416,8 @@ impl<T: Trait> Module<T> {
 		price: Price,
 		max_slippage: Option<Permill>,
 	) -> result::Result<Price, DispatchError> {
-		let bid_spread = T::LiquidityPools::get_bid_spread(pool_id, currency_id).ok_or(Error::<T>::NoBidSpread)?;
+		let bid_spread =
+			T::SyntheticProtocolLiquidityPools::get_bid_spread(pool_id, currency_id).ok_or(Error::<T>::NoBidSpread)?;
 
 		if let Some(m) = max_slippage {
 			if bid_spread.deconstruct() > m.deconstruct() {

@@ -155,6 +155,24 @@ impl core::fmt::Debug for Leverage {
 	}
 }
 
+#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct SwapPeriod<Moment> {
+	pub period: Moment,
+	pub start: Moment,
+}
+
+#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct AccumulateConfig<BlockNumber> {
+	pub frequency: BlockNumber,
+	pub offset: BlockNumber,
+}
+
+#[derive(Encode, Decode, Copy, Clone, RuntimeDebug, Eq, PartialEq, Ord, PartialOrd)]
+pub struct TradingPair {
+	pub base: CurrencyId,
+	pub quote: CurrencyId,
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
