@@ -2,7 +2,7 @@
 
 #![cfg(test)]
 
-use frame_support::{impl_outer_event, impl_outer_origin, ord_parameter_types, parameter_types};
+use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
 use frame_system as system;
 use orml_utilities::Fixed128;
 use primitives::{Balance, CurrencyId, LiquidityPoolId, TradingPair};
@@ -108,6 +108,7 @@ impl PriceProvider<CurrencyId, Price> for MockPrices {
 thread_local! {
 	static SPREAD: RefCell<Permill> = RefCell::new(Permill::zero());
 	static ACC_SWAP_RATES: RefCell<BTreeMap<TradingPair, Fixed128>> = RefCell::new(BTreeMap::new());
+	static LIQUIDITIES: RefCell<BTreeMap<LiquidityPoolId, Balance>> = RefCell::new(BTreeMap::new());
 }
 
 //TODO: implementation based on unit test requirements
@@ -122,11 +123,23 @@ impl MockLiquidityPools {
 	}
 
 	pub fn accumulated_swap_rate(pair: TradingPair) -> Fixed128 {
-		ACC_SWAP_RATES.with(|v| v.borrow_mut().get(&pair).map(|r| *r)).unwrap()
+		ACC_SWAP_RATES
+			.with(|v| v.borrow_mut().get(&pair).map(|r| *r))
+			.unwrap_or_default()
 	}
 
 	pub fn set_mock_accumulated_swap_rate(pair: TradingPair, rate: Fixed128) {
 		ACC_SWAP_RATES.with(|v| v.borrow_mut().insert(pair, rate));
+	}
+
+	pub fn liquidity(pool: LiquidityPoolId) -> Balance {
+		LIQUIDITIES
+			.with(|v| v.borrow_mut().get(&pool).map(|l| *l))
+			.unwrap_or_default()
+	}
+
+	pub fn set_mock_liquidity(pool: LiquidityPoolId, liquidity: Balance) {
+		LIQUIDITIES.with(|v| v.borrow_mut().insert(pool, liquidity));
 	}
 }
 impl LiquidityPools<AccountId> for MockLiquidityPools {
@@ -134,30 +147,30 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 	type CurrencyId = CurrencyId;
 	type Balance = Balance;
 
-	fn ensure_liquidity(pool_id: Self::LiquidityPoolId) -> bool {
+	fn ensure_liquidity(_pool_id: Self::LiquidityPoolId) -> bool {
 		unimplemented!()
 	}
 
-	fn is_owner(pool_id: Self::LiquidityPoolId, who: &u64) -> bool {
+	fn is_owner(_pool_id: Self::LiquidityPoolId, _who: &u64) -> bool {
 		unimplemented!()
 	}
 
 	fn liquidity(pool_id: Self::LiquidityPoolId) -> Self::Balance {
+		Self::liquidity(pool_id)
+	}
+
+	fn deposit_liquidity(_source: &u64, _pool_id: Self::LiquidityPoolId, _amount: Self::Balance) -> DispatchResult {
 		unimplemented!()
 	}
 
-	fn deposit_liquidity(source: &u64, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
-		unimplemented!()
-	}
-
-	fn withdraw_liquidity(dest: &u64, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
+	fn withdraw_liquidity(_dest: &u64, _pool_id: Self::LiquidityPoolId, _amount: Self::Balance) -> DispatchResult {
 		unimplemented!()
 	}
 }
 impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
 	type TradingPair = TradingPair;
 
-	fn is_allowed_position(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair, leverage: Leverage) -> bool {
+	fn is_allowed_position(_pool_id: Self::LiquidityPoolId, _pair: Self::TradingPair, _leverage: Leverage) -> bool {
 		unimplemented!()
 	}
 
@@ -169,19 +182,19 @@ impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
 		Some(Self::spread())
 	}
 
-	fn get_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128 {
+	fn get_swap_rate(_pool_id: Self::LiquidityPoolId, _pair: Self::TradingPair) -> Fixed128 {
 		unimplemented!()
 	}
 
-	fn get_accumulated_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128 {
+	fn get_accumulated_swap_rate(_pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128 {
 		Self::accumulated_swap_rate(pair)
 	}
 
 	fn can_open_position(
-		pool_id: Self::LiquidityPoolId,
-		pair: Self::TradingPair,
-		leverage: Leverage,
-		leveraged_amount: Balance,
+		_pool_id: Self::LiquidityPoolId,
+		_pair: Self::TradingPair,
+		_leverage: Leverage,
+		_leveraged_amount: Balance,
 	) -> bool {
 		unimplemented!()
 	}
@@ -205,6 +218,7 @@ pub struct ExtBuilder {
 	prices: Vec<(CurrencyId, Price)>,
 	swap_rates: Vec<(TradingPair, Fixed128)>,
 	trader_risk_threshold: RiskThreshold,
+	pool_liquidities: Vec<(LiquidityPoolId, Balance)>,
 	liquidity_pool_enp_threshold: RiskThreshold,
 	liquidity_pool_ell_threshold: RiskThreshold,
 }
@@ -220,6 +234,7 @@ impl Default for ExtBuilder {
 			trader_risk_threshold: RiskThreshold::default(),
 			liquidity_pool_enp_threshold: RiskThreshold::default(),
 			liquidity_pool_ell_threshold: RiskThreshold::default(),
+			pool_liquidities: vec![],
 		}
 	}
 }
@@ -252,6 +267,11 @@ impl ExtBuilder {
 		self
 	}
 
+	pub fn pool_liquidity(mut self, pool: LiquidityPoolId, liquidity: Balance) -> Self {
+		self.pool_liquidities.push((pool, liquidity));
+		self
+	}
+
 	pub fn liquidity_pool_enp_threshold(mut self, threshold: RiskThreshold) -> Self {
 		self.liquidity_pool_enp_threshold = threshold;
 		self
@@ -270,6 +290,9 @@ impl ExtBuilder {
 		self.swap_rates
 			.iter()
 			.for_each(|(p, r)| MockLiquidityPools::set_mock_accumulated_swap_rate(*p, *r));
+		self.pool_liquidities
+			.iter()
+			.for_each(|(p, l)| MockLiquidityPools::set_mock_liquidity(*p, *l));
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
