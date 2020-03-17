@@ -273,18 +273,11 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// ask_price = price * (1 + ask_spread)
-	fn _ask_price(pool: LiquidityPoolId, held: CurrencyId, debit: CurrencyId, max: Option<Price>) -> PriceResult {
-		let price = Self::_price(debit, held)?;
-		//FIXME: liquidity pools should provide spread based on trading pair
-		let spread: Price = T::LiquidityPools::get_ask_spread(
-			pool,
-			TradingPair {
-				quote: held,
-				base: debit,
-			},
-		)
-		.ok_or(Error::<T>::NoAskSpread)?
-		.into();
+	fn _ask_price(pool: LiquidityPoolId, pair: TradingPair, max: Option<Price>) -> PriceResult {
+		let price = Self::_price(pair.base, pair.quote)?;
+		let spread: Price = T::LiquidityPools::get_ask_spread(pool, pair)
+			.ok_or(Error::<T>::NoAskSpread)?
+			.into();
 		let ask_price: Price = Price::from_natural(1).saturating_add(spread).saturating_mul(price);
 
 		if let Some(m) = max {
@@ -297,18 +290,11 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// bid_price = price * (1 - bid_spread)
-	fn _bid_price(pool: LiquidityPoolId, held: CurrencyId, debit: CurrencyId, min: Option<Price>) -> PriceResult {
-		let price = Self::_price(debit, held)?;
-		//FIXME: liquidity pools should provide spread based on trading pair
-		let spread: Price = T::LiquidityPools::get_bid_spread(
-			pool,
-			TradingPair {
-				quote: held,
-				base: debit,
-			},
-		)
-		.ok_or(Error::<T>::NoAskSpread)?
-		.into();
+	fn _bid_price(pool: LiquidityPoolId, pair: TradingPair, min: Option<Price>) -> PriceResult {
+		let price = Self::_price(pair.base, pair.quote)?;
+		let spread: Price = T::LiquidityPools::get_bid_spread(pool, pair)
+			.ok_or(Error::<T>::NoAskSpread)?
+			.into();
 		let bid_price = Price::from_natural(1).saturating_sub(spread).saturating_mul(price);
 		if let Some(m) = min {
 			if bid_price < m {
@@ -343,9 +329,9 @@ impl<T: Trait> Module<T> {
 			.saturating_abs();
 		let curr_price = {
 			let p = if position.leverage.is_long() {
-				Self::_bid_price(position.pool, position.pair.quote, position.pair.base, None)?
+				Self::_bid_price(position.pool, position.pair, None)?
 			} else {
-				Self::_ask_price(position.pool, position.pair.quote, position.pair.base, None)?
+				Self::_ask_price(position.pool, position.pair, None)?
 			};
 			fixed_128_from_fixed_u128(p)
 		};
