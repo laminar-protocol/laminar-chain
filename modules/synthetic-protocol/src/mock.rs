@@ -190,32 +190,13 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 	type CurrencyId = CurrencyId;
 	type Balance = Balance;
 
-	fn get_bid_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Option<Permill> {
-		Some(Self::spread())
-	}
-
-	fn get_ask_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Option<Permill> {
-		Some(Self::spread())
-	}
-
-	fn ensure_liquidity(pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
-		Self::liquidity(pool_id)
-			.checked_sub(amount)
-			.ok_or(Error::<Runtime>::BalanceTooLow)?;
-		Ok(())
+	fn ensure_liquidity(_pool_id: Self::LiquidityPoolId) -> bool {
+		unimplemented!()
 	}
 
 	/// ALICE is the mock owner
 	fn is_owner(_pool_id: Self::LiquidityPoolId, who: &u32) -> bool {
 		who == &ALICE
-	}
-
-	fn is_allowed_position(
-		_pool_id: Self::LiquidityPoolId,
-		_currency_id: Self::CurrencyId,
-		_leverage: Leverage,
-	) -> bool {
-		Self::is_allowed()
 	}
 
 	fn liquidity(pool_id: Self::LiquidityPoolId) -> Self::Balance {
@@ -232,6 +213,14 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 }
 
 impl SyntheticProtocolLiquidityPools<AccountId> for MockLiquidityPools {
+	fn get_bid_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Option<Permill> {
+		Some(Self::spread())
+	}
+
+	fn get_ask_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Option<Permill> {
+		Some(Self::spread())
+	}
+
 	fn get_additional_collateral_ratio(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
 		Self::additional_collateral_ratio()
 	}

@@ -14,6 +14,7 @@ use orml_currencies::Currency;
 use primitives::{Balance, CurrencyId, LiquidityPoolId};
 use system::EnsureSignedBy;
 
+pub type BlockNumber = u64;
 pub type AccountId = u32;
 
 ord_parameter_types! {
@@ -40,7 +41,7 @@ impl system::Trait for Runtime {
 	type Origin = Origin;
 	type Call = ();
 	type Index = u64;
-	type BlockNumber = u64;
+	type BlockNumber = BlockNumber;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = AccountId;
@@ -53,16 +54,15 @@ impl system::Trait for Runtime {
 	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
 	type ModuleToIndex = ();
+	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
-	type AccountData = ();
 }
 
 parameter_types! {
 	pub const ExistentialDeposit: u128 = 50;
 	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::LAMI;
 	pub const GetLiquidityCurrencyId: CurrencyId = CurrencyId::AUSD;
-	pub const MaxSwap: Fixed128 = Fixed128::from_natural(2);
 }
 
 type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
@@ -104,7 +104,6 @@ impl Trait for Runtime {
 	type PoolManager = PoolManager;
 	type ExistentialDeposit = ExistentialDeposit;
 	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
-	type MaxSwap = MaxSwap;
 }
 pub type ModuleLiquidityPools = Module<Runtime>;
 
