@@ -263,7 +263,7 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Module<T> {
 	/// Unrealized profit and loss of a position(USD value).
 	///
-	/// unrealized_pl_of_position = (curr_price - open_price) * leveraged_held
+	/// unrealized_pl_of_position = (curr_price - open_price) * leveraged_held * price
 	fn _unrealized_pl_of_position(position: &Position<T>) -> Fixed128Result {
 		// open_price = abs(leveraged_debits / leveraged_held)
 		let open_price = position
@@ -286,7 +286,7 @@ impl<T: Trait> Module<T> {
 			.leveraged_held
 			.checked_mul(&price_delta)
 			.ok_or(Error::<T>::NumOutOfBound)?;
-		Self::_usd_value(position.pair.quote, unrealized)
+		Self::_usd_value(position.pair.base, unrealized)
 	}
 
 	/// Unrealized profit and loss of a given trader(USD value). It is the sum of unrealized profit and loss of all positions
@@ -312,26 +312,25 @@ impl<T: Trait> Module<T> {
 
 	/// Free balance: the balance available for withdraw.
 	///
-	/// free_balance = balance - margin_held
+	/// free_balance = max(balance - margin_held, zero)
 	fn _free_balance(who: &T::AccountId) -> Balance {
 		Self::balances(who)
 			.checked_sub(Self::_margin_held(who))
-			.expect("ensured enough open margin on open position; qed")
+			.unwrap_or_default()
 	}
 
 	/// Accumulated swap rate of a position(USD value).
 	///
-	/// accumulated_swap_rate_of_position = (current_accumulated - open_accumulated) * leveraged_held * price
+	/// accumulated_swap_rate_of_position = (current_accumulated - open_accumulated) * leveraged_held
 	fn _accumulated_swap_rate_of_position(position: &Position<T>) -> Fixed128Result {
 		let rate = T::LiquidityPools::get_accumulated_swap_rate(position.pool, position.pair)
 			.checked_sub(&position.open_accumulated_swap_rate)
 			.ok_or(Error::<T>::NumOutOfBound)?;
-		let rate_amount = position
+		position
 			.leveraged_held
 			.saturating_abs()
 			.checked_mul(&rate)
-			.ok_or(Error::<T>::NumOutOfBound)?;
-		Self::_usd_value(position.pair.quote, rate_amount)
+			.ok_or(Error::<T>::NumOutOfBound.into())
 	}
 
 	/// Accumulated swap of all open positions of a given trader(USD value).
@@ -345,7 +344,7 @@ impl<T: Trait> Module<T> {
 			})
 	}
 
-	/// equity_of_trader = balance + unrealized_pl - accumulated_swap_rate
+	/// equity_of_trader = balance + unrealized_pl + accumulated_swap_rate
 	fn _equity_of_trader(who: &T::AccountId) -> Fixed128Result {
 		let unrealized = Self::_unrealized_pl_of_trader(who)?;
 		let with_unrealized = fixed_128_from_u128(Self::balances(who))
@@ -353,7 +352,7 @@ impl<T: Trait> Module<T> {
 			.ok_or(Error::<T>::NumOutOfBound)?;
 		let accumulated_swap_rate = Self::_accumulated_swap_rate_of_trader(who)?;
 		with_unrealized
-			.checked_sub(&accumulated_swap_rate)
+			.checked_add(&accumulated_swap_rate)
 			.ok_or(Error::<T>::NumOutOfBound.into())
 	}
 
@@ -399,26 +398,26 @@ impl<T: Trait> Module<T> {
 
 // Liquidity pool helpers
 impl<T: Trait> Module<T> {
-	/// equity_of_pool = liquidity - all_unrealized_pl + all_accumulated_swap_rate
+	/// equity_of_pool = liquidity - all_unrealized_pl - all_accumulated_swap_rate
 	fn _equity_of_pool(pool: LiquidityPoolId) -> Fixed128Result {
 		let liquidity = {
 			let l = <T::LiquidityPools as LiquidityPools<T::AccountId>>::liquidity(pool);
 			fixed_128_from_u128(l)
 		};
 
-		// -all_unrealized_pl + all_accumulated_swap_rate
+		// all_unrealized_pl + all_accumulated_swap_rate
 		let unrealized_pl_and_rate = PositionsByPool::iter_prefix(pool)
 			.flatten()
 			.filter_map(|position_id| Self::positions(position_id))
 			.try_fold::<_, _, Fixed128Result>(Fixed128::zero(), |acc, p| {
 				let rate = Self::_accumulated_swap_rate_of_position(&p)?;
 				let unrealized = Self::_unrealized_pl_of_position(&p)?;
-				let sum = rate.checked_sub(&unrealized).ok_or(Error::<T>::NumOutOfBound)?;
+				let sum = rate.checked_add(&unrealized).ok_or(Error::<T>::NumOutOfBound)?;
 				acc.checked_add(&sum).ok_or(Error::<T>::NumOutOfBound.into())
 			})?;
 
 		liquidity
-			.checked_add(&unrealized_pl_and_rate)
+			.checked_sub(&unrealized_pl_and_rate)
 			.ok_or(Error::<T>::NumOutOfBound.into())
 	}
 

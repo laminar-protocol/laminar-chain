@@ -167,7 +167,7 @@ pub struct AccumulateConfig<BlockNumber> {
 	pub offset: BlockNumber,
 }
 
-#[derive(Encode, Decode, Copy, Clone, RuntimeDebug, Eq, PartialEq)]
+#[derive(Encode, Decode, Copy, Clone, RuntimeDebug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct TradingPair {
 	pub base: CurrencyId,
 	pub quote: CurrencyId,
