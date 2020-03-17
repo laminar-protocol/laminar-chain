@@ -198,6 +198,10 @@ impl Trait for Runtime {
 	type LiquidityPools = MockLiquidityPools;
 	type PriceProvider = MockPrices;
 }
+pub type MarginProtocol = Module<Runtime>;
+
+pub const ALICE: AccountId = 0;
+pub const MOCK_POOL: LiquidityPoolId = 100;
 
 //TODO: more fields based on unit test requirements
 pub struct ExtBuilder {

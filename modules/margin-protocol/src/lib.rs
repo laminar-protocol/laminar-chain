@@ -406,7 +406,7 @@ impl<T: Trait> Module<T> {
 	fn _free_balance(who: &T::AccountId) -> Balance {
 		Self::balances(who)
 			.checked_sub(Self::_margin_held(who))
-			.unwrap_or(Zero::zero())
+			.unwrap_or_default()
 	}
 
 	/// Accumulated swap rate of a position(USD value).
