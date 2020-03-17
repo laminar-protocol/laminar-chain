@@ -15,7 +15,7 @@ pub trait LiquidityPools<AccountId> {
 	type CurrencyId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug;
 	type Balance: Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
-	fn ensure_liquidity(pool_id: Self::LiquidityPoolId) -> bool;
+	fn ensure_liquidity(pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult;
 
 	fn is_owner(pool_id: Self::LiquidityPoolId, who: &AccountId) -> bool;
 

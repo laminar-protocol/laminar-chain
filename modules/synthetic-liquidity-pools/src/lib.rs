@@ -193,7 +193,7 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 	type CurrencyId = CurrencyId;
 	type Balance = Balance;
 
-	fn ensure_liquidity(_pool_id: Self::LiquidityPoolId) -> bool {
+	fn ensure_liquidity(pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
 		unimplemented!()
 	}
 
@@ -294,7 +294,6 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _withdraw_liquidity(who: &T::AccountId, pool_id: T::LiquidityPoolId, amount: Balance) -> DispatchResult {
-		ensure!(<Owners<T>>::contains_key(&pool_id), Error::<T>::PoolNotFound);
 		let new_balance = Self::balances(&pool_id)
 			.checked_sub(amount)
 			.ok_or(Error::<T>::CannotWithdrawAmount)?;

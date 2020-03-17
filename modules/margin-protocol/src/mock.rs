@@ -147,7 +147,7 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 	type CurrencyId = CurrencyId;
 	type Balance = Balance;
 
-	fn ensure_liquidity(_pool_id: Self::LiquidityPoolId) -> bool {
+	fn ensure_liquidity(_pool_id: Self::LiquidityPoolId, _amount: Self::Balance) -> DispatchResult {
 		unimplemented!()
 	}
 
