@@ -409,7 +409,7 @@ impl<T: Trait> Module<T> {
 
 	/// Get bid price from liquidity pool for a given currency. Would fail if price could not meet max slippage.
 	///
-	/// ask_price = price * (1 - bid_spread)
+	/// bid_price = price * (1 - bid_spread)
 	fn _get_bid_price(
 		pool_id: T::LiquidityPoolId,
 		currency_id: T::CurrencyId,
@@ -430,7 +430,8 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// Calculate liquidity provider's collateral parts:
-	/// 	synthetic_value * (1 + ratio) - collateral
+	///
+	/// synthetic_value * (1 + ratio) - collateral
 	fn _calc_additional_collateral_amount(
 		pool_id: T::LiquidityPoolId,
 		currency_id: T::CurrencyId,

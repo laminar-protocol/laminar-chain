@@ -518,3 +518,180 @@ fn ensure_pool_safe_works() {
 			);
 		});
 }
+
+#[test]
+fn trader_margin_call_should_work() {
+	let risk_threshold = RiskThreshold {
+		margin_call: Permill::from_percent(5),
+		stop_out: Permill::from_percent(3),
+	};
+
+	ExtBuilder::default()
+		.spread(Permill::zero())
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.price(CurrencyId::FEUR, (1, 1))
+		.trader_risk_threshold(risk_threshold)
+		.build()
+		.execute_with(|| {
+			<Balances<Runtime>>::insert(ALICE, balance_from_natural_currency_cent(100));
+			let position: Position<Runtime> = Position {
+				owner: ALICE,
+				pool: MOCK_POOL,
+				pair: EUR_USD_PAIR,
+				leverage: Leverage::LongTwo,
+				leveraged_held: fixed128_from_natural_currency_cent(100),
+				leveraged_debits: fixed128_from_natural_currency_cent(100),
+				leveraged_held_in_usd: fixed128_from_natural_currency_cent(100),
+				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				open_margin: balance_from_natural_currency_cent(100),
+			};
+
+			assert_eq!(MarginProtocol::_margin_level(&ALICE, None), Ok(Fixed128::max_value()));
+
+			// without position
+			assert_noop!(
+				MarginProtocol::trader_margin_call(Origin::ROOT, ALICE),
+				Error::<Runtime>::SafeTrader
+			);
+
+			<Positions<Runtime>>::insert(0, position);
+			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
+			assert_eq!(
+				MarginProtocol::_margin_level(&ALICE, None),
+				Ok(Fixed128::from_natural(1))
+			);
+
+			MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(1, 20)));
+			assert_eq!(
+				MarginProtocol::_margin_level(&ALICE, None),
+				Ok(Fixed128::from_rational(5, NonZeroI128::new(100).unwrap()))
+			);
+
+			assert_ok!(MarginProtocol::trader_margin_call(Origin::ROOT, ALICE));
+		});
+}
+
+#[test]
+fn trader_become_safe_should_work() {
+	let risk_threshold = RiskThreshold {
+		margin_call: Permill::from_percent(5),
+		stop_out: Permill::from_percent(3),
+	};
+
+	ExtBuilder::default()
+		.spread(Permill::zero())
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.price(CurrencyId::FEUR, (1, 1))
+		.trader_risk_threshold(risk_threshold)
+		.build()
+		.execute_with(|| {
+			<Balances<Runtime>>::insert(ALICE, balance_from_natural_currency_cent(100));
+			let position: Position<Runtime> = Position {
+				owner: ALICE,
+				pool: MOCK_POOL,
+				pair: EUR_USD_PAIR,
+				leverage: Leverage::LongTwo,
+				leveraged_held: fixed128_from_natural_currency_cent(100),
+				leveraged_debits: fixed128_from_natural_currency_cent(100),
+				leveraged_held_in_usd: fixed128_from_natural_currency_cent(100),
+				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				open_margin: balance_from_natural_currency_cent(100),
+			};
+
+			// without position
+			assert_ok!(MarginProtocol::trader_become_safe(Origin::ROOT, ALICE));
+
+			<Positions<Runtime>>::insert(0, position);
+			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
+			assert_eq!(
+				MarginProtocol::_margin_level(&ALICE, None),
+				Ok(Fixed128::from_natural(1))
+			);
+
+			MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(4, 100)));
+			assert_eq!(
+				MarginProtocol::_margin_level(&ALICE, None),
+				Ok(Fixed128::from_rational(4, NonZeroI128::new(100).unwrap()))
+			);
+			assert_ok!(MarginProtocol::trader_margin_call(Origin::ROOT, ALICE));
+			assert_noop!(
+				MarginProtocol::trader_become_safe(Origin::ROOT, ALICE),
+				Error::<Runtime>::UnsafeTrader
+			);
+
+			MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(5, 100)));
+			assert_eq!(
+				MarginProtocol::_margin_level(&ALICE, None),
+				Ok(Fixed128::from_rational(5, NonZeroI128::new(100).unwrap()))
+			);
+			assert_noop!(
+				MarginProtocol::trader_become_safe(Origin::ROOT, ALICE),
+				Error::<Runtime>::UnsafeTrader
+			);
+
+			MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(6, 100)));
+			assert_eq!(
+				MarginProtocol::_margin_level(&ALICE, None),
+				Ok(Fixed128::from_rational(6, NonZeroI128::new(100).unwrap()))
+			);
+			assert_ok!(MarginProtocol::trader_become_safe(Origin::ROOT, ALICE));
+		});
+}
+#[test]
+fn trader_liquidate_should_work() {
+	let risk_threshold = RiskThreshold {
+		margin_call: Permill::from_percent(5),
+		stop_out: Permill::from_percent(3),
+	};
+
+	ExtBuilder::default()
+		.spread(Permill::zero())
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.price(CurrencyId::FEUR, (1, 1))
+		.trader_risk_threshold(risk_threshold)
+		.build()
+		.execute_with(|| {
+			<Balances<Runtime>>::insert(ALICE, balance_from_natural_currency_cent(100));
+			let position: Position<Runtime> = Position {
+				owner: ALICE,
+				pool: MOCK_POOL,
+				pair: EUR_USD_PAIR,
+				leverage: Leverage::LongTwo,
+				leveraged_held: fixed128_from_natural_currency_cent(100),
+				leveraged_debits: fixed128_from_natural_currency_cent(100),
+				leveraged_held_in_usd: fixed128_from_natural_currency_cent(100),
+				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				open_margin: balance_from_natural_currency_cent(100),
+			};
+
+			// without position
+			assert_noop!(
+				MarginProtocol::trader_liquidate(Origin::ROOT, ALICE),
+				Error::<Runtime>::NotReachedRiskThreshold
+			);
+
+			<Positions<Runtime>>::insert(0, position);
+			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
+			assert_eq!(
+				MarginProtocol::_margin_level(&ALICE, None),
+				Ok(Fixed128::from_natural(1))
+			);
+
+			// trader_liquidate without trader_margin_call
+			MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(3, 100)));
+			assert_eq!(
+				MarginProtocol::_margin_level(&ALICE, None),
+				Ok(Fixed128::from_rational(3, NonZeroI128::new(100).unwrap()))
+			);
+			assert_eq!(
+				MarginProtocol::_free_balance(&ALICE),
+				balance_from_natural_currency_cent(0)
+			);
+			// TODO: need implementation close_positions
+			//assert_ok!(MarginProtocol::trader_liquidate(Origin::ROOT, ALICE));
+			//assert_eq!(
+			//	MarginProtocol::_free_balance(&ALICE),
+			//	balance_from_natural_currency_cent(0)
+			//);
+		});
+}
