@@ -50,8 +50,8 @@ pub struct Position<T: Trait> {
 	leverage: Leverage,
 	leveraged_held: Fixed128,
 	leveraged_debits: Fixed128,
-	/// USD value of leveraged held on open position.
-	leveraged_held_in_usd: Fixed128,
+	/// USD value of leveraged debits on open position.
+	leveraged_debits_in_usd: Fixed128,
 	open_accumulated_swap_rate: Fixed128,
 	open_margin: Balance,
 }
@@ -237,7 +237,7 @@ impl<T: Trait> Module<T> {
 			leverage,
 			leveraged_held: fixed_128_mul_signum(leveraged_held, held_signum),
 			leveraged_debits: fixed_128_mul_signum(leveraged_debits, debit_signum),
-			leveraged_held_in_usd: fixed_128_mul_signum(leveraged_held_in_usd, debit_signum),
+			leveraged_debits_in_usd: fixed_128_mul_signum(leveraged_held_in_usd, debit_signum),
 			open_accumulated_swap_rate,
 			open_margin,
 		};
@@ -486,16 +486,16 @@ impl<T: Trait> Module<T> {
 	/// else based on current positions plus this new one.
 	fn _margin_level(who: &T::AccountId, new_position: Option<Position<T>>) -> Fixed128Result {
 		let equity = Self::_equity_of_trader(who)?;
-		let leveraged_held_in_usd = <PositionsByTrader<T>>::iter_prefix(who)
+		let leveraged_debits_in_usd = <PositionsByTrader<T>>::iter_prefix(who)
 			.flatten()
 			.filter_map(|position_id| Self::positions(position_id))
 			.chain(new_position.map_or(vec![], |p| vec![p]))
 			.try_fold(Fixed128::zero(), |acc, p| {
-				acc.checked_add(&p.leveraged_held_in_usd.saturating_abs())
+				acc.checked_add(&p.leveraged_debits_in_usd.saturating_abs())
 					.ok_or(Error::<T>::NumOutOfBound)
 			})?;
 		Ok(equity
-			.checked_div(&leveraged_held_in_usd)
+			.checked_div(&leveraged_debits_in_usd)
 			// if no leveraged held, margin level is max
 			.unwrap_or(Fixed128::max_value()))
 	}
@@ -563,13 +563,13 @@ impl<T: Trait> Module<T> {
 				(Fixed128::zero(), Fixed128::zero(), Fixed128::zero()),
 				|(net, positive, non_positive), p| {
 					let new_net = net
-						.checked_add(&p.leveraged_held_in_usd)
+						.checked_add(&p.leveraged_debits_in_usd)
 						.expect("ensured safe on open position; qed");
-					if p.leveraged_held_in_usd.is_positive() {
+					if p.leveraged_debits_in_usd.is_positive() {
 						(
 							new_net,
 							positive
-								.checked_add(&p.leveraged_held_in_usd)
+								.checked_add(&p.leveraged_debits_in_usd)
 								.expect("ensured safe on open position; qed"),
 							non_positive,
 						)
@@ -578,7 +578,7 @@ impl<T: Trait> Module<T> {
 							new_net,
 							positive,
 							non_positive
-								.checked_add(&p.leveraged_held_in_usd)
+								.checked_add(&p.leveraged_debits_in_usd)
 								.expect("ensured safe on open position; qed"),
 						)
 					}

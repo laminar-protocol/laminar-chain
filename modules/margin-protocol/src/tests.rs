@@ -40,7 +40,7 @@ fn eur_jpy_long() -> Position<Runtime> {
 		leverage: Leverage::LongTwenty,
 		leveraged_held: Fixed128::from_natural(100_000),
 		leveraged_debits: Fixed128::from_natural(-14_104_090),
-		leveraged_held_in_usd: fixed128_from_natural_currency_cent(-131_813_93),
+		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(-131_813_93),
 		open_accumulated_swap_rate: Fixed128::from_natural(1),
 		open_margin: balance_from_natural_currency_cent(6_591),
 	}
@@ -54,7 +54,7 @@ fn eur_jpy_short() -> Position<Runtime> {
 		leverage: Leverage::ShortTwenty,
 		leveraged_held: Fixed128::from_natural(-100_000),
 		leveraged_debits: Fixed128::from_natural(14_175_810),
-		leveraged_held_in_usd: fixed128_from_natural_currency_cent(133_734_06),
+		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(133_734_06),
 		open_accumulated_swap_rate: Fixed128::from_natural(1),
 		open_margin: balance_from_natural_currency_cent(6_687),
 	}
@@ -164,7 +164,7 @@ fn eur_usd_long_1() -> Position<Runtime> {
 		leverage: Leverage::LongFive,
 		leveraged_held: Fixed128::from_natural(100_000),
 		leveraged_debits: fixed128_from_natural_currency_cent(-120_420_30),
-		leveraged_held_in_usd: fixed128_from_natural_currency_cent(-120_420_30),
+		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(-120_420_30),
 		open_accumulated_swap_rate: open_rate,
 		open_margin: balance_from_natural_currency_cent(24_084),
 	}
@@ -180,7 +180,7 @@ fn eur_usd_long_2() -> Position<Runtime> {
 		leverage: Leverage::LongTwenty,
 		leveraged_held: Fixed128::from_natural(100_000),
 		leveraged_debits: fixed128_from_natural_currency_cent(-119_419_30),
-		leveraged_held_in_usd: fixed128_from_natural_currency_cent(-119_419_30),
+		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(-119_419_30),
 		open_accumulated_swap_rate: open_rate,
 		open_margin: balance_from_natural_currency_cent(5_971),
 	}
@@ -196,7 +196,7 @@ fn eur_usd_short_1() -> Position<Runtime> {
 		leverage: Leverage::ShortTen,
 		leveraged_held: Fixed128::from_natural(-100_000),
 		leveraged_debits: fixed128_from_natural_currency_cent(119_780_10),
-		leveraged_held_in_usd: fixed128_from_natural_currency_cent(119_780_10),
+		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(119_780_10),
 		open_accumulated_swap_rate: open_rate,
 		open_margin: balance_from_natural_currency_cent(11_978),
 	}
@@ -212,7 +212,7 @@ fn eur_usd_short_2() -> Position<Runtime> {
 		leverage: Leverage::ShortFifty,
 		leveraged_held: Fixed128::from_natural(-200_000),
 		leveraged_debits: fixed128_from_natural_currency_cent(237_362_40),
-		leveraged_held_in_usd: fixed128_from_natural_currency_cent(237_362_40),
+		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(237_362_40),
 		open_accumulated_swap_rate: open_rate,
 		open_margin: balance_from_natural_currency_cent(4_747),
 	}
@@ -338,7 +338,7 @@ fn ensure_trader_safe_works() {
 				leverage: Leverage::LongTwo,
 				leveraged_held: fixed128_from_natural_currency_cent(100),
 				leveraged_debits: fixed128_from_natural_currency_cent(100),
-				leveraged_held_in_usd: fixed128_from_natural_currency_cent(100),
+				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
 				open_margin: balance_from_natural_currency_cent(100),
 			};
@@ -459,7 +459,7 @@ fn ensure_pool_safe_works() {
 				leverage: Leverage::LongTwo,
 				leveraged_held: fixed128_from_natural_currency_cent(100),
 				leveraged_debits: fixed128_from_natural_currency_cent(100),
-				leveraged_held_in_usd: fixed128_from_natural_currency_cent(100),
+				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
 				open_margin: balance_from_natural_currency_cent(100),
 			};
@@ -541,7 +541,7 @@ fn trader_margin_call_should_work() {
 				leverage: Leverage::LongTwo,
 				leveraged_held: fixed128_from_natural_currency_cent(100),
 				leveraged_debits: fixed128_from_natural_currency_cent(100),
-				leveraged_held_in_usd: fixed128_from_natural_currency_cent(100),
+				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
 				open_margin: balance_from_natural_currency_cent(100),
 			};
@@ -593,7 +593,7 @@ fn trader_become_safe_should_work() {
 				leverage: Leverage::LongTwo,
 				leveraged_held: fixed128_from_natural_currency_cent(100),
 				leveraged_debits: fixed128_from_natural_currency_cent(100),
-				leveraged_held_in_usd: fixed128_from_natural_currency_cent(100),
+				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
 				open_margin: balance_from_natural_currency_cent(100),
 			};
@@ -659,7 +659,7 @@ fn trader_liquidate_should_work() {
 				leverage: Leverage::LongTwo,
 				leveraged_held: fixed128_from_natural_currency_cent(100),
 				leveraged_debits: fixed128_from_natural_currency_cent(100),
-				leveraged_held_in_usd: fixed128_from_natural_currency_cent(100),
+				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
 				open_margin: balance_from_natural_currency_cent(100),
 			};
