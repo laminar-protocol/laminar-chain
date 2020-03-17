@@ -140,7 +140,7 @@ decl_module! {
 
 		pub fn close_position(origin, position_id: PositionId, price: Price) {
 			let who = ensure_signed(origin)?;
-			Self::_close_position(&who, position_id, price)?;
+			Self::_close_position(&who, position_id, Some(price))?;
 
 			Self::deposit_event(RawEvent::PositionClosed(who, position_id, price));
 		}
@@ -201,7 +201,7 @@ impl<T: Trait> Module<T> {
 		unimplemented!()
 	}
 
-	fn _close_position(who: &T::AccountId, position_id: PositionId, price: Price) -> DispatchResult {
+	fn _close_position(who: &T::AccountId, position_id: PositionId, price: Option<Price>) -> DispatchResult {
 		// TODO: implementation
 		unimplemented!()
 	}
@@ -250,13 +250,7 @@ impl<T: Trait> Module<T> {
 		// TODO: print error log
 		<PositionsByTrader<T>>::iter_prefix(who).for_each(|user_position_ids| {
 			user_position_ids.iter().for_each(|position_id| {
-				if let Some(position) = <Positions<T>>::get(position_id) {
-					if let Ok(bid_price) =
-						Self::_bid_price(position.pool, position.pair.quote, position.pair.base, None)
-					{
-						let _ = Self::_close_position(who, *position_id, bid_price);
-					}
-				}
+				let _ = Self::_close_position(who, *position_id, None);
 			})
 		});
 
