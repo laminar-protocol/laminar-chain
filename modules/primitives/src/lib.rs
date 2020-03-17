@@ -10,6 +10,8 @@ extern crate bitmask;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
+pub mod arithmetic;
+
 pub use orml_prices::Price;
 
 pub type LiquidityPoolId = u32;
@@ -118,18 +120,15 @@ impl Decode for Leverage {
 }
 
 impl Leverage {
-	#[allow(dead_code)]
-	fn is_long(&self) -> bool {
+	pub fn is_long(&self) -> bool {
 		!self.is_short()
 	}
 
-	#[allow(dead_code)]
-	fn is_short(&self) -> bool {
+	pub fn is_short(&self) -> bool {
 		*self >= Leverage::ShortTwo
 	}
 
-	#[allow(dead_code)]
-	fn value(&self) -> u8 {
+	pub fn value(&self) -> u8 {
 		match *self {
 			Leverage::LongTwo | Leverage::ShortTwo => 2,
 			Leverage::LongThree | Leverage::ShortThree => 3,
@@ -154,6 +153,24 @@ impl core::fmt::Debug for Leverage {
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		write!(f, "Leverage {:?}", self)
 	}
+}
+
+#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct SwapPeriod<Moment> {
+	pub period: Moment,
+	pub start: Moment,
+}
+
+#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct AccumulateConfig<BlockNumber> {
+	pub frequency: BlockNumber,
+	pub offset: BlockNumber,
+}
+
+#[derive(Encode, Decode, Copy, Clone, RuntimeDebug, Eq, PartialEq, Ord, PartialOrd)]
+pub struct TradingPair {
+	pub base: CurrencyId,
+	pub quote: CurrencyId,
 }
 
 #[cfg(test)]

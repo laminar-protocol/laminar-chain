@@ -1,5 +1,5 @@
 [package]
-name = "module-liquidity-pools"
+name = "module-margin-liquidity-pools"
 version = "0.0.1"
 authors = ["Ermal Kaleci <ermal@laminar.one>"]
 edition = "2018"
