@@ -462,7 +462,7 @@ impl<T: Trait> Module<T> {
 			);
 
 		let enp = equity
-			.checked_div(&net)
+			.checked_div(&net.saturating_abs())
 			// if `net_position` is zero, ENP is max
 			.unwrap_or(Fixed128::max_value());
 		let longest_leg = cmp::max(positive, non_positive.saturating_abs());
