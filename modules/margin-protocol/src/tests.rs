@@ -410,7 +410,7 @@ fn trader_margin_call_should_work() {
 			// without position
 			assert_noop!(
 				MarginProtocol::trader_margin_call(Origin::ROOT, ALICE),
-				Error::<Runtime>::CannotTraderMarginCall
+				Error::<Runtime>::SafeTrader
 			);
 
 			<Positions<Runtime>>::insert(0, position);
@@ -475,7 +475,7 @@ fn trader_become_safe_should_work() {
 			assert_ok!(MarginProtocol::trader_margin_call(Origin::ROOT, ALICE));
 			assert_noop!(
 				MarginProtocol::trader_become_safe(Origin::ROOT, ALICE),
-				Error::<Runtime>::CannotTraderBecomeSafe
+				Error::<Runtime>::UnsafeTrader
 			);
 
 			MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(5, 100)));
@@ -485,7 +485,7 @@ fn trader_become_safe_should_work() {
 			);
 			assert_noop!(
 				MarginProtocol::trader_become_safe(Origin::ROOT, ALICE),
-				Error::<Runtime>::CannotTraderBecomeSafe
+				Error::<Runtime>::UnsafeTrader
 			);
 
 			MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(6, 100)));
@@ -526,7 +526,7 @@ fn trader_liquidate_should_work() {
 			// without position
 			assert_noop!(
 				MarginProtocol::trader_liquidate(Origin::ROOT, ALICE),
-				Error::<Runtime>::CannotTraderLiquidate
+				Error::<Runtime>::NotReachedRiskThreshold
 			);
 
 			<Positions<Runtime>>::insert(0, position);

@@ -100,12 +100,12 @@ decl_event! {
 		Deposited(AccountId, Amount),
 		/// Withdrew: (who, amount)
 		Withdrew(AccountId, Amount),
-		/// TraderMarginCall: (who)
-		TraderMarginCall(AccountId),
-		/// TraderBecomeSafe: (who)
-		TraderBecomeSafe(AccountId),
-		/// TraderLiquidate: (who)
-		TraderLiquidate(AccountId),
+		/// TraderMarginCalled: (who)
+		TraderMarginCalled(AccountId),
+		/// TraderBecameSafe: (who)
+		TraderBecameSafe(AccountId),
+		/// TraderLiquidated: (who)
+		TraderLiquidated(AccountId),
 	}
 }
 
@@ -120,10 +120,8 @@ decl_error! {
 		TraderWouldBeUnsafe,
 		UnsafePool,
 		PoolWouldBeUnsafe,
-		NoTraderRiskThreshold,
-		CannotTraderMarginCall,
-		CannotTraderBecomeSafe,
-		CannotTraderLiquidate,
+		SafeTrader,
+		NotReachedRiskThreshold,
 	}
 }
 
@@ -165,21 +163,21 @@ decl_module! {
 			let who = T::Lookup::lookup(who)?;
 
 			Self::_trader_margin_call(&who)?;
-			Self::deposit_event(RawEvent::TraderMarginCall(who));
+			Self::deposit_event(RawEvent::TraderMarginCalled(who));
 		}
 
 		pub fn trader_become_safe(origin, who: <T::Lookup as StaticLookup>::Source) {
 			let who = T::Lookup::lookup(who)?;
 
 			Self::_trader_become_safe(&who)?;
-			Self::deposit_event(RawEvent::TraderBecomeSafe(who));
+			Self::deposit_event(RawEvent::TraderBecameSafe(who));
 		}
 
 		pub fn trader_liquidate(origin, who: <T::Lookup as StaticLookup>::Source) {
 			let who = T::Lookup::lookup(who)?;
 
 			Self::_trader_liquidate(&who)?;
-			Self::deposit_event(RawEvent::TraderLiquidate(who));
+			Self::deposit_event(RawEvent::TraderLiquidated(who));
 		}
 
 		// TODO: implementations
@@ -220,13 +218,10 @@ impl<T: Trait> Module<T> {
 
 	fn _trader_margin_call(who: &T::AccountId) -> DispatchResult {
 		if !<MarginCalledTraders<T>>::contains_key(who) {
-			let threshold = TraderRiskThreshold::get();
-			let margin_level = Self::_margin_level(who, None)?;
-
-			if margin_level <= threshold.margin_call.into() {
+			if Self::_ensure_trader_safe(who, None).is_err() {
 				<MarginCalledTraders<T>>::insert(who, ());
 			} else {
-				return Err(Error::<T>::CannotTraderMarginCall.into());
+				return Err(Error::<T>::SafeTrader.into());
 			}
 		}
 		Ok(())
@@ -234,13 +229,10 @@ impl<T: Trait> Module<T> {
 
 	fn _trader_become_safe(who: &T::AccountId) -> DispatchResult {
 		if <MarginCalledTraders<T>>::contains_key(who) {
-			let threshold = TraderRiskThreshold::get();
-			let margin_level = Self::_margin_level(who, None)?;
-
-			if margin_level > threshold.margin_call.into() {
+			if Self::_ensure_trader_safe(who, None).is_ok() {
 				<MarginCalledTraders<T>>::remove(who);
 			} else {
-				return Err(Error::<T>::CannotTraderBecomeSafe.into());
+				return Err(Error::<T>::UnsafeTrader.into());
 			}
 		}
 		Ok(())
@@ -250,31 +242,27 @@ impl<T: Trait> Module<T> {
 		let threshold = TraderRiskThreshold::get();
 		let margin_level = Self::_margin_level(who, None)?;
 
-		if margin_level <= threshold.stop_out.into() {
-			// Close position as much as possible
-			// TODO: print error log
-			<PositionsByTrader<T>>::iter_prefix(who).for_each(|user_position_ids| {
-				user_position_ids.iter().for_each(|position_id| {
-					if let Some(position) = <Positions<T>>::get(position_id) {
-						if let Ok(bid_price) =
-							Self::_bid_price(position.pool, position.pair.quote, position.pair.base, None)
-						{
-							let _ = Self::_close_position(who, *position_id, bid_price);
-						}
-					}
-				})
-			});
-
-			let margin_level = Self::_margin_level(who, None)?;
-			if margin_level > threshold.margin_call.into() {
-				if <MarginCalledTraders<T>>::contains_key(who) {
-					<MarginCalledTraders<T>>::remove(who);
-				}
-			}
-		} else {
-			return Err(Error::<T>::CannotTraderLiquidate.into());
+		if margin_level > threshold.stop_out.into() {
+			return Err(Error::<T>::NotReachedRiskThreshold.into());
 		}
 
+		// Close position as much as possible
+		// TODO: print error log
+		<PositionsByTrader<T>>::iter_prefix(who).for_each(|user_position_ids| {
+			user_position_ids.iter().for_each(|position_id| {
+				if let Some(position) = <Positions<T>>::get(position_id) {
+					if let Ok(bid_price) =
+						Self::_bid_price(position.pool, position.pair.quote, position.pair.base, None)
+					{
+						let _ = Self::_close_position(who, *position_id, bid_price);
+					}
+				}
+			})
+		});
+
+		if Self::_ensure_trader_safe(who, None).is_ok() && <MarginCalledTraders<T>>::contains_key(who) {
+			<MarginCalledTraders<T>>::remove(who);
+		}
 		Ok(())
 	}
 }
