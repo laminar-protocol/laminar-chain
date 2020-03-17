@@ -178,7 +178,7 @@ decl_module! {
 		pub fn trader_liquidate(origin, who: <T::Lookup as StaticLookup>::Source) {
 			let who = T::Lookup::lookup(who)?;
 
-			Self::_trader_become_safe(&who)?;
+			Self::_trader_liquidate(&who)?;
 			Self::deposit_event(RawEvent::TraderLiquidate(who));
 		}
 

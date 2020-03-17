@@ -524,7 +524,10 @@ fn trader_liquidate_should_work() {
 			};
 
 			// without position
-			assert_ok!(MarginProtocol::trader_liquidate(Origin::ROOT, ALICE));
+			assert_noop!(
+				MarginProtocol::trader_liquidate(Origin::ROOT, ALICE),
+				Error::<Runtime>::CannotTraderLiquidate
+			);
 
 			<Positions<Runtime>>::insert(0, position);
 			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
