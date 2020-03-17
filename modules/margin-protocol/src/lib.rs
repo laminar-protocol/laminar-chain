@@ -3,7 +3,7 @@
 use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage};
 use sp_arithmetic::{
-	traits::{Bounded, Saturating, Zero},
+	traits::{Bounded, Saturating},
 	Permill,
 };
 use sp_runtime::{traits::StaticLookup, DispatchError, DispatchResult, RuntimeDebug};
@@ -316,7 +316,7 @@ impl<T: Trait> Module<T> {
 	fn _free_balance(who: &T::AccountId) -> Balance {
 		Self::balances(who)
 			.checked_sub(Self::_margin_held(who))
-			.unwrap_or(Zero::zero())
+			.unwrap_or_default()
 	}
 
 	/// Accumulated swap rate of a position(USD value).
