@@ -160,15 +160,15 @@ mod tests {
 	}
 
 	fn collateral_balance(who: &AccountId) -> Balance {
-		<Runtime as synthetic_protocol::Trait>::CollateralCurrency::balance(&who)
+		<Runtime as synthetic_protocol::Trait>::CollateralCurrency::free_balance(&who)
 	}
 
 	fn synthetic_collateral_balance() -> Balance {
-		<Runtime as synthetic_protocol::Trait>::CollateralCurrency::balance(&ModuleTokens::account_id())
+		<Runtime as synthetic_protocol::Trait>::CollateralCurrency::free_balance(&ModuleTokens::account_id())
 	}
 
 	fn synthetic_balance(who: &AccountId, currency_id: CurrencyId) -> Balance {
-		<Runtime as synthetic_protocol::Trait>::MultiCurrency::balance(currency_id, &who)
+		<Runtime as synthetic_protocol::Trait>::MultiCurrency::free_balance(currency_id, &who)
 	}
 
 	fn synthetic_enabled(currency_id: CurrencyId, enabled: bool) -> DispatchResult {

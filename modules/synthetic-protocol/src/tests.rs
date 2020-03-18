@@ -48,11 +48,11 @@ fn mock_pool_liquidity() -> Balance {
 }
 
 fn collateral_balance(who: AccountId) -> Balance {
-	CollateralCurrency::balance(&who)
+	CollateralCurrency::free_balance(&who)
 }
 
 fn synthetic_balance(who: AccountId) -> Balance {
-	SyntheticCurrency::balance(&who)
+	SyntheticCurrency::free_balance(&who)
 }
 
 fn position() -> (Balance, Balance) {
@@ -302,7 +302,7 @@ fn redeem_fails_if_synthetic_position_too_low() {
 
 			// redeem all in one pool, synthetic position would be too low
 			assert_noop!(
-				redeem_ausd(ALICE, SyntheticCurrency::balance(&ALICE)),
+				redeem_ausd(ALICE, SyntheticCurrency::free_balance(&ALICE)),
 				Error::<Runtime>::LiquidityPoolSyntheticPositionTooLow
 			);
 		});
@@ -323,7 +323,7 @@ fn redeem_fails_if_collateral_position_too_low() {
 			set_mock_feur_price(4, 1);
 
 			assert_noop!(
-				redeem_ausd(ALICE, SyntheticCurrency::balance(&ALICE)),
+				redeem_ausd(ALICE, SyntheticCurrency::free_balance(&ALICE)),
 				Error::<Runtime>::LiquidityPoolCollateralPositionTooLow
 			);
 		});
@@ -347,7 +347,7 @@ fn redeem_fails_if_not_enough_locked_collateral() {
 			));
 
 			assert_noop!(
-				redeem_ausd(ALICE, SyntheticCurrency::balance(&ALICE)),
+				redeem_ausd(ALICE, SyntheticCurrency::free_balance(&ALICE)),
 				Error::<Runtime>::NotEnoughLockedCollateralAvailable,
 			);
 		});
