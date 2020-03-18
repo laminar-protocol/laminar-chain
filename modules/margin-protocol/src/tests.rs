@@ -42,7 +42,7 @@ fn eur_jpy_long() -> Position<Runtime> {
 		leveraged_debits: Fixed128::from_natural(-14_104_090),
 		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(-131_813_93),
 		open_accumulated_swap_rate: Fixed128::from_natural(1),
-		open_margin: balance_from_natural_currency_cent(6_591),
+		open_margin: balance_from_natural_currency_cent(6_591_00),
 	}
 }
 
@@ -56,7 +56,7 @@ fn eur_jpy_short() -> Position<Runtime> {
 		leveraged_debits: Fixed128::from_natural(14_175_810),
 		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(133_734_06),
 		open_accumulated_swap_rate: Fixed128::from_natural(1),
-		open_margin: balance_from_natural_currency_cent(6_687),
+		open_margin: balance_from_natural_currency_cent(6_687_00),
 	}
 }
 
@@ -166,7 +166,7 @@ fn eur_usd_long_1() -> Position<Runtime> {
 		leveraged_debits: fixed128_from_natural_currency_cent(-120_420_30),
 		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(-120_420_30),
 		open_accumulated_swap_rate: open_rate,
-		open_margin: balance_from_natural_currency_cent(24_084),
+		open_margin: balance_from_natural_currency_cent(24_084_00),
 	}
 }
 
@@ -182,7 +182,7 @@ fn eur_usd_long_2() -> Position<Runtime> {
 		leveraged_debits: fixed128_from_natural_currency_cent(-119_419_30),
 		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(-119_419_30),
 		open_accumulated_swap_rate: open_rate,
-		open_margin: balance_from_natural_currency_cent(5_971),
+		open_margin: balance_from_natural_currency_cent(5_971_00),
 	}
 }
 
@@ -198,7 +198,7 @@ fn eur_usd_short_1() -> Position<Runtime> {
 		leveraged_debits: fixed128_from_natural_currency_cent(119_780_10),
 		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(119_780_10),
 		open_accumulated_swap_rate: open_rate,
-		open_margin: balance_from_natural_currency_cent(11_978),
+		open_margin: balance_from_natural_currency_cent(11_978_00),
 	}
 }
 
@@ -214,7 +214,7 @@ fn eur_usd_short_2() -> Position<Runtime> {
 		leveraged_debits: fixed128_from_natural_currency_cent(237_362_40),
 		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(237_362_40),
 		open_accumulated_swap_rate: open_rate,
-		open_margin: balance_from_natural_currency_cent(4_747),
+		open_margin: balance_from_natural_currency_cent(4_747_00),
 	}
 }
 
@@ -693,5 +693,52 @@ fn trader_liquidate_should_work() {
 			//	MarginProtocol::_free_balance(&ALICE),
 			//	balance_from_natural_currency_cent(0)
 			//);
+		});
+}
+
+#[test]
+fn open_long_position_works() {
+	ExtBuilder::default()
+		// USD/JPY = 110
+		.price(CurrencyId::FJPY, (1, 107))
+		// EUR/JPY = 140.9 => EUR/USD = 140.9/110
+		.price(CurrencyId::FEUR, (1409, 1070))
+		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000))
+		.build()
+		.execute_with(|| {
+			<Balances<Runtime>>::insert(ALICE, balance_from_natural_currency_cent(10_000));
+			assert_ok!(MarginProtocol::open_position(
+				Origin::signed(ALICE),
+				MOCK_POOL,
+				EUR_JPY_PAIR,
+				Leverage::LongTwenty,
+				balance_from_natural_currency_cent(100_000_00),
+				Price::from_natural(142)
+			));
+
+			let position = {
+				let mut p = eur_jpy_long();
+				// with higher precision level
+				p.leveraged_debits = Fixed128::from_parts(-14104090000000000732500000);
+				p.leveraged_debits_in_usd = Fixed128::from_parts(-131813925233644859804554);
+				p.open_margin = 6590696261682242990227;
+				p
+			};
+			let id = 0;
+			assert_eq!(MarginProtocol::positions(id), Some(position));
+			assert_eq!(MarginProtocol::positions_by_trader(ALICE, MOCK_POOL), vec![id]);
+			assert_eq!(MarginProtocol::positions_by_pool(MOCK_POOL, EUR_JPY_PAIR), vec![id]);
+			assert_eq!(MarginProtocol::next_position_id(), 1);
+
+			let event = TestEvent::margin_protocol(RawEvent::PositionOpened(
+				ALICE,
+				MOCK_POOL,
+				EUR_JPY_PAIR,
+				Leverage::LongTwenty,
+				balance_from_natural_currency_cent(100_000_00),
+				Price::from_natural(142),
+			));
+			assert!(System::events().iter().any(|record| record.event == event));
 		});
 }

@@ -123,9 +123,7 @@ impl MockLiquidityPools {
 	}
 
 	pub fn accumulated_swap_rate(pair: TradingPair) -> Fixed128 {
-		ACC_SWAP_RATES
-			.with(|v| v.borrow_mut().get(&pair).map(|r| *r))
-			.unwrap_or_default()
+		ACC_SWAP_RATES.with(|v| v.borrow_mut().get(&pair).map(|r| *r)).unwrap()
 	}
 
 	pub fn set_mock_accumulated_swap_rate(pair: TradingPair, rate: Fixed128) {
@@ -133,9 +131,7 @@ impl MockLiquidityPools {
 	}
 
 	pub fn liquidity(pool: LiquidityPoolId) -> Balance {
-		LIQUIDITIES
-			.with(|v| v.borrow_mut().get(&pool).map(|l| *l))
-			.unwrap_or_default()
+		LIQUIDITIES.with(|v| v.borrow_mut().get(&pool).map(|l| *l)).unwrap()
 	}
 
 	pub fn set_mock_liquidity(pool: LiquidityPoolId, liquidity: Balance) {

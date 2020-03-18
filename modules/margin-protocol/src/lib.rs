@@ -245,7 +245,7 @@ impl<T: Trait> Module<T> {
 		Self::_ensure_trader_safe(who, Some(position.clone()))?;
 		Self::_ensure_pool_safe(pool, Some(position.clone()))?;
 
-		Self::_insert_position(who, pool, pair, position);
+		Self::_try_insert_position(who, pool, pair, position)?;
 
 		Ok(())
 	}
@@ -312,7 +312,7 @@ impl<T: Trait> Module<T> {
 
 // Storage helpers
 impl<T: Trait> Module<T> {
-	fn _insert_position(
+	fn _try_insert_position(
 		who: &T::AccountId,
 		pool: LiquidityPoolId,
 		pair: TradingPair,
