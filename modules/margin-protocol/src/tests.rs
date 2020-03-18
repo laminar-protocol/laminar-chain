@@ -744,6 +744,39 @@ fn open_long_position_works() {
 }
 
 #[test]
+fn open_short_position_works() {
+	ExtBuilder::default()
+		// USD/JPY = 106
+		.price(CurrencyId::FJPY, (1, 106))
+		// EUR/JPY = 141.9 => EUR/USD = 141.9/106
+		.price(CurrencyId::FEUR, (1419, 1060))
+		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000))
+		.build()
+		.execute_with(|| {
+			<Balances<Runtime>>::insert(ALICE, balance_from_natural_currency_cent(10_000));
+			assert_ok!(MarginProtocol::open_position(
+				Origin::signed(ALICE),
+				MOCK_POOL,
+				EUR_JPY_PAIR,
+				Leverage::ShortTwenty,
+				balance_from_natural_currency_cent(100_000_00),
+				Price::from_natural(141)
+			));
+
+			let position = {
+				let mut p = eur_jpy_short();
+				// with higher precision level
+				p.leveraged_debits = Fixed128::from_parts(14175810000000000585500000);
+				p.leveraged_debits_in_usd = Fixed128::from_parts(133734056603773584812414);
+				p.open_margin = 6686702830188679240620;
+				p
+			};
+			assert_eq!(MarginProtocol::positions(0), Some(position));
+		});
+}
+
+#[test]
 fn open_position_fails_if_trader_margin_called() {
 	ExtBuilder::default()
 		// USD/JPY = 110

@@ -140,12 +140,12 @@ decl_module! {
 			pair: TradingPair,
 			leverage: Leverage,
 			#[compact] leveraged_amount: Balance,
-			max_price: Price,
+			price: Price,
 		) {
 			let who = ensure_signed(origin)?;
-			Self::_open_position(&who, pool, pair, leverage, leveraged_amount, max_price)?;
+			Self::_open_position(&who, pool, pair, leverage, leveraged_amount, price)?;
 
-			Self::deposit_event(RawEvent::PositionOpened(who, pool, pair, leverage, leveraged_amount, max_price));
+			Self::deposit_event(RawEvent::PositionOpened(who, pool, pair, leverage, leveraged_amount, price));
 		}
 
 		pub fn close_position(origin, position_id: PositionId, price: Price) {
@@ -205,7 +205,7 @@ impl<T: Trait> Module<T> {
 		pair: TradingPair,
 		leverage: Leverage,
 		leveraged_amount: Balance,
-		max_price: Price,
+		price: Price,
 	) -> DispatchResult {
 		ensure!(
 			Self::margin_called_traders(who).is_none(),
@@ -215,12 +215,16 @@ impl<T: Trait> Module<T> {
 
 		let (held_signum, debit_signum): (i128, i128) = if leverage.is_long() { (1, -1) } else { (-1, 1) };
 		let leveraged_held = fixed_128_from_u128(leveraged_amount);
-		let leveraged_debits = {
-			let ask_price = Self::_ask_price(pool, pair, Some(max_price))?;
-			leveraged_held
-				.checked_mul(&ask_price)
-				.ok_or(Error::<T>::NumOutOfBound)?
+		let debits_price = {
+			if leverage.is_long() {
+				Self::_ask_price(pool, pair, Some(price))?
+			} else {
+				Self::_bid_price(pool, pair, Some(price))?
+			}
 		};
+		let leveraged_debits = leveraged_held
+			.checked_mul(&debits_price)
+			.ok_or(Error::<T>::NumOutOfBound)?;
 		let leveraged_held_in_usd = Self::_usd_value(pair.base, leveraged_debits)?;
 		let open_margin = {
 			let leverage_value = Fixed128::from_natural(leverage.value().into());
