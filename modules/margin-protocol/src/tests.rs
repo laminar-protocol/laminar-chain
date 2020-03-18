@@ -71,7 +71,7 @@ fn unrealized_pl_of_long_position_works() {
 		.build()
 		.execute_with(|| {
 			assert_eq!(
-				MarginProtocol::_unrealized_pl_of_position(&eur_jpy_long()),
+				MarginProtocol::_unrealized_pl_of_position(&eur_jpy_long(), None),
 				Ok(Fixed128::from_parts(-1073545454545441750827)),
 			);
 		});
@@ -87,7 +87,7 @@ fn unrealized_pl_of_short_position_works() {
 		.build()
 		.execute_with(|| {
 			assert_eq!(
-				MarginProtocol::_unrealized_pl_of_position(&eur_jpy_short()),
+				MarginProtocol::_unrealized_pl_of_position(&eur_jpy_short(), None),
 				Ok(Fixed128::from_parts(1470999999999987141081)),
 			);
 		});

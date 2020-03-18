@@ -6,7 +6,10 @@ use sp_arithmetic::{
 	traits::{Bounded, Saturating},
 	Permill,
 };
-use sp_runtime::{traits::StaticLookup, DispatchError, DispatchResult, RuntimeDebug};
+use sp_runtime::{
+	traits::{AccountIdConversion, StaticLookup},
+	DispatchError, DispatchResult, ModuleId, RuntimeDebug,
+};
 // FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
 // would cause compiling error in `decl_module!` and `construct_runtime!`
 // #3295 https://github.com/paritytech/substrate/issues/3295
@@ -26,6 +29,8 @@ use serde::{Deserialize, Serialize};
 
 mod mock;
 mod tests;
+
+const MODULE_ID: ModuleId = ModuleId(*b"lami/mgn");
 
 pub trait Trait: frame_system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
@@ -125,6 +130,8 @@ decl_error! {
 		MarginCalledTrader,
 		MarginCalledPool,
 		NoAvailablePositionId,
+		PositionNotFound,
+		PositionNotOpenedByTrader,
 	}
 }
 
@@ -255,8 +262,48 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _close_position(who: &T::AccountId, position_id: PositionId, price: Option<Price>) -> DispatchResult {
-		// TODO: implementation
-		unimplemented!()
+		let position = Self::positions(position_id).ok_or(Error::<T>::PositionNotFound)?;
+		let index = Self::positions_by_trader(who, position.pool)
+			.iter()
+			.position(|id| *id == position_id)
+			.ok_or(Error::<T>::PositionNotOpenedByTrader)?;
+		let unrealized_pl = Self::_unrealized_pl_of_position(&position, price)?;
+		let accumulated_swap_rate = Self::_accumulated_swap_rate_of_position(&position)?;
+		let balance_delta = unrealized_pl
+			.checked_add(&accumulated_swap_rate)
+			.ok_or(Error::<T>::NumOutOfBound)?;
+
+		// realizing
+		let balance_delta_abs = u128_from_fixed_128(balance_delta.saturating_abs());
+		if balance_delta.is_positive() {
+			// trader has profit
+			let realized = cmp::min(
+				<T::LiquidityPools as LiquidityPools<T::AccountId>>::liquidity(position.pool),
+				balance_delta_abs,
+			);
+			<T::LiquidityPools as LiquidityPools<T::AccountId>>::withdraw_liquidity(
+				&Self::account_id(),
+				position.pool,
+				realized,
+			)?;
+			<Balances<T>>::mutate(who, |b| *b += realized);
+		} else {
+			// trader has loss
+			let realized = cmp::min(Self::balances(who), balance_delta_abs);
+			<T::LiquidityPools as LiquidityPools<T::AccountId>>::deposit_liquidity(
+				&Self::account_id(),
+				position.pool,
+				realized,
+			)?;
+			<Balances<T>>::mutate(who, |b| *b -= realized);
+		}
+
+		// remove position
+		<Positions<T>>::remove(position_id);
+		<PositionsByTrader<T>>::mutate(who, position.pool, |v| v.remove(index));
+		PositionsByPool::mutate(position.pool, position.pair, |v| v.retain(|id| *id != position_id));
+
+		Ok(())
 	}
 
 	fn _deposit(who: &T::AccountId, amount: Balance) -> DispatchResult {
@@ -316,6 +363,10 @@ impl<T: Trait> Module<T> {
 
 // Storage helpers
 impl<T: Trait> Module<T> {
+	pub fn account_id() -> T::AccountId {
+		MODULE_ID.into_account()
+	}
+
 	fn _insert_position(
 		who: &T::AccountId,
 		pool: LiquidityPoolId,
@@ -336,7 +387,6 @@ impl<T: Trait> Module<T> {
 
 type PriceResult = result::Result<Price, DispatchError>;
 type Fixed128Result = result::Result<Fixed128, DispatchError>;
-type BalanceResult = result::Result<Balance, DispatchError>;
 
 // Price helpers
 impl<T: Trait> Module<T> {
@@ -392,8 +442,8 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Module<T> {
 	/// Unrealized profit and loss of a position(USD value).
 	///
-	/// unrealized_pl_of_position = (curr_price - open_price) * leveraged_held * price
-	fn _unrealized_pl_of_position(position: &Position<T>) -> Fixed128Result {
+	/// unrealized_pl_of_position = (curr_price - open_price) * leveraged_held * to_usd_price
+	fn _unrealized_pl_of_position(position: &Position<T>, price: Option<Price>) -> Fixed128Result {
 		// open_price = abs(leveraged_debits / leveraged_held)
 		let open_price = position
 			.leveraged_debits
@@ -402,9 +452,9 @@ impl<T: Trait> Module<T> {
 			.saturating_abs();
 		let curr_price = {
 			if position.leverage.is_long() {
-				Self::_bid_price(position.pool, position.pair, None)?
+				Self::_bid_price(position.pool, position.pair, price)?
 			} else {
-				Self::_ask_price(position.pool, position.pair, None)?
+				Self::_ask_price(position.pool, position.pair, price)?
 			}
 		};
 		let price_delta = curr_price
@@ -424,7 +474,7 @@ impl<T: Trait> Module<T> {
 			.flatten()
 			.filter_map(|position_id| Self::positions(position_id))
 			.try_fold(Fixed128::zero(), |acc, p| {
-				let unrealized = Self::_unrealized_pl_of_position(&p)?;
+				let unrealized = Self::_unrealized_pl_of_position(&p, None)?;
 				acc.checked_add(&unrealized).ok_or(Error::<T>::NumOutOfBound.into())
 			})
 	}
@@ -539,7 +589,7 @@ impl<T: Trait> Module<T> {
 			.filter_map(|position_id| Self::positions(position_id))
 			.try_fold::<_, _, Fixed128Result>(Fixed128::zero(), |acc, p| {
 				let rate = Self::_accumulated_swap_rate_of_position(&p)?;
-				let unrealized = Self::_unrealized_pl_of_position(&p)?;
+				let unrealized = Self::_unrealized_pl_of_position(&p, None)?;
 				let sum = rate.checked_add(&unrealized).ok_or(Error::<T>::NumOutOfBound)?;
 				acc.checked_add(&sum).ok_or(Error::<T>::NumOutOfBound.into())
 			})?;
