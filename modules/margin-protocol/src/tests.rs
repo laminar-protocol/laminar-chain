@@ -7,6 +7,7 @@ use mock::*;
 
 use core::num::NonZeroI128;
 use frame_support::{assert_noop, assert_ok};
+use orml_utilities::FixedU128;
 use primitives::Leverage;
 use sp_runtime::PerThing;
 
@@ -699,9 +700,9 @@ fn trader_liquidate_should_work() {
 #[test]
 fn open_long_position_works() {
 	ExtBuilder::default()
-		// USD/JPY = 110
+		// USD/JPY = 107
 		.price(CurrencyId::FJPY, (1, 107))
-		// EUR/JPY = 140.9 => EUR/USD = 140.9/110
+		// EUR/JPY = 140.9 => EUR/USD = 140.9/107
 		.price(CurrencyId::FEUR, (1409, 1070))
 		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000))
@@ -779,9 +780,9 @@ fn open_short_position_works() {
 #[test]
 fn open_position_fails_if_trader_margin_called() {
 	ExtBuilder::default()
-		// USD/JPY = 110
+		// USD/JPY = 107
 		.price(CurrencyId::FJPY, (1, 107))
-		// EUR/JPY = 140.9 => EUR/USD = 140.9/110
+		// EUR/JPY = 140.9 => EUR/USD = 140.9/107
 		.price(CurrencyId::FEUR, (1409, 1070))
 		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000))
@@ -806,9 +807,9 @@ fn open_position_fails_if_trader_margin_called() {
 #[test]
 fn open_position_fails_if_pool_margin_called() {
 	ExtBuilder::default()
-		// USD/JPY = 110
+		// USD/JPY = 107
 		.price(CurrencyId::FJPY, (1, 107))
-		// EUR/JPY = 140.9 => EUR/USD = 140.9/110
+		// EUR/JPY = 140.9 => EUR/USD = 140.9/107
 		.price(CurrencyId::FEUR, (1409, 1070))
 		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000))
@@ -833,7 +834,6 @@ fn open_position_fails_if_pool_margin_called() {
 #[test]
 fn open_position_fails_if_no_base_price() {
 	ExtBuilder::default()
-		// EUR/JPY = 140.9 => EUR/USD = 140.9/110
 		.price(CurrencyId::FEUR, (1409, 1070))
 		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000))
@@ -857,7 +857,6 @@ fn open_position_fails_if_no_base_price() {
 #[test]
 fn open_position_fails_if_no_quote_price() {
 	ExtBuilder::default()
-		// USD/JPY = 110
 		.price(CurrencyId::FJPY, (1, 107))
 		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000))
@@ -881,9 +880,9 @@ fn open_position_fails_if_no_quote_price() {
 #[test]
 fn open_position_fails_if_market_price_too_high() {
 	ExtBuilder::default()
-		// USD/JPY = 110
+		// USD/JPY = 107
 		.price(CurrencyId::FJPY, (1, 107))
-		// EUR/JPY = 140.9 => EUR/USD = 140.9/110
+		// EUR/JPY = 140.9 => EUR/USD = 140.9/107
 		.price(CurrencyId::FEUR, (1409, 1070))
 		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000))
@@ -931,9 +930,9 @@ fn open_position_fails_if_leveraged_debits_out_of_bound() {
 #[test]
 fn open_position_fails_if_trader_would_be_unsafe() {
 	ExtBuilder::default()
-		// USD/JPY = 110
+		// USD/JPY = 107
 		.price(CurrencyId::FJPY, (1, 107))
-		// EUR/JPY = 140.9 => EUR/USD = 140.9/110
+		// EUR/JPY = 140.9 => EUR/USD = 140.9/107
 		.price(CurrencyId::FEUR, (1409, 1070))
 		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000))
@@ -958,9 +957,9 @@ fn open_position_fails_if_trader_would_be_unsafe() {
 #[test]
 fn open_position_fails_if_would_reach_enp_threshold() {
 	ExtBuilder::default()
-		// USD/JPY = 110
+		// USD/JPY = 107
 		.price(CurrencyId::FJPY, (1, 107))
-		// EUR/JPY = 140.9 => EUR/USD = 140.9/110
+		// EUR/JPY = 140.9 => EUR/USD = 140.9/107
 		.price(CurrencyId::FEUR, (1409, 1070))
 		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(659_00))
@@ -985,9 +984,9 @@ fn open_position_fails_if_would_reach_enp_threshold() {
 #[test]
 fn open_position_fails_if_would_reach_ell_threshold() {
 	ExtBuilder::default()
-		// USD/JPY = 110
+		// USD/JPY = 107
 		.price(CurrencyId::FJPY, (1, 107))
-		// EUR/JPY = 140.9 => EUR/USD = 140.9/110
+		// EUR/JPY = 140.9 => EUR/USD = 140.9/107
 		.price(CurrencyId::FEUR, (1409, 1070))
 		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(659_00))
@@ -1012,9 +1011,9 @@ fn open_position_fails_if_would_reach_ell_threshold() {
 #[test]
 fn open_position_fails_if_run_out_of_position_id() {
 	ExtBuilder::default()
-		// USD/JPY = 110
+		// USD/JPY = 107
 		.price(CurrencyId::FJPY, (1, 107))
-		// EUR/JPY = 140.9 => EUR/USD = 140.9/110
+		// EUR/JPY = 140.9 => EUR/USD = 140.9/107
 		.price(CurrencyId::FEUR, (1409, 1070))
 		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000))

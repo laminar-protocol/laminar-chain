@@ -4,7 +4,7 @@
 
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
 use frame_system as system;
-use orml_utilities::Fixed128;
+use orml_utilities::FixedU128;
 use primitives::{Balance, CurrencyId, LiquidityPoolId, TradingPair};
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup, PerThing, Perbill};
@@ -111,7 +111,6 @@ thread_local! {
 	static LIQUIDITIES: RefCell<BTreeMap<LiquidityPoolId, Balance>> = RefCell::new(BTreeMap::new());
 }
 
-//TODO: implementation based on unit test requirements
 pub struct MockLiquidityPools;
 impl MockLiquidityPools {
 	pub fn spread() -> Permill {
@@ -207,7 +206,6 @@ pub type MarginProtocol = Module<Runtime>;
 pub const ALICE: AccountId = 0;
 pub const MOCK_POOL: LiquidityPoolId = 100;
 
-//TODO: more fields based on unit test requirements
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	spread: Permill,

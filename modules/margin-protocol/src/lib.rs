@@ -13,7 +13,7 @@ use sp_runtime::{traits::StaticLookup, DispatchError, DispatchResult, RuntimeDeb
 use frame_system as system;
 use frame_system::ensure_signed;
 use orml_traits::{MultiCurrency, PriceProvider};
-use orml_utilities::{Fixed128, FixedU128};
+use orml_utilities::Fixed128;
 use primitives::{
 	arithmetic::{fixed_128_from_fixed_u128, fixed_128_from_u128, fixed_128_mul_signum, u128_from_fixed_128},
 	Balance, CurrencyId, Leverage, LiquidityPoolId, Price, TradingPair,
