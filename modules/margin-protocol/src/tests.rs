@@ -1123,3 +1123,126 @@ fn close_profit_position_works() {
 			);
 		});
 }
+
+#[test]
+fn close_position_fails_if_position_not_found() {
+	let alice_initial = balance_from_natural_currency_cent(10_000_00);
+	ExtBuilder::default()
+		.module_balance(alice_initial)
+		// EUR/USD = 1.2
+		.price(CurrencyId::FEUR, (12, 10))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
+		.build()
+		.execute_with(|| {
+			<Balances<Runtime>>::insert(ALICE, alice_initial);
+
+			assert_noop!(
+				MarginProtocol::close_position(Origin::signed(ALICE), 0, Price::from_rational(11, 10)),
+				Error::<Runtime>::PositionNotFound
+			);
+		});
+}
+
+#[test]
+fn close_position_fails_if_position_not_opened_by_trader() {
+	let alice_initial = balance_from_natural_currency_cent(10_000_00);
+	ExtBuilder::default()
+		.module_balance(alice_initial)
+		// EUR/USD = 1.2
+		.price(CurrencyId::FEUR, (12, 10))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
+		.build()
+		.execute_with(|| {
+			<Balances<Runtime>>::insert(ALICE, alice_initial);
+
+			let position = eur_usd_long_1();
+			let id = 0;
+			<Positions<Runtime>>::insert(id, position);
+			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
+			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
+
+			assert_noop!(
+				MarginProtocol::close_position(Origin::signed(BOB), 0, Price::from_rational(11, 10)),
+				Error::<Runtime>::PositionNotOpenedByTrader
+			);
+		});
+}
+
+#[test]
+fn close_position_fails_if_unrealized_out_of_bound() {
+	let alice_initial = balance_from_natural_currency_cent(10_000_00);
+	ExtBuilder::default()
+		.module_balance(alice_initial)
+		.price(CurrencyId::FEUR, (u128::max_value(), 1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
+		.build()
+		.execute_with(|| {
+			<Balances<Runtime>>::insert(ALICE, alice_initial);
+
+			let position = eur_usd_long_1();
+			let id = 0;
+			<Positions<Runtime>>::insert(id, position);
+			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
+			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
+
+			assert_noop!(
+				MarginProtocol::close_position(Origin::signed(ALICE), 0, Price::from_rational(11, 10)),
+				Error::<Runtime>::NumOutOfBound
+			);
+		});
+}
+
+#[test]
+fn close_long_position_fails_if_market_price_too_low() {
+	let alice_initial = balance_from_natural_currency_cent(10_000_00);
+	ExtBuilder::default()
+		.module_balance(alice_initial)
+		// EUR/USD = 1.2
+		.price(CurrencyId::FEUR, (12, 10))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
+		.build()
+		.execute_with(|| {
+			<Balances<Runtime>>::insert(ALICE, alice_initial);
+
+			let position = eur_usd_long_1();
+			let id = 0;
+			<Positions<Runtime>>::insert(id, position);
+			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
+			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
+
+			assert_noop!(
+				MarginProtocol::close_position(Origin::signed(ALICE), 0, Price::from_rational(12, 10)),
+				Error::<Runtime>::MarketPriceTooLow
+			);
+		});
+}
+
+#[test]
+fn close_short_position_fails_if_market_price_too_high() {
+	let alice_initial = balance_from_natural_currency_cent(10_000_00);
+	ExtBuilder::default()
+		.module_balance(alice_initial)
+		// EUR/USD = 1.2
+		.price(CurrencyId::FEUR, (12, 10))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
+		.build()
+		.execute_with(|| {
+			<Balances<Runtime>>::insert(ALICE, alice_initial);
+
+			let position = eur_usd_short_1();
+			let id = 0;
+			<Positions<Runtime>>::insert(id, position);
+			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
+			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
+
+			assert_noop!(
+				MarginProtocol::close_position(Origin::signed(ALICE), 0, Price::from_rational(12, 10)),
+				Error::<Runtime>::MarketPriceTooHigh
+			);
+		});
+}

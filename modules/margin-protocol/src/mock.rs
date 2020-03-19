@@ -220,6 +220,7 @@ impl Trait for Runtime {
 pub type MarginProtocol = Module<Runtime>;
 
 pub const ALICE: AccountId = 0;
+pub const BOB: AccountId = 1;
 pub const MOCK_POOL: LiquidityPoolId = 100;
 
 pub struct ExtBuilder {
