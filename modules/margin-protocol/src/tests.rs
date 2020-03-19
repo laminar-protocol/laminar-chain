@@ -307,7 +307,7 @@ fn margin_level_with_new_position_works() {
 	ExtBuilder::default().build().execute_with(|| {
 		<Balances<Runtime>>::insert(ALICE, balance_from_natural_currency_cent(120_000_00));
 		assert_eq!(
-			MarginProtocol::_margin_level(&ALICE, Some(eur_usd_long_1())),
+			MarginProtocol::_margin_level(&ALICE, Some(eur_usd_long_1()), None),
 			// 120_000_00 / 120_420_30 = 0.996509724689275811
 			Ok(Fixed128::from_parts(996509724689275811))
 		);
@@ -360,10 +360,11 @@ fn ensure_trader_safe_works() {
 			);
 			// 100% > 99%, safe
 			TraderRiskThreshold::put(risk_threshold(99, 0));
-			assert_ok!(
-				MarginProtocol::_ensure_trader_safe(&ALICE, Some(position.clone())),
+			assert_ok!(MarginProtocol::_ensure_trader_safe(
+				&ALICE,
+				Some(position.clone()),
 				None
-			);
+			));
 
 			<Positions<Runtime>>::insert(0, position);
 			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
@@ -1359,4 +1360,58 @@ fn deposit_fails_if_transfer_err() {
 			orml_tokens::Error::<Runtime>::BalanceTooLow
 		);
 	});
+}
+
+#[test]
+fn withdraw_works() {
+	ExtBuilder::default().module_balance(1000).build().execute_with(|| {
+		<Balances<Runtime>>::insert(ALICE, 1000);
+		assert_ok!(MarginProtocol::withdraw(Origin::signed(ALICE), 500));
+	});
+}
+
+#[test]
+fn withdraw_fails_if_balance_too_low() {
+	ExtBuilder::default().module_balance(1000).build().execute_with(|| {
+		<Balances<Runtime>>::insert(ALICE, 1000);
+		assert_noop!(
+			MarginProtocol::withdraw(Origin::signed(ALICE), 1500),
+			Error::<Runtime>::BalanceTooLow
+		);
+	});
+}
+
+#[test]
+fn withdraw_fails_if_trader_would_not_be_safe() {
+	ExtBuilder::default()
+		.spread(Permill::zero())
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.price(CurrencyId::FEUR, (1, 1))
+		.trader_risk_threshold(risk_threshold(100, 0))
+		.build()
+		.execute_with(|| {
+			<Balances<Runtime>>::insert(ALICE, balance_from_natural_currency_cent(100));
+			let position: Position<Runtime> = Position {
+				owner: ALICE,
+				pool: MOCK_POOL,
+				pair: EUR_USD_PAIR,
+				leverage: Leverage::LongTwo,
+				leveraged_held: fixed128_from_natural_currency_cent(100),
+				leveraged_debits: fixed128_from_natural_currency_cent(100),
+				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
+				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				open_margin: balance_from_natural_currency_cent(100),
+			};
+			<Positions<Runtime>>::insert(0, position);
+			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
+			assert_eq!(
+				MarginProtocol::_margin_level(&ALICE, None, None),
+				Ok(Fixed128::from_natural(1))
+			);
+
+			assert_noop!(
+				MarginProtocol::withdraw(Origin::signed(ALICE), 10),
+				Error::<Runtime>::TraderWouldBeUnsafe
+			);
+		});
 }

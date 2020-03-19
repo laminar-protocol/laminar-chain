@@ -578,11 +578,11 @@ impl<T: Trait> Module<T> {
 		new_position: Option<Position<T>>,
 		equity_delta: Option<Fixed128>,
 	) -> DispatchResult {
-		let has_new = new_position.is_some();
+		let has_change = new_position.is_some() || equity_delta.is_some();
 		let margin_level = Self::_margin_level(who, new_position.clone(), equity_delta)?;
 		let not_safe = margin_level <= Self::trader_risk_threshold().margin_call.into();
 		if not_safe {
-			let err = if has_new {
+			let err = if has_change {
 				Error::<T>::TraderWouldBeUnsafe
 			} else {
 				Error::<T>::UnsafeTrader
