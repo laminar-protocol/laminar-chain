@@ -878,7 +878,7 @@ fn open_position_fails_if_no_quote_price() {
 }
 
 #[test]
-fn open_position_fails_if_market_price_too_high() {
+fn open_long_position_fails_if_market_price_too_high() {
 	ExtBuilder::default()
 		// USD/JPY = 107
 		.price(CurrencyId::FJPY, (1, 107))
@@ -899,6 +899,32 @@ fn open_position_fails_if_market_price_too_high() {
 					Price::from_natural(141)
 				),
 				Error::<Runtime>::MarketPriceTooHigh
+			);
+		});
+}
+
+#[test]
+fn open_short_position_fails_if_market_price_too_low() {
+	ExtBuilder::default()
+		// USD/JPY = 106
+		.price(CurrencyId::FJPY, (1, 106))
+		// EUR/JPY = 141.9 => EUR/USD = 141.9/106
+		.price(CurrencyId::FEUR, (1419, 1060))
+		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000))
+		.build()
+		.execute_with(|| {
+			<Balances<Runtime>>::insert(ALICE, balance_from_natural_currency_cent(10_000));
+			assert_noop!(
+				MarginProtocol::open_position(
+					Origin::signed(ALICE),
+					MOCK_POOL,
+					EUR_JPY_PAIR,
+					Leverage::ShortTwenty,
+					balance_from_natural_currency_cent(100_000_00),
+					Price::from_natural(142)
+				),
+				Error::<Runtime>::MarketPriceTooLow
 			);
 		});
 }
