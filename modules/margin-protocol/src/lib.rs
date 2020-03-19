@@ -106,6 +106,8 @@ decl_event! {
 		TraderBecameSafe(AccountId),
 		/// TraderLiquidated: (who)
 		TraderLiquidated(AccountId),
+		/// LiquidityPoolMarginCalled: (pool_id)
+		LiquidityPoolMarginCalled(LiquidityPoolId),
 	}
 }
 
@@ -121,6 +123,7 @@ decl_error! {
 		UnsafePool,
 		PoolWouldBeUnsafe,
 		SafeTrader,
+		SafePool,
 		NotReachedRiskThreshold,
 		MarginCalledTrader,
 		MarginCalledPool,
@@ -190,8 +193,11 @@ decl_module! {
 			Self::deposit_event(RawEvent::TraderLiquidated(who));
 		}
 
+		pub fn liquidity_pool_margin_call(origin, pool: LiquidityPoolId) {
+			Self::_liquidity_pool_margin_call(pool)?;
+			Self::deposit_event(RawEvent::LiquidityPoolMarginCalled(pool));
+		}
 		// TODO: implementations
-		pub fn liquidity_pool_margin_call(origin, pool: LiquidityPoolId) {}
 		pub fn liquidity_pool_become_safe(origin, pool: LiquidityPoolId) {}
 		pub fn liquidity_pool_liquidate(origin, pool: LiquidityPoolId) {}
 	}
@@ -309,6 +315,17 @@ impl<T: Trait> Module<T> {
 
 		if Self::_ensure_trader_safe(who, None).is_ok() && <MarginCalledTraders<T>>::contains_key(who) {
 			<MarginCalledTraders<T>>::remove(who);
+		}
+		Ok(())
+	}
+
+	fn _liquidity_pool_margin_call(pool: LiquidityPoolId) -> DispatchResult {
+		if !MarginCalledPools::contains_key(pool) {
+			if Self::_ensure_pool_safe(pool, None).is_err() {
+				MarginCalledPools::insert(pool, ());
+			} else {
+				return Err(Error::<T>::SafePool.into());
+			}
 		}
 		Ok(())
 	}

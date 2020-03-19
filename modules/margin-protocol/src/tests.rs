@@ -474,6 +474,10 @@ fn ensure_pool_safe_works() {
 
 			// ENP 100% > 99%, ELL 100% > 99%, safe
 			assert_ok!(MarginProtocol::_ensure_pool_safe(MOCK_POOL, Some(position.clone())));
+			assert_noop!(
+				MarginProtocol::liquidity_pool_margin_call(Origin::ROOT, MOCK_POOL),
+				Error::<Runtime>::SafePool
+			);
 
 			// ENP 100% == 100%, unsafe
 			LiquidityPoolENPThreshold::put(risk_threshold(100, 0));
@@ -517,21 +521,20 @@ fn ensure_pool_safe_works() {
 				MarginProtocol::_ensure_pool_safe(MOCK_POOL, None),
 				Error::<Runtime>::UnsafePool
 			);
+
+			assert_ok!(MarginProtocol::liquidity_pool_margin_call(Origin::ROOT, MOCK_POOL));
+			let event = TestEvent::margin_protocol(RawEvent::LiquidityPoolMarginCalled(MOCK_POOL));
+			assert!(System::events().iter().any(|record| record.event == event));
 		});
 }
 
 #[test]
 fn trader_margin_call_should_work() {
-	let risk_threshold = RiskThreshold {
-		margin_call: Permill::from_percent(5),
-		stop_out: Permill::from_percent(3),
-	};
-
 	ExtBuilder::default()
 		.spread(Permill::zero())
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.price(CurrencyId::FEUR, (1, 1))
-		.trader_risk_threshold(risk_threshold)
+		.trader_risk_threshold(risk_threshold(5, 3))
 		.build()
 		.execute_with(|| {
 			<Balances<Runtime>>::insert(ALICE, balance_from_natural_currency_cent(100));
@@ -574,16 +577,11 @@ fn trader_margin_call_should_work() {
 
 #[test]
 fn trader_become_safe_should_work() {
-	let risk_threshold = RiskThreshold {
-		margin_call: Permill::from_percent(5),
-		stop_out: Permill::from_percent(3),
-	};
-
 	ExtBuilder::default()
 		.spread(Permill::zero())
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.price(CurrencyId::FEUR, (1, 1))
-		.trader_risk_threshold(risk_threshold)
+		.trader_risk_threshold(risk_threshold(5, 3))
 		.build()
 		.execute_with(|| {
 			<Balances<Runtime>>::insert(ALICE, balance_from_natural_currency_cent(100));
@@ -640,16 +638,11 @@ fn trader_become_safe_should_work() {
 }
 #[test]
 fn trader_liquidate_should_work() {
-	let risk_threshold = RiskThreshold {
-		margin_call: Permill::from_percent(5),
-		stop_out: Permill::from_percent(3),
-	};
-
 	ExtBuilder::default()
 		.spread(Permill::zero())
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.price(CurrencyId::FEUR, (1, 1))
-		.trader_risk_threshold(risk_threshold)
+		.trader_risk_threshold(risk_threshold(5, 3))
 		.build()
 		.execute_with(|| {
 			<Balances<Runtime>>::insert(ALICE, balance_from_natural_currency_cent(100));
