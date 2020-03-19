@@ -443,6 +443,51 @@ fn enp_and_ell_with_new_position_works() {
 }
 
 #[test]
+fn enp_and_ell_without_position_with_liquidity_works() {
+	ExtBuilder::default()
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
+		.price(CurrencyId::FEUR, (12, 10))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.build()
+		.execute_with(|| {
+			<Positions<Runtime>>::insert(0, eur_usd_long_1());
+			<Positions<Runtime>>::insert(1, eur_usd_long_2());
+			<Positions<Runtime>>::insert(2, eur_usd_short_1());
+			<Positions<Runtime>>::insert(3, eur_usd_short_2());
+			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0, 1, 2, 3]);
+
+			assert_eq!(
+				MarginProtocol::_enp_and_ell(MOCK_POOL, None, Some(fixed128_from_natural_currency_cent(10))),
+				Ok((
+					Fixed128::from_parts(880916328581816817),
+					Fixed128::from_parts(289335601335601335)
+				))
+			);
+		});
+}
+
+#[test]
+fn enp_and_ell_with_liquidity_works() {
+	ExtBuilder::default()
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
+		.build()
+		.execute_with(|| {
+			// enp = ell = (100_000_00 - 10)/ 120_420_30
+			assert_eq!(
+				MarginProtocol::_enp_and_ell(
+					MOCK_POOL,
+					Some(eur_usd_long_1()),
+					Some(fixed128_from_natural_currency_cent(10))
+				),
+				Ok((
+					Fixed128::from_parts(830423940149625935),
+					Fixed128::from_parts(830423940149625935)
+				))
+			);
+		});
+}
+
+#[test]
 fn ensure_pool_safe_works() {
 	ExtBuilder::default()
 		.spread(Permill::zero())
