@@ -174,7 +174,7 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 			dest,
 			amount,
 		)?;
-		Self::set_mock_liquidity(pool_id, amount - Self::liquidity(pool_id));
+		Self::set_mock_liquidity(pool_id, Self::liquidity(pool_id) - amount);
 		Ok(())
 	}
 }
@@ -285,6 +285,8 @@ impl ExtBuilder {
 
 	pub fn pool_liquidity(mut self, pool: LiquidityPoolId, liquidity: Balance) -> Self {
 		self.pool_liquidities.push((pool, liquidity));
+		self.endowed_accounts
+			.push((MOCK_LIQUIDITY_LOCK_ACCOUNT, CurrencyId::AUSD, liquidity));
 		self
 	}
 

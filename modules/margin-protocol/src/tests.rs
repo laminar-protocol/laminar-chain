@@ -1083,3 +1083,43 @@ fn close_loss_position_works() {
 			assert!(System::events().iter().any(|record| record.event == event));
 		});
 }
+
+#[test]
+fn close_profit_position_works() {
+	let alice_initial = balance_from_natural_currency_cent(10_000_00);
+	ExtBuilder::default()
+		.module_balance(alice_initial)
+		// EUR/USD = 1.2
+		.price(CurrencyId::FEUR, (12, 10))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
+		.build()
+		.execute_with(|| {
+			<Balances<Runtime>>::insert(ALICE, alice_initial);
+
+			let position = eur_usd_long_2();
+			let id = 0;
+			<Positions<Runtime>>::insert(id, position);
+			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
+			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
+
+			assert_ok!(MarginProtocol::close_position(
+				Origin::signed(ALICE),
+				id,
+				Price::from_rational(11, 10)
+			));
+
+			assert_eq!(
+				MarginProtocol::balances(ALICE),
+				balance_from_natural_currency_cent(10442_27)
+			);
+			assert_eq!(
+				MockLiquidityPools::liquidity(MOCK_POOL),
+				balance_from_natural_currency_cent(99557_73)
+			);
+			assert_eq!(
+				OrmlTokens::free_balance(CurrencyId::AUSD, &MarginProtocol::account_id()),
+				balance_from_natural_currency_cent(10442_27)
+			);
+		});
+}
