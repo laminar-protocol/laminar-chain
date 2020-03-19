@@ -111,6 +111,8 @@ thread_local! {
 	static LIQUIDITIES: RefCell<BTreeMap<LiquidityPoolId, Balance>> = RefCell::new(BTreeMap::new());
 }
 
+pub const MOCK_LIQUIDITY_LOCK_ACCOUNT: u64 = 1000;
+
 pub struct MockLiquidityPools;
 impl MockLiquidityPools {
 	pub fn spread() -> Permill {
@@ -154,12 +156,26 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 		Self::liquidity(pool_id)
 	}
 
-	fn deposit_liquidity(_source: &u64, _pool_id: Self::LiquidityPoolId, _amount: Self::Balance) -> DispatchResult {
-		unimplemented!()
+	fn deposit_liquidity(source: &u64, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
+		<OrmlTokens as MultiCurrency<AccountId>>::transfer(
+			CurrencyId::AUSD,
+			source,
+			&MOCK_LIQUIDITY_LOCK_ACCOUNT,
+			amount,
+		)?;
+		Self::set_mock_liquidity(pool_id, amount + Self::liquidity(pool_id));
+		Ok(())
 	}
 
-	fn withdraw_liquidity(_dest: &u64, _pool_id: Self::LiquidityPoolId, _amount: Self::Balance) -> DispatchResult {
-		unimplemented!()
+	fn withdraw_liquidity(dest: &u64, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
+		<OrmlTokens as MultiCurrency<AccountId>>::transfer(
+			CurrencyId::AUSD,
+			&MOCK_LIQUIDITY_LOCK_ACCOUNT,
+			dest,
+			amount,
+		)?;
+		Self::set_mock_liquidity(pool_id, amount - Self::liquidity(pool_id));
+		Ok(())
 	}
 }
 impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
@@ -236,6 +252,12 @@ impl Default for ExtBuilder {
 impl ExtBuilder {
 	pub fn balances(mut self, endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
 		self.endowed_accounts = endowed_accounts;
+		self
+	}
+
+	pub fn module_balance(mut self, balance: Balance) -> Self {
+		self.endowed_accounts
+			.push((MarginProtocol::account_id(), CurrencyId::AUSD, balance));
 		self
 	}
 
