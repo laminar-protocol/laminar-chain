@@ -422,15 +422,22 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// ENP and ELL. If `new_position` is `None`, return the ENP & ELL based on current positions,
-	/// else based on current positions plus this new one.
+	/// else based on current positions plus this new one. If `withdraw_liquidity` is `None`, return
+	/// the ENP & ELL based on current equity of pool, else based on current equity of pool subtract
+	/// the `withdraw_liquidity`.
 	///
 	/// ENP - Equity to Net Position ratio of a liquidity pool.
 	/// ELL - Equity to Longest Leg ratio of a liquidity pool.
 	fn _enp_and_ell(
 		pool: LiquidityPoolId,
 		new_position: Option<Position<T>>,
+		withdraw_liquidity: Option<Fixed128>,
 	) -> result::Result<(Fixed128, Fixed128), DispatchError> {
-		let equity = Self::_equity_of_pool(pool)?;
+		let mut equity = Self::_equity_of_pool(pool)?;
+		if let Some(w) = withdraw_liquidity {
+			equity = equity.checked_sub(&w).ok_or(Error::<T>::NumOutOfBound)?;
+		}
+
 		let (net, positive, non_positive) = PositionsByPool::iter_prefix(pool)
 			.flatten()
 			.filter_map(|position_id| Self::positions(position_id))
@@ -479,7 +486,7 @@ impl<T: Trait> Module<T> {
 	/// Return `Ok` if ensured safe, or `Err` if not.
 	fn _ensure_pool_safe(pool: LiquidityPoolId, new_position: Option<Position<T>>) -> DispatchResult {
 		let has_new = new_position.is_some();
-		let (enp, ell) = Self::_enp_and_ell(pool, new_position)?;
+		let (enp, ell) = Self::_enp_and_ell(pool, new_position, None)?;
 		let not_safe = enp <= Self::liquidity_pool_enp_threshold().margin_call.into()
 			|| ell <= Self::liquidity_pool_ell_threshold().margin_call.into();
 		if not_safe {
@@ -495,7 +502,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	pub fn ensure_liquidity_safe(pool: LiquidityPoolId, amount: Balance) -> DispatchResult {
-		let (enp, ell) = Self::_withdraw_liquidity_enp_and_ell(pool, amount)?;
+		let (enp, ell) = Self::_enp_and_ell(pool, None, Some(fixed_128_from_u128(amount)))?;
 		let not_safe = enp <= Self::liquidity_pool_enp_threshold().margin_call.into()
 			|| ell <= Self::liquidity_pool_ell_threshold().margin_call.into();
 		if not_safe {
@@ -503,57 +510,6 @@ impl<T: Trait> Module<T> {
 		} else {
 			Ok(())
 		}
-	}
-
-	fn _withdraw_liquidity_enp_and_ell(
-		pool: LiquidityPoolId,
-		withdraw_liquidity: Balance,
-	) -> result::Result<(Fixed128, Fixed128), DispatchError> {
-		let equity = Self::_equity_of_pool(pool)?;
-		let equity = equity
-			.checked_sub(&fixed_128_from_u128(withdraw_liquidity))
-			.ok_or(Error::<T>::NumOutOfBound)?;
-
-		let (net, positive, non_positive) = PositionsByPool::iter_prefix(pool)
-			.flatten()
-			.filter_map(|position_id| Self::positions(position_id))
-			.fold(
-				(Fixed128::zero(), Fixed128::zero(), Fixed128::zero()),
-				|(net, positive, non_positive), p| {
-					let new_net = net
-						.checked_add(&p.leveraged_held_in_usd)
-						.expect("ensured safe on open position; qed");
-					if p.leveraged_held_in_usd.is_positive() {
-						(
-							new_net,
-							positive
-								.checked_add(&p.leveraged_held_in_usd)
-								.expect("ensured safe on open position; qed"),
-							non_positive,
-						)
-					} else {
-						(
-							new_net,
-							positive,
-							non_positive
-								.checked_add(&p.leveraged_held_in_usd)
-								.expect("ensured safe on open position; qed"),
-						)
-					}
-				},
-			);
-
-		let enp = equity
-			.checked_div(&net.saturating_abs())
-			// if `net_position` is zero, ENP is max
-			.unwrap_or(Fixed128::max_value());
-		let longest_leg = cmp::max(positive, non_positive.saturating_abs());
-		let ell = equity
-			.checked_div(&longest_leg)
-			// if `longest_leg` is zero, ELL is max
-			.unwrap_or(Fixed128::max_value());
-
-		Ok((enp, ell))
 	}
 }
 
