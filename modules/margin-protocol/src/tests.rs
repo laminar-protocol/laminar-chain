@@ -1196,6 +1196,56 @@ fn close_position_fails_if_unrealized_out_of_bound() {
 }
 
 #[test]
+fn close_position_fails_if_no_base_price() {
+	let alice_initial = balance_from_natural_currency_cent(10_000_00);
+	ExtBuilder::default()
+		.module_balance(alice_initial)
+		.price(CurrencyId::FEUR, (1409, 1070))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
+		.build()
+		.execute_with(|| {
+			<Balances<Runtime>>::insert(ALICE, alice_initial);
+
+			let position = eur_jpy_long();
+			let id = 0;
+			<Positions<Runtime>>::insert(id, position);
+			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
+			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
+
+			assert_noop!(
+				MarginProtocol::close_position(Origin::signed(ALICE), 0, Price::from_rational(1410, 1070)),
+				Error::<Runtime>::NoPrice
+			);
+		});
+}
+
+#[test]
+fn close_position_fails_if_no_quote_price() {
+	let alice_initial = balance_from_natural_currency_cent(10_000_00);
+	ExtBuilder::default()
+		.module_balance(alice_initial)
+		.price(CurrencyId::FJPY, (1, 107))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
+		.build()
+		.execute_with(|| {
+			<Balances<Runtime>>::insert(ALICE, alice_initial);
+
+			let position = eur_jpy_long();
+			let id = 0;
+			<Positions<Runtime>>::insert(id, position);
+			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
+			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
+
+			assert_noop!(
+				MarginProtocol::close_position(Origin::signed(ALICE), 0, Price::from_rational(1390, 1070)),
+				Error::<Runtime>::NoPrice
+			);
+		});
+}
+
+#[test]
 fn close_long_position_fails_if_market_price_too_low() {
 	let alice_initial = balance_from_natural_currency_cent(10_000_00);
 	ExtBuilder::default()
