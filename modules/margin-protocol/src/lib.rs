@@ -132,6 +132,7 @@ decl_error! {
 		NoAvailablePositionId,
 		PositionNotFound,
 		PositionNotOpenedByTrader,
+		BalanceTooLow,
 	}
 }
 
@@ -253,7 +254,7 @@ impl<T: Trait> Module<T> {
 			open_margin,
 		};
 
-		Self::_ensure_trader_safe(who, Some(position.clone()))?;
+		Self::_ensure_trader_safe(who, Some(position.clone()), None)?;
 		Self::_ensure_pool_safe(pool, Some(position.clone()))?;
 
 		Self::_insert_position(who, pool, pair, position)?;
@@ -313,13 +314,20 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _withdraw(who: &T::AccountId, amount: Balance) -> DispatchResult {
-		// TODO: implementation
-		unimplemented!()
+		ensure!(Self::balances(who) >= amount, Error::<T>::BalanceTooLow);
+
+		let equity_delta = fixed_128_mul_signum(fixed_128_from_u128(amount), -1);
+		Self::_ensure_trader_safe(who, None, Some(equity_delta))?;
+
+		T::MultiCurrency::transfer(CurrencyId::AUSD, &Self::account_id(), who, amount)?;
+		<Balances<T>>::mutate(who, |b| *b -= amount);
+
+		Ok(())
 	}
 
 	fn _trader_margin_call(who: &T::AccountId) -> DispatchResult {
 		if !<MarginCalledTraders<T>>::contains_key(who) {
-			if Self::_ensure_trader_safe(who, None).is_err() {
+			if Self::_ensure_trader_safe(who, None, None).is_err() {
 				<MarginCalledTraders<T>>::insert(who, ());
 			} else {
 				return Err(Error::<T>::SafeTrader.into());
@@ -330,7 +338,7 @@ impl<T: Trait> Module<T> {
 
 	fn _trader_become_safe(who: &T::AccountId) -> DispatchResult {
 		if <MarginCalledTraders<T>>::contains_key(who) {
-			if Self::_ensure_trader_safe(who, None).is_ok() {
+			if Self::_ensure_trader_safe(who, None, None).is_ok() {
 				<MarginCalledTraders<T>>::remove(who);
 			} else {
 				return Err(Error::<T>::UnsafeTrader.into());
@@ -341,7 +349,7 @@ impl<T: Trait> Module<T> {
 
 	fn _trader_liquidate(who: &T::AccountId) -> DispatchResult {
 		let threshold = TraderRiskThreshold::get();
-		let margin_level = Self::_margin_level(who, None)?;
+		let margin_level = Self::_margin_level(who, None, None)?;
 
 		if margin_level > threshold.stop_out.into() {
 			return Err(Error::<T>::NotReachedRiskThreshold.into());
@@ -355,7 +363,7 @@ impl<T: Trait> Module<T> {
 			})
 		});
 
-		if Self::_ensure_trader_safe(who, None).is_ok() && <MarginCalledTraders<T>>::contains_key(who) {
+		if Self::_ensure_trader_safe(who, None, None).is_ok() && <MarginCalledTraders<T>>::contains_key(who) {
 			<MarginCalledTraders<T>>::remove(who);
 		}
 		Ok(())
@@ -537,10 +545,17 @@ impl<T: Trait> Module<T> {
 
 	/// Margin level of a given user.
 	///
-	/// If `new_position` is `None`, return the margin level based on current positions,
-	/// else based on current positions plus this new one.
-	fn _margin_level(who: &T::AccountId, new_position: Option<Position<T>>) -> Fixed128Result {
-		let equity = Self::_equity_of_trader(who)?;
+	/// If `new_position` is `None`, return the margin level based on current positions, else based on current
+	/// positions plus this new one. If `equity_delta`, apply the delta to current equity.
+	fn _margin_level(
+		who: &T::AccountId,
+		new_position: Option<Position<T>>,
+		equity_delta: Option<Fixed128>,
+	) -> Fixed128Result {
+		let mut equity = Self::_equity_of_trader(who)?;
+		if let Some(d) = equity_delta {
+			equity = equity.checked_add(&d).ok_or(Error::<T>::NumOutOfBound)?;
+		}
 		let leveraged_debits_in_usd = <PositionsByTrader<T>>::iter_prefix(who)
 			.flatten()
 			.filter_map(|position_id| Self::positions(position_id))
@@ -555,12 +570,16 @@ impl<T: Trait> Module<T> {
 			.unwrap_or(Fixed128::max_value()))
 	}
 
-	/// Ensure a trader is safe, based on opened positions, or plus a new one to open.
+	/// Ensure a trader is safe, based on equity delta, opened positions or plus a new one to open.
 	///
 	/// Return `Ok` if ensured safe, or `Err` if not.
-	fn _ensure_trader_safe(who: &T::AccountId, new_position: Option<Position<T>>) -> DispatchResult {
+	fn _ensure_trader_safe(
+		who: &T::AccountId,
+		new_position: Option<Position<T>>,
+		equity_delta: Option<Fixed128>,
+	) -> DispatchResult {
 		let has_new = new_position.is_some();
-		let margin_level = Self::_margin_level(who, new_position.clone())?;
+		let margin_level = Self::_margin_level(who, new_position.clone(), equity_delta)?;
 		let not_safe = margin_level <= Self::trader_risk_threshold().margin_call.into();
 		if not_safe {
 			let err = if has_new {

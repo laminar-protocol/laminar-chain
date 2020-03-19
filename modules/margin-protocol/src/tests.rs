@@ -295,7 +295,7 @@ fn margin_level_without_new_position_works() {
 			<Positions<Runtime>>::insert(3, eur_usd_short_2());
 			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0, 1, 2, 3]);
 			assert_eq!(
-				MarginProtocol::_margin_level(&ALICE, None),
+				MarginProtocol::_margin_level(&ALICE, None, None),
 				// 19.44%
 				Ok(Fixed128::from_parts(195426060513372176))
 			);
@@ -318,7 +318,10 @@ fn margin_level_with_new_position_works() {
 fn margin_level_without_any_opened_position_is_max() {
 	ExtBuilder::default().build().execute_with(|| {
 		<Balances<Runtime>>::insert(ALICE, 1);
-		assert_eq!(MarginProtocol::_margin_level(&ALICE, None), Ok(Fixed128::max_value()));
+		assert_eq!(
+			MarginProtocol::_margin_level(&ALICE, None, None),
+			Ok(Fixed128::max_value())
+		);
 	});
 }
 
@@ -344,7 +347,7 @@ fn ensure_trader_safe_works() {
 				open_margin: balance_from_natural_currency_cent(100),
 			};
 			assert_eq!(
-				MarginProtocol::_margin_level(&ALICE, Some(position.clone())),
+				MarginProtocol::_margin_level(&ALICE, Some(position.clone()), None),
 				Ok(Fixed128::from_natural(1))
 			);
 
@@ -352,17 +355,20 @@ fn ensure_trader_safe_works() {
 
 			// 100% == 100%, unsafe
 			assert_noop!(
-				MarginProtocol::_ensure_trader_safe(&ALICE, Some(position.clone())),
+				MarginProtocol::_ensure_trader_safe(&ALICE, Some(position.clone()), None),
 				Error::<Runtime>::TraderWouldBeUnsafe
 			);
 			// 100% > 99%, safe
 			TraderRiskThreshold::put(risk_threshold(99, 0));
-			assert_ok!(MarginProtocol::_ensure_trader_safe(&ALICE, Some(position.clone())));
+			assert_ok!(
+				MarginProtocol::_ensure_trader_safe(&ALICE, Some(position.clone())),
+				None
+			);
 
 			<Positions<Runtime>>::insert(0, position);
 			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
 			assert_eq!(
-				MarginProtocol::_margin_level(&ALICE, None),
+				MarginProtocol::_margin_level(&ALICE, None, None),
 				Ok(Fixed128::from_natural(1))
 			);
 
@@ -372,12 +378,12 @@ fn ensure_trader_safe_works() {
 
 			// 100% == 100%, unsafe
 			assert_noop!(
-				MarginProtocol::_ensure_trader_safe(&ALICE, None),
+				MarginProtocol::_ensure_trader_safe(&ALICE, None, None),
 				Error::<Runtime>::UnsafeTrader
 			);
 			// 100% > 99%, safe
 			TraderRiskThreshold::put(risk_threshold(99, 0));
-			assert_ok!(MarginProtocol::_ensure_trader_safe(&ALICE, None));
+			assert_ok!(MarginProtocol::_ensure_trader_safe(&ALICE, None, None));
 		});
 }
 
@@ -547,7 +553,10 @@ fn trader_margin_call_should_work() {
 				open_margin: balance_from_natural_currency_cent(100),
 			};
 
-			assert_eq!(MarginProtocol::_margin_level(&ALICE, None), Ok(Fixed128::max_value()));
+			assert_eq!(
+				MarginProtocol::_margin_level(&ALICE, None, None),
+				Ok(Fixed128::max_value())
+			);
 
 			// without position
 			assert_noop!(
@@ -558,13 +567,13 @@ fn trader_margin_call_should_work() {
 			<Positions<Runtime>>::insert(0, position);
 			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
 			assert_eq!(
-				MarginProtocol::_margin_level(&ALICE, None),
+				MarginProtocol::_margin_level(&ALICE, None, None),
 				Ok(Fixed128::from_natural(1))
 			);
 
 			MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(1, 20)));
 			assert_eq!(
-				MarginProtocol::_margin_level(&ALICE, None),
+				MarginProtocol::_margin_level(&ALICE, None, None),
 				Ok(Fixed128::from_rational(5, NonZeroI128::new(100).unwrap()))
 			);
 
@@ -605,13 +614,13 @@ fn trader_become_safe_should_work() {
 			<Positions<Runtime>>::insert(0, position);
 			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
 			assert_eq!(
-				MarginProtocol::_margin_level(&ALICE, None),
+				MarginProtocol::_margin_level(&ALICE, None, None),
 				Ok(Fixed128::from_natural(1))
 			);
 
 			MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(4, 100)));
 			assert_eq!(
-				MarginProtocol::_margin_level(&ALICE, None),
+				MarginProtocol::_margin_level(&ALICE, None, None),
 				Ok(Fixed128::from_rational(4, NonZeroI128::new(100).unwrap()))
 			);
 			assert_ok!(MarginProtocol::trader_margin_call(Origin::ROOT, ALICE));
@@ -622,7 +631,7 @@ fn trader_become_safe_should_work() {
 
 			MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(5, 100)));
 			assert_eq!(
-				MarginProtocol::_margin_level(&ALICE, None),
+				MarginProtocol::_margin_level(&ALICE, None, None),
 				Ok(Fixed128::from_rational(5, NonZeroI128::new(100).unwrap()))
 			);
 			assert_noop!(
@@ -632,7 +641,7 @@ fn trader_become_safe_should_work() {
 
 			MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(6, 100)));
 			assert_eq!(
-				MarginProtocol::_margin_level(&ALICE, None),
+				MarginProtocol::_margin_level(&ALICE, None, None),
 				Ok(Fixed128::from_rational(6, NonZeroI128::new(100).unwrap()))
 			);
 			assert_ok!(MarginProtocol::trader_become_safe(Origin::ROOT, ALICE));
@@ -674,14 +683,14 @@ fn trader_liquidate_should_work() {
 			<Positions<Runtime>>::insert(0, position);
 			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
 			assert_eq!(
-				MarginProtocol::_margin_level(&ALICE, None),
+				MarginProtocol::_margin_level(&ALICE, None, None),
 				Ok(Fixed128::from_natural(1))
 			);
 
 			// trader_liquidate without trader_margin_call
 			MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(3, 100)));
 			assert_eq!(
-				MarginProtocol::_margin_level(&ALICE, None),
+				MarginProtocol::_margin_level(&ALICE, None, None),
 				Ok(Fixed128::from_rational(3, NonZeroI128::new(100).unwrap()))
 			);
 			assert_eq!(
