@@ -200,7 +200,7 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 	}
 
 	fn liquidity(pool_id: Self::LiquidityPoolId) -> Self::Balance {
-		CollateralCurrency::balance(&pool_id)
+		CollateralCurrency::free_balance(&pool_id)
 	}
 
 	fn deposit_liquidity(from: &AccountId, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
