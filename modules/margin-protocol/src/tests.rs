@@ -1322,3 +1322,32 @@ fn close_short_position_fails_if_market_price_too_high() {
 			);
 		});
 }
+
+#[test]
+fn deposit_works() {
+	ExtBuilder::default().alice_balance(1000).build().execute_with(|| {
+		assert_eq!(OrmlTokens::free_balance(CurrencyId::AUSD, &ALICE), 1000);
+		assert_eq!(
+			OrmlTokens::free_balance(CurrencyId::AUSD, &MarginProtocol::account_id()),
+			0
+		);
+
+		assert_ok!(MarginProtocol::deposit(Origin::signed(ALICE), 500));
+
+		assert_eq!(OrmlTokens::free_balance(CurrencyId::AUSD, &ALICE), 500);
+		assert_eq!(
+			OrmlTokens::free_balance(CurrencyId::AUSD, &MarginProtocol::account_id()),
+			500
+		);
+	});
+}
+
+#[test]
+fn deposit_fails_if_transfer_err() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_noop!(
+			MarginProtocol::deposit(Origin::signed(ALICE), 500),
+			orml_tokens::Error::<Runtime>::BalanceTooLow
+		);
+	});
+}

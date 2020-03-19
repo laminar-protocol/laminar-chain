@@ -307,8 +307,9 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _deposit(who: &T::AccountId, amount: Balance) -> DispatchResult {
-		// TODO: implementation
-		unimplemented!()
+		T::MultiCurrency::transfer(CurrencyId::AUSD, who, &Self::account_id(), amount)?;
+		<Balances<T>>::mutate(who, |b| *b += amount);
+		Ok(())
 	}
 
 	fn _withdraw(who: &T::AccountId, amount: Balance) -> DispatchResult {
