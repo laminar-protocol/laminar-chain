@@ -493,6 +493,68 @@ impl<T: Trait> Module<T> {
 			Ok(())
 		}
 	}
+
+	pub fn ensure_liquidity_safe(pool: LiquidityPoolId, amount: Balance) -> DispatchResult {
+		let (enp, ell) = Self::_withdraw_liquidity_enp_and_ell(pool, amount)?;
+		let not_safe = enp <= Self::liquidity_pool_enp_threshold().margin_call.into()
+			|| ell <= Self::liquidity_pool_ell_threshold().margin_call.into();
+		if not_safe {
+			Err(Error::<T>::PoolWouldBeUnsafe.into())
+		} else {
+			Ok(())
+		}
+	}
+
+	fn _withdraw_liquidity_enp_and_ell(
+		pool: LiquidityPoolId,
+		withdraw_liquidity: Balance,
+	) -> result::Result<(Fixed128, Fixed128), DispatchError> {
+		let equity = Self::_equity_of_pool(pool)?;
+		let equity = equity
+			.checked_sub(&fixed_128_from_u128(withdraw_liquidity))
+			.ok_or(Error::<T>::NumOutOfBound)?;
+
+		let (net, positive, non_positive) = PositionsByPool::iter_prefix(pool)
+			.flatten()
+			.filter_map(|position_id| Self::positions(position_id))
+			.fold(
+				(Fixed128::zero(), Fixed128::zero(), Fixed128::zero()),
+				|(net, positive, non_positive), p| {
+					let new_net = net
+						.checked_add(&p.leveraged_held_in_usd)
+						.expect("ensured safe on open position; qed");
+					if p.leveraged_held_in_usd.is_positive() {
+						(
+							new_net,
+							positive
+								.checked_add(&p.leveraged_held_in_usd)
+								.expect("ensured safe on open position; qed"),
+							non_positive,
+						)
+					} else {
+						(
+							new_net,
+							positive,
+							non_positive
+								.checked_add(&p.leveraged_held_in_usd)
+								.expect("ensured safe on open position; qed"),
+						)
+					}
+				},
+			);
+
+		let enp = equity
+			.checked_div(&net.saturating_abs())
+			// if `net_position` is zero, ENP is max
+			.unwrap_or(Fixed128::max_value());
+		let longest_leg = cmp::max(positive, non_positive.saturating_abs());
+		let ell = equity
+			.checked_div(&longest_leg)
+			// if `longest_leg` is zero, ELL is max
+			.unwrap_or(Fixed128::max_value());
+
+		Ok((enp, ell))
+	}
 }
 
 //TODO: implementations, prevent open new position for margin called pools

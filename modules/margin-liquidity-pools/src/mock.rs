@@ -3,6 +3,7 @@
 use super::*;
 
 use frame_support::{impl_outer_origin, ord_parameter_types, parameter_types, weights::Weight};
+use orml_traits::PriceProvider;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -11,7 +12,7 @@ use sp_runtime::{
 };
 
 use orml_currencies::Currency;
-use primitives::{Balance, CurrencyId, LiquidityPoolId};
+use primitives::{Balance, CurrencyId, LiquidityPoolId, Price};
 use system::EnsureSignedBy;
 
 pub type BlockNumber = u64;
@@ -87,7 +88,6 @@ impl orml_tokens::Trait for Runtime {
 }
 
 pub struct PoolManager;
-
 impl LiquidityPoolManager<LiquidityPoolId, Balance> for PoolManager {
 	fn can_remove(_pool_id: LiquidityPoolId) -> bool {
 		true
@@ -95,6 +95,25 @@ impl LiquidityPoolManager<LiquidityPoolId, Balance> for PoolManager {
 	fn get_required_deposit(_pool: LiquidityPoolId) -> Balance {
 		unimplemented!()
 	}
+}
+
+pub struct MockPrices;
+impl MockPrices {
+	fn prices(currency_id: CurrencyId) -> Option<Price> {
+		unimplemented!()
+	}
+}
+impl PriceProvider<CurrencyId, Price> for MockPrices {
+	fn get_price(base: CurrencyId, quote: CurrencyId) -> Option<Price> {
+		unimplemented!()
+	}
+}
+
+impl margin_protocol::Trait for Runtime {
+	type Event = ();
+	type MultiCurrency = orml_currencies::Module<Runtime>;
+	type LiquidityPools = ModuleLiquidityPools;
+	type PriceProvider = MockPrices;
 }
 
 impl Trait for Runtime {
