@@ -16,7 +16,7 @@ use sp_runtime::{
 use frame_system as system;
 use frame_system::ensure_signed;
 use orml_traits::{MultiCurrency, PriceProvider};
-use orml_utilities::Fixed128;
+use orml_utilities::{Fixed128, FixedU128};
 use primitives::{
 	arithmetic::{fixed_128_from_fixed_u128, fixed_128_from_u128, fixed_128_mul_signum, u128_from_fixed_128},
 	Balance, CurrencyId, Leverage, LiquidityPoolId, Price, TradingPair,
@@ -97,9 +97,9 @@ decl_event! {
 		TradingPair = TradingPair,
 		Amount = Balance
 	{
-		/// Position opened: (who, pool_id, trading_pair, leverage, leveraged_amount, price)
+		/// Position opened: (who, pool_id, trading_pair, leverage, leveraged_amount, market_price)
 		PositionOpened(AccountId, LiquidityPoolId, TradingPair, Leverage, Amount, Price),
-		/// Position closed: (who, position_id, price)
+		/// Position closed: (who, position_id, market_price)
 		PositionClosed(AccountId, PositionId, Price),
 		/// Deposited: (who, amount)
 		Deposited(AccountId, Amount),
@@ -152,15 +152,11 @@ decl_module! {
 		) {
 			let who = ensure_signed(origin)?;
 			Self::_open_position(&who, pool, pair, leverage, leveraged_amount, price)?;
-
-			Self::deposit_event(RawEvent::PositionOpened(who, pool, pair, leverage, leveraged_amount, price));
 		}
 
 		pub fn close_position(origin, position_id: PositionId, price: Price) {
 			let who = ensure_signed(origin)?;
 			Self::_close_position(&who, position_id, Some(price))?;
-
-			Self::deposit_event(RawEvent::PositionClosed(who, position_id, price));
 		}
 
 		pub fn deposit(origin, #[compact] amount: Balance) {
@@ -259,6 +255,15 @@ impl<T: Trait> Module<T> {
 
 		Self::_insert_position(who, pool, pair, position)?;
 
+		Self::deposit_event(RawEvent::PositionOpened(
+			who.clone(),
+			pool,
+			pair,
+			leverage,
+			leveraged_amount,
+			FixedU128::from_parts(u128_from_fixed_128(debits_price)),
+		));
+
 		Ok(())
 	}
 
@@ -268,7 +273,7 @@ impl<T: Trait> Module<T> {
 			.iter()
 			.position(|id| *id == position_id)
 			.ok_or(Error::<T>::PositionNotOpenedByTrader)?;
-		let unrealized_pl = Self::_unrealized_pl_of_position(&position, price)?;
+		let (unrealized_pl, market_price) = Self::_unrealized_pl_and_market_price_of_position(&position, price)?;
 		let accumulated_swap_rate = Self::_accumulated_swap_rate_of_position(&position)?;
 		let balance_delta = unrealized_pl
 			.checked_add(&accumulated_swap_rate)
@@ -303,6 +308,12 @@ impl<T: Trait> Module<T> {
 		<Positions<T>>::remove(position_id);
 		<PositionsByTrader<T>>::mutate(who, position.pool, |v| v.remove(index));
 		PositionsByPool::mutate(position.pool, position.pair, |v| v.retain(|id| *id != position_id));
+
+		Self::deposit_event(RawEvent::PositionClosed(
+			who.clone(),
+			position_id,
+			FixedU128::from_parts(u128_from_fixed_128(market_price)),
+		));
 
 		Ok(())
 	}
@@ -449,10 +460,20 @@ impl<T: Trait> Module<T> {
 
 // Trader helpers
 impl<T: Trait> Module<T> {
-	/// Unrealized profit and loss of a position(USD value).
+	/// Unrealized profit and loss of a position(USD value), based on current market price.
 	///
 	/// unrealized_pl_of_position = (curr_price - open_price) * leveraged_held * to_usd_price
-	fn _unrealized_pl_of_position(position: &Position<T>, price: Option<Price>) -> Fixed128Result {
+	fn _unrealized_pl_of_position(position: &Position<T>) -> Fixed128Result {
+		let (unrealized, _) = Self::_unrealized_pl_and_market_price_of_position(position, None)?;
+		Ok(unrealized)
+	}
+
+	/// Returns `Ok((unrealized_pl, market_price))` of a given position. If `price`, market price must fit this bound,
+	/// else returns `None`.
+	fn _unrealized_pl_and_market_price_of_position(
+		position: &Position<T>,
+		price: Option<Price>,
+	) -> result::Result<(Fixed128, Fixed128), DispatchError> {
 		// open_price = abs(leveraged_debits / leveraged_held)
 		let open_price = position
 			.leveraged_debits
@@ -473,7 +494,9 @@ impl<T: Trait> Module<T> {
 			.leveraged_held
 			.checked_mul(&price_delta)
 			.ok_or(Error::<T>::NumOutOfBound)?;
-		Self::_usd_value(position.pair.base, unrealized)
+		let usd_value = Self::_usd_value(position.pair.base, unrealized)?;
+
+		Ok((usd_value, curr_price))
 	}
 
 	/// Unrealized profit and loss of a given trader(USD value). It is the sum of unrealized profit and loss of all positions
@@ -483,7 +506,7 @@ impl<T: Trait> Module<T> {
 			.flatten()
 			.filter_map(|position_id| Self::positions(position_id))
 			.try_fold(Fixed128::zero(), |acc, p| {
-				let unrealized = Self::_unrealized_pl_of_position(&p, None)?;
+				let unrealized = Self::_unrealized_pl_of_position(&p)?;
 				acc.checked_add(&unrealized).ok_or(Error::<T>::NumOutOfBound.into())
 			})
 	}
@@ -609,7 +632,7 @@ impl<T: Trait> Module<T> {
 			.filter_map(|position_id| Self::positions(position_id))
 			.try_fold::<_, _, Fixed128Result>(Fixed128::zero(), |acc, p| {
 				let rate = Self::_accumulated_swap_rate_of_position(&p)?;
-				let unrealized = Self::_unrealized_pl_of_position(&p, None)?;
+				let unrealized = Self::_unrealized_pl_of_position(&p)?;
 				let sum = rate.checked_add(&unrealized).ok_or(Error::<T>::NumOutOfBound)?;
 				acc.checked_add(&sum).ok_or(Error::<T>::NumOutOfBound.into())
 			})?;

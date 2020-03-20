@@ -7,7 +7,6 @@ use mock::*;
 
 use core::num::NonZeroI128;
 use frame_support::{assert_noop, assert_ok};
-use orml_utilities::FixedU128;
 use primitives::Leverage;
 use sp_runtime::PerThing;
 
@@ -71,7 +70,7 @@ fn unrealized_pl_of_long_position_works() {
 		.build()
 		.execute_with(|| {
 			assert_eq!(
-				MarginProtocol::_unrealized_pl_of_position(&eur_jpy_long(), None),
+				MarginProtocol::_unrealized_pl_of_position(&eur_jpy_long()),
 				Ok(Fixed128::from_parts(-1073545454545441750827)),
 			);
 		});
@@ -87,7 +86,7 @@ fn unrealized_pl_of_short_position_works() {
 		.build()
 		.execute_with(|| {
 			assert_eq!(
-				MarginProtocol::_unrealized_pl_of_position(&eur_jpy_short(), None),
+				MarginProtocol::_unrealized_pl_of_position(&eur_jpy_short()),
 				Ok(Fixed128::from_parts(1470999999999987141081)),
 			);
 		});
@@ -792,7 +791,8 @@ fn open_long_position_works() {
 				EUR_JPY_PAIR,
 				Leverage::LongTwenty,
 				balance_from_natural_currency_cent(100_000_00),
-				Price::from_natural(142),
+				// price: 141.0409
+				Price::from_parts(141040900000000007325),
 			));
 			assert!(System::events().iter().any(|record| record.event == event));
 		});
@@ -1159,7 +1159,8 @@ fn close_loss_position_works() {
 			assert_eq!(MarginProtocol::positions_by_trader(ALICE, MOCK_POOL), vec![]);
 			assert_eq!(MarginProtocol::positions_by_pool(MOCK_POOL, EUR_USD_PAIR), vec![]);
 
-			let event = TestEvent::margin_protocol(RawEvent::PositionClosed(ALICE, id, Price::from_rational(11, 10)));
+			let event =
+				TestEvent::margin_protocol(RawEvent::PositionClosed(ALICE, id, Price::from_rational(11988, 10000)));
 			assert!(System::events().iter().any(|record| record.event == event));
 		});
 }

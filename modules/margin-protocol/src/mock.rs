@@ -4,7 +4,6 @@
 
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
 use frame_system as system;
-use orml_utilities::FixedU128;
 use primitives::{Balance, CurrencyId, LiquidityPoolId, TradingPair};
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup, PerThing, Perbill};
@@ -251,11 +250,6 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
-	pub fn balances(mut self, endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
-		self.endowed_accounts = endowed_accounts;
-		self
-	}
-
 	pub fn alice_balance(mut self, balance: Balance) -> Self {
 		self.endowed_accounts.push((ALICE, CurrencyId::AUSD, balance));
 		self
