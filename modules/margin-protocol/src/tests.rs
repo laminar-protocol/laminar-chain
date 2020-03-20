@@ -683,7 +683,7 @@ fn trader_liquidate_should_work() {
 }
 
 #[test]
-fn liquidity_pool_should_works() {
+fn liquidity_pool_margin_call_and_become_safe_work() {
 	ExtBuilder::default()
 		.spread(Permill::zero())
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
