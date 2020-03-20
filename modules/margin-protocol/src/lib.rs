@@ -264,7 +264,7 @@ impl<T: Trait> Module<T> {
 		};
 
 		Self::_ensure_trader_safe(who, Some(position.clone()), None)?;
-		Self::_ensure_pool_safe(pool, Some(position.clone()))?;
+		Self::_ensure_pool_safe(pool, Some(position.clone()), None)?;
 
 		Self::_insert_position(who, pool, pair, position)?;
 
@@ -395,7 +395,7 @@ impl<T: Trait> Module<T> {
 
 	fn _liquidity_pool_margin_call(pool: LiquidityPoolId) -> DispatchResult {
 		if !MarginCalledPools::contains_key(pool) {
-			if Self::_ensure_pool_safe(pool, None).is_err() {
+			if Self::_ensure_pool_safe(pool, None, None).is_err() {
 				MarginCalledPools::insert(pool, ());
 			} else {
 				return Err(Error::<T>::SafePool.into());
@@ -406,7 +406,7 @@ impl<T: Trait> Module<T> {
 
 	fn _liquidity_pool_become_safe(pool: LiquidityPoolId) -> DispatchResult {
 		if MarginCalledPools::contains_key(pool) {
-			if Self::_ensure_pool_safe(pool, None).is_ok() {
+			if Self::_ensure_pool_safe(pool, None, None).is_ok() {
 				MarginCalledPools::remove(pool);
 			} else {
 				return Err(Error::<T>::UnsafePool.into());
@@ -678,9 +678,9 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// ENP and ELL. If `new_position` is `None`, return the ENP & ELL based on current positions,
-	/// else based on current positions plus this new one. If `equity` is `None`, return
+	/// else based on current positions plus this new one. If `equity_delta` is `None`, return
 	/// the ENP & ELL based on current equity of pool, else based on current equity of pool plus
-	/// the `equity`.
+	/// the `equity_delta`.
 	///
 	/// ENP - Equity to Net Position ratio of a liquidity pool.
 	/// ELL - Equity to Longest Leg ratio of a liquidity pool.
@@ -740,13 +740,17 @@ impl<T: Trait> Module<T> {
 	/// Ensure a liquidity pool is safe, based on opened positions, or plus a new one to open.
 	///
 	/// Return `Ok` if ensured safe, or `Err` if not.
-	fn _ensure_pool_safe(pool: LiquidityPoolId, new_position: Option<Position<T>>) -> DispatchResult {
-		let has_new = new_position.is_some();
-		let (enp, ell) = Self::_enp_and_ell(pool, new_position, None)?;
+	fn _ensure_pool_safe(
+		pool: LiquidityPoolId,
+		new_position: Option<Position<T>>,
+		equity_delta: Option<Fixed128>,
+	) -> DispatchResult {
+		let has_change = new_position.is_some() || equity_delta.is_some();
+		let (enp, ell) = Self::_enp_and_ell(pool, new_position, equity_delta)?;
 		let not_safe = enp <= Self::liquidity_pool_enp_threshold().margin_call.into()
 			|| ell <= Self::liquidity_pool_ell_threshold().margin_call.into();
 		if not_safe {
-			let err = if has_new {
+			let err = if has_change {
 				Error::<T>::PoolWouldBeUnsafe
 			} else {
 				Error::<T>::UnsafePool
@@ -761,14 +765,7 @@ impl<T: Trait> Module<T> {
 		let equity_delta = Fixed128::zero()
 			.checked_sub(&fixed_128_from_u128(amount))
 			.expect("negation; qed");
-		let (enp, ell) = Self::_enp_and_ell(pool, None, Some(equity_delta))?;
-		let not_safe = enp <= Self::liquidity_pool_enp_threshold().margin_call.into()
-			|| ell <= Self::liquidity_pool_ell_threshold().margin_call.into();
-		if not_safe {
-			Err(Error::<T>::PoolWouldBeUnsafe.into())
-		} else {
-			Ok(())
-		}
+		Self::_ensure_pool_safe(pool, None, Some(equity_delta))
 	}
 }
 

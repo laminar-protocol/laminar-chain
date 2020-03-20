@@ -605,12 +605,16 @@ fn ensure_pool_safe_works() {
 			);
 
 			// ENP 100% > 99%, ELL 100% > 99%, safe
-			assert_ok!(MarginProtocol::_ensure_pool_safe(MOCK_POOL, Some(position.clone())));
+			assert_ok!(MarginProtocol::_ensure_pool_safe(
+				MOCK_POOL,
+				Some(position.clone()),
+				None
+			));
 
 			// ENP 100% == 100%, unsafe
 			LiquidityPoolENPThreshold::put(risk_threshold(100, 0));
 			assert_noop!(
-				MarginProtocol::_ensure_pool_safe(MOCK_POOL, Some(position.clone())),
+				MarginProtocol::_ensure_pool_safe(MOCK_POOL, Some(position.clone()), None),
 				Error::<Runtime>::PoolWouldBeUnsafe
 			);
 
@@ -618,7 +622,7 @@ fn ensure_pool_safe_works() {
 			LiquidityPoolENPThreshold::put(risk_threshold(99, 0));
 			LiquidityPoolELLThreshold::put(risk_threshold(100, 0));
 			assert_noop!(
-				MarginProtocol::_ensure_pool_safe(MOCK_POOL, Some(position.clone())),
+				MarginProtocol::_ensure_pool_safe(MOCK_POOL, Some(position.clone()), None),
 				Error::<Runtime>::PoolWouldBeUnsafe
 			);
 
@@ -633,12 +637,12 @@ fn ensure_pool_safe_works() {
 			);
 
 			// ENP 100% > 99%, ELL 100% > 99%, safe
-			assert_ok!(MarginProtocol::_ensure_pool_safe(MOCK_POOL, None));
+			assert_ok!(MarginProtocol::_ensure_pool_safe(MOCK_POOL, None, None));
 
 			// ENP 100% == 100%, unsafe
 			LiquidityPoolENPThreshold::put(risk_threshold(100, 0));
 			assert_noop!(
-				MarginProtocol::_ensure_pool_safe(MOCK_POOL, None),
+				MarginProtocol::_ensure_pool_safe(MOCK_POOL, None, None),
 				Error::<Runtime>::UnsafePool
 			);
 
@@ -646,7 +650,7 @@ fn ensure_pool_safe_works() {
 			LiquidityPoolENPThreshold::put(risk_threshold(99, 0));
 			LiquidityPoolELLThreshold::put(risk_threshold(100, 0));
 			assert_noop!(
-				MarginProtocol::_ensure_pool_safe(MOCK_POOL, None),
+				MarginProtocol::_ensure_pool_safe(MOCK_POOL, None, None),
 				Error::<Runtime>::UnsafePool
 			);
 		});
@@ -843,7 +847,7 @@ fn liquidity_pool_margin_call_and_become_safe_work() {
 			<Positions<Runtime>>::insert(0, position);
 			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
 			assert_eq!(
-				MarginProtocol::_enp_and_ell(MOCK_POOL, None),
+				MarginProtocol::_enp_and_ell(MOCK_POOL, None, None),
 				Ok((Fixed128::from_natural(1), Fixed128::from_natural(1)))
 			);
 
