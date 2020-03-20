@@ -1,17 +1,21 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use frame_support::{decl_error, decl_event, decl_module, decl_storage};
+use frame_support::{debug, decl_error, decl_event, decl_module, decl_storage, IsSubType};
 use sp_arithmetic::{
 	traits::{Bounded, Saturating},
 	Permill,
 };
-use sp_runtime::{traits::StaticLookup, DispatchError, DispatchResult, RuntimeDebug};
+use sp_runtime::{
+	offchain::{storage::StorageValueRef, Duration, Timestamp},
+	traits::{BlakeTwo256, Hash, StaticLookup},
+	DispatchError, DispatchResult, RandomNumberGenerator, RuntimeDebug,
+};
 // FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
 // would cause compiling error in `decl_module!` and `construct_runtime!`
 // #3295 https://github.com/paritytech/substrate/issues/3295
 use frame_system as system;
-use frame_system::ensure_signed;
+use frame_system::{ensure_signed, offchain::SubmitUnsignedTransaction};
 use orml_traits::{MultiCurrency, PriceProvider};
 use orml_utilities::{Fixed128, FixedU128};
 use primitives::{
@@ -38,6 +42,8 @@ pub trait Trait: frame_system::Trait {
 		TradingPair = TradingPair,
 	>;
 	type PriceProvider: PriceProvider<CurrencyId, Price>;
+	type SubmitTransaction: SubmitUnsignedTransaction<Self, <Self as Trait>::Call>;
+	type Call: From<Call<Self>> + IsSubType<Module<Self>, Self>;
 }
 
 pub type PositionId = u64;
@@ -62,8 +68,8 @@ const MAX_POSITIONS_COUNT: u16 = u16::max_value();
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Copy, Clone, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct RiskThreshold {
-	margin_call: Permill,
-	stop_out: Permill,
+	pub margin_call: Permill,
+	pub stop_out: Permill,
 }
 
 //TODO: Refactor `PositionsByPool` to `double_map LiquidityPoolId, (TradingPair, PositionId) => Option<()>`
@@ -158,6 +164,18 @@ decl_module! {
 		pub fn liquidity_pool_margin_call(origin, pool: LiquidityPoolId) {}
 		pub fn liquidity_pool_become_safe(origin, pool: LiquidityPoolId) {}
 		pub fn liquidity_pool_liquidate(origin, pool: LiquidityPoolId) {}
+
+
+		fn offchain_worker(block_number: T::BlockNumber) {
+			if let Err(e) = Self::_offchain_worker(block_number) {
+				debug::info!(
+					target: "margin-protocol offchain worker",
+					"cannot run offchain worker at {:?}: {:?}",
+					block_number,
+					e,
+				);
+			}
+		}
 	}
 }
 
@@ -493,6 +511,22 @@ impl<T: Trait> Module<T> {
 			Ok(())
 		}
 	}
+
+	/// Get a list of traders
+	fn _get_traders() -> Vec<T::AccountId> {
+		let mut traders: Vec<T::AccountId> = <Positions<T>>::iter().map(|x| x.owner).collect();
+		traders.sort();
+		traders.dedup();
+		traders
+	}
+
+	/// Get a list of pools
+	fn _get_pools() -> Vec<LiquidityPoolId> {
+		let mut pools: Vec<LiquidityPoolId> = <Positions<T>>::iter().map(|x| x.pool).collect();
+		pools.sort();
+		pools.dedup();
+		pools
+	}
 }
 
 //TODO: implementations, prevent open new position for margin called pools
@@ -503,5 +537,108 @@ impl<T: Trait> LiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
 
 	fn get_required_deposit(pool: LiquidityPoolId) -> Balance {
 		unimplemented!()
+	}
+}
+
+/// Error which may occur while executing the off-chain code.
+#[cfg_attr(test, derive(PartialEq))]
+enum OffchainErr {
+	FailedToAcquireLock,
+	SubmitTransaction,
+	NotValidator,
+	LockStillInLocked,
+}
+
+// constant for offchain worker
+const LOCK_EXPIRE_DURATION: u64 = 60_000; // 60 sec
+const LOCK_UPDATE_DURATION: u64 = 40_000; // 40 sec
+const DB_PREFIX: &[u8] = b"laminar/margin-protocol-offchain-worker/";
+
+impl sp_std::fmt::Debug for OffchainErr {
+	fn fmt(&self, fmt: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
+		match *self {
+			OffchainErr::FailedToAcquireLock => write!(fmt, "Failed to acquire lock"),
+			OffchainErr::SubmitTransaction => write!(fmt, "Failed to submit transaction"),
+			OffchainErr::NotValidator => write!(fmt, "Not validator"),
+			OffchainErr::LockStillInLocked => write!(fmt, "Lock is still in locked"),
+		}
+	}
+}
+
+impl<T: Trait> Module<T> {
+	fn _offchain_worker(_block_number: T::BlockNumber) -> Result<(), OffchainErr> {
+		// check if we are a potential validator
+		if !sp_io::offchain::is_validator() {
+			return Err(OffchainErr::NotValidator);
+		}
+
+		// Acquire offchain worker lock.
+		// If succeeded, update the lock, otherwise return error
+		let _ = Self::acquire_offchain_worker_lock()?;
+
+		// check all traders
+		for trader in Self::_get_traders() {
+			if Self::_ensure_trader_safe(&trader, None).is_err() {
+				let who = T::Lookup::unlookup(trader);
+				// TODO: trader_liquidate
+				let call = Call::<T>::trader_margin_call(who);
+				T::SubmitTransaction::submit_unsigned(call).map_err(|_| OffchainErr::SubmitTransaction)?;
+			}
+			Self::extend_offchain_worker_lock_if_needed();
+		}
+
+		// check all pools
+		for pool_id in Self::_get_pools() {
+			if Self::_ensure_pool_safe(pool_id, None).is_err() {
+				// TODO: pool liquidate
+				let call = Call::<T>::liquidity_pool_margin_call(pool_id);
+				T::SubmitTransaction::submit_unsigned(call).map_err(|_| OffchainErr::SubmitTransaction)?;
+			}
+			Self::extend_offchain_worker_lock_if_needed();
+		}
+
+		Self::release_offchain_worker_lock();
+		Ok(())
+	}
+
+	fn acquire_offchain_worker_lock() -> Result<Timestamp, OffchainErr> {
+		let storage_key = DB_PREFIX.to_vec();
+		let storage = StorageValueRef::persistent(&storage_key);
+
+		let acquire_lock = storage.mutate(|lock: Option<Option<Timestamp>>| {
+			let now = sp_io::offchain::timestamp();
+			match lock {
+				None => {
+					let expire_timestamp = now.add(Duration::from_millis(LOCK_EXPIRE_DURATION));
+					Ok(expire_timestamp)
+				}
+				Some(Some(expire_timestamp)) if now >= expire_timestamp => {
+					let expire_timestamp = now.add(Duration::from_millis(LOCK_EXPIRE_DURATION));
+					Ok(expire_timestamp)
+				}
+				_ => Err(OffchainErr::LockStillInLocked),
+			}
+		})?;
+
+		acquire_lock.map_err(|_| OffchainErr::FailedToAcquireLock)
+	}
+
+	fn release_offchain_worker_lock() {
+		let storage_key = DB_PREFIX.to_vec();
+		let storage = StorageValueRef::persistent(&storage_key);
+		let now = sp_io::offchain::timestamp();
+		storage.set(&now);
+	}
+
+	fn extend_offchain_worker_lock_if_needed() {
+		let storage_key = DB_PREFIX.to_vec();
+		let storage = StorageValueRef::persistent(&storage_key);
+
+		if let Some(Some(current_expire)) = storage.get::<Timestamp>() {
+			if current_expire <= sp_io::offchain::timestamp().add(Duration::from_millis(LOCK_UPDATE_DURATION)) {
+				let future_expire = sp_io::offchain::timestamp().add(Duration::from_millis(LOCK_EXPIRE_DURATION));
+				storage.set(&future_expire);
+			}
+		}
 	}
 }

@@ -2,12 +2,16 @@
 
 #![cfg(test)]
 
-use frame_support::{impl_outer_event, impl_outer_origin, parameter_types};
+use frame_support::{impl_outer_dispatch, impl_outer_event, impl_outer_origin, parameter_types};
 use frame_system as system;
 use orml_utilities::Fixed128;
 use primitives::{Balance, CurrencyId, LiquidityPoolId, TradingPair};
 use sp_core::H256;
-use sp_runtime::{testing::Header, traits::IdentityLookup, PerThing, Perbill};
+use sp_runtime::{
+	testing::{Header, TestXt},
+	traits::IdentityLookup,
+	PerThing, Perbill,
+};
 use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
 use traits::LiquidityPools;
 
@@ -15,6 +19,12 @@ use super::*;
 
 impl_outer_origin! {
 	pub enum Origin for Runtime {}
+}
+
+impl_outer_dispatch! {
+	pub enum Call for Runtime where origin: Origin {
+		margin_protocol::MarginProtocol,
+	}
 }
 
 mod margin_protocol {
@@ -38,9 +48,10 @@ parameter_types! {
 }
 
 type AccountId = u64;
+
 impl frame_system::Trait for Runtime {
 	type Origin = Origin;
-	type Call = ();
+	type Call = Call;
 	type Index = u64;
 	type BlockNumber = u64;
 	type Hash = H256;
@@ -151,7 +162,7 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 		unimplemented!()
 	}
 
-	fn is_owner(_pool_id: Self::LiquidityPoolId, _who: &u64) -> bool {
+	fn is_owner(_pool_id: Self::LiquidityPoolId, _who: &AccountId) -> bool {
 		unimplemented!()
 	}
 
@@ -159,11 +170,19 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 		Self::liquidity(pool_id)
 	}
 
-	fn deposit_liquidity(_source: &u64, _pool_id: Self::LiquidityPoolId, _amount: Self::Balance) -> DispatchResult {
+	fn deposit_liquidity(
+		_source: &AccountId,
+		_pool_id: Self::LiquidityPoolId,
+		_amount: Self::Balance,
+	) -> DispatchResult {
 		unimplemented!()
 	}
 
-	fn withdraw_liquidity(_dest: &u64, _pool_id: Self::LiquidityPoolId, _amount: Self::Balance) -> DispatchResult {
+	fn withdraw_liquidity(
+		_dest: &AccountId,
+		_pool_id: Self::LiquidityPoolId,
+		_amount: Self::Balance,
+	) -> DispatchResult {
 		unimplemented!()
 	}
 }
@@ -200,11 +219,16 @@ impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
 	}
 }
 
+pub type Extrinsic = TestXt<Call, ()>;
+type SubmitTransaction = frame_system::offchain::TransactionSubmitter<(), Call, Extrinsic>;
+
 impl Trait for Runtime {
 	type Event = TestEvent;
 	type MultiCurrency = OrmlTokens;
 	type LiquidityPools = MockLiquidityPools;
 	type PriceProvider = MockPrices;
+	type SubmitTransaction = SubmitTransaction;
+	type Call = Call;
 }
 pub type MarginProtocol = Module<Runtime>;
 
