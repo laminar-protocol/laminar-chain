@@ -282,7 +282,7 @@ fn equity_of_trader_works() {
 }
 
 #[test]
-fn margin_level_without_new_position_works() {
+fn margin_level_works() {
 	ExtBuilder::default()
 		.price(CurrencyId::FEUR, (12, 10))
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
@@ -312,6 +312,36 @@ fn margin_level_with_new_position_works() {
 			Ok(Fixed128::from_parts(996509724689275811))
 		);
 	});
+}
+
+#[test]
+fn margin_level_with_equity_delta_works() {
+	ExtBuilder::default()
+		.price(CurrencyId::FEUR, (12, 10))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.build()
+		.execute_with(|| {
+			<Balances<Runtime>>::insert(ALICE, balance_from_natural_currency_cent(120_000_00));
+			<Positions<Runtime>>::insert(0, eur_usd_long_1());
+			<Positions<Runtime>>::insert(1, eur_usd_long_2());
+			<Positions<Runtime>>::insert(2, eur_usd_short_1());
+			<Positions<Runtime>>::insert(3, eur_usd_short_2());
+			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0, 1, 2, 3]);
+
+			// positive delta
+			assert_eq!(
+				MarginProtocol::_margin_level(&ALICE, None, Some(fixed128_from_natural_currency_cent(10_000_00))),
+				// 21.21%
+				Ok(Fixed128::from_parts(212176981520886472))
+			);
+
+			// negative delta
+			assert_eq!(
+				MarginProtocol::_margin_level(&ALICE, None, Some(fixed128_from_natural_currency_cent(-10_000_00))),
+				// 17.87%
+				Ok(Fixed128::from_parts(178675139505857880))
+			);
+		});
 }
 
 #[test]
@@ -385,6 +415,20 @@ fn ensure_trader_safe_works() {
 			// 100% > 99%, safe
 			TraderRiskThreshold::put(risk_threshold(99, 0));
 			assert_ok!(MarginProtocol::_ensure_trader_safe(&ALICE, None, None));
+
+			// with equity delta
+
+			// positive delta
+			assert_ok!(MarginProtocol::_ensure_trader_safe(
+				&ALICE,
+				None,
+				Some(fixed128_from_natural_currency_cent(10))
+			));
+			// negative delta
+			assert_noop!(
+				MarginProtocol::_ensure_trader_safe(&ALICE, None, Some(fixed128_from_natural_currency_cent(-10))),
+				Error::<Runtime>::TraderWouldBeUnsafe
+			);
 		});
 }
 
@@ -1349,6 +1393,9 @@ fn deposit_works() {
 			OrmlTokens::free_balance(CurrencyId::AUSD, &MarginProtocol::account_id()),
 			500
 		);
+
+		let event = TestEvent::margin_protocol(RawEvent::Deposited(ALICE, 500));
+		assert!(System::events().iter().any(|record| record.event == event));
 	});
 }
 
@@ -1367,6 +1414,9 @@ fn withdraw_works() {
 	ExtBuilder::default().module_balance(1000).build().execute_with(|| {
 		<Balances<Runtime>>::insert(ALICE, 1000);
 		assert_ok!(MarginProtocol::withdraw(Origin::signed(ALICE), 500));
+
+		let event = TestEvent::margin_protocol(RawEvent::Withdrew(ALICE, 500));
+		assert!(System::events().iter().any(|record| record.event == event));
 	});
 }
 
