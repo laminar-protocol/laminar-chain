@@ -705,11 +705,6 @@ fn liquidity_pool_margin_call_and_become_safe_work() {
 				open_margin: balance_from_natural_currency_cent(100),
 			};
 
-			assert_eq!(
-				MarginProtocol::_enp_and_ell(MOCK_POOL, Some(position.clone())),
-				Ok((Fixed128::from_natural(1), Fixed128::from_natural(1)))
-			);
-
 			<Positions<Runtime>>::insert(0, position);
 			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
 			assert_eq!(
