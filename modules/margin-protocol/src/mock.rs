@@ -256,6 +256,11 @@ impl ExtBuilder {
 		self
 	}
 
+	pub fn alice_balance(mut self, balance: Balance) -> Self {
+		self.endowed_accounts.push((ALICE, CurrencyId::AUSD, balance));
+		self
+	}
+
 	pub fn module_balance(mut self, balance: Balance) -> Self {
 		self.endowed_accounts
 			.push((MarginProtocol::account_id(), CurrencyId::AUSD, balance));
