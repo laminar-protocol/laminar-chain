@@ -1782,6 +1782,7 @@ dependencies = [
  "frame-system 2.0.0-alpha.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-system-rpc-runtime-api 2.0.0-alpha.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "module-margin-liquidity-pools 0.0.1",
+ "module-margin-protocol 0.0.1",
  "module-primitives 0.0.1",
  "module-synthetic-liquidity-pools 0.0.1",
  "module-synthetic-protocol 0.0.1",

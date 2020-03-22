@@ -8,7 +8,7 @@ use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, t
 use frame_system::{self as system, ensure_root, ensure_signed};
 use orml_traits::{BasicCurrency, MultiCurrency};
 use orml_utilities::Fixed128;
-use primitives::{AccumulateConfig, Balance, CurrencyId, Leverage, Leverages, TradingPair};
+use primitives::{AccumulateConfig, Balance, CurrencyId, Leverage, Leverages, LiquidityPoolId, TradingPair};
 use sp_runtime::{
 	traits::{
 		AccountIdConversion, AtLeast32Bit, CheckedAdd, EnsureOrigin, MaybeSerializeDeserialize, Member, One, Saturating,
@@ -27,7 +27,7 @@ pub struct MarginLiquidityPoolOption {
 
 const MODULE_ID: ModuleId = ModuleId(*b"lami/mlp");
 
-pub trait Trait: system::Trait {
+pub trait Trait: system::Trait + margin_protocol::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
 	type LiquidityCurrency: BasicCurrency<Self::AccountId, Balance = Balance>;
@@ -37,6 +37,7 @@ pub trait Trait: system::Trait {
 		+ Copy
 		+ Ord
 		+ Default
+		+ Into<LiquidityPoolId>
 		+ AtLeast32Bit
 		+ MaybeSerializeDeserialize;
 	type PoolManager: LiquidityPoolManager<Self::LiquidityPoolId, Balance>;
@@ -259,8 +260,9 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 	type CurrencyId = CurrencyId;
 	type Balance = Balance;
 
-	fn ensure_liquidity(_pool_id: Self::LiquidityPoolId) -> bool {
-		unimplemented!()
+	fn ensure_liquidity(pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
+		ensure!(Self::balances(&pool_id) >= amount, Error::<T>::CannotWithdrawAmount);
+		margin_protocol::Module::<T>::ensure_pool_safe_after_withdrawal(pool_id.into(), amount)
 	}
 
 	fn is_owner(pool_id: Self::LiquidityPoolId, who: &T::AccountId) -> bool {
@@ -376,6 +378,9 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _withdraw_liquidity(who: &T::AccountId, pool_id: T::LiquidityPoolId, amount: Balance) -> DispatchResult {
+		ensure!(<Owners<T>>::contains_key(&pool_id), Error::<T>::PoolNotFound);
+
+		Self::ensure_liquidity(pool_id, amount)?;
 		let new_balance = Self::balances(&pool_id)
 			.checked_sub(amount)
 			.ok_or(Error::<T>::CannotWithdrawAmount)?;

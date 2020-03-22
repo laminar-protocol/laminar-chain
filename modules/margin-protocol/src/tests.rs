@@ -466,7 +466,7 @@ fn enp_and_ell_without_new_position_works() {
 			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0, 1, 2, 3]);
 
 			assert_eq!(
-				MarginProtocol::_enp_and_ell(MOCK_POOL, None),
+				MarginProtocol::_enp_and_ell(MOCK_POOL, None, None),
 				Ok((
 					Fixed128::from_parts(880917181075659681),
 					Fixed128::from_parts(289335881335881335)
@@ -483,11 +483,93 @@ fn enp_and_ell_with_new_position_works() {
 		.execute_with(|| {
 			// enp = ell = 100_000_00 / 120_420_30
 			assert_eq!(
-				MarginProtocol::_enp_and_ell(MOCK_POOL, Some(eur_usd_long_1())),
+				MarginProtocol::_enp_and_ell(MOCK_POOL, Some(eur_usd_long_1()), None),
 				Ok((
 					Fixed128::from_parts(830424770574396509),
 					Fixed128::from_parts(830424770574396509)
 				))
+			);
+		});
+}
+
+#[test]
+fn enp_and_ell_without_position_with_liquidity_works() {
+	ExtBuilder::default()
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
+		.price(CurrencyId::FEUR, (12, 10))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.build()
+		.execute_with(|| {
+			<Positions<Runtime>>::insert(0, eur_usd_long_1());
+			<Positions<Runtime>>::insert(1, eur_usd_long_2());
+			<Positions<Runtime>>::insert(2, eur_usd_short_1());
+			<Positions<Runtime>>::insert(3, eur_usd_short_2());
+			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0, 1, 2, 3]);
+
+			assert_eq!(
+				MarginProtocol::_enp_and_ell(MOCK_POOL, None, Some(fixed128_from_natural_currency_cent(-10))),
+				Ok((
+					Fixed128::from_parts(880916328581816817),
+					Fixed128::from_parts(289335601335601335)
+				))
+			);
+		});
+}
+
+#[test]
+fn enp_and_ell_with_liquidity_works() {
+	ExtBuilder::default()
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
+		.build()
+		.execute_with(|| {
+			// enp = ell = (100_000_00 - 10)/ 120_420_30
+			assert_eq!(
+				MarginProtocol::_enp_and_ell(
+					MOCK_POOL,
+					Some(eur_usd_long_1()),
+					Some(fixed128_from_natural_currency_cent(-10))
+				),
+				Ok((
+					Fixed128::from_parts(830423940149625935),
+					Fixed128::from_parts(830423940149625935)
+				))
+			);
+		});
+}
+
+#[test]
+fn ensure_liquidity_works() {
+	ExtBuilder::default()
+		.spread(Permill::zero())
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.price(CurrencyId::FEUR, (1, 1))
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100))
+		.liquidity_pool_ell_threshold(risk_threshold(99, 0))
+		.liquidity_pool_enp_threshold(risk_threshold(99, 0))
+		.build()
+		.execute_with(|| {
+			let position: Position<Runtime> = Position {
+				owner: ALICE,
+				pool: MOCK_POOL,
+				pair: EUR_USD_PAIR,
+				leverage: Leverage::LongTwo,
+				leveraged_held: fixed128_from_natural_currency_cent(100),
+				leveraged_debits: fixed128_from_natural_currency_cent(100),
+				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
+				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				open_margin: balance_from_natural_currency_cent(100),
+			};
+
+			<Positions<Runtime>>::insert(0, position);
+			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
+
+			assert_ok!(MarginProtocol::ensure_pool_safe_after_withdrawal(MOCK_POOL, 10));
+
+			LiquidityPoolELLThreshold::put(risk_threshold(100, 0));
+
+			assert_noop!(
+				MarginProtocol::ensure_pool_safe_after_withdrawal(MOCK_POOL, 1),
+				Error::<Runtime>::PoolWouldBeUnsafe
 			);
 		});
 }
@@ -518,17 +600,21 @@ fn ensure_pool_safe_works() {
 			// with new position
 
 			assert_eq!(
-				MarginProtocol::_enp_and_ell(MOCK_POOL, Some(position.clone())),
+				MarginProtocol::_enp_and_ell(MOCK_POOL, Some(position.clone()), None),
 				Ok((Fixed128::from_natural(1), Fixed128::from_natural(1)))
 			);
 
 			// ENP 100% > 99%, ELL 100% > 99%, safe
-			assert_ok!(MarginProtocol::_ensure_pool_safe(MOCK_POOL, Some(position.clone())));
+			assert_ok!(MarginProtocol::_ensure_pool_safe(
+				MOCK_POOL,
+				Some(position.clone()),
+				None
+			));
 
 			// ENP 100% == 100%, unsafe
 			LiquidityPoolENPThreshold::put(risk_threshold(100, 0));
 			assert_noop!(
-				MarginProtocol::_ensure_pool_safe(MOCK_POOL, Some(position.clone())),
+				MarginProtocol::_ensure_pool_safe(MOCK_POOL, Some(position.clone()), None),
 				Error::<Runtime>::PoolWouldBeUnsafe
 			);
 
@@ -536,7 +622,7 @@ fn ensure_pool_safe_works() {
 			LiquidityPoolENPThreshold::put(risk_threshold(99, 0));
 			LiquidityPoolELLThreshold::put(risk_threshold(100, 0));
 			assert_noop!(
-				MarginProtocol::_ensure_pool_safe(MOCK_POOL, Some(position.clone())),
+				MarginProtocol::_ensure_pool_safe(MOCK_POOL, Some(position.clone()), None),
 				Error::<Runtime>::PoolWouldBeUnsafe
 			);
 
@@ -546,17 +632,17 @@ fn ensure_pool_safe_works() {
 			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
 			LiquidityPoolELLThreshold::put(risk_threshold(99, 0));
 			assert_eq!(
-				MarginProtocol::_enp_and_ell(MOCK_POOL, None),
+				MarginProtocol::_enp_and_ell(MOCK_POOL, None, None),
 				Ok((Fixed128::from_natural(1), Fixed128::from_natural(1)))
 			);
 
 			// ENP 100% > 99%, ELL 100% > 99%, safe
-			assert_ok!(MarginProtocol::_ensure_pool_safe(MOCK_POOL, None));
+			assert_ok!(MarginProtocol::_ensure_pool_safe(MOCK_POOL, None, None));
 
 			// ENP 100% == 100%, unsafe
 			LiquidityPoolENPThreshold::put(risk_threshold(100, 0));
 			assert_noop!(
-				MarginProtocol::_ensure_pool_safe(MOCK_POOL, None),
+				MarginProtocol::_ensure_pool_safe(MOCK_POOL, None, None),
 				Error::<Runtime>::UnsafePool
 			);
 
@@ -564,7 +650,7 @@ fn ensure_pool_safe_works() {
 			LiquidityPoolENPThreshold::put(risk_threshold(99, 0));
 			LiquidityPoolELLThreshold::put(risk_threshold(100, 0));
 			assert_noop!(
-				MarginProtocol::_ensure_pool_safe(MOCK_POOL, None),
+				MarginProtocol::_ensure_pool_safe(MOCK_POOL, None, None),
 				Error::<Runtime>::UnsafePool
 			);
 		});
@@ -761,7 +847,7 @@ fn liquidity_pool_margin_call_and_become_safe_work() {
 			<Positions<Runtime>>::insert(0, position);
 			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
 			assert_eq!(
-				MarginProtocol::_enp_and_ell(MOCK_POOL, None),
+				MarginProtocol::_enp_and_ell(MOCK_POOL, None, None),
 				Ok((Fixed128::from_natural(1), Fixed128::from_natural(1)))
 			);
 

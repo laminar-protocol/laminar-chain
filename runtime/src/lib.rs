@@ -485,6 +485,13 @@ impl margin_liquidity_pools::Trait for Runtime {
 	type MaxSwap = MaxSwap;
 }
 
+impl margin_protocol::Trait for Runtime {
+	type Event = Event;
+	type MultiCurrency = orml_currencies::Module<Runtime>;
+	type LiquidityPools = margin_liquidity_pools::Module<Runtime>;
+	type PriceProvider = orml_prices::Module<Runtime>;
+}
+
 impl synthetic_liquidity_pools::Trait for Runtime {
 	type Event = Event;
 	type MultiCurrency = orml_currencies::Module<Runtime>;
@@ -541,6 +548,7 @@ construct_runtime!(
 		Prices: orml_prices::{Module, Storage},
 		SyntheticTokens: synthetic_tokens::{Module, Storage, Call, Event<T>},
 		SyntheticProtocol: synthetic_protocol::{Module, Call, Event<T>},
+		MarginPrtotcol: margin_protocol::{Module, Storage, Call, Event<T>},
 		MarginLiquidityPools: margin_liquidity_pools::{Module, Storage, Call, Event<T>},
 		SyntheticLiquidityPools: synthetic_liquidity_pools::{Module, Storage, Call, Event<T>, Config},
 	}
