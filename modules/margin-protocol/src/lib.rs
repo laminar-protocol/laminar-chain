@@ -764,22 +764,6 @@ impl<T: Trait> Module<T> {
 			Ok(())
 		}
 	}
-
-	/// Get a list of traders
-	fn _get_traders() -> Vec<T::AccountId> {
-		let mut traders: Vec<T::AccountId> = <Positions<T>>::iter().map(|x| x.owner).collect();
-		traders.sort();
-		traders.dedup();
-		traders
-	}
-
-	/// Get a list of pools
-	fn _get_pools() -> Vec<LiquidityPoolId> {
-		let mut pools: Vec<LiquidityPoolId> = <Positions<T>>::iter().map(|x| x.pool).collect();
-		pools.sort();
-		pools.dedup();
-		pools
-	}
 }
 
 //TODO: implementations, prevent open new position for margin called pools
@@ -800,6 +784,7 @@ enum OffchainErr {
 	SubmitTransaction,
 	NotValidator,
 	LockStillInLocked,
+	CheckFail,
 }
 
 // constant for offchain worker
@@ -814,11 +799,28 @@ impl sp_std::fmt::Debug for OffchainErr {
 			OffchainErr::SubmitTransaction => write!(fmt, "Failed to submit transaction"),
 			OffchainErr::NotValidator => write!(fmt, "Not validator"),
 			OffchainErr::LockStillInLocked => write!(fmt, "Lock is still in locked"),
+			OffchainErr::CheckFail => write!(fmt, "Check fail"),
 		}
 	}
 }
 
 impl<T: Trait> Module<T> {
+	/// Get a list of traders
+	fn _get_traders() -> Vec<T::AccountId> {
+		let mut traders: Vec<T::AccountId> = <Positions<T>>::iter().map(|x| x.owner).collect();
+		traders.sort();
+		traders.dedup();
+		traders
+	}
+
+	/// Get a list of pools
+	fn _get_pools() -> Vec<LiquidityPoolId> {
+		let mut pools: Vec<LiquidityPoolId> = <Positions<T>>::iter().map(|x| x.pool).collect();
+		pools.sort();
+		pools.dedup();
+		pools
+	}
+
 	fn _offchain_worker(_block_number: T::BlockNumber) -> Result<(), OffchainErr> {
 		// check if we are a potential validator
 		if !sp_io::offchain::is_validator() {
@@ -827,34 +829,111 @@ impl<T: Trait> Module<T> {
 
 		// Acquire offchain worker lock.
 		// If succeeded, update the lock, otherwise return error
-		let _ = Self::acquire_offchain_worker_lock()?;
+		let _ = Self::_acquire_offchain_worker_lock()?;
 
-		// check all traders
-		for trader in Self::_get_traders() {
-			if Self::_ensure_trader_safe(&trader, None, None).is_err() {
+		let (stop_out, margin_call, safe) = Self::_check_all_traders()?;
+
+		for trader in stop_out {
+			let who = T::Lookup::unlookup(trader);
+			let call = Call::<T>::trader_liquidate(who);
+			T::SubmitTransaction::submit_unsigned(call).map_err(|_| OffchainErr::SubmitTransaction)?;
+		}
+
+		for trader in margin_call {
+			if !Self::_is_trader_margin_called(&trader) {
 				let who = T::Lookup::unlookup(trader);
-				// TODO: trader_liquidate
 				let call = Call::<T>::trader_margin_call(who);
 				T::SubmitTransaction::submit_unsigned(call).map_err(|_| OffchainErr::SubmitTransaction)?;
 			}
-			Self::extend_offchain_worker_lock_if_needed();
 		}
 
-		// check all pools
-		for pool_id in Self::_get_pools() {
-			if Self::_ensure_pool_safe(pool_id, None).is_err() {
-				// TODO: pool liquidate
+		for trader in safe {
+			if Self::_is_trader_margin_called(&trader) {
+				let who = T::Lookup::unlookup(trader);
+				let call = Call::<T>::trader_become_safe(who);
+				T::SubmitTransaction::submit_unsigned(call).map_err(|_| OffchainErr::SubmitTransaction)?;
+			}
+		}
+
+		Self::_extend_offchain_worker_lock_if_needed();
+
+		let (stop_out, margin_call, safe) = Self::_check_all_pools()?;
+
+		for pool_id in stop_out {
+			let call = Call::<T>::liquidity_pool_liquidate(pool_id);
+			T::SubmitTransaction::submit_unsigned(call).map_err(|_| OffchainErr::SubmitTransaction)?;
+		}
+
+		for pool_id in margin_call {
+			if !Self::_is_pool_margin_called(pool_id) {
 				let call = Call::<T>::liquidity_pool_margin_call(pool_id);
 				T::SubmitTransaction::submit_unsigned(call).map_err(|_| OffchainErr::SubmitTransaction)?;
 			}
-			Self::extend_offchain_worker_lock_if_needed();
 		}
 
-		Self::release_offchain_worker_lock();
+		for pool_id in safe {
+			if Self::_is_pool_margin_called(pool_id) {
+				let call = Call::<T>::liquidity_pool_become_safe(pool_id);
+				T::SubmitTransaction::submit_unsigned(call).map_err(|_| OffchainErr::SubmitTransaction)?;
+			}
+		}
+
+		Self::_release_offchain_worker_lock();
 		Ok(())
 	}
 
-	fn acquire_offchain_worker_lock() -> Result<Timestamp, OffchainErr> {
+	fn _is_trader_margin_called(who: &T::AccountId) -> bool {
+		<MarginCalledTraders<T>>::contains_key(&who)
+	}
+
+	fn _is_pool_margin_called(pool_id: LiquidityPoolId) -> bool {
+		MarginCalledPools::contains_key(pool_id)
+	}
+
+	fn _check_all_traders() -> Result<(Vec<T::AccountId>, Vec<T::AccountId>, Vec<T::AccountId>), OffchainErr> {
+		let mut stop_out: Vec<T::AccountId> = vec![];
+		let mut margin_call: Vec<T::AccountId> = vec![];
+		let mut safe: Vec<T::AccountId> = vec![];
+
+		let threshold = Self::trader_risk_threshold();
+
+		for trader in Self::_get_traders() {
+			let margin_level = Self::_margin_level(&trader, None, None).map_err(|_| OffchainErr::CheckFail)?;
+			if margin_level <= threshold.stop_out.into() {
+				stop_out.push(trader);
+			} else if margin_level <= threshold.margin_call.into() {
+				margin_call.push(trader);
+			} else {
+				safe.push(trader);
+			}
+		}
+
+		Ok((stop_out, margin_call, safe))
+	}
+
+	fn _check_all_pools() -> Result<(Vec<LiquidityPoolId>, Vec<LiquidityPoolId>, Vec<LiquidityPoolId>), OffchainErr> {
+		let mut stop_out: Vec<LiquidityPoolId> = vec![];
+		let mut margin_call: Vec<LiquidityPoolId> = vec![];
+		let mut safe: Vec<LiquidityPoolId> = vec![];
+
+		let enp_threshold = Self::liquidity_pool_enp_threshold();
+		let ell_threshold = Self::liquidity_pool_ell_threshold();
+
+		for pool_id in Self::_get_pools() {
+			let (enp, ell) = Self::_enp_and_ell(pool_id, None).map_err(|_| OffchainErr::CheckFail)?;
+			if enp <= enp_threshold.stop_out.into() || ell <= ell_threshold.stop_out.into() {
+				stop_out.push(pool_id);
+			} else if enp <= enp_threshold.margin_call.into() || ell <= ell_threshold.margin_call.into() {
+				margin_call.push(pool_id);
+			} else {
+				safe.push(pool_id);
+			}
+		}
+
+		Ok((stop_out, margin_call, safe))
+	}
+
+	fn _acquire_offchain_worker_lock() -> Result<Timestamp, OffchainErr> {
 		let storage_key = DB_PREFIX.to_vec();
 		let storage = StorageValueRef::persistent(&storage_key);
 
@@ -876,14 +955,14 @@ impl<T: Trait> Module<T> {
 		acquire_lock.map_err(|_| OffchainErr::FailedToAcquireLock)
 	}
 
-	fn release_offchain_worker_lock() {
+	fn _release_offchain_worker_lock() {
 		let storage_key = DB_PREFIX.to_vec();
 		let storage = StorageValueRef::persistent(&storage_key);
 		let now = sp_io::offchain::timestamp();
 		storage.set(&now);
 	}
 
-	fn extend_offchain_worker_lock_if_needed() {
+	fn _extend_offchain_worker_lock_if_needed() {
 		let storage_key = DB_PREFIX.to_vec();
 		let storage = StorageValueRef::persistent(&storage_key);
 

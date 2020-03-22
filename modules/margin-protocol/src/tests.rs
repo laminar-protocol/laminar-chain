@@ -12,7 +12,7 @@ use sp_core::offchain::{
 	testing::{TestOffchainExt, TestTransactionPoolExt},
 	OffchainExt, TransactionPoolExt,
 };
-use sp_runtime::{traits::OffchainWorker, PerThing};
+use sp_runtime::PerThing;
 
 const EUR_JPY_PAIR: TradingPair = TradingPair {
 	base: CurrencyId::FJPY,
@@ -1565,6 +1565,12 @@ fn offchain_worker_should_work() {
 		assert_noop!(
 			MarginProtocol::_ensure_pool_safe(MOCK_POOL, None),
 			Error::<Runtime>::UnsafePool
+		);
+
+		assert_eq!(MarginProtocol::_check_all_traders(), Ok((vec![ALICE], vec![], vec![])));
+		assert_eq!(
+			MarginProtocol::_check_all_pools(),
+			Ok((vec![], vec![MOCK_POOL], vec![]))
 		);
 
 		assert_ok!(MarginProtocol::_offchain_worker(1));
