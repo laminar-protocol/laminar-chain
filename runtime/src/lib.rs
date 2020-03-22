@@ -554,7 +554,7 @@ construct_runtime!(
 		SyntheticProtocol: synthetic_protocol::{Module, Call, Event<T>},
 		MarginLiquidityPools: margin_liquidity_pools::{Module, Storage, Call, Event<T>},
 		SyntheticLiquidityPools: synthetic_liquidity_pools::{Module, Storage, Call, Event<T>, Config},
-		MarginProtocol: margin_protocol::{Module, Storage, Call, Event<T>, Config},
+		MarginProtocol: margin_protocol::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned },
 	}
 );
 
