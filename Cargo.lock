@@ -1733,6 +1733,7 @@ dependencies = [
  "jsonrpc-core 14.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "laminar-runtime 0.0.1",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "module-margin-protocol 0.0.1",
  "orml-oracle-rpc 0.0.1",
  "orml-utilities 0.0.1",
  "pallet-transaction-payment-rpc 2.0.0-alpha.3 (registry+https://github.com/rust-lang/crates.io-index)",

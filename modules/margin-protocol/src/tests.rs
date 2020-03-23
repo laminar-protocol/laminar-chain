@@ -8,6 +8,10 @@ use mock::*;
 use core::num::NonZeroI128;
 use frame_support::{assert_noop, assert_ok};
 use primitives::Leverage;
+use sp_core::offchain::{
+	testing::{TestOffchainExt, TestTransactionPoolExt},
+	OffchainExt, TransactionPoolExt,
+};
 use sp_runtime::PerThing;
 
 const EUR_JPY_PAIR: TradingPair = TradingPair {
@@ -1605,4 +1609,56 @@ fn withdraw_fails_if_trader_would_not_be_safe() {
 				Error::<Runtime>::TraderWouldBeUnsafe
 			);
 		});
+}
+
+#[test]
+fn offchain_worker_should_work() {
+	let mut ext = ExtBuilder::default()
+		.spread(Permill::zero())
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.price(CurrencyId::FEUR, (1, 1))
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100))
+		.liquidity_pool_ell_threshold(risk_threshold(100, 0))
+		.liquidity_pool_enp_threshold(risk_threshold(100, 0))
+		.build();
+
+	let (offchain, _state) = TestOffchainExt::new();
+	let (pool, _state) = TestTransactionPoolExt::new();
+	ext.register_extension(OffchainExt::new(offchain));
+	ext.register_extension(TransactionPoolExt::new(pool));
+
+	ext.execute_with(|| {
+		let position: Position<Runtime> = Position {
+			owner: ALICE,
+			pool: MOCK_POOL,
+			pair: EUR_USD_PAIR,
+			leverage: Leverage::LongTwo,
+			leveraged_held: fixed128_from_natural_currency_cent(100),
+			leveraged_debits: fixed128_from_natural_currency_cent(100),
+			leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
+			open_accumulated_swap_rate: Fixed128::from_natural(1),
+			open_margin: balance_from_natural_currency_cent(100),
+		};
+
+		<Positions<Runtime>>::insert(0, position);
+		PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
+		<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
+
+		assert_noop!(
+			MarginProtocol::_ensure_trader_safe(&ALICE, None, None),
+			Error::<Runtime>::UnsafeTrader
+		);
+		assert_noop!(
+			MarginProtocol::_ensure_pool_safe(MOCK_POOL, None),
+			Error::<Runtime>::UnsafePool
+		);
+
+		assert_eq!(MarginProtocol::_check_all_traders(), Ok((vec![ALICE], vec![], vec![])));
+		assert_eq!(
+			MarginProtocol::_check_all_pools(),
+			Ok((vec![], vec![MOCK_POOL], vec![]))
+		);
+
+		assert_ok!(MarginProtocol::_offchain_worker(1));
+	});
 }
