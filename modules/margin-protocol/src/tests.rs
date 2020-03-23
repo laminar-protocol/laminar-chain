@@ -1649,7 +1649,7 @@ fn offchain_worker_should_work() {
 			Error::<Runtime>::UnsafeTrader
 		);
 		assert_noop!(
-			MarginProtocol::_ensure_pool_safe(MOCK_POOL, None),
+			MarginProtocol::_ensure_pool_safe(MOCK_POOL, None, None),
 			Error::<Runtime>::UnsafePool
 		);
 
@@ -1660,5 +1660,16 @@ fn offchain_worker_should_work() {
 		);
 
 		assert_ok!(MarginProtocol::_offchain_worker(1));
+	});
+}
+
+#[test]
+fn liquidity_pool_manager_can_remove_works() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert!(<MarginProtocol as LiquidityPoolManager<LiquidityPoolId, Balance>>::can_remove(MOCK_POOL));
+
+		<Positions<Runtime>>::insert(0, eur_jpy_long());
+		PositionsByPool::insert(MOCK_POOL, EUR_JPY_PAIR, vec![0]);
+		assert!(!<MarginProtocol as LiquidityPoolManager<LiquidityPoolId, Balance>>::can_remove(MOCK_POOL));
 	});
 }

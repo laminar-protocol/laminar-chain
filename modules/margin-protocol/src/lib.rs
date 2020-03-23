@@ -787,10 +787,12 @@ impl<T: Trait> Module<T> {
 
 //TODO: implementations, prevent open new position for margin called pools
 impl<T: Trait> LiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
+	/// Returns if `pool` has liability in margin protocol.
 	fn can_remove(pool: LiquidityPoolId) -> bool {
-		unimplemented!()
+		PositionsByPool::iter_prefix(pool).flatten().count() == 0
 	}
 
+	/// Required deposit to make pool safe.
 	fn get_required_deposit(pool: LiquidityPoolId) -> Balance {
 		unimplemented!()
 	}
@@ -939,7 +941,7 @@ impl<T: Trait> Module<T> {
 		let ell_threshold = Self::liquidity_pool_ell_threshold();
 
 		for pool_id in Self::_get_pools() {
-			let (enp, ell) = Self::_enp_and_ell(pool_id, None).map_err(|_| OffchainErr::CheckFail)?;
+			let (enp, ell) = Self::_enp_and_ell(pool_id, None, None).map_err(|_| OffchainErr::CheckFail)?;
 			if enp <= enp_threshold.stop_out.into() || ell <= ell_threshold.stop_out.into() {
 				stop_out.push(pool_id);
 			} else if enp <= enp_threshold.margin_call.into() || ell <= ell_threshold.margin_call.into() {
