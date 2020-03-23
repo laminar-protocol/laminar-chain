@@ -1649,7 +1649,7 @@ fn offchain_worker_should_work() {
 			Error::<Runtime>::UnsafeTrader
 		);
 		assert_noop!(
-			MarginProtocol::_ensure_pool_safe(MOCK_POOL, None),
+			MarginProtocol::_ensure_pool_safe(MOCK_POOL, None, None),
 			Error::<Runtime>::UnsafePool
 		);
 

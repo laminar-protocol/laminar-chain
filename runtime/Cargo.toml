@@ -55,7 +55,6 @@ module-primitives = { path = "../modules/primitives", default-features = false }
 margin-protocol = { package = "module-margin-protocol", path = "../modules/margin-protocol", default-features = false }
 margin-liquidity-pools = { package = "module-margin-liquidity-pools", path = "../modules/margin-liquidity-pools", default-features = false }
 synthetic-liquidity-pools = { package = "module-synthetic-liquidity-pools", path = "../modules/synthetic-liquidity-pools", default-features = false }
-margin-protocol = { package = "module-margin-protocol", path = "../modules/margin-protocol", default-features = false }
 
 [build-dependencies]
 wasm-builder-runner = { package = "substrate-wasm-builder-runner", version = "1.0.5" }
@@ -112,5 +111,4 @@ std = [
 	"margin-protocol/std",
 	"synthetic-protocol/std",
 	"synthetic-tokens/std",
-	"margin-protocol/std",
 ]
