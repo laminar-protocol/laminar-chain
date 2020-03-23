@@ -726,12 +726,12 @@ fn trader_liquidate_should_work() {
 				MarginProtocol::_free_balance(&ALICE),
 				balance_from_natural_currency_cent(0)
 			);
-			// TODO: need implementation close_positions
-			//assert_ok!(MarginProtocol::trader_liquidate(Origin::ROOT, ALICE));
-			//assert_eq!(
-			//	MarginProtocol::_free_balance(&ALICE),
-			//	balance_from_natural_currency_cent(0)
-			//);
+
+			assert_ok!(MarginProtocol::trader_liquidate(Origin::ROOT, ALICE));
+			assert_eq!(
+				MarginProtocol::_free_balance(&ALICE),
+				balance_from_natural_currency_cent(0)
+			);
 		});
 }
 
@@ -800,6 +800,46 @@ fn liquidity_pool_margin_call_and_become_safe_work() {
 				MOCK_POOL
 			));
 			let event = TestEvent::margin_protocol(RawEvent::LiquidityPoolBecameSafe(MOCK_POOL));
+			assert!(System::events().iter().any(|record| record.event == event));
+		});
+}
+
+#[test]
+fn liquidity_pool_liquidate_work() {
+	ExtBuilder::default()
+		.spread(Permill::zero())
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.price(CurrencyId::FEUR, (1, 1))
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100))
+		.liquidity_pool_ell_threshold(risk_threshold(0, 99))
+		.liquidity_pool_enp_threshold(risk_threshold(0, 99))
+		.build()
+		.execute_with(|| {
+			let position: Position<Runtime> = Position {
+				owner: ALICE,
+				pool: MOCK_POOL,
+				pair: EUR_USD_PAIR,
+				leverage: Leverage::LongTwo,
+				leveraged_held: fixed128_from_natural_currency_cent(100),
+				leveraged_debits: fixed128_from_natural_currency_cent(100),
+				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
+				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				open_margin: balance_from_natural_currency_cent(100),
+			};
+
+			<Positions<Runtime>>::insert(0, position);
+			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
+
+			// ENP 100% > 99%, ELL 100% > 99%, safe
+			assert_noop!(
+				MarginProtocol::liquidity_pool_liquidate(Origin::signed(BOB), MOCK_POOL),
+				Error::<Runtime>::NotReachedRiskThreshold
+			);
+
+			// ENP 100% == 100%, unsafe
+			LiquidityPoolENPThreshold::put(risk_threshold(0, 100));
+			assert_ok!(MarginProtocol::liquidity_pool_liquidate(Origin::signed(BOB), MOCK_POOL));
+			let event = TestEvent::margin_protocol(RawEvent::LiquidityPoolLiquidated(MOCK_POOL));
 			assert!(System::events().iter().any(|record| record.event == event));
 		});
 }

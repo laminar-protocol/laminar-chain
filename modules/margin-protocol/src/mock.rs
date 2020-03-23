@@ -34,6 +34,7 @@ parameter_types! {
 	pub const MaximumBlockWeight: u32 = 1024;
 	pub const MaximumBlockLength: u32 = 2 * 1024;
 	pub const AvailableBlockRatio: Perbill = Perbill::one();
+	pub const TreasuryAccount: AccountId = 9;
 }
 
 type AccountId = u64;
@@ -215,6 +216,7 @@ impl Trait for Runtime {
 	type MultiCurrency = OrmlTokens;
 	type LiquidityPools = MockLiquidityPools;
 	type PriceProvider = MockPrices;
+	type TreasuryAccount = TreasuryAccount;
 }
 pub type MarginProtocol = Module<Runtime>;
 
