@@ -687,7 +687,7 @@ fn trader_margin_call_should_work() {
 
 			// without position
 			assert_noop!(
-				MarginProtocol::trader_margin_call(Origin::ROOT, ALICE),
+				MarginProtocol::trader_margin_call(Origin::NONE, ALICE),
 				Error::<Runtime>::SafeTrader
 			);
 
@@ -704,7 +704,7 @@ fn trader_margin_call_should_work() {
 				Ok(Fixed128::from_rational(5, NonZeroI128::new(100).unwrap()))
 			);
 
-			assert_ok!(MarginProtocol::trader_margin_call(Origin::ROOT, ALICE));
+			assert_ok!(MarginProtocol::trader_margin_call(Origin::NONE, ALICE));
 		});
 }
 
@@ -731,7 +731,7 @@ fn trader_become_safe_should_work() {
 			};
 
 			// without position
-			assert_ok!(MarginProtocol::trader_become_safe(Origin::ROOT, ALICE));
+			assert_ok!(MarginProtocol::trader_become_safe(Origin::NONE, ALICE));
 
 			<Positions<Runtime>>::insert(0, position);
 			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
@@ -745,9 +745,9 @@ fn trader_become_safe_should_work() {
 				MarginProtocol::_margin_level(&ALICE, None, None),
 				Ok(Fixed128::from_rational(4, NonZeroI128::new(100).unwrap()))
 			);
-			assert_ok!(MarginProtocol::trader_margin_call(Origin::ROOT, ALICE));
+			assert_ok!(MarginProtocol::trader_margin_call(Origin::NONE, ALICE));
 			assert_noop!(
-				MarginProtocol::trader_become_safe(Origin::ROOT, ALICE),
+				MarginProtocol::trader_become_safe(Origin::NONE, ALICE),
 				Error::<Runtime>::UnsafeTrader
 			);
 
@@ -757,7 +757,7 @@ fn trader_become_safe_should_work() {
 				Ok(Fixed128::from_rational(5, NonZeroI128::new(100).unwrap()))
 			);
 			assert_noop!(
-				MarginProtocol::trader_become_safe(Origin::ROOT, ALICE),
+				MarginProtocol::trader_become_safe(Origin::NONE, ALICE),
 				Error::<Runtime>::UnsafeTrader
 			);
 
@@ -766,7 +766,7 @@ fn trader_become_safe_should_work() {
 				MarginProtocol::_margin_level(&ALICE, None, None),
 				Ok(Fixed128::from_rational(6, NonZeroI128::new(100).unwrap()))
 			);
-			assert_ok!(MarginProtocol::trader_become_safe(Origin::ROOT, ALICE));
+			assert_ok!(MarginProtocol::trader_become_safe(Origin::NONE, ALICE));
 		});
 }
 #[test]
@@ -793,7 +793,7 @@ fn trader_liquidate_should_work() {
 
 			// without position
 			assert_noop!(
-				MarginProtocol::trader_liquidate(Origin::ROOT, ALICE),
+				MarginProtocol::trader_liquidate(Origin::NONE, ALICE),
 				Error::<Runtime>::NotReachedRiskThreshold
 			);
 
@@ -815,7 +815,7 @@ fn trader_liquidate_should_work() {
 				balance_from_natural_currency_cent(0)
 			);
 
-			assert_ok!(MarginProtocol::trader_liquidate(Origin::ROOT, ALICE));
+			assert_ok!(MarginProtocol::trader_liquidate(Origin::NONE, ALICE));
 			assert_eq!(
 				MarginProtocol::_free_balance(&ALICE),
 				balance_from_natural_currency_cent(0)
@@ -855,38 +855,26 @@ fn liquidity_pool_margin_call_and_become_safe_work() {
 
 			// ENP 100% > 99%, ELL 100% > 99%, safe
 			assert_noop!(
-				MarginProtocol::liquidity_pool_margin_call(Origin::signed(BOB), MOCK_POOL),
+				MarginProtocol::liquidity_pool_margin_call(Origin::NONE, MOCK_POOL),
 				Error::<Runtime>::SafePool
 			);
-			assert_ok!(MarginProtocol::liquidity_pool_become_safe(
-				Origin::signed(BOB),
-				MOCK_POOL
-			));
+			assert_ok!(MarginProtocol::liquidity_pool_become_safe(Origin::NONE, MOCK_POOL));
 
 			// ENP 100% == 100%, unsafe
 			LiquidityPoolENPThreshold::put(risk_threshold(100, 0));
-			assert_ok!(MarginProtocol::liquidity_pool_margin_call(
-				Origin::signed(BOB),
-				MOCK_POOL
-			));
+			assert_ok!(MarginProtocol::liquidity_pool_margin_call(Origin::NONE, MOCK_POOL));
 			let event = TestEvent::margin_protocol(RawEvent::LiquidityPoolMarginCalled(MOCK_POOL));
 			assert!(System::events().iter().any(|record| record.event == event));
 
 			assert_noop!(
-				MarginProtocol::liquidity_pool_become_safe(Origin::signed(BOB), MOCK_POOL),
+				MarginProtocol::liquidity_pool_become_safe(Origin::NONE, MOCK_POOL),
 				Error::<Runtime>::UnsafePool
 			);
 
 			// ENP 100% > 99%, ELL 100% > 99%, safe
 			LiquidityPoolENPThreshold::put(risk_threshold(99, 0));
-			assert_ok!(MarginProtocol::liquidity_pool_margin_call(
-				Origin::signed(BOB),
-				MOCK_POOL
-			));
-			assert_ok!(MarginProtocol::liquidity_pool_become_safe(
-				Origin::signed(BOB),
-				MOCK_POOL
-			));
+			assert_ok!(MarginProtocol::liquidity_pool_margin_call(Origin::NONE, MOCK_POOL));
+			assert_ok!(MarginProtocol::liquidity_pool_become_safe(Origin::NONE, MOCK_POOL));
 			let event = TestEvent::margin_protocol(RawEvent::LiquidityPoolBecameSafe(MOCK_POOL));
 			assert!(System::events().iter().any(|record| record.event == event));
 		});
