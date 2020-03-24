@@ -5,7 +5,7 @@ use frame_support::{decl_error, decl_event, decl_module, decl_storage, traits::G
 use frame_system::{self as system, ensure_root};
 use sp_runtime::{
 	traits::{AccountIdConversion, AtLeast32Bit, EnsureOrigin, MaybeSerializeDeserialize, Member, Saturating, Zero},
-	ModuleId, Permill,
+	DispatchResult, ModuleId, Permill,
 };
 
 use module_traits::LiquidityPoolManager;
@@ -208,6 +208,10 @@ impl<T: Trait> LiquidityPoolManager<T::LiquidityPoolId, T::Balance> for Module<T
 	}
 
 	fn get_required_deposit(_pool: <T as Trait>::LiquidityPoolId) -> <T as Trait>::Balance {
+		unimplemented!()
+	}
+
+	fn ensure_can_withdrawal(_pool: T::LiquidityPoolId, _amount: T::Balance) -> DispatchResult {
 		unimplemented!()
 	}
 }

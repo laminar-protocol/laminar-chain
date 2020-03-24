@@ -15,7 +15,7 @@ pub trait LiquidityPools<AccountId> {
 	type CurrencyId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug;
 	type Balance: Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
-	fn ensure_liquidity(pool_id: Self::LiquidityPoolId) -> bool;
+	fn ensure_liquidity(pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult;
 
 	fn is_owner(pool_id: Self::LiquidityPoolId, who: &AccountId) -> bool;
 
@@ -30,6 +30,7 @@ pub trait LiquidityPools<AccountId> {
 pub trait LiquidityPoolManager<LiquidityPoolId, Balance> {
 	fn can_remove(pool: LiquidityPoolId) -> bool;
 	fn get_required_deposit(pool: LiquidityPoolId) -> Balance;
+	fn ensure_can_withdrawal(pool: LiquidityPoolId, amount: Balance) -> DispatchResult;
 }
 
 pub trait SyntheticProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
@@ -53,4 +54,8 @@ pub trait MarginProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
 		leverage: Leverage,
 		leveraged_amount: Balance,
 	) -> bool;
+}
+
+pub trait LaminarTreasry<AccountId> {
+	fn account_id() -> AccountId;
 }

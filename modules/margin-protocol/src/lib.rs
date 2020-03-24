@@ -1,20 +1,22 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
+use frame_support::{debug, decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get, IsSubType};
 use sp_arithmetic::{
 	traits::{Bounded, Saturating},
 	Permill,
 };
 use sp_runtime::{
+	offchain::{storage::StorageValueRef, Duration, Timestamp},
 	traits::{AccountIdConversion, StaticLookup},
+	transaction_validity::{InvalidTransaction, TransactionPriority, TransactionValidity, ValidTransaction},
 	DispatchError, DispatchResult, ModuleId, RuntimeDebug,
 };
 // FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
 // would cause compiling error in `decl_module!` and `construct_runtime!`
 // #3295 https://github.com/paritytech/substrate/issues/3295
 use frame_system as system;
-use frame_system::ensure_signed;
+use frame_system::{ensure_signed, offchain::SubmitUnsignedTransaction};
 use orml_traits::{MultiCurrency, PriceProvider};
 use orml_utilities::{Fixed128, FixedU128};
 use primitives::{
@@ -22,7 +24,7 @@ use primitives::{
 	Balance, CurrencyId, Leverage, LiquidityPoolId, Price, TradingPair,
 };
 use sp_std::{cmp, prelude::*, result};
-use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools};
+use traits::{LaminarTreasry, LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools};
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -43,7 +45,9 @@ pub trait Trait: frame_system::Trait {
 		TradingPair = TradingPair,
 	>;
 	type PriceProvider: PriceProvider<CurrencyId, Price>;
-	type TreasuryAccount: Get<<Self as system::Trait>::AccountId>;
+	type Treasury: LaminarTreasry<Self::AccountId>;
+	type SubmitTransaction: SubmitUnsignedTransaction<Self, <Self as Trait>::Call>;
+	type Call: From<Call<Self>> + IsSubType<Module<Self>, Self>;
 }
 
 pub type PositionId = u64;
@@ -68,8 +72,8 @@ const MAX_POSITIONS_COUNT: u16 = u16::max_value();
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Copy, Clone, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct RiskThreshold {
-	margin_call: Permill,
-	stop_out: Permill,
+	pub margin_call: Permill,
+	pub stop_out: Permill,
 }
 
 //TODO: Refactor `PositionsByPool` to `double_map LiquidityPoolId, (TradingPair, PositionId) => Option<()>`
@@ -181,40 +185,51 @@ decl_module! {
 			Self::deposit_event(RawEvent::Withdrew(who, amount));
 		}
 
-		pub fn trader_margin_call(origin, who: <T::Lookup as StaticLookup>::Source) {
+		pub fn trader_margin_call(_origin, who: <T::Lookup as StaticLookup>::Source) {
 			let who = T::Lookup::lookup(who)?;
 
 			Self::_trader_margin_call(&who)?;
 			Self::deposit_event(RawEvent::TraderMarginCalled(who));
 		}
 
-		pub fn trader_become_safe(origin, who: <T::Lookup as StaticLookup>::Source) {
+		pub fn trader_become_safe(_origin, who: <T::Lookup as StaticLookup>::Source) {
 			let who = T::Lookup::lookup(who)?;
 
 			Self::_trader_become_safe(&who)?;
 			Self::deposit_event(RawEvent::TraderBecameSafe(who));
 		}
 
-		pub fn trader_liquidate(origin, who: <T::Lookup as StaticLookup>::Source) {
+		pub fn trader_liquidate(_origin, who: <T::Lookup as StaticLookup>::Source) {
 			let who = T::Lookup::lookup(who)?;
 
 			Self::_trader_liquidate(&who)?;
 			Self::deposit_event(RawEvent::TraderLiquidated(who));
 		}
 
-		pub fn liquidity_pool_margin_call(origin, pool: LiquidityPoolId) {
+		pub fn liquidity_pool_margin_call(_origin, pool: LiquidityPoolId) {
 			Self::_liquidity_pool_margin_call(pool)?;
 			Self::deposit_event(RawEvent::LiquidityPoolMarginCalled(pool));
 		}
 
-		pub fn liquidity_pool_become_safe(origin, pool: LiquidityPoolId) {
+		pub fn liquidity_pool_become_safe(_origin, pool: LiquidityPoolId) {
 			Self::_liquidity_pool_become_safe(pool)?;
 			Self::deposit_event(RawEvent::LiquidityPoolBecameSafe(pool));
 		}
 
-		pub fn liquidity_pool_liquidate(origin, pool: LiquidityPoolId) {
+		pub fn liquidity_pool_liquidate(_origin, pool: LiquidityPoolId) {
 			Self::_liquidity_pool_liquidate(pool)?;
 			Self::deposit_event(RawEvent::LiquidityPoolLiquidated(pool));
+		}
+
+		fn offchain_worker(block_number: T::BlockNumber) {
+			if let Err(e) = Self::_offchain_worker(block_number) {
+				debug::info!(
+					target: "margin-protocol offchain worker",
+					"cannot run offchain worker at {:?}: {:?}",
+					block_number,
+					e,
+				);
+			}
 		}
 	}
 }
@@ -269,7 +284,7 @@ impl<T: Trait> Module<T> {
 		};
 
 		Self::_ensure_trader_safe(who, Some(position.clone()), None)?;
-		Self::_ensure_pool_safe(pool, Some(position.clone()))?;
+		Self::_ensure_pool_safe(pool, Some(position.clone()), None)?;
 
 		Self::_insert_position(who, pool, pair, position)?;
 
@@ -400,7 +415,7 @@ impl<T: Trait> Module<T> {
 
 	fn _liquidity_pool_margin_call(pool: LiquidityPoolId) -> DispatchResult {
 		if !MarginCalledPools::contains_key(pool) {
-			if Self::_ensure_pool_safe(pool, None).is_err() {
+			if Self::_ensure_pool_safe(pool, None, None).is_err() {
 				MarginCalledPools::insert(pool, ());
 			} else {
 				return Err(Error::<T>::SafePool.into());
@@ -411,7 +426,7 @@ impl<T: Trait> Module<T> {
 
 	fn _liquidity_pool_become_safe(pool: LiquidityPoolId) -> DispatchResult {
 		if MarginCalledPools::contains_key(pool) {
-			if Self::_ensure_pool_safe(pool, None).is_ok() {
+			if Self::_ensure_pool_safe(pool, None, None).is_ok() {
 				MarginCalledPools::remove(pool);
 			} else {
 				return Err(Error::<T>::UnsafePool.into());
@@ -421,7 +436,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _liquidity_pool_liquidate(pool: LiquidityPoolId) -> DispatchResult {
-		let (enp, ell) = Self::_enp_and_ell(pool, None)?;
+		let (enp, ell) = Self::_enp_and_ell(pool, None, None)?;
 		let need_liquidate = enp <= Self::liquidity_pool_enp_threshold().stop_out.into()
 			|| ell <= Self::liquidity_pool_ell_threshold().stop_out.into();
 		if !need_liquidate {
@@ -435,7 +450,7 @@ impl<T: Trait> Module<T> {
 			});
 		});
 
-		if Self::_ensure_pool_safe(pool, None).is_ok() && MarginCalledPools::contains_key(pool) {
+		if Self::_ensure_pool_safe(pool, None, None).is_ok() && MarginCalledPools::contains_key(pool) {
 			MarginCalledPools::remove(pool);
 		}
 		Ok(())
@@ -704,15 +719,22 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// ENP and ELL. If `new_position` is `None`, return the ENP & ELL based on current positions,
-	/// else based on current positions plus this new one.
+	/// else based on current positions plus this new one. If `equity_delta` is `None`, return
+	/// the ENP & ELL based on current equity of pool, else based on current equity of pool plus
+	/// the `equity_delta`.
 	///
 	/// ENP - Equity to Net Position ratio of a liquidity pool.
 	/// ELL - Equity to Longest Leg ratio of a liquidity pool.
 	fn _enp_and_ell(
 		pool: LiquidityPoolId,
 		new_position: Option<Position<T>>,
+		equity_delta: Option<Fixed128>,
 	) -> result::Result<(Fixed128, Fixed128), DispatchError> {
-		let equity = Self::_equity_of_pool(pool)?;
+		let mut equity = Self::_equity_of_pool(pool)?;
+		if let Some(e) = equity_delta {
+			equity = equity.checked_add(&e).ok_or(Error::<T>::NumOutOfBound)?;
+		}
+
 		let (net, positive, non_positive) = PositionsByPool::iter_prefix(pool)
 			.flatten()
 			.filter_map(|position_id| Self::positions(position_id))
@@ -759,13 +781,17 @@ impl<T: Trait> Module<T> {
 	/// Ensure a liquidity pool is safe, based on opened positions, or plus a new one to open.
 	///
 	/// Return `Ok` if ensured safe, or `Err` if not.
-	fn _ensure_pool_safe(pool: LiquidityPoolId, new_position: Option<Position<T>>) -> DispatchResult {
-		let has_new = new_position.is_some();
-		let (enp, ell) = Self::_enp_and_ell(pool, new_position)?;
+	fn _ensure_pool_safe(
+		pool: LiquidityPoolId,
+		new_position: Option<Position<T>>,
+		equity_delta: Option<Fixed128>,
+	) -> DispatchResult {
+		let has_change = new_position.is_some() || equity_delta.is_some();
+		let (enp, ell) = Self::_enp_and_ell(pool, new_position, equity_delta)?;
 		let not_safe = enp <= Self::liquidity_pool_enp_threshold().margin_call.into()
 			|| ell <= Self::liquidity_pool_ell_threshold().margin_call.into();
 		if not_safe {
-			let err = if has_new {
+			let err = if has_change {
 				Error::<T>::PoolWouldBeUnsafe
 			} else {
 				Error::<T>::UnsafePool
@@ -807,7 +833,7 @@ impl<T: Trait> Module<T> {
 		Self::_close_position(&position.owner, position_id, None)?;
 
 		<T::LiquidityPools as LiquidityPools<T::AccountId>>::withdraw_liquidity(
-			&T::TreasuryAccount::get(),
+			&T::Treasury::account_id(),
 			position.pool,
 			u128_from_fixed_128(profit_in_usd),
 		)
@@ -822,5 +848,289 @@ impl<T: Trait> LiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
 
 	fn get_required_deposit(pool: LiquidityPoolId) -> Balance {
 		unimplemented!()
+	}
+
+	fn ensure_can_withdrawal(pool: LiquidityPoolId, amount: Balance) -> DispatchResult {
+		let equity_delta = Fixed128::zero()
+			.checked_sub(&fixed_128_from_u128(amount))
+			.expect("negation; qed");
+		Self::_ensure_pool_safe(pool, None, Some(equity_delta))
+	}
+}
+
+/// Error which may occur while executing the off-chain code.
+#[cfg_attr(test, derive(PartialEq))]
+enum OffchainErr {
+	FailedToAcquireLock,
+	SubmitTransaction,
+	NotValidator,
+	LockStillInLocked,
+	CheckFail,
+}
+
+// constant for offchain worker
+const LOCK_EXPIRE_DURATION: u64 = 60_000; // 60 sec
+const LOCK_UPDATE_DURATION: u64 = 40_000; // 40 sec
+const DB_PREFIX: &[u8] = b"laminar/margin-protocol-offchain-worker/";
+
+impl sp_std::fmt::Debug for OffchainErr {
+	fn fmt(&self, fmt: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
+		match *self {
+			OffchainErr::FailedToAcquireLock => write!(fmt, "Failed to acquire lock"),
+			OffchainErr::SubmitTransaction => write!(fmt, "Failed to submit transaction"),
+			OffchainErr::NotValidator => write!(fmt, "Not validator"),
+			OffchainErr::LockStillInLocked => write!(fmt, "Lock is still in locked"),
+			OffchainErr::CheckFail => write!(fmt, "Check fail"),
+		}
+	}
+}
+
+impl<T: Trait> Module<T> {
+	/// Get a list of traders
+	fn _get_traders() -> Vec<T::AccountId> {
+		let mut traders: Vec<T::AccountId> = <Positions<T>>::iter().map(|x| x.owner).collect();
+		traders.sort();
+		traders.dedup();
+		traders
+	}
+
+	/// Get a list of pools
+	fn _get_pools() -> Vec<LiquidityPoolId> {
+		let mut pools: Vec<LiquidityPoolId> = <Positions<T>>::iter().map(|x| x.pool).collect();
+		pools.sort();
+		pools.dedup();
+		pools
+	}
+
+	fn _offchain_worker(_block_number: T::BlockNumber) -> Result<(), OffchainErr> {
+		// check if we are a potential validator
+		if !sp_io::offchain::is_validator() {
+			return Err(OffchainErr::NotValidator);
+		}
+
+		// Acquire offchain worker lock.
+		// If succeeded, update the lock, otherwise return error
+		let _ = Self::_acquire_offchain_worker_lock()?;
+
+		let (stop_out, margin_call, safe) = Self::_check_all_traders()?;
+
+		for trader in stop_out {
+			let who = T::Lookup::unlookup(trader);
+			let call = Call::<T>::trader_liquidate(who);
+			T::SubmitTransaction::submit_unsigned(call).map_err(|_| OffchainErr::SubmitTransaction)?;
+		}
+
+		for trader in margin_call {
+			if !Self::_is_trader_margin_called(&trader) {
+				let who = T::Lookup::unlookup(trader);
+				let call = Call::<T>::trader_margin_call(who);
+				T::SubmitTransaction::submit_unsigned(call).map_err(|_| OffchainErr::SubmitTransaction)?;
+			}
+		}
+
+		for trader in safe {
+			if Self::_is_trader_margin_called(&trader) {
+				let who = T::Lookup::unlookup(trader);
+				let call = Call::<T>::trader_become_safe(who);
+				T::SubmitTransaction::submit_unsigned(call).map_err(|_| OffchainErr::SubmitTransaction)?;
+			}
+		}
+
+		Self::_extend_offchain_worker_lock_if_needed();
+
+		let (stop_out, margin_call, safe) = Self::_check_all_pools()?;
+
+		for pool_id in stop_out {
+			let call = Call::<T>::liquidity_pool_liquidate(pool_id);
+			T::SubmitTransaction::submit_unsigned(call).map_err(|_| OffchainErr::SubmitTransaction)?;
+		}
+
+		for pool_id in margin_call {
+			if !Self::_is_pool_margin_called(&pool_id) {
+				let call = Call::<T>::liquidity_pool_margin_call(pool_id);
+				T::SubmitTransaction::submit_unsigned(call).map_err(|_| OffchainErr::SubmitTransaction)?;
+			}
+		}
+
+		for pool_id in safe {
+			if Self::_is_pool_margin_called(&pool_id) {
+				let call = Call::<T>::liquidity_pool_become_safe(pool_id);
+				T::SubmitTransaction::submit_unsigned(call).map_err(|_| OffchainErr::SubmitTransaction)?;
+			}
+		}
+
+		Self::_release_offchain_worker_lock();
+		Ok(())
+	}
+
+	fn _is_trader_margin_called(who: &T::AccountId) -> bool {
+		<MarginCalledTraders<T>>::contains_key(&who)
+	}
+
+	fn _is_pool_margin_called(pool_id: &LiquidityPoolId) -> bool {
+		MarginCalledPools::contains_key(pool_id)
+	}
+
+	fn _check_all_traders() -> Result<(Vec<T::AccountId>, Vec<T::AccountId>, Vec<T::AccountId>), OffchainErr> {
+		let mut stop_out: Vec<T::AccountId> = vec![];
+		let mut margin_call: Vec<T::AccountId> = vec![];
+		let mut safe: Vec<T::AccountId> = vec![];
+
+		let threshold = Self::trader_risk_threshold();
+
+		for trader in Self::_get_traders() {
+			let margin_level = Self::_margin_level(&trader, None, None).map_err(|_| OffchainErr::CheckFail)?;
+			if margin_level <= threshold.stop_out.into() {
+				stop_out.push(trader);
+			} else if margin_level <= threshold.margin_call.into() {
+				margin_call.push(trader);
+			} else {
+				safe.push(trader);
+			}
+		}
+
+		Ok((stop_out, margin_call, safe))
+	}
+
+	fn _check_all_pools() -> Result<(Vec<LiquidityPoolId>, Vec<LiquidityPoolId>, Vec<LiquidityPoolId>), OffchainErr> {
+		let mut stop_out: Vec<LiquidityPoolId> = vec![];
+		let mut margin_call: Vec<LiquidityPoolId> = vec![];
+		let mut safe: Vec<LiquidityPoolId> = vec![];
+
+		let enp_threshold = Self::liquidity_pool_enp_threshold();
+		let ell_threshold = Self::liquidity_pool_ell_threshold();
+
+		for pool_id in Self::_get_pools() {
+			let (enp, ell) = Self::_enp_and_ell(pool_id, None, None).map_err(|_| OffchainErr::CheckFail)?;
+			if enp <= enp_threshold.stop_out.into() || ell <= ell_threshold.stop_out.into() {
+				stop_out.push(pool_id);
+			} else if enp <= enp_threshold.margin_call.into() || ell <= ell_threshold.margin_call.into() {
+				margin_call.push(pool_id);
+			} else {
+				safe.push(pool_id);
+			}
+		}
+
+		Ok((stop_out, margin_call, safe))
+	}
+
+	fn _acquire_offchain_worker_lock() -> Result<Timestamp, OffchainErr> {
+		let storage_key = DB_PREFIX.to_vec();
+		let storage = StorageValueRef::persistent(&storage_key);
+
+		let acquire_lock = storage.mutate(|lock: Option<Option<Timestamp>>| {
+			let now = sp_io::offchain::timestamp();
+			match lock {
+				None => {
+					let expire_timestamp = now.add(Duration::from_millis(LOCK_EXPIRE_DURATION));
+					Ok(expire_timestamp)
+				}
+				Some(Some(expire_timestamp)) if now >= expire_timestamp => {
+					let expire_timestamp = now.add(Duration::from_millis(LOCK_EXPIRE_DURATION));
+					Ok(expire_timestamp)
+				}
+				_ => Err(OffchainErr::LockStillInLocked),
+			}
+		})?;
+
+		acquire_lock.map_err(|_| OffchainErr::FailedToAcquireLock)
+	}
+
+	fn _release_offchain_worker_lock() {
+		let storage_key = DB_PREFIX.to_vec();
+		let storage = StorageValueRef::persistent(&storage_key);
+		let now = sp_io::offchain::timestamp();
+		storage.set(&now);
+	}
+
+	fn _extend_offchain_worker_lock_if_needed() {
+		let storage_key = DB_PREFIX.to_vec();
+		let storage = StorageValueRef::persistent(&storage_key);
+
+		if let Some(Some(current_expire)) = storage.get::<Timestamp>() {
+			if current_expire <= sp_io::offchain::timestamp().add(Duration::from_millis(LOCK_UPDATE_DURATION)) {
+				let future_expire = sp_io::offchain::timestamp().add(Duration::from_millis(LOCK_EXPIRE_DURATION));
+				storage.set(&future_expire);
+			}
+		}
+	}
+}
+
+#[allow(deprecated)]
+impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
+	type Call = Call<T>;
+
+	fn validate_unsigned(call: &Self::Call) -> TransactionValidity {
+		match call {
+			Call::trader_margin_call(who) => {
+				let trader = T::Lookup::lookup(who.clone()).expect(InvalidTransaction::Call.into());
+				if Self::_is_trader_margin_called(&trader) {
+					return InvalidTransaction::Stale.into();
+				}
+
+				Ok(ValidTransaction {
+					priority: TransactionPriority::max_value(),
+					requires: vec![],
+					provides: vec![(<system::Module<T>>::block_number(), who).encode()],
+					longevity: 64_u64,
+					propagate: true,
+				})
+			}
+			Call::trader_become_safe(who) => {
+				let trader = T::Lookup::lookup(who.clone()).expect(InvalidTransaction::Call.into());
+				if !Self::_is_trader_margin_called(&trader) {
+					return InvalidTransaction::Stale.into();
+				}
+
+				Ok(ValidTransaction {
+					priority: TransactionPriority::max_value(),
+					requires: vec![],
+					provides: vec![(<system::Module<T>>::block_number(), who).encode()],
+					longevity: 64_u64,
+					propagate: true,
+				})
+			}
+			Call::trader_liquidate(who) => Ok(ValidTransaction {
+				priority: TransactionPriority::max_value(),
+				requires: vec![],
+				provides: vec![(<system::Module<T>>::block_number(), who).encode()],
+				longevity: 64_u64,
+				propagate: true,
+			}),
+			Call::liquidity_pool_margin_call(pool_id) => {
+				if Self::_is_pool_margin_called(pool_id) {
+					return InvalidTransaction::Stale.into();
+				}
+
+				Ok(ValidTransaction {
+					priority: TransactionPriority::max_value(),
+					requires: vec![],
+					provides: vec![(<system::Module<T>>::block_number(), pool_id).encode()],
+					longevity: 64_u64,
+					propagate: true,
+				})
+			}
+			Call::liquidity_pool_become_safe(pool_id) => {
+				if !Self::_is_pool_margin_called(pool_id) {
+					return InvalidTransaction::Stale.into();
+				}
+
+				Ok(ValidTransaction {
+					priority: TransactionPriority::max_value(),
+					requires: vec![],
+					provides: vec![(<system::Module<T>>::block_number(), pool_id).encode()],
+					longevity: 64_u64,
+					propagate: true,
+				})
+			}
+			Call::liquidity_pool_liquidate(pool_id) => Ok(ValidTransaction {
+				priority: TransactionPriority::max_value(),
+				requires: vec![],
+				provides: vec![(<system::Module<T>>::block_number(), pool_id).encode()],
+				longevity: 64_u64,
+				propagate: true,
+			}),
+			_ => InvalidTransaction::Call.into(),
+		}
 	}
 }

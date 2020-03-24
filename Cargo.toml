@@ -53,6 +53,7 @@ sp-runtime = { version = "2.0.0-alpha.3" }
 sp-transaction-pool = { version = "2.0.0-alpha.3" }
 substrate-frame-rpc-system = { version = "2.0.0-alpha.3" }
 
+margin-protocol = { package = "module-margin-protocol", path = "modules/margin-protocol"}
 orml-oracle-rpc = { path = "orml/oracle/rpc" }
 orml-utilities = { path = "orml/utilities" }
 runtime = { package = "laminar-runtime", path = "runtime" }

@@ -3,6 +3,7 @@
 use super::*;
 
 use frame_support::{impl_outer_origin, ord_parameter_types, parameter_types, weights::Weight};
+use orml_traits::PriceProvider;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -87,13 +88,15 @@ impl orml_tokens::Trait for Runtime {
 }
 
 pub struct PoolManager;
-
 impl LiquidityPoolManager<LiquidityPoolId, Balance> for PoolManager {
 	fn can_remove(_pool_id: LiquidityPoolId) -> bool {
 		true
 	}
 	fn get_required_deposit(_pool: LiquidityPoolId) -> Balance {
 		unimplemented!()
+	}
+	fn ensure_can_withdrawal(_pool: LiquidityPoolId, _amount: Balance) -> DispatchResult {
+		Ok(())
 	}
 }
 

@@ -1,8 +1,9 @@
 use hex_literal::hex;
+use margin_protocol::RiskThreshold;
 use runtime::{
 	opaque::Block, opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, CurrencyId,
 	FinancialCouncilMembershipConfig, GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, IndicesConfig,
-	OperatorMembershipConfig, SessionConfig, Signature, StakerStatus, StakingConfig, SudoConfig,
+	MarginProtocolConfig, OperatorMembershipConfig, SessionConfig, Signature, StakerStatus, StakingConfig, SudoConfig,
 	SyntheticLiquidityPoolsConfig, SystemConfig, TokensConfig, WASM_BINARY,
 };
 use sc_chain_spec::ChainSpecExtension;
@@ -283,6 +284,21 @@ fn dev_genesis(
 		synthetic_liquidity_pools: Some(SyntheticLiquidityPoolsConfig {
 			min_additional_collateral_ratio: Permill::from_percent(10), // default min additional collateral ratio
 		}),
+		// TODO: update thresholds
+		margin_protocol: Some(MarginProtocolConfig {
+			trader_risk_threshold: RiskThreshold {
+				margin_call: Permill::from_percent(3),
+				stop_out: Permill::from_percent(1),
+			},
+			liquidity_pool_enp_threshold: RiskThreshold {
+				margin_call: Permill::from_percent(30),
+				stop_out: Permill::from_percent(10),
+			},
+			liquidity_pool_ell_threshold: RiskThreshold {
+				margin_call: Permill::from_percent(30),
+				stop_out: Permill::from_percent(10),
+			},
+		}),
 	}
 }
 
@@ -356,6 +372,21 @@ fn testnet_genesis(
 		}),
 		synthetic_liquidity_pools: Some(SyntheticLiquidityPoolsConfig {
 			min_additional_collateral_ratio: Permill::from_percent(10), // default min additional collateral ratio
+		}),
+		// TODO: update thresholds
+		margin_protocol: Some(MarginProtocolConfig {
+			trader_risk_threshold: RiskThreshold {
+				margin_call: Permill::from_percent(3),
+				stop_out: Permill::from_percent(1),
+			},
+			liquidity_pool_enp_threshold: RiskThreshold {
+				margin_call: Permill::from_percent(30),
+				stop_out: Permill::from_percent(10),
+			},
+			liquidity_pool_ell_threshold: RiskThreshold {
+				margin_call: Permill::from_percent(30),
+				stop_out: Permill::from_percent(10),
+			},
 		}),
 	}
 }
