@@ -95,7 +95,7 @@ impl LiquidityPoolManager<LiquidityPoolId, Balance> for PoolManager {
 	fn get_required_deposit(_pool: LiquidityPoolId) -> Balance {
 		unimplemented!()
 	}
-	fn ensure_can_withdrawal(_pool: LiquidityPoolId, _amount: Balance) -> DispatchResult {
+	fn ensure_can_withdraw(_pool: LiquidityPoolId, _amount: Balance) -> DispatchResult {
 		unimplemented!()
 	}
 }

@@ -261,7 +261,7 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 
 	fn ensure_liquidity(pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
 		ensure!(Self::balances(&pool_id) >= amount, Error::<T>::CannotWithdrawAmount);
-		T::PoolManager::ensure_can_withdrawal(pool_id, amount)
+		T::PoolManager::ensure_can_withdraw(pool_id, amount)
 	}
 
 	fn is_owner(pool_id: Self::LiquidityPoolId, who: &T::AccountId) -> bool {

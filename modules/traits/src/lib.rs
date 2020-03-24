@@ -30,7 +30,7 @@ pub trait LiquidityPools<AccountId> {
 pub trait LiquidityPoolManager<LiquidityPoolId, Balance> {
 	fn can_remove(pool_id: LiquidityPoolId) -> bool;
 	fn get_required_deposit(pool_id: LiquidityPoolId) -> Balance;
-	fn ensure_can_withdrawal(pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult;
+	fn ensure_can_withdraw(pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult;
 }
 
 pub trait SyntheticProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
@@ -56,6 +56,6 @@ pub trait MarginProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
 	) -> bool;
 }
 
-pub trait LaminarTreasry<AccountId> {
+pub trait Treasry<AccountId> {
 	fn account_id() -> AccountId;
 }

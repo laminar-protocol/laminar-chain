@@ -211,7 +211,7 @@ impl<T: Trait> LiquidityPoolManager<T::LiquidityPoolId, T::Balance> for Module<T
 		unimplemented!()
 	}
 
-	fn ensure_can_withdrawal(_pool: T::LiquidityPoolId, _amount: T::Balance) -> DispatchResult {
+	fn ensure_can_withdraw(_pool: T::LiquidityPoolId, _amount: T::Balance) -> DispatchResult {
 		unimplemented!()
 	}
 }

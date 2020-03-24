@@ -24,7 +24,7 @@ use primitives::{
 	Balance, CurrencyId, Leverage, LiquidityPoolId, Price, TradingPair,
 };
 use sp_std::{cmp, prelude::*, result};
-use traits::{LaminarTreasry, LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools};
+use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools, Treasry};
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -45,7 +45,7 @@ pub trait Trait: frame_system::Trait {
 		TradingPair = TradingPair,
 	>;
 	type PriceProvider: PriceProvider<CurrencyId, Price>;
-	type Treasury: LaminarTreasry<Self::AccountId>;
+	type Treasury: Treasry<Self::AccountId>;
 	type SubmitTransaction: SubmitUnsignedTransaction<Self, <Self as Trait>::Call>;
 	type Call: From<Call<Self>> + IsSubType<Module<Self>, Self>;
 }
@@ -129,6 +129,7 @@ decl_error! {
 	pub enum Error for Module<T: Trait> {
 		NoPrice,
 		NoAskSpread,
+		NoBidSpread,
 		MarketPriceTooHigh,
 		MarketPriceTooLow,
 		NumOutOfBound,
@@ -414,14 +415,7 @@ impl<T: Trait> Module<T> {
 		// Close position as much as possible
 		<PositionsByTrader<T>>::iter_prefix(who).for_each(|trading_pair_position_ids| {
 			trading_pair_position_ids.iter().for_each(|position_id| {
-				if let Err(err) = Self::_close_position(who, *position_id, None) {
-					debug::native::trace!(
-						target: TAG,
-						"Trader liquidate failed. [position_id = {:?}, err = {:?}]",
-						position_id,
-						err
-					);
-				}
+				let _ = Self::_close_position(who, *position_id, None);
 			})
 		});
 
@@ -455,22 +449,15 @@ impl<T: Trait> Module<T> {
 
 	fn _liquidity_pool_liquidate(pool: LiquidityPoolId) -> DispatchResult {
 		let (enp, ell) = Self::_enp_and_ell(pool, None, None)?;
-		let need_liquidate = enp <= Self::liquidity_pool_enp_threshold().stop_out.into()
+		let need_liquidating = enp <= Self::liquidity_pool_enp_threshold().stop_out.into()
 			|| ell <= Self::liquidity_pool_ell_threshold().stop_out.into();
-		if !need_liquidate {
+		if !need_liquidating {
 			return Err(Error::<T>::NotReachedRiskThreshold.into());
 		}
 
 		PositionsByPool::iter_prefix(pool).for_each(|trading_pair_position_ids| {
 			trading_pair_position_ids.iter().for_each(|position_id| {
-				if let Err(err) = Self::_pool_liquidate(pool, *position_id) {
-					debug::native::trace!(
-						target: TAG,
-						"Pool liquidate failed. [position_id = {:?}, err = {:?}]",
-						position_id,
-						err
-					);
-				}
+				let _ = Self::_liquidity_pool_close_position(pool, *position_id);
 			});
 		});
 
@@ -536,7 +523,7 @@ impl<T: Trait> Module<T> {
 	fn _bid_price(pool: LiquidityPoolId, pair: TradingPair, min: Option<Price>) -> Fixed128Result {
 		let price = Self::_price(pair.base, pair.quote)?;
 		let spread: Price = T::LiquidityPools::get_bid_spread(pool, pair)
-			.ok_or(Error::<T>::NoAskSpread)?
+			.ok_or(Error::<T>::NoBidSpread)?
 			.into();
 		let bid_price = Price::from_natural(1).saturating_sub(spread).saturating_mul(price);
 		if let Some(m) = min {
@@ -829,14 +816,14 @@ impl<T: Trait> Module<T> {
 	/// Force closure position to liquidate liquidity pool based on opened positions.
 	///
 	/// Return `Ok` if closure success, or `Err` if not.
-	fn _pool_liquidate(pool: LiquidityPoolId, position_id: PositionId) -> DispatchResult {
+	fn _liquidity_pool_close_position(pool: LiquidityPoolId, position_id: PositionId) -> DispatchResult {
 		let position = Self::positions(position_id).ok_or(Error::<T>::PositionNotFound)?;
 
 		let price = Self::_price(position.pair.base, position.pair.quote)?;
 		let spread = {
 			if position.leverage.is_long() {
 				T::LiquidityPools::get_bid_spread(pool, position.pair)
-					.ok_or(Error::<T>::NoAskSpread)?
+					.ok_or(Error::<T>::NoBidSpread)?
 					.into()
 			} else {
 				T::LiquidityPools::get_ask_spread(pool, position.pair)
@@ -845,25 +832,30 @@ impl<T: Trait> Module<T> {
 			}
 		};
 
-		// Profit from spread + penalty
-		let price_spread = fixed_128_from_fixed_u128(price)
-			.saturating_mul(spread)
-			.saturating_mul(Fixed128::from_parts(2));
-
 		let spread_profit = position
 			.leveraged_held
-			.checked_mul(&price_spread)
+			.checked_mul(&fixed_128_from_fixed_u128(price).saturating_mul(spread))
 			.ok_or(Error::<T>::NumOutOfBound)?;
 
-		let profit_in_usd = Self::_usd_value(position.pair.base, spread_profit)?;
+		let spread_profit_in_usd = Self::_usd_value(position.pair.base, spread_profit)?;
+		let penalty = spread_profit_in_usd;
+		let sub_amount = spread_profit_in_usd
+			.checked_add(&penalty)
+			.ok_or(Error::<T>::NumOutOfBound)?;
 
 		Self::_close_position(&position.owner, position_id, None)?;
 
+		let realized = cmp::min(
+			<T::LiquidityPools as LiquidityPools<T::AccountId>>::liquidity(position.pool),
+			u128_from_fixed_128(sub_amount),
+		);
 		<T::LiquidityPools as LiquidityPools<T::AccountId>>::withdraw_liquidity(
-			&T::Treasury::account_id(),
+			&Self::account_id(),
 			position.pool,
-			u128_from_fixed_128(profit_in_usd),
-		)
+			realized,
+		)?;
+		<Balances<T>>::mutate(T::Treasury::account_id(), |b| *b += realized);
+		Ok(())
 	}
 }
 
@@ -877,7 +869,7 @@ impl<T: Trait> LiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
 		unimplemented!()
 	}
 
-	fn ensure_can_withdrawal(pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
+	fn ensure_can_withdraw(pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
 		let equity_delta = Fixed128::zero()
 			.checked_sub(&fixed_128_from_u128(amount))
 			.expect("negation; qed");
