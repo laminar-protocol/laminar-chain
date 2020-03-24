@@ -942,7 +942,7 @@ fn liquidity_pool_liquidate_works() {
 				balance_from_natural_currency_cent(0)
 			);
 			assert_eq!(
-				MarginProtocol::balances(TreasuryAccount),
+				MarginProtocol::balances(TREASURY_ACCOUNT),
 				balance_from_natural_currency_cent(300_00)
 			);
 		});

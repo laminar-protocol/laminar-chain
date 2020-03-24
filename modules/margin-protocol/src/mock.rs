@@ -225,7 +225,7 @@ impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
 pub struct Treasury;
 impl Treasry<AccountId> for Treasury {
 	fn account_id() -> AccountId {
-		TreasuryAccount
+		TREASURY_ACCOUNT
 	}
 }
 
@@ -245,7 +245,7 @@ pub type MarginProtocol = Module<Runtime>;
 
 pub const ALICE: AccountId = 0;
 pub const BOB: AccountId = 1;
-pub const TreasuryAccount: AccountId = 200;
+pub const TREASURY_ACCOUNT: AccountId = 200;
 pub const MOCK_POOL: LiquidityPoolId = 100;
 
 pub struct ExtBuilder {
