@@ -24,7 +24,7 @@ use primitives::{
 	Balance, CurrencyId, Leverage, LiquidityPoolId, Price, TradingPair,
 };
 use sp_std::{cmp, prelude::*, result};
-use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools, Treasry};
+use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools, Treasury};
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -45,7 +45,7 @@ pub trait Trait: frame_system::Trait {
 		TradingPair = TradingPair,
 	>;
 	type PriceProvider: PriceProvider<CurrencyId, Price>;
-	type Treasury: Treasry<Self::AccountId>;
+	type Treasury: Treasury<Self::AccountId>;
 	type SubmitTransaction: SubmitUnsignedTransaction<Self, <Self as Trait>::Call>;
 	type Call: From<Call<Self>> + IsSubType<Module<Self>, Self>;
 }
@@ -222,7 +222,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::LiquidityPoolBecameSafe(pool));
 		}
 
-		pub fn liquidity_pool_liquidate(_origin, pool: LiquidityPoolId) {
+		pub fn liquidity_pool_liquidate(origin, pool: LiquidityPoolId) {
 			ensure_none(origin)?;
 			Self::_liquidity_pool_liquidate(pool)?;
 			Self::deposit_event(RawEvent::LiquidityPoolLiquidated(pool));
@@ -848,6 +848,7 @@ impl<T: Trait> Module<T> {
 
 		let spread_profit = position
 			.leveraged_held
+			.saturating_abs()
 			.checked_mul(&fixed_128_from_fixed_u128(price).saturating_mul(spread))
 			.ok_or(Error::<T>::NumOutOfBound)?;
 
@@ -864,11 +865,11 @@ impl<T: Trait> Module<T> {
 			u128_from_fixed_128(sub_amount),
 		);
 		<T::LiquidityPools as LiquidityPools<T::AccountId>>::withdraw_liquidity(
-			&Self::account_id(),
+			&T::Treasury::account_id(),
 			position.pool,
 			realized,
 		)?;
-		<Balances<T>>::mutate(T::Treasury::account_id(), |b| *b += realized);
+
 		Ok(())
 	}
 }

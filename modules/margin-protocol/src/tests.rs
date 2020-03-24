@@ -908,7 +908,7 @@ fn liquidity_pool_liquidate_works() {
 
 			// ENP 100% > 99%, ELL 100% > 99%, safe
 			assert_noop!(
-				MarginProtocol::liquidity_pool_liquidate(Origin::signed(BOB), MOCK_POOL),
+				MarginProtocol::liquidity_pool_liquidate(Origin::NONE, MOCK_POOL),
 				Error::<Runtime>::NotReachedRiskThreshold
 			);
 
@@ -917,7 +917,8 @@ fn liquidity_pool_liquidate_works() {
 			// So liquidity remain 300. Total penalty is 200*2 = 400.
 			MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(2, 1)));
 			// ENP 50% < 99%, unsafe
-			assert_ok!(MarginProtocol::liquidity_pool_liquidate(Origin::signed(BOB), MOCK_POOL));
+			assert_ok!(MarginProtocol::liquidity_pool_liquidate(Origin::NONE, MOCK_POOL));
+
 			let event = TestEvent::margin_protocol(RawEvent::LiquidityPoolLiquidated(MOCK_POOL));
 			assert!(System::events().iter().any(|record| record.event == event));
 
@@ -930,7 +931,7 @@ fn liquidity_pool_liquidate_works() {
 				balance_from_natural_currency_cent(0)
 			);
 			assert_eq!(
-				MarginProtocol::balances(TREASURY_ACCOUNT),
+				OrmlTokens::total_balance(CurrencyId::AUSD, &TREASURY_ACCOUNT),
 				balance_from_natural_currency_cent(300_00)
 			);
 		});
