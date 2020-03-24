@@ -27,7 +27,7 @@ pub struct MarginLiquidityPoolOption {
 
 const MODULE_ID: ModuleId = ModuleId(*b"lami/mlp");
 
-pub trait Trait: system::Trait + margin_protocol::Trait {
+pub trait Trait: frame_system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
 	type LiquidityCurrency: BasicCurrency<Self::AccountId, Balance = Balance>;
@@ -262,7 +262,7 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 
 	fn ensure_liquidity(pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
 		ensure!(Self::balances(&pool_id) >= amount, Error::<T>::CannotWithdrawAmount);
-		margin_protocol::Module::<T>::ensure_pool_safe_after_withdrawal(pool_id.into(), amount)
+		T::PoolManager::ensure_pool_safe_after_withdrawal(pool_id, amount)
 	}
 
 	fn is_owner(pool_id: Self::LiquidityPoolId, who: &T::AccountId) -> bool {

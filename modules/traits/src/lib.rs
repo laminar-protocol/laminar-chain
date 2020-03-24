@@ -28,8 +28,9 @@ pub trait LiquidityPools<AccountId> {
 }
 
 pub trait LiquidityPoolManager<LiquidityPoolId, Balance> {
-	fn can_remove(pool: LiquidityPoolId) -> bool;
-	fn get_required_deposit(pool: LiquidityPoolId) -> Balance;
+	fn can_remove(pool_id: LiquidityPoolId) -> bool;
+	fn get_required_deposit(pool_id: LiquidityPoolId) -> Balance;
+	fn ensure_pool_safe_after_withdrawal(pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult;
 }
 
 pub trait SyntheticProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
