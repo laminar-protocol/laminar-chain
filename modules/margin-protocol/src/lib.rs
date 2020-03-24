@@ -8,7 +8,7 @@ use sp_arithmetic::{
 };
 use sp_runtime::{
 	offchain::{storage::StorageValueRef, Duration, Timestamp},
-	traits::{AccountIdConversion, StaticLookup},
+	traits::{AccountIdConversion, StaticLookup, UniqueSaturatedInto},
 	transaction_validity::{InvalidTransaction, TransactionPriority, TransactionValidity, ValidTransaction},
 	DispatchError, DispatchResult, ModuleId, RuntimeDebug,
 };
@@ -218,13 +218,25 @@ decl_module! {
 
 
 		fn offchain_worker(block_number: T::BlockNumber) {
-			if let Err(e) = Self::_offchain_worker(block_number) {
-				debug::info!(
-					target: "margin-protocol offchain worker",
-					"cannot run offchain worker at {:?}: {:?}",
-					block_number,
-					e,
-				);
+			if let Err(error) = Self::_offchain_worker(block_number) {
+				match error {
+					OffchainErr::NotValidator | OffchainErr::FailedToAcquireLock => {
+						debug::native::info!(
+							target: TAG,
+							"{:?} [block_number = {:?}]",
+							error,
+							block_number,
+						);
+					},
+					_ => {
+						debug::native::error!(
+							target: TAG,
+							"{:?} [block_number = {:?}]",
+							error,
+							block_number,
+						);
+					}
+				};
 			}
 		}
 	}
@@ -776,13 +788,6 @@ impl<T: Trait> Module<T> {
 			Ok(())
 		}
 	}
-
-	pub fn ensure_pool_safe_after_withdrawal(pool: LiquidityPoolId, amount: Balance) -> DispatchResult {
-		let equity_delta = Fixed128::zero()
-			.checked_sub(&fixed_128_from_u128(amount))
-			.expect("negation; qed");
-		Self::_ensure_pool_safe(pool, None, Some(equity_delta))
-	}
 }
 
 //TODO: implementations, prevent open new position for margin called pools
@@ -793,8 +798,13 @@ impl<T: Trait> LiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
 	}
 
 	/// Required deposit to make pool safe.
-	fn get_required_deposit(pool: LiquidityPoolId) -> Balance {
-		unimplemented!()
+	fn get_required_deposit(pool: LiquidityPoolId) -> Balance {}
+
+	fn ensure_pool_safe_after_withdrawal(pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
+		let equity_delta = Fixed128::zero()
+			.checked_sub(&fixed_128_from_u128(amount))
+			.expect("negation; qed");
+		Self::_ensure_pool_safe(pool_id, None, Some(equity_delta))
 	}
 }
 
@@ -812,6 +822,7 @@ enum OffchainErr {
 const LOCK_EXPIRE_DURATION: u64 = 60_000; // 60 sec
 const LOCK_UPDATE_DURATION: u64 = 40_000; // 40 sec
 const DB_PREFIX: &[u8] = b"laminar/margin-protocol-offchain-worker/";
+const TAG: &str = "MARGIN_PROTOCOL_OFFCHAIN_WORKER";
 
 impl sp_std::fmt::Debug for OffchainErr {
 	fn fmt(&self, fmt: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
@@ -828,21 +839,23 @@ impl sp_std::fmt::Debug for OffchainErr {
 impl<T: Trait> Module<T> {
 	/// Get a list of traders
 	fn _get_traders() -> Vec<T::AccountId> {
+		// TODO: use key iter after this gets closed https://github.com/paritytech/substrate/issues/5319
 		let mut traders: Vec<T::AccountId> = <Positions<T>>::iter().map(|x| x.owner).collect();
 		traders.sort();
-		traders.dedup();
+		traders.dedup(); // dedup works as unique for sorted vec, so we sort first
 		traders
 	}
 
 	/// Get a list of pools
 	fn _get_pools() -> Vec<LiquidityPoolId> {
+		// TODO: use key iter after this gets closed https://github.com/paritytech/substrate/issues/5319
 		let mut pools: Vec<LiquidityPoolId> = <Positions<T>>::iter().map(|x| x.pool).collect();
 		pools.sort();
-		pools.dedup();
+		pools.dedup(); // dedup works as unique for sorted vec, so we sort first
 		pools
 	}
 
-	fn _offchain_worker(_block_number: T::BlockNumber) -> Result<(), OffchainErr> {
+	fn _offchain_worker(block_number: T::BlockNumber) -> Result<(), OffchainErr> {
 		// check if we are a potential validator
 		if !sp_io::offchain::is_validator() {
 			return Err(OffchainErr::NotValidator);
@@ -852,27 +865,47 @@ impl<T: Trait> Module<T> {
 		// If succeeded, update the lock, otherwise return error
 		let _ = Self::_acquire_offchain_worker_lock()?;
 
+		debug::native::trace!(target: TAG, "Started [block_number = {:?}]", block_number);
+
 		let (stop_out, margin_call, safe) = Self::_check_all_traders()?;
 
 		for trader in stop_out {
-			let who = T::Lookup::unlookup(trader);
+			let who = T::Lookup::unlookup(trader.clone());
 			let call = Call::<T>::trader_liquidate(who);
 			T::SubmitTransaction::submit_unsigned(call).map_err(|_| OffchainErr::SubmitTransaction)?;
+			debug::native::trace!(
+				target: TAG,
+				"Trader liquidate [trader = {:?}, block_number = {:?}]",
+				trader,
+				block_number
+			);
 		}
 
 		for trader in margin_call {
 			if !Self::_is_trader_margin_called(&trader) {
-				let who = T::Lookup::unlookup(trader);
+				let who = T::Lookup::unlookup(trader.clone());
 				let call = Call::<T>::trader_margin_call(who);
 				T::SubmitTransaction::submit_unsigned(call).map_err(|_| OffchainErr::SubmitTransaction)?;
+				debug::native::trace!(
+					target: TAG,
+					"Trader margin call [trader = {:?}, block_number = {:?}]",
+					trader,
+					block_number
+				);
 			}
 		}
 
 		for trader in safe {
 			if Self::_is_trader_margin_called(&trader) {
-				let who = T::Lookup::unlookup(trader);
+				let who = T::Lookup::unlookup(trader.clone());
 				let call = Call::<T>::trader_become_safe(who);
 				T::SubmitTransaction::submit_unsigned(call).map_err(|_| OffchainErr::SubmitTransaction)?;
+				debug::native::trace!(
+					target: TAG,
+					"Trader become safe [trader = {:?}, block_number = {:?}]",
+					trader,
+					block_number
+				);
 			}
 		}
 
@@ -883,12 +916,24 @@ impl<T: Trait> Module<T> {
 		for pool_id in stop_out {
 			let call = Call::<T>::liquidity_pool_liquidate(pool_id);
 			T::SubmitTransaction::submit_unsigned(call).map_err(|_| OffchainErr::SubmitTransaction)?;
+			debug::native::trace!(
+				target: TAG,
+				"Liquidity pool liquidate [pool_id = {:?}, block_number = {:?}]",
+				pool_id,
+				block_number
+			);
 		}
 
 		for pool_id in margin_call {
 			if !Self::_is_pool_margin_called(&pool_id) {
 				let call = Call::<T>::liquidity_pool_margin_call(pool_id);
 				T::SubmitTransaction::submit_unsigned(call).map_err(|_| OffchainErr::SubmitTransaction)?;
+				debug::native::trace!(
+					target: TAG,
+					"Liquidity pool margin call [pool_id = {:?}, block_number = {:?}]",
+					pool_id,
+					block_number
+				);
 			}
 		}
 
@@ -896,10 +941,18 @@ impl<T: Trait> Module<T> {
 			if Self::_is_pool_margin_called(&pool_id) {
 				let call = Call::<T>::liquidity_pool_become_safe(pool_id);
 				T::SubmitTransaction::submit_unsigned(call).map_err(|_| OffchainErr::SubmitTransaction)?;
+				debug::native::trace!(
+					target: TAG,
+					"Liquidity pool become safe [pool_id = {:?}, block_number = {:?}]",
+					pool_id,
+					block_number
+				);
 			}
 		}
 
 		Self::_release_offchain_worker_lock();
+
+		debug::native::trace!(target: TAG, "Finished [block_number = {:?}]", block_number);
 		Ok(())
 	}
 
@@ -909,6 +962,20 @@ impl<T: Trait> Module<T> {
 
 	fn _is_pool_margin_called(pool_id: &LiquidityPoolId) -> bool {
 		MarginCalledPools::contains_key(pool_id)
+	}
+
+	fn _should_liquidate_trader(who: &T::AccountId) -> Result<bool, OffchainErr> {
+		let margin_level = Self::_margin_level(who, None, None).map_err(|_| OffchainErr::CheckFail)?;
+
+		Ok(margin_level <= Self::trader_risk_threshold().stop_out.into())
+	}
+
+	fn _should_liquidate_liquidity_pool(pool_id: &LiquidityPoolId) -> Result<bool, OffchainErr> {
+		let enp_threshold = Self::liquidity_pool_enp_threshold();
+		let ell_threshold = Self::liquidity_pool_ell_threshold();
+
+		let (enp, ell) = Self::_enp_and_ell(*pool_id, None, None).map_err(|_| OffchainErr::CheckFail)?;
+		Ok(enp <= enp_threshold.stop_out.into() || ell <= ell_threshold.stop_out.into())
 	}
 
 	fn _check_all_traders() -> Result<(Vec<T::AccountId>, Vec<T::AccountId>, Vec<T::AccountId>), OffchainErr> {
@@ -1001,53 +1068,58 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 	type Call = Call<T>;
 
 	fn validate_unsigned(call: &Self::Call) -> TransactionValidity {
+		let base_priority = TransactionPriority::max_value() - 86400 * 365 * 100 / 2;
+		let block_number = <system::Module<T>>::block_number().unique_saturated_into() as u64;
+
+		let defaults = ValidTransaction {
+			priority: base_priority.saturating_add(block_number),
+			requires: vec![],
+			provides: vec![],
+			longevity: 64_u64,
+			propagate: true,
+		};
+
 		match call {
 			Call::trader_margin_call(who) => {
-				let trader = T::Lookup::lookup(who.clone()).expect(InvalidTransaction::Call.into());
+				let trader = T::Lookup::lookup(who.clone()).expect(InvalidTransaction::Stale.into());
 				if Self::_is_trader_margin_called(&trader) {
 					return InvalidTransaction::Stale.into();
 				}
 
 				Ok(ValidTransaction {
-					priority: TransactionPriority::max_value(),
-					requires: vec![],
-					provides: vec![(<system::Module<T>>::block_number(), who).encode()],
-					longevity: 64_u64,
-					propagate: true,
+					provides: vec![("margin_protocol/trader_margin_call", who).encode()],
+					..defaults
 				})
 			}
 			Call::trader_become_safe(who) => {
-				let trader = T::Lookup::lookup(who.clone()).expect(InvalidTransaction::Call.into());
+				let trader = T::Lookup::lookup(who.clone()).expect(InvalidTransaction::Stale.into());
 				if !Self::_is_trader_margin_called(&trader) {
 					return InvalidTransaction::Stale.into();
 				}
 
 				Ok(ValidTransaction {
-					priority: TransactionPriority::max_value(),
-					requires: vec![],
-					provides: vec![(<system::Module<T>>::block_number(), who).encode()],
-					longevity: 64_u64,
-					propagate: true,
+					provides: vec![("margin_protocol/trader_become_safe", who).encode()],
+					..defaults
 				})
 			}
-			Call::trader_liquidate(who) => Ok(ValidTransaction {
-				priority: TransactionPriority::max_value(),
-				requires: vec![],
-				provides: vec![(<system::Module<T>>::block_number(), who).encode()],
-				longevity: 64_u64,
-				propagate: true,
-			}),
+			Call::trader_liquidate(who) => {
+				let trader = T::Lookup::lookup(who.clone()).expect(InvalidTransaction::Stale.into());
+				if Self::_should_liquidate_trader(&trader).ok() == Some(true) {
+					return Ok(ValidTransaction {
+						provides: vec![("margin_protocol/trader_liquidate", who).encode()],
+						..defaults
+					});
+				}
+				InvalidTransaction::Stale.into()
+			}
 			Call::liquidity_pool_margin_call(pool_id) => {
 				if Self::_is_pool_margin_called(pool_id) {
 					return InvalidTransaction::Stale.into();
 				}
 
 				Ok(ValidTransaction {
-					priority: TransactionPriority::max_value(),
-					requires: vec![],
-					provides: vec![(<system::Module<T>>::block_number(), pool_id).encode()],
-					longevity: 64_u64,
-					propagate: true,
+					provides: vec![("margin_protocol/liquidity_pool_margin_call", pool_id).encode()],
+					..defaults
 				})
 			}
 			Call::liquidity_pool_become_safe(pool_id) => {
@@ -1056,20 +1128,20 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 				}
 
 				Ok(ValidTransaction {
-					priority: TransactionPriority::max_value(),
-					requires: vec![],
-					provides: vec![(<system::Module<T>>::block_number(), pool_id).encode()],
-					longevity: 64_u64,
-					propagate: true,
+					provides: vec![("margin_protocol/liquidity_pool_become_safe", pool_id).encode()],
+					..defaults
 				})
 			}
-			Call::liquidity_pool_liquidate(pool_id) => Ok(ValidTransaction {
-				priority: TransactionPriority::max_value(),
-				requires: vec![],
-				provides: vec![(<system::Module<T>>::block_number(), pool_id).encode()],
-				longevity: 64_u64,
-				propagate: true,
-			}),
+			Call::liquidity_pool_liquidate(pool_id) => {
+				if Self::_should_liquidate_liquidity_pool(pool_id).ok() == Some(true) {
+					return Ok(ValidTransaction {
+						provides: vec![("margin_protocol/liquidity_pool_liquidate", pool_id).encode()],
+						..defaults
+					});
+				}
+
+				InvalidTransaction::Stale.into()
+			}
 			_ => InvalidTransaction::Call.into(),
 		}
 	}

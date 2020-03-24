@@ -92,8 +92,13 @@ impl LiquidityPoolManager<LiquidityPoolId, Balance> for PoolManager {
 	fn can_remove(_pool_id: LiquidityPoolId) -> bool {
 		true
 	}
+
 	fn get_required_deposit(_pool: LiquidityPoolId) -> Balance {
 		unimplemented!()
+	}
+
+	fn ensure_pool_safe_after_withdrawal(_pool_id: u32, _amount: u128) -> DispatchResult {
+		Ok(())
 	}
 }
 
@@ -107,13 +112,6 @@ impl PriceProvider<CurrencyId, Price> for MockPrices {
 	fn get_price(base: CurrencyId, quote: CurrencyId) -> Option<Price> {
 		unimplemented!()
 	}
-}
-
-impl margin_protocol::Trait for Runtime {
-	type Event = ();
-	type MultiCurrency = orml_currencies::Module<Runtime>;
-	type LiquidityPools = ModuleLiquidityPools;
-	type PriceProvider = MockPrices;
 }
 
 impl Trait for Runtime {
