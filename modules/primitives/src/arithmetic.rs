@@ -17,7 +17,11 @@ pub fn fixed_128_from_u128(u: u128) -> Fixed128 {
 	Fixed128::from_parts(u.unique_saturated_into())
 }
 
-/// Create a `u128` from `Fixed128` by saturating.
+/// Create a `u128` from `Fixed128` by saturating. Returns zero if `f` is negative.
 pub fn u128_from_fixed_128(f: Fixed128) -> u128 {
+	if f.is_negative() {
+		return 0u128;
+	}
+
 	f.deconstruct().unique_saturated_into()
 }

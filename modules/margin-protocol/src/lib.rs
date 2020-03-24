@@ -705,23 +705,8 @@ impl<T: Trait> Module<T> {
 			.ok_or(Error::<T>::NumOutOfBound.into())
 	}
 
-	/// ENP and ELL. If `new_position` is `None`, return the ENP & ELL based on current positions,
-	/// else based on current positions plus this new one. If `equity_delta` is `None`, return
-	/// the ENP & ELL based on current equity of pool, else based on current equity of pool plus
-	/// the `equity_delta`.
-	///
-	/// ENP - Equity to Net Position ratio of a liquidity pool.
-	/// ELL - Equity to Longest Leg ratio of a liquidity pool.
-	fn _enp_and_ell(
-		pool: LiquidityPoolId,
-		new_position: Option<Position<T>>,
-		equity_delta: Option<Fixed128>,
-	) -> result::Result<(Fixed128, Fixed128), DispatchError> {
-		let mut equity = Self::_equity_of_pool(pool)?;
-		if let Some(e) = equity_delta {
-			equity = equity.checked_add(&e).ok_or(Error::<T>::NumOutOfBound)?;
-		}
-
+	/// Returns `(net_position, longest_leg)` of a liquidity pool.
+	fn _net_position_and_longest_leg(pool: LiquidityPoolId, new_position: Option<Position<T>>) -> (Fixed128, Fixed128) {
 		let (net, positive, non_positive) = PositionsByPool::iter_prefix(pool)
 			.flatten()
 			.filter_map(|position_id| Self::positions(position_id))
@@ -752,11 +737,34 @@ impl<T: Trait> Module<T> {
 				},
 			);
 
+		let net = net.saturating_abs();
+		let longest_leg = cmp::max(positive, non_positive.saturating_abs());
+
+		(net, longest_leg)
+	}
+
+	/// ENP and ELL. If `new_position` is `None`, return the ENP & ELL based on current positions,
+	/// else based on current positions plus this new one. If `equity_delta` is `None`, return
+	/// the ENP & ELL based on current equity of pool, else based on current equity of pool plus
+	/// the `equity_delta`.
+	///
+	/// ENP - Equity to Net Position ratio of a liquidity pool.
+	/// ELL - Equity to Longest Leg ratio of a liquidity pool.
+	fn _enp_and_ell(
+		pool: LiquidityPoolId,
+		new_position: Option<Position<T>>,
+		equity_delta: Option<Fixed128>,
+	) -> result::Result<(Fixed128, Fixed128), DispatchError> {
+		let mut equity = Self::_equity_of_pool(pool)?;
+		if let Some(e) = equity_delta {
+			equity = equity.checked_add(&e).ok_or(Error::<T>::NumOutOfBound)?;
+		}
+
+		let (net_position, longest_leg) = Self::_net_position_and_longest_leg(pool, new_position);
 		let enp = equity
-			.checked_div(&net.saturating_abs())
+			.checked_div(&net_position)
 			// if `net_position` is zero, ENP is max
 			.unwrap_or(Fixed128::max_value());
-		let longest_leg = cmp::max(positive, non_positive.saturating_abs());
 		let ell = equity
 			.checked_div(&longest_leg)
 			// if `longest_leg` is zero, ELL is max
@@ -790,14 +798,29 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-//TODO: implementations, prevent open new position for margin called pools
 impl<T: Trait> LiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
-	fn can_remove(pool_id: LiquidityPoolId) -> bool {
-		unimplemented!()
+	/// Returns if `pool` has liability in margin protocol.
+	fn can_remove(pool: LiquidityPoolId) -> bool {
+		PositionsByPool::iter_prefix(pool).flatten().count() == 0
 	}
 
-	fn get_required_deposit(pool_id: LiquidityPoolId) -> Balance {
-		unimplemented!()
+	/// Returns required deposit amount to make pool safe.
+	fn get_required_deposit(pool: LiquidityPoolId) -> result::Result<Balance, DispatchError> {
+		let (net_position, longest_leg) = Self::_net_position_and_longest_leg(pool, None);
+		let required_equity = {
+			let for_enp = net_position
+				.checked_mul(&Self::liquidity_pool_enp_threshold().margin_call.into())
+				.expect("ENP margin call threshold < 1; qed");
+			let for_ell = longest_leg
+				.checked_mul(&Self::liquidity_pool_ell_threshold().margin_call.into())
+				.expect("ELL margin call threshold < 1; qed");
+			cmp::max(for_enp, for_ell)
+		};
+		let equity = Self::_equity_of_pool(pool)?;
+		let gap = required_equity.checked_sub(&equity).ok_or(Error::<T>::NumOutOfBound)?;
+
+		// would be saturated into zero if gap < 0
+		return Ok(u128_from_fixed_128(gap));
 	}
 
 	fn ensure_pool_safe_after_withdrawal(pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {

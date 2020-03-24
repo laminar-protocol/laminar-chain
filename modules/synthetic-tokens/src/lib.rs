@@ -5,12 +5,12 @@ use frame_support::{decl_error, decl_event, decl_module, decl_storage, traits::G
 use frame_system::{self as system, ensure_root};
 use sp_runtime::{
 	traits::{AccountIdConversion, AtLeast32Bit, EnsureOrigin, MaybeSerializeDeserialize, Member, Saturating, Zero},
-	DispatchResult, ModuleId, Permill,
+	DispatchError, DispatchResult, ModuleId, Permill,
 };
 
 use module_traits::LiquidityPoolManager;
 use orml_utilities::FixedU128;
-use sp_std::prelude::Vec;
+use sp_std::{prelude::Vec, result};
 
 mod mock;
 mod tests;
@@ -207,7 +207,9 @@ impl<T: Trait> LiquidityPoolManager<T::LiquidityPoolId, T::Balance> for Module<T
 			.all(|x| x.1.is_zero())
 	}
 
-	fn get_required_deposit(_pool: <T as Trait>::LiquidityPoolId) -> <T as Trait>::Balance {
+	fn get_required_deposit(
+		_pool: <T as Trait>::LiquidityPoolId,
+	) -> result::Result<<T as Trait>::Balance, DispatchError> {
 		unimplemented!()
 	}
 
