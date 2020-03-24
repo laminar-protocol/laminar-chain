@@ -16,7 +16,7 @@ use sp_runtime::{
 // would cause compiling error in `decl_module!` and `construct_runtime!`
 // #3295 https://github.com/paritytech/substrate/issues/3295
 use frame_system as system;
-use frame_system::{ensure_signed, offchain::SubmitUnsignedTransaction};
+use frame_system::{ensure_none, ensure_signed, offchain::SubmitUnsignedTransaction};
 use orml_traits::{MultiCurrency, PriceProvider};
 use orml_utilities::{Fixed128, FixedU128};
 use primitives::{
@@ -183,6 +183,7 @@ decl_module! {
 		}
 
 		pub fn trader_margin_call(origin, who: <T::Lookup as StaticLookup>::Source) {
+			ensure_none(origin)?;
 			let who = T::Lookup::lookup(who)?;
 
 			Self::_trader_margin_call(&who)?;
@@ -190,6 +191,7 @@ decl_module! {
 		}
 
 		pub fn trader_become_safe(origin, who: <T::Lookup as StaticLookup>::Source) {
+			ensure_none(origin)?;
 			let who = T::Lookup::lookup(who)?;
 
 			Self::_trader_become_safe(&who)?;
@@ -197,6 +199,7 @@ decl_module! {
 		}
 
 		pub fn trader_liquidate(origin, who: <T::Lookup as StaticLookup>::Source) {
+			ensure_none(origin)?;
 			let who = T::Lookup::lookup(who)?;
 
 			Self::_trader_liquidate(&who)?;
@@ -204,17 +207,22 @@ decl_module! {
 		}
 
 		pub fn liquidity_pool_margin_call(origin, pool: LiquidityPoolId) {
+			ensure_none(origin)?;
 			Self::_liquidity_pool_margin_call(pool)?;
 			Self::deposit_event(RawEvent::LiquidityPoolMarginCalled(pool));
 		}
 
 		pub fn liquidity_pool_become_safe(origin, pool: LiquidityPoolId) {
+			ensure_none(origin)?;
 			Self::_liquidity_pool_become_safe(pool)?;
 			Self::deposit_event(RawEvent::LiquidityPoolBecameSafe(pool));
 		}
 
 		// TODO: implementations
-		pub fn liquidity_pool_liquidate(origin, pool: LiquidityPoolId) {}
+		pub fn liquidity_pool_liquidate(origin, pool: LiquidityPoolId) {
+			ensure_none(origin)?;
+			// TODO: implement me!
+		}
 
 
 		fn offchain_worker(block_number: T::BlockNumber) {
