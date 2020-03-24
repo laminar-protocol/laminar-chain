@@ -27,7 +27,7 @@ pub struct MarginLiquidityPoolOption {
 
 const MODULE_ID: ModuleId = ModuleId(*b"lami/mlp");
 
-pub trait Trait: system::Trait {
+pub trait Trait: frame_system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
 	type LiquidityCurrency: BasicCurrency<Self::AccountId, Balance = Balance>;
@@ -37,7 +37,6 @@ pub trait Trait: system::Trait {
 		+ Copy
 		+ Ord
 		+ Default
-		+ Into<LiquidityPoolId>
 		+ AtLeast32Bit
 		+ MaybeSerializeDeserialize;
 	type PoolManager: LiquidityPoolManager<Self::LiquidityPoolId, Balance>;

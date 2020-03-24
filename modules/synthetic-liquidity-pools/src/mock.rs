@@ -91,6 +91,7 @@ impl LiquidityPoolManager<LiquidityPoolId, Balance> for PoolManager {
 	fn can_remove(_pool_id: LiquidityPoolId) -> bool {
 		true
 	}
+
 	fn get_required_deposit(_pool: LiquidityPoolId) -> Balance {
 		unimplemented!()
 	}
