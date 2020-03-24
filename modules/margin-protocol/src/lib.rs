@@ -798,7 +798,9 @@ impl<T: Trait> LiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
 	}
 
 	/// Required deposit to make pool safe.
-	fn get_required_deposit(pool: LiquidityPoolId) -> Balance {}
+	fn get_required_deposit(pool: LiquidityPoolId) -> result::Result<Balance, DispatchError> {
+		unimplemented!()
+	}
 
 	fn ensure_pool_safe_after_withdrawal(pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
 		let equity_delta = Fixed128::zero()
