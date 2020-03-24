@@ -515,7 +515,7 @@ type TransactionSubmitter = system::offchain::TransactionSubmitter<(), Runtime, 
 
 // TODO: implement LaminarTreasury
 pub struct MockLaminarTreasury;
-impl module_traits::Treasry<AccountId> for MockLaminarTreasury {
+impl module_traits::Treasury<AccountId> for MockLaminarTreasury {
 	fn account_id() -> AccountId {
 		pallet_treasury::Module::<Runtime>::account_id()
 	}

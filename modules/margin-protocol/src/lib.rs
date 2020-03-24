@@ -16,7 +16,7 @@ use sp_runtime::{
 // would cause compiling error in `decl_module!` and `construct_runtime!`
 // #3295 https://github.com/paritytech/substrate/issues/3295
 use frame_system as system;
-use frame_system::{ensure_signed, offchain::SubmitUnsignedTransaction};
+use frame_system::{ensure_none, ensure_signed, offchain::SubmitUnsignedTransaction};
 use orml_traits::{MultiCurrency, PriceProvider};
 use orml_utilities::{Fixed128, FixedU128};
 use primitives::{
@@ -24,7 +24,7 @@ use primitives::{
 	Balance, CurrencyId, Leverage, LiquidityPoolId, Price, TradingPair,
 };
 use sp_std::{cmp, prelude::*, result};
-use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools, Treasry};
+use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools, Treasury};
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -45,7 +45,7 @@ pub trait Trait: frame_system::Trait {
 		TradingPair = TradingPair,
 	>;
 	type PriceProvider: PriceProvider<CurrencyId, Price>;
-	type Treasury: Treasry<Self::AccountId>;
+	type Treasury: Treasury<Self::AccountId>;
 	type SubmitTransaction: SubmitUnsignedTransaction<Self, <Self as Trait>::Call>;
 	type Call: From<Call<Self>> + IsSubType<Module<Self>, Self>;
 }
@@ -186,38 +186,44 @@ decl_module! {
 			Self::deposit_event(RawEvent::Withdrew(who, amount));
 		}
 
-		pub fn trader_margin_call(_origin, who: <T::Lookup as StaticLookup>::Source) {
+		pub fn trader_margin_call(origin, who: <T::Lookup as StaticLookup>::Source) {
+			ensure_none(origin)?;
 			let who = T::Lookup::lookup(who)?;
 
 			Self::_trader_margin_call(&who)?;
 			Self::deposit_event(RawEvent::TraderMarginCalled(who));
 		}
 
-		pub fn trader_become_safe(_origin, who: <T::Lookup as StaticLookup>::Source) {
+		pub fn trader_become_safe(origin, who: <T::Lookup as StaticLookup>::Source) {
+			ensure_none(origin)?;
 			let who = T::Lookup::lookup(who)?;
 
 			Self::_trader_become_safe(&who)?;
 			Self::deposit_event(RawEvent::TraderBecameSafe(who));
 		}
 
-		pub fn trader_liquidate(_origin, who: <T::Lookup as StaticLookup>::Source) {
+		pub fn trader_liquidate(origin, who: <T::Lookup as StaticLookup>::Source) {
+			ensure_none(origin)?;
 			let who = T::Lookup::lookup(who)?;
 
 			Self::_trader_liquidate(&who)?;
 			Self::deposit_event(RawEvent::TraderLiquidated(who));
 		}
 
-		pub fn liquidity_pool_margin_call(_origin, pool: LiquidityPoolId) {
+		pub fn liquidity_pool_margin_call(origin, pool: LiquidityPoolId) {
+			ensure_none(origin)?;
 			Self::_liquidity_pool_margin_call(pool)?;
 			Self::deposit_event(RawEvent::LiquidityPoolMarginCalled(pool));
 		}
 
-		pub fn liquidity_pool_become_safe(_origin, pool: LiquidityPoolId) {
+		pub fn liquidity_pool_become_safe(origin, pool: LiquidityPoolId) {
+			ensure_none(origin)?;
 			Self::_liquidity_pool_become_safe(pool)?;
 			Self::deposit_event(RawEvent::LiquidityPoolBecameSafe(pool));
 		}
 
-		pub fn liquidity_pool_liquidate(_origin, pool: LiquidityPoolId) {
+		pub fn liquidity_pool_liquidate(origin, pool: LiquidityPoolId) {
+			ensure_none(origin)?;
 			Self::_liquidity_pool_liquidate(pool)?;
 			Self::deposit_event(RawEvent::LiquidityPoolLiquidated(pool));
 		}
@@ -842,6 +848,7 @@ impl<T: Trait> Module<T> {
 
 		let spread_profit = position
 			.leveraged_held
+			.saturating_abs()
 			.checked_mul(&fixed_128_from_fixed_u128(price).saturating_mul(spread))
 			.ok_or(Error::<T>::NumOutOfBound)?;
 
@@ -858,11 +865,11 @@ impl<T: Trait> Module<T> {
 			u128_from_fixed_128(sub_amount),
 		);
 		<T::LiquidityPools as LiquidityPools<T::AccountId>>::withdraw_liquidity(
-			&Self::account_id(),
+			&T::Treasury::account_id(),
 			position.pool,
 			realized,
 		)?;
-		<Balances<T>>::mutate(T::Treasury::account_id(), |b| *b += realized);
+
 		Ok(())
 	}
 }

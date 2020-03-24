@@ -56,6 +56,6 @@ pub trait MarginProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
 	) -> bool;
 }
 
-pub trait Treasry<AccountId> {
+pub trait Treasury<AccountId> {
 	fn account_id() -> AccountId;
 }
