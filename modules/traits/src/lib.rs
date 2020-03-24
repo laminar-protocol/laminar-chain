@@ -6,9 +6,9 @@ use orml_utilities::Fixed128;
 use primitives::{Balance, Leverage, TradingPair};
 use sp_runtime::{
 	traits::{AtLeast32Bit, MaybeSerializeDeserialize},
-	DispatchResult, Permill,
+	DispatchError, DispatchResult, Permill,
 };
-use sp_std::{fmt::Debug, prelude::*};
+use sp_std::{fmt::Debug, prelude::*, result};
 
 pub trait LiquidityPools<AccountId> {
 	type LiquidityPoolId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug;
@@ -29,7 +29,7 @@ pub trait LiquidityPools<AccountId> {
 
 pub trait LiquidityPoolManager<LiquidityPoolId, Balance> {
 	fn can_remove(pool_id: LiquidityPoolId) -> bool;
-	fn get_required_deposit(pool_id: LiquidityPoolId) -> Balance;
+	fn get_required_deposit(pool_id: LiquidityPoolId) -> result::Result<Balance, DispatchError>;
 	fn ensure_can_withdraw(pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult;
 }
 
