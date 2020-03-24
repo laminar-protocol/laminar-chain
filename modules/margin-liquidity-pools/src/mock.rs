@@ -3,7 +3,6 @@
 use super::*;
 
 use frame_support::{impl_outer_origin, ord_parameter_types, parameter_types, weights::Weight};
-use orml_traits::PriceProvider;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
