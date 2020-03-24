@@ -1673,3 +1673,51 @@ fn liquidity_pool_manager_can_remove_works() {
 		assert!(!<MarginProtocol as LiquidityPoolManager<LiquidityPoolId, Balance>>::can_remove(MOCK_POOL));
 	});
 }
+
+#[test]
+fn liquidity_pool_manager_get_required_deposit_works() {
+	ExtBuilder::default()
+		.spread(Permill::zero())
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.price(CurrencyId::FEUR, (1, 1))
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(0))
+		.liquidity_pool_ell_threshold(risk_threshold(90, 0))
+		.liquidity_pool_enp_threshold(risk_threshold(100, 0))
+		.build()
+		.execute_with(|| {
+			let position: Position<Runtime> = Position {
+				owner: ALICE,
+				pool: MOCK_POOL,
+				pair: EUR_USD_PAIR,
+				leverage: Leverage::LongTwo,
+				leveraged_held: fixed128_from_natural_currency_cent(100),
+				leveraged_debits: fixed128_from_natural_currency_cent(100),
+				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
+				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				open_margin: balance_from_natural_currency_cent(100),
+			};
+			let id = 0;
+			<Positions<Runtime>>::insert(id, position);
+			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![id]);
+
+			// need deposit because of ENP
+			assert_eq!(
+				MarginProtocol::get_required_deposit(MOCK_POOL),
+				Ok(balance_from_natural_currency_cent(100)),
+			);
+
+			// need deposit because of ELL
+			LiquidityPoolENPThreshold::put(risk_threshold(80, 0));
+			assert_eq!(
+				MarginProtocol::get_required_deposit(MOCK_POOL),
+				Ok(balance_from_natural_currency_cent(90)),
+			);
+
+			// no need to deposit
+			MockLiquidityPools::set_mock_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100));
+			assert_eq!(
+				MarginProtocol::get_required_deposit(MOCK_POOL),
+				Ok(balance_from_natural_currency_cent(0)),
+			);
+		});
+}
