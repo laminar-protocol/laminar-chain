@@ -1623,7 +1623,7 @@ fn offchain_worker_should_work() {
 		.build();
 
 	let (offchain, _state) = TestOffchainExt::new();
-	let (pool, _state) = TestTransactionPoolExt::new();
+	let (pool, pool_state) = TestTransactionPoolExt::new();
 	ext.register_extension(OffchainExt::new(offchain));
 	ext.register_extension(TransactionPoolExt::new(pool));
 
@@ -1660,6 +1660,28 @@ fn offchain_worker_should_work() {
 		);
 
 		assert_ok!(MarginProtocol::_offchain_worker(1));
+
+		assert_eq!(pool_state.read().transactions.len(), 2);
+
+		let liquidity_pool_margin_call = pool_state.write().transactions.pop().unwrap();
+		let trader_liquidate = pool_state.write().transactions.pop().unwrap();
+
+		assert!(pool_state.read().transactions.is_empty());
+
+		let liquidity_pool_margin_call_tx = Extrinsic::decode(&mut &*liquidity_pool_margin_call).unwrap();
+		let trader_liquidate_tx = Extrinsic::decode(&mut &*trader_liquidate).unwrap();
+
+		assert_eq!(liquidity_pool_margin_call_tx.signature, None);
+		assert_eq!(trader_liquidate_tx.signature, None);
+
+		assert_eq!(
+			liquidity_pool_margin_call_tx.call,
+			mock::Call::MarginProtocol(super::Call::liquidity_pool_margin_call(MOCK_POOL))
+		);
+		assert_eq!(
+			trader_liquidate_tx.call,
+			mock::Call::MarginProtocol(super::Call::trader_liquidate(ALICE))
+		);
 	});
 }
 
