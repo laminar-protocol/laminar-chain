@@ -1617,9 +1617,10 @@ fn offchain_worker_should_work() {
 		.spread(Permill::zero())
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.price(CurrencyId::FEUR, (1, 1))
-		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100))
-		.liquidity_pool_ell_threshold(risk_threshold(100, 0))
-		.liquidity_pool_enp_threshold(risk_threshold(100, 0))
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(200_00))
+		.trader_risk_threshold(risk_threshold(3, 1))
+		.liquidity_pool_ell_threshold(risk_threshold(50, 20))
+		.liquidity_pool_enp_threshold(risk_threshold(10, 2))
 		.build();
 
 	let (offchain, _state) = TestOffchainExt::new();
@@ -1628,32 +1629,97 @@ fn offchain_worker_should_work() {
 	ext.register_extension(TransactionPoolExt::new(pool));
 
 	ext.execute_with(|| {
-		let position: Position<Runtime> = Position {
-			owner: ALICE,
-			pool: MOCK_POOL,
-			pair: EUR_USD_PAIR,
-			leverage: Leverage::LongTwo,
-			leveraged_held: fixed128_from_natural_currency_cent(100),
-			leveraged_debits: fixed128_from_natural_currency_cent(100),
-			leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
-			open_accumulated_swap_rate: Fixed128::from_natural(1),
-			open_margin: balance_from_natural_currency_cent(100),
-		};
-
-		<Positions<Runtime>>::insert(0, position);
-		PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
-		<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
-
-		assert_noop!(
-			MarginProtocol::_ensure_trader_safe(&ALICE, None, None),
-			Error::<Runtime>::UnsafeTrader
+		<Balances<Runtime>>::insert(&ALICE, balance_from_natural_currency_cent(10_00));
+		assert_eq!(
+			MarginProtocol::_margin_level(&ALICE, None, None).ok().unwrap(),
+			Fixed128::max_value()
 		);
-		assert_noop!(
-			MarginProtocol::_ensure_pool_safe(MOCK_POOL, None, None),
-			Error::<Runtime>::UnsafePool
+
+		assert_ok!(MarginProtocol::open_position(
+			Origin::signed(ALICE),
+			MOCK_POOL,
+			EUR_USD_PAIR,
+			Leverage::LongTen,
+			balance_from_natural_currency_cent(200_00),
+			Price::from_natural(100)
+		));
+
+		assert_eq!(
+			MarginProtocol::_margin_level(&ALICE, None, None).ok().unwrap(),
+			Fixed128::from_rational(5, NonZeroI128::new(100).unwrap()) // 5%
+		);
+
+		// price goes down EUR/USD 0.97/1
+		MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(97, 100)));
+
+		assert_eq!(
+			MarginProtocol::_margin_level(&ALICE, None, None).ok().unwrap(),
+			Fixed128::from_rational(2, NonZeroI128::new(100).unwrap()) // 2%
+		);
+
+		assert_eq!(MarginProtocol::_check_all_traders(), Ok((vec![], vec![ALICE], vec![])));
+		assert_ok!(MarginProtocol::_offchain_worker(1));
+
+		assert_eq!(pool_state.read().transactions.len(), 1);
+		let trader_margin_call = pool_state.write().transactions.pop().unwrap();
+		assert!(pool_state.read().transactions.is_empty());
+
+		let tx = Extrinsic::decode(&mut &*trader_margin_call).unwrap();
+
+		assert_eq!(tx.signature, None);
+		assert_eq!(
+			tx.call,
+			mock::Call::MarginProtocol(super::Call::trader_margin_call(ALICE))
+		);
+
+		// price goes down to EUR/USD 0.96/1
+		MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(96, 100)));
+
+		assert_eq!(
+			MarginProtocol::_margin_level(&ALICE, None, None).ok().unwrap(),
+			Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()) // 1%
 		);
 
 		assert_eq!(MarginProtocol::_check_all_traders(), Ok((vec![ALICE], vec![], vec![])));
+		assert_ok!(MarginProtocol::_offchain_worker(1));
+
+		assert_eq!(pool_state.read().transactions.len(), 1);
+		let trader_liquidate_call = pool_state.write().transactions.pop().unwrap();
+		assert!(pool_state.read().transactions.is_empty());
+
+		let tx = Extrinsic::decode(&mut &*trader_liquidate_call).unwrap();
+
+		assert_eq!(tx.signature, None);
+		assert_eq!(
+			tx.call,
+			mock::Call::MarginProtocol(super::Call::trader_liquidate(ALICE))
+		);
+
+		// price goes up to EUR/USD 1.1/1
+		MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(110, 100)));
+
+		<MarginCalledTraders<Runtime>>::insert(ALICE, ());
+		assert_eq!(MarginProtocol::_check_all_traders(), Ok((vec![], vec![], vec![ALICE])));
+
+		assert_ok!(MarginProtocol::_offchain_worker(1));
+
+		assert_eq!(pool_state.read().transactions.len(), 1);
+		let trader_become_safe = pool_state.write().transactions.pop().unwrap();
+		assert!(pool_state.read().transactions.is_empty());
+
+		let tx = Extrinsic::decode(&mut &*trader_become_safe).unwrap();
+
+		assert_eq!(tx.signature, None);
+		assert_eq!(
+			tx.call,
+			mock::Call::MarginProtocol(super::Call::trader_become_safe(ALICE))
+		);
+
+		<MarginCalledTraders<Runtime>>::remove(ALICE);
+
+		// price goes up to EUR/USD 1.5/1
+		MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(150, 100)));
+
 		assert_eq!(
 			MarginProtocol::_check_all_pools(),
 			Ok((vec![], vec![MOCK_POOL], vec![]))
@@ -1661,27 +1727,64 @@ fn offchain_worker_should_work() {
 
 		assert_ok!(MarginProtocol::_offchain_worker(1));
 
-		assert_eq!(pool_state.read().transactions.len(), 2);
-
+		assert_eq!(pool_state.read().transactions.len(), 1);
 		let liquidity_pool_margin_call = pool_state.write().transactions.pop().unwrap();
-		let trader_liquidate = pool_state.write().transactions.pop().unwrap();
-
 		assert!(pool_state.read().transactions.is_empty());
 
-		let liquidity_pool_margin_call_tx = Extrinsic::decode(&mut &*liquidity_pool_margin_call).unwrap();
-		let trader_liquidate_tx = Extrinsic::decode(&mut &*trader_liquidate).unwrap();
+		let tx = Extrinsic::decode(&mut &*liquidity_pool_margin_call).unwrap();
 
-		assert_eq!(liquidity_pool_margin_call_tx.signature, None);
-		assert_eq!(trader_liquidate_tx.signature, None);
-
+		assert_eq!(tx.signature, None);
 		assert_eq!(
-			liquidity_pool_margin_call_tx.call,
+			tx.call,
 			mock::Call::MarginProtocol(super::Call::liquidity_pool_margin_call(MOCK_POOL))
 		);
+
+		// price goes up to EUR/USD 1.8/1
+		MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(180, 100)));
+
 		assert_eq!(
-			trader_liquidate_tx.call,
-			mock::Call::MarginProtocol(super::Call::trader_liquidate(ALICE))
+			MarginProtocol::_check_all_pools(),
+			Ok((vec![MOCK_POOL], vec![], vec![]))
 		);
+
+		assert_ok!(MarginProtocol::_offchain_worker(1));
+
+		assert_eq!(pool_state.read().transactions.len(), 1);
+		let liquidity_pool_liquidate = pool_state.write().transactions.pop().unwrap();
+		assert!(pool_state.read().transactions.is_empty());
+
+		let tx = Extrinsic::decode(&mut &*liquidity_pool_liquidate).unwrap();
+
+		assert_eq!(tx.signature, None);
+		assert_eq!(
+			tx.call,
+			mock::Call::MarginProtocol(super::Call::liquidity_pool_liquidate(MOCK_POOL))
+		);
+
+		// price goes down to EUR/USD 1.1/1
+		MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(110, 100)));
+
+		MarginCalledPools::insert(MOCK_POOL, ());
+		assert_eq!(
+			MarginProtocol::_check_all_pools(),
+			Ok((vec![], vec![], vec![MOCK_POOL]))
+		);
+
+		assert_ok!(MarginProtocol::_offchain_worker(1));
+
+		assert_eq!(pool_state.read().transactions.len(), 1);
+		let liquidity_pool_become_safe = pool_state.write().transactions.pop().unwrap();
+		assert!(pool_state.read().transactions.is_empty());
+
+		let tx = Extrinsic::decode(&mut &*liquidity_pool_become_safe).unwrap();
+
+		assert_eq!(tx.signature, None);
+		assert_eq!(
+			tx.call,
+			mock::Call::MarginProtocol(super::Call::liquidity_pool_become_safe(MOCK_POOL))
+		);
+
+		MarginCalledPools::remove(MOCK_POOL);
 	});
 }
 
