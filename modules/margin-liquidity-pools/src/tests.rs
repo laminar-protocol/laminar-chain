@@ -494,7 +494,7 @@ fn should_set_min_leveraged_amount() {
 	new_test_ext().execute_with(|| {
 		let pool_id = 0;
 
-		assert_eq!(ModuleLiquidityPools::min_leveraged_amount(pool_id), 0);
+		assert_eq!(ModuleLiquidityPools::min_leveraged_amount(pool_id), None);
 		assert_eq!(ModuleLiquidityPools::get_min_leveraged_amount(pool_id), 0);
 
 		// set default min leveraged amount
@@ -514,7 +514,8 @@ fn should_set_min_leveraged_amount() {
 			pool_id,
 			2
 		));
-		assert_eq!(ModuleLiquidityPools::min_leveraged_amount(pool_id), 2);
+		assert_eq!(ModuleLiquidityPools::min_leveraged_amount(pool_id), Some(2));
+		assert_eq!(ModuleLiquidityPools::get_min_leveraged_amount(pool_id), 10);
 
 		// non pool owners cannot set min leveraged amount
 		assert_noop!(

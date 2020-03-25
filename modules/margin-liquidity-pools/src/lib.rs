@@ -15,6 +15,7 @@ use sp_runtime::{
 	},
 	DispatchResult, ModuleId, PerThing, Permill, RuntimeDebug,
 };
+use sp_std::cmp::max;
 use sp_std::{prelude::*, result};
 use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools};
 
@@ -59,7 +60,7 @@ decl_storage! {
 		pub EnabledTradingPairs get(fn enabled_trading_pair): map hasher(blake2_256) TradingPair => Option<TradingPair>;
 		pub LiquidityPoolEnabledTradingPairs get(fn liquidity_pool_enabled_trading_pair): double_map hasher(blake2_256) T::LiquidityPoolId, hasher(blake2_256) TradingPair => Option<TradingPair>;
 		pub DefaultMinLeveragedAmount get(fn default_min_leveraged_amount) config(): Balance;
-		pub MinLeveragedAmount get(fn min_leveraged_amount): map hasher(blake2_256) T::LiquidityPoolId => Balance;
+		pub MinLeveragedAmount get(fn min_leveraged_amount): map hasher(blake2_256) T::LiquidityPoolId => Option<Balance>;
 	}
 }
 
@@ -276,11 +277,8 @@ impl<T: Trait> Module<T> {
 	}
 
 	pub fn get_min_leveraged_amount(pool_id: T::LiquidityPoolId) -> Balance {
-		let min_leveraged_amount = Self::min_leveraged_amount(pool_id);
-		if min_leveraged_amount == 0 {
-			return Self::default_min_leveraged_amount();
-		}
-		min_leveraged_amount
+		let min_leveraged_amount = Self::min_leveraged_amount(pool_id).unwrap_or(0);
+		max(min_leveraged_amount, Self::default_min_leveraged_amount())
 	}
 }
 
