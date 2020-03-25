@@ -58,6 +58,8 @@ decl_storage! {
 		pub Accumulates get(fn accumulate): map hasher(blake2_256) TradingPair => Option<(AccumulateConfig<T::BlockNumber>, TradingPair)>;
 		pub EnabledTradingPairs get(fn enabled_trading_pair): map hasher(blake2_256) TradingPair => Option<TradingPair>;
 		pub LiquidityPoolEnabledTradingPairs get(fn liquidity_pool_enabled_trading_pair): double_map hasher(blake2_256) T::LiquidityPoolId, hasher(blake2_256) TradingPair => Option<TradingPair>;
+		pub DefaultMinLeveragedAmount get(fn default_min_leveraged_amount) config(): Balance;
+		pub MinLeveragedAmount get(fn min_leveraged_amount): map hasher(blake2_256) T::LiquidityPoolId => Balance;
 	}
 }
 
@@ -97,6 +99,10 @@ decl_event!(
 		LiquidityPoolTradingPairEnabled(TradingPair),
 		/// LiquidityPool trading pair disabled (pair)
 		LiquidityPoolTradingPairDisabled(TradingPair),
+		/// Set default min leveraged amount (default_min_leveraged_amount)
+		SetDefaultMinLeveragedAmount(Balance),
+		/// Set min leveraged amount (pool_id, min_leveraged_amount)
+		SetMinLeveragedAmount(LiquidityPoolId, Balance),
 	}
 );
 
@@ -215,6 +221,21 @@ decl_module! {
 			Self::deposit_event(RawEvent::LiquidityPoolTradingPairDisabled(pair))
 		}
 
+		pub fn set_default_min_leveraged_amount(origin, amount: Balance) {
+			T::UpdateOrigin::try_origin(origin)
+				.map(|_| ())
+				.or_else(ensure_root)?;
+			DefaultMinLeveragedAmount::put(amount);
+			Self::deposit_event(RawEvent::SetDefaultMinLeveragedAmount(amount))
+		}
+
+		pub fn set_min_leveraged_amount(origin, pool_id: T::LiquidityPoolId, amount: Balance) {
+			let who = ensure_signed(origin)?;
+			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
+			<MinLeveragedAmount<T>>::insert(pool_id, amount);
+			Self::deposit_event(RawEvent::SetMinLeveragedAmount(pool_id, amount))
+		}
+
 		fn on_initialize(n: T::BlockNumber) {
 			for (accumulate_config, pair) in <Accumulates<T>>::iter() {
 				if n % accumulate_config.frequency == accumulate_config.offset {
@@ -252,6 +273,14 @@ impl<T: Trait> Module<T> {
 
 	pub fn is_enabled(pool_id: T::LiquidityPoolId, pair: TradingPair, leverage: Leverage) -> bool {
 		Self::liquidity_pool_options(&pool_id, &pair).map_or(false, |pool| pool.enabled_trades.contains(leverage))
+	}
+
+	pub fn get_min_leveraged_amount(pool_id: T::LiquidityPoolId) -> Balance {
+		let min_leveraged_amount = Self::min_leveraged_amount(pool_id);
+		if min_leveraged_amount == 0 {
+			return Self::default_min_leveraged_amount();
+		}
+		min_leveraged_amount
 	}
 }
 
@@ -320,12 +349,12 @@ impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
 		pool_id: Self::LiquidityPoolId,
 		pair: Self::TradingPair,
 		leverage: Leverage,
-		_leveraged_amount: Balance,
+		leveraged_amount: Balance,
 	) -> bool {
-		// FIXME: this implementation may change
 		Self::is_enabled(pool_id, pair, leverage)
 			&& Self::enabled_trading_pair(&pair).is_some()
 			&& Self::liquidity_pool_enabled_trading_pair(&pool_id, &pair).is_some()
+			&& leveraged_amount >= Self::get_min_leveraged_amount(pool_id)
 	}
 }
 
