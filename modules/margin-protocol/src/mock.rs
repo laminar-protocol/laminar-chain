@@ -193,7 +193,7 @@ impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
 	type TradingPair = TradingPair;
 
 	fn is_allowed_position(_pool_id: Self::LiquidityPoolId, _pair: Self::TradingPair, _leverage: Leverage) -> bool {
-		unimplemented!()
+		true
 	}
 
 	fn get_bid_spread(_pool_id: Self::LiquidityPoolId, _pair: Self::TradingPair) -> Option<Permill> {
@@ -218,7 +218,7 @@ impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
 		_leverage: Leverage,
 		_leveraged_amount: Balance,
 	) -> bool {
-		unimplemented!()
+		true
 	}
 }
 
