@@ -8,7 +8,7 @@ use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, t
 use frame_system::{self as system, ensure_root, ensure_signed};
 use orml_traits::{BasicCurrency, MultiCurrency};
 use orml_utilities::Fixed128;
-use primitives::{AccumulateConfig, Balance, CurrencyId, Leverage, Leverages, LiquidityPoolId, TradingPair};
+use primitives::{AccumulateConfig, Balance, CurrencyId, Leverage, Leverages, TradingPair};
 use sp_runtime::{
 	traits::{
 		AccountIdConversion, AtLeast32Bit, CheckedAdd, EnsureOrigin, MaybeSerializeDeserialize, Member, One, Saturating,
@@ -37,7 +37,6 @@ pub trait Trait: frame_system::Trait {
 		+ Copy
 		+ Ord
 		+ Default
-		+ Into<LiquidityPoolId>
 		+ AtLeast32Bit
 		+ MaybeSerializeDeserialize;
 	type PoolManager: LiquidityPoolManager<Self::LiquidityPoolId, Balance>;
@@ -262,7 +261,7 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 
 	fn ensure_liquidity(pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
 		ensure!(Self::balances(&pool_id) >= amount, Error::<T>::CannotWithdrawAmount);
-		T::PoolManager::ensure_pool_safe_after_withdrawal(pool_id, amount)
+		T::PoolManager::ensure_can_withdraw(pool_id, amount)
 	}
 
 	fn is_owner(pool_id: Self::LiquidityPoolId, who: &T::AccountId) -> bool {

@@ -513,11 +513,20 @@ impl synthetic_protocol::Trait for Runtime {
 
 type TransactionSubmitter = system::offchain::TransactionSubmitter<(), Runtime, UncheckedExtrinsic>;
 
+// TODO: implement LaminarTreasury
+pub struct MockLaminarTreasury;
+impl module_traits::Treasury<AccountId> for MockLaminarTreasury {
+	fn account_id() -> AccountId {
+		pallet_treasury::Module::<Runtime>::account_id()
+	}
+}
+
 impl margin_protocol::Trait for Runtime {
 	type Event = Event;
 	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type LiquidityPools = margin_liquidity_pools::Module<Runtime>;
 	type PriceProvider = orml_prices::Module<Runtime>;
+	type Treasury = MockLaminarTreasury;
 	type SubmitTransaction = TransactionSubmitter;
 	type Call = Call;
 }

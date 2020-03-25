@@ -222,6 +222,13 @@ impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
 	}
 }
 
+pub struct MockTreasury;
+impl Treasury<AccountId> for MockTreasury {
+	fn account_id() -> AccountId {
+		TREASURY_ACCOUNT
+	}
+}
+
 pub type Extrinsic = TestXt<Call, ()>;
 type SubmitTransaction = frame_system::offchain::TransactionSubmitter<(), Call, Extrinsic>;
 
@@ -230,6 +237,7 @@ impl Trait for Runtime {
 	type MultiCurrency = OrmlTokens;
 	type LiquidityPools = MockLiquidityPools;
 	type PriceProvider = MockPrices;
+	type Treasury = MockTreasury;
 	type SubmitTransaction = SubmitTransaction;
 	type Call = Call;
 }
@@ -237,6 +245,7 @@ pub type MarginProtocol = Module<Runtime>;
 
 pub const ALICE: AccountId = 0;
 pub const BOB: AccountId = 1;
+pub const TREASURY_ACCOUNT: AccountId = 3;
 pub const MOCK_POOL: LiquidityPoolId = 100;
 
 pub struct ExtBuilder {

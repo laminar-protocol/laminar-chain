@@ -3,7 +3,6 @@
 use super::*;
 
 use frame_support::{impl_outer_origin, ord_parameter_types, parameter_types, weights::Weight};
-use orml_traits::PriceProvider;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -12,7 +11,7 @@ use sp_runtime::{
 };
 
 use orml_currencies::Currency;
-use primitives::{Balance, CurrencyId, LiquidityPoolId, Price};
+use primitives::{Balance, CurrencyId, LiquidityPoolId};
 use system::EnsureSignedBy;
 
 pub type BlockNumber = u64;
@@ -96,21 +95,8 @@ impl LiquidityPoolManager<LiquidityPoolId, Balance> for PoolManager {
 	fn get_required_deposit(_pool: LiquidityPoolId) -> result::Result<Balance, DispatchError> {
 		unimplemented!()
 	}
-
-	fn ensure_pool_safe_after_withdrawal(_pool_id: u32, _amount: u128) -> DispatchResult {
+	fn ensure_can_withdraw(_pool: LiquidityPoolId, _amount: Balance) -> DispatchResult {
 		Ok(())
-	}
-}
-
-pub struct MockPrices;
-impl MockPrices {
-	fn prices(currency_id: CurrencyId) -> Option<Price> {
-		unimplemented!()
-	}
-}
-impl PriceProvider<CurrencyId, Price> for MockPrices {
-	fn get_price(base: CurrencyId, quote: CurrencyId) -> Option<Price> {
-		unimplemented!()
 	}
 }
 
