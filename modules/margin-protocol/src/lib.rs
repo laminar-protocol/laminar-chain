@@ -266,11 +266,11 @@ impl<T: Trait> Module<T> {
 		price: Price,
 	) -> DispatchResult {
 		ensure!(
-			PositionsByPool::iter_prefix(pool).count() as u16 <= POOL_MAX_POSITIONS,
+			PositionsByPool::iter_prefix(pool).count() as u16 < POOL_MAX_POSITIONS,
 			Error::<T>::CannotOpenMorePosition
 		);
 		ensure!(
-			<PositionsByTrader<T>>::iter_prefix(who).count() as u16 <= TRADER_MAX_POSITIONS,
+			<PositionsByTrader<T>>::iter_prefix(who).count() as u16 < TRADER_MAX_POSITIONS,
 			Error::<T>::CannotOpenMorePosition
 		);
 		ensure!(
