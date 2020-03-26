@@ -361,6 +361,7 @@ impl<T: Trait> Module<T> {
 		<LiquidityPoolOptions<T>>::remove_prefix(&pool_id);
 		<SwapRates<T>>::remove_prefix(&pool_id);
 		<AccumulatedSwapRates<T>>::remove_prefix(&pool_id);
+		<LiquidityPoolEnabledTradingPairs<T>>::remove_prefix(&pool_id);
 
 		Ok(())
 	}
