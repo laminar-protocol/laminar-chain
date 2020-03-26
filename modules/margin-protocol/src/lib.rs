@@ -146,6 +146,7 @@ decl_error! {
 		PositionNotFound,
 		PositionNotOpenedByTrader,
 		BalanceTooLow,
+		NotSupportedByLiquidityPool,
 	}
 }
 
@@ -268,6 +269,10 @@ impl<T: Trait> Module<T> {
 			Error::<T>::MarginCalledTrader
 		);
 		ensure!(Self::margin_called_pools(pool).is_none(), Error::<T>::MarginCalledPool);
+		ensure!(
+			T::LiquidityPools::can_open_position(pool, pair, leverage, leveraged_amount),
+			Error::<T>::NotSupportedByLiquidityPool
+		);
 
 		let (held_signum, debit_signum): (i128, i128) = if leverage.is_long() { (1, -1) } else { (-1, 1) };
 		let leveraged_held = fixed_128_from_u128(leveraged_amount);
