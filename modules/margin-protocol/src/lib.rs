@@ -32,6 +32,8 @@ use serde::{Deserialize, Serialize};
 mod mock;
 mod tests;
 
+const TRADER_MAX_POSITIONS: u16 = 200;
+const POOL_MAX_POSITIONS: u16 = 1000;
 const MODULE_ID: ModuleId = ModuleId(*b"lami/mgn");
 
 pub trait Trait: frame_system::Trait {
@@ -65,9 +67,6 @@ pub struct Position<T: Trait> {
 	open_accumulated_swap_rate: Fixed128,
 	open_margin: Balance,
 }
-
-//TODO: set this value
-const MAX_POSITIONS_COUNT: u16 = u16::max_value();
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Copy, Clone, RuntimeDebug, Eq, PartialEq, Default)]
@@ -148,6 +147,7 @@ decl_error! {
 		BalanceTooLow,
 		PositionNotAllowed,
 		CannotOpenPosition,
+		CannotOpenMorePosition,
 	}
 }
 
@@ -265,6 +265,14 @@ impl<T: Trait> Module<T> {
 		leveraged_amount: Balance,
 		price: Price,
 	) -> DispatchResult {
+		ensure!(
+			PositionsByPool::iter_prefix(pool).count() as u16 <= POOL_MAX_POSITIONS,
+			Error::<T>::CannotOpenMorePosition
+		);
+		ensure!(
+			<PositionsByTrader<T>>::iter_prefix(who).count() as u16 <= TRADER_MAX_POSITIONS,
+			Error::<T>::CannotOpenMorePosition
+		);
 		ensure!(
 			Self::margin_called_traders(who).is_none(),
 			Error::<T>::MarginCalledTrader
