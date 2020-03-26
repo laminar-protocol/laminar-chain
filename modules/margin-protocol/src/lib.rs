@@ -146,7 +146,8 @@ decl_error! {
 		PositionNotFound,
 		PositionNotOpenedByTrader,
 		BalanceTooLow,
-		NotSupportedByLiquidityPool,
+		PositionNotAllowed,
+		CannotOpenPosition,
 	}
 }
 
@@ -270,8 +271,8 @@ impl<T: Trait> Module<T> {
 		);
 		ensure!(Self::margin_called_pools(pool).is_none(), Error::<T>::MarginCalledPool);
 		ensure!(
-			T::LiquidityPools::can_open_position(pool, pair, leverage, leveraged_amount),
-			Error::<T>::NotSupportedByLiquidityPool
+			T::LiquidityPools::is_allowed_position(pool, pair, leverage),
+			Error::<T>::PositionNotAllowed
 		);
 
 		let (held_signum, debit_signum): (i128, i128) = if leverage.is_long() { (1, -1) } else { (-1, 1) };
@@ -287,6 +288,11 @@ impl<T: Trait> Module<T> {
 			.checked_mul(&debits_price)
 			.ok_or(Error::<T>::NumOutOfBound)?;
 		let leveraged_held_in_usd = Self::_usd_value(pair.base, leveraged_debits)?;
+		ensure!(
+			T::LiquidityPools::can_open_position(pool, pair, leverage, u128_from_fixed_128(leveraged_held_in_usd)),
+			Error::<T>::CannotOpenPosition
+		);
+
 		let open_margin = {
 			let leverage_value = Fixed128::from_natural(leverage.value().into());
 			let m = leveraged_held_in_usd

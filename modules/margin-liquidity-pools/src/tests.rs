@@ -473,3 +473,54 @@ fn liquidity_provider_should_enable_disable_trading_pairs() {
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_enabled_trading_pair(0, pair), None);
 	})
 }
+
+#[test]
+fn should_set_default_min_leveraged_amount() {
+	new_test_ext().execute_with(|| {
+		let pool_id = 0;
+
+		assert_eq!(ModuleLiquidityPools::default_min_leveraged_amount(), 0);
+		assert_eq!(ModuleLiquidityPools::get_min_leveraged_amount(pool_id), 0);
+
+		// set default min leveraged amount
+		assert_ok!(ModuleLiquidityPools::set_default_min_leveraged_amount(Origin::ROOT, 10));
+		assert_eq!(ModuleLiquidityPools::default_min_leveraged_amount(), 10);
+		assert_eq!(ModuleLiquidityPools::get_min_leveraged_amount(pool_id), 10);
+	})
+}
+
+#[test]
+fn should_set_min_leveraged_amount() {
+	new_test_ext().execute_with(|| {
+		let pool_id = 0;
+
+		assert_eq!(ModuleLiquidityPools::min_leveraged_amount(pool_id), None);
+		assert_eq!(ModuleLiquidityPools::get_min_leveraged_amount(pool_id), 0);
+
+		// set default min leveraged amount
+		assert_ok!(ModuleLiquidityPools::set_default_min_leveraged_amount(Origin::ROOT, 10));
+		assert_eq!(ModuleLiquidityPools::get_min_leveraged_amount(pool_id), 10);
+
+		// pool not created yet
+		assert_noop!(
+			ModuleLiquidityPools::set_min_leveraged_amount(Origin::signed(ALICE), pool_id, 10),
+			Error::<Runtime>::NoPermission
+		);
+
+		// create pool and set min leveraged amount
+		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
+		assert_ok!(ModuleLiquidityPools::set_min_leveraged_amount(
+			Origin::signed(ALICE),
+			pool_id,
+			2
+		));
+		assert_eq!(ModuleLiquidityPools::min_leveraged_amount(pool_id), Some(2));
+		assert_eq!(ModuleLiquidityPools::get_min_leveraged_amount(pool_id), 10);
+
+		// non pool owners cannot set min leveraged amount
+		assert_noop!(
+			ModuleLiquidityPools::set_min_leveraged_amount(Origin::signed(BOB), pool_id, 20),
+			Error::<Runtime>::NoPermission
+		);
+	})
+}
