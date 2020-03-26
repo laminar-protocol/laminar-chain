@@ -218,7 +218,7 @@ impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
 		_leverage: Leverage,
 		_leveraged_amount: Balance,
 	) -> bool {
-		unimplemented!()
+		true
 	}
 }
 
