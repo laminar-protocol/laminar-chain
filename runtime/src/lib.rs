@@ -479,7 +479,7 @@ impl margin_liquidity_pools::Trait for Runtime {
 	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type LiquidityCurrency = LiquidityCurrency;
 	type LiquidityPoolId = LiquidityPoolId;
-	type PoolManager = SyntheticTokens;
+	type PoolManager = MarginProtocol;
 	type ExistentialDeposit = ExistentialDeposit;
 	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
 	type MaxSwap = MaxSwap;
