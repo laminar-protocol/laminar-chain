@@ -17,7 +17,7 @@ mod tests {
 		Leverage::{self, *},
 		Leverages, TradingPair,
 	};
-	use module_traits::{LiquidityPoolManager, Treasury};
+	use module_traits::{LiquidityPoolManager, MarginProtocolLiquidityPools, Treasury};
 	use orml_prices::Price;
 	use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
 	use orml_utilities::Fixed128;
@@ -1619,6 +1619,7 @@ mod tests {
 				assert_ok!(margin_enable_trading_pair(EUR_USD));
 				assert_ok!(margin_liquidity_pool_enable_trading_pair(EUR_USD));
 
+				// LongTen
 				assert_ok!(margin_open_position(
 					&ALICE::get(),
 					EUR_USD,
@@ -1629,7 +1630,6 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(margin_balance(&ALICE::get()), dollar(5000));
 
-				// run twice
 				for i in 1..9 {
 					MarginLiquidityPools::on_initialize(i);
 				}
@@ -1640,11 +1640,42 @@ mod tests {
 				// close_price = 3 * (1 - 0.01) = 2.97
 				// profit = leveraged_held * (close_price - open_price)
 				// -300 = 5000 * (2.97 - 3.03)
-				// TODO: maybe bugs
-				//assert_eq!(margin_balance(&ALICE::get()), dollar(4650));
-				//assert_eq!(margin_liquidity(), dollar(5300));
-				//assert_ok!(margin_withdraw(&ALICE::get(), dollar(9700)));
-				//assert_eq!(collateral_balance(&ALICE::get()), dollar(14700));
+				// penalty = leveraged_held * (accumulated_swap_rate - open_accumulated_swap_rate)
+				// 50 = 5000 * (0.01 - 0)
+				assert_eq!(margin_balance(&ALICE::get()), dollar(4650));
+				assert_eq!(margin_liquidity(), dollar(10350));
+
+				// ShortTen
+				assert_ok!(margin_open_position(
+					&ALICE::get(),
+					EUR_USD,
+					ShortTen,
+					dollar(5000),
+					Price::from_rational(2, 1)
+				));
+				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), dollar(4650));
+
+				for i in 1..12 {
+					MarginLiquidityPools::on_initialize(i);
+					println!(
+						"accumulated_swap_rate = {:?}",
+						MarginLiquidityPools::get_accumulated_swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD)
+					);
+				}
+
+				assert_ok!(margin_close_position(&ALICE::get(), 1, Price::from_rational(4, 1)));
+				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
+				// open_price = 3 * (1 + 0.01) = 3.03
+				// close_price = 3 * (1 - 0.01) = 2.97
+				// profit = leveraged_held * (close_price - open_price)
+				// -300 = 5000 * (2.97 - 3.03)
+				// penalty = leveraged_held * (accumulated_swap_rate - open_accumulated_swap_rate)
+				// 101.505 = 5000 * (0.030301 - 0.01)
+				assert_eq!(margin_balance(&ALICE::get()), 4451505000000000000000);
+				assert_eq!(margin_liquidity(), 10548495000000000000000);
+				assert_ok!(margin_withdraw(&ALICE::get(), 4451505000000000000000));
+				assert_eq!(collateral_balance(&ALICE::get()), 9451505000000000000000);
 			});
 	}
 }
