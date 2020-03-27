@@ -230,7 +230,7 @@ fn accumulated_swap_rate_of_long_position_works() {
 		.execute_with(|| {
 			assert_eq!(
 				MarginProtocol::_accumulated_swap_rate_of_position(&eur_usd_long_1()),
-				Ok(fixed128_from_natural_currency_cent(36_87))
+				Ok(fixed128_from_natural_currency_cent(-36_87))
 			);
 		});
 }
@@ -259,7 +259,7 @@ fn accumulated_swap_rate_of_trader_sums_all_positions() {
 			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0, 1]);
 			assert_eq!(
 				MarginProtocol::_accumulated_swap_rate_of_trader(&ALICE),
-				Ok(fixed128_from_natural_currency_cent(47_83))
+				Ok(fixed128_from_natural_currency_cent(-25_91))
 			);
 		});
 }
@@ -279,7 +279,7 @@ fn equity_of_trader_works() {
 			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0, 1, 2, 3]);
 			assert_eq!(
 				MarginProtocol::_equity_of_trader(&ALICE),
-				Ok(fixed128_from_natural_currency_cent(116_776_46))
+				Ok(fixed128_from_natural_currency_cent(116_665_86))
 			);
 		});
 }
@@ -300,7 +300,7 @@ fn margin_level_works() {
 			assert_eq!(
 				MarginProtocol::_margin_level(&ALICE, None, None),
 				// 19.44%
-				Ok(Fixed128::from_parts(195611325699715284))
+				Ok(Fixed128::from_parts(195426060513372176))
 			);
 		});
 }
@@ -335,14 +335,14 @@ fn margin_level_with_equity_delta_works() {
 			assert_eq!(
 				MarginProtocol::_margin_level(&ALICE, None, Some(fixed128_from_natural_currency_cent(10_000_00))),
 				// 21.21%
-				Ok(Fixed128::from_parts(212362246707229580))
+				Ok(Fixed128::from_parts(212176981520886472))
 			);
 
 			// negative delta
 			assert_eq!(
 				MarginProtocol::_margin_level(&ALICE, None, Some(fixed128_from_natural_currency_cent(-10_000_00))),
 				// 17.87%
-				Ok(Fixed128::from_parts(178860404692200988))
+				Ok(Fixed128::from_parts(178675139505857880))
 			);
 		});
 }
@@ -450,7 +450,7 @@ fn equity_of_pool_works() {
 			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0, 1, 2, 3]);
 			assert_eq!(
 				MarginProtocol::_equity_of_pool(MOCK_POOL),
-				Ok(fixed128_from_natural_currency_cent(103_223_54))
+				Ok(fixed128_from_natural_currency_cent(103_334_14))
 			);
 		});
 }
@@ -472,8 +472,8 @@ fn enp_and_ell_without_new_position_works() {
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, None, None),
 				Ok((
-					Fixed128::from_parts(879974322885452959),
-					Fixed128::from_parts(289026201026201026)
+					Fixed128::from_parts(880917181075659681),
+					Fixed128::from_parts(289335881335881335)
 				))
 			);
 		});
@@ -513,8 +513,8 @@ fn enp_and_ell_without_position_with_liquidity_works() {
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, None, Some(fixed128_from_natural_currency_cent(-10))),
 				Ok((
-					Fixed128::from_parts(879973470391610096),
-					Fixed128::from_parts(289025921025921025)
+					Fixed128::from_parts(880916328581816817),
+					Fixed128::from_parts(289335601335601335)
 				))
 			);
 		});
@@ -1330,15 +1330,15 @@ fn close_loss_position_works() {
 			// realized math
 			assert_eq!(
 				MarginProtocol::balances(ALICE),
-				balance_from_natural_currency_cent(9496_57)
+				balance_from_natural_currency_cent(9422_83)
 			);
 			assert_eq!(
 				MockLiquidityPools::liquidity(MOCK_POOL),
-				balance_from_natural_currency_cent(100503_43)
+				balance_from_natural_currency_cent(100577_17)
 			);
 			assert_eq!(
 				OrmlTokens::free_balance(CurrencyId::AUSD, &MarginProtocol::account_id()),
-				balance_from_natural_currency_cent(9496_57)
+				balance_from_natural_currency_cent(9422_83)
 			);
 
 			// position removed
@@ -1379,15 +1379,15 @@ fn close_profit_position_works() {
 
 			assert_eq!(
 				MarginProtocol::balances(ALICE),
-				balance_from_natural_currency_cent(10479_13)
+				balance_from_natural_currency_cent(10442_27)
 			);
 			assert_eq!(
 				MockLiquidityPools::liquidity(MOCK_POOL),
-				balance_from_natural_currency_cent(99520_87)
+				balance_from_natural_currency_cent(99557_73)
 			);
 			assert_eq!(
 				OrmlTokens::free_balance(CurrencyId::AUSD, &MarginProtocol::account_id()),
-				balance_from_natural_currency_cent(10479_13)
+				balance_from_natural_currency_cent(10442_27)
 			);
 		});
 }
