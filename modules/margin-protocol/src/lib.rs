@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use frame_support::{debug, decl_error, decl_event, decl_module, decl_storage, ensure, IsSubType};
+use frame_support::{debug, decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get, IsSubType};
 use sp_arithmetic::{
 	traits::{Bounded, Saturating},
 	Permill,
@@ -32,8 +32,6 @@ use serde::{Deserialize, Serialize};
 mod mock;
 mod tests;
 
-const TRADER_MAX_POSITIONS: u16 = 200;
-const POOL_MAX_POSITIONS: u16 = 1000;
 const MODULE_ID: ModuleId = ModuleId(*b"lami/mgn");
 
 pub trait Trait: frame_system::Trait {
@@ -50,6 +48,8 @@ pub trait Trait: frame_system::Trait {
 	type Treasury: Treasury<Self::AccountId>;
 	type SubmitTransaction: SubmitUnsignedTransaction<Self, <Self as Trait>::Call>;
 	type Call: From<Call<Self>> + IsSubType<Module<Self>, Self>;
+	type GetTraderMaxOpenPositions: Get<usize>;
+	type GetPoolMaxOpenPositions: Get<usize>;
 }
 
 pub type PositionId = u64;
@@ -266,11 +266,11 @@ impl<T: Trait> Module<T> {
 		price: Price,
 	) -> DispatchResult {
 		ensure!(
-			PositionsByPool::iter_prefix(pool).count() as u16 < POOL_MAX_POSITIONS,
+			PositionsByPool::get(pool, pair).len() < T::GetPoolMaxOpenPositions::get(),
 			Error::<T>::CannotOpenMorePosition
 		);
 		ensure!(
-			<PositionsByTrader<T>>::iter_prefix(who).count() as u16 < TRADER_MAX_POSITIONS,
+			<PositionsByTrader<T>>::get(who, pool).len() < T::GetTraderMaxOpenPositions::get(),
 			Error::<T>::CannotOpenMorePosition
 		);
 		ensure!(
