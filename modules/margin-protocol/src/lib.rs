@@ -640,19 +640,11 @@ impl<T: Trait> Module<T> {
 		let rate = T::LiquidityPools::get_accumulated_swap_rate(position.pool, position.pair)
 			.checked_sub(&position.open_accumulated_swap_rate)
 			.ok_or(Error::<T>::NumOutOfBound)?;
-		let accumulated_swap = position
+		position
 			.leveraged_held
 			.saturating_abs()
 			.checked_mul(&rate)
-			.ok_or(Error::<T>::NumOutOfBound)?;
-
-		if position.leverage.is_long() {
-			Fixed128::zero()
-				.checked_sub(&accumulated_swap)
-				.ok_or(Error::<T>::NumOutOfBound.into())
-		} else {
-			Ok(accumulated_swap)
-		}
+			.ok_or(Error::<T>::NumOutOfBound.into())
 	}
 
 	/// Accumulated swap of all open positions of a given trader(USD value).
