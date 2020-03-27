@@ -142,8 +142,8 @@ decl_module! {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
 
+			Self::ensure_liquidity(pool_id, amount)?;
 			let new_balance = Self::balances(&pool_id).checked_sub(amount).ok_or(Error::<T>::CannotWithdrawAmount)?;
-
 			// check minimum balance
 			if new_balance < T::ExistentialDeposit::get() {
 				return Err(Error::<T>::CannotWithdrawExistentialDeposit.into());
@@ -407,7 +407,6 @@ impl<T: Trait> Module<T> {
 	fn _withdraw_liquidity(who: &T::AccountId, pool_id: T::LiquidityPoolId, amount: Balance) -> DispatchResult {
 		ensure!(<Owners<T>>::contains_key(&pool_id), Error::<T>::PoolNotFound);
 
-		Self::ensure_liquidity(pool_id, amount)?;
 		let new_balance = Self::balances(&pool_id)
 			.checked_sub(amount)
 			.ok_or(Error::<T>::CannotWithdrawAmount)?;
