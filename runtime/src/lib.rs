@@ -521,6 +521,11 @@ impl module_traits::Treasury<AccountId> for MockLaminarTreasury {
 	}
 }
 
+parameter_types! {
+	pub const GetTraderMaxOpenPositions: usize = 200;
+	pub const GetPoolMaxOpenPositions: usize = 1000;
+}
+
 impl margin_protocol::Trait for Runtime {
 	type Event = Event;
 	type MultiCurrency = orml_currencies::Module<Runtime>;
@@ -529,6 +534,8 @@ impl margin_protocol::Trait for Runtime {
 	type Treasury = MockLaminarTreasury;
 	type SubmitTransaction = TransactionSubmitter;
 	type Call = Call;
+	type GetTraderMaxOpenPositions = GetTraderMaxOpenPositions;
+	type GetPoolMaxOpenPositions = GetPoolMaxOpenPositions;
 }
 
 construct_runtime!(
