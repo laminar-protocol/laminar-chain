@@ -671,34 +671,25 @@ impl<T: Trait> Module<T> {
 
 	/// Margin level of a given user.
 	fn _margin_level(who: &T::AccountId, action: Action<T>) -> Fixed128Result {
-		let equity = Self::_equity_of_trader(who)?;
-		let leveraged_debits_in_usd = Self::_leveraged_debits_in_usd(who)?;
+		let mut equity = Self::_equity_of_trader(who)?;
+		let mut leveraged_debits_in_usd = Self::_leveraged_debits_in_usd(who)?;
 		// if no leveraged held, margin level is max
 		match action {
 			Action::Withdraw(amount) => {
-				let fixed128_amount = fixed_128_from_u128(amount);
-				// ensure there's no value loss
-				ensure!(
-					u128_from_fixed_128(fixed128_amount) == amount,
-					Error::<T>::NumOutOfBound
-				);
-				let equity = equity.checked_sub(&fixed128_amount).ok_or(Error::<T>::NumOutOfBound)?;
-				Ok(equity
-					.checked_div(&leveraged_debits_in_usd)
-					.unwrap_or(Fixed128::max_value()))
+				equity = equity
+					.checked_sub(&fixed_128_from_u128(amount))
+					.ok_or(Error::<T>::NumOutOfBound)?;
 			}
 			Action::OpenPosition(p) => {
-				let leveraged_debits_in_usd = leveraged_debits_in_usd
+				leveraged_debits_in_usd = leveraged_debits_in_usd
 					.checked_add(&p.leveraged_debits_in_usd.saturating_abs())
 					.ok_or(Error::<T>::NumOutOfBound)?;
-				Ok(equity
-					.checked_div(&leveraged_debits_in_usd)
-					.unwrap_or(Fixed128::max_value()))
 			}
-			Action::None => Ok(equity
-				.checked_div(&leveraged_debits_in_usd)
-				.unwrap_or(Fixed128::max_value())),
-		}
+			_ => {}
+		};
+		Ok(equity
+			.checked_div(&leveraged_debits_in_usd)
+			.unwrap_or(Fixed128::max_value()))
 	}
 
 	fn _leveraged_debits_in_usd(who: &T::AccountId) -> Fixed128Result {
@@ -831,15 +822,9 @@ impl<T: Trait> Module<T> {
 		let (net_position, longest_leg) = Self::_net_position_and_longest_leg(pool, new_position);
 
 		let equity = match action {
-			Action::Withdraw(amount) => {
-				let fixed128_amount = fixed_128_from_u128(amount);
-				// ensure there's no value loss
-				ensure!(
-					u128_from_fixed_128(fixed128_amount) == amount,
-					Error::<T>::NumOutOfBound
-				);
-				equity.checked_sub(&fixed128_amount).ok_or(Error::<T>::NumOutOfBound)?
-			}
+			Action::Withdraw(amount) => equity
+				.checked_sub(&fixed_128_from_u128(amount))
+				.ok_or(Error::<T>::NumOutOfBound)?,
 			_ => equity,
 		};
 

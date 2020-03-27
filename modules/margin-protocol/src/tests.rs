@@ -416,16 +416,6 @@ fn ensure_trader_safe_works() {
 				MarginProtocol::_ensure_trader_safe(&ALICE, Action::Withdraw(balance_from_natural_currency_cent(10))),
 				Error::<Runtime>::TraderWouldBeUnsafe
 			);
-
-			let amount = Fixed128::max_value().deconstruct() as u128 + 1;
-			assert_noop!(
-				MarginProtocol::_ensure_trader_safe(&ALICE, Action::Withdraw(amount)),
-				Error::<Runtime>::TraderWouldBeUnsafe
-			);
-			assert_noop!(
-				MarginProtocol::_check_trader(&ALICE, Action::Withdraw(amount)),
-				Error::<Runtime>::NumOutOfBound
-			);
 		});
 }
 
@@ -541,15 +531,6 @@ fn ensure_liquidity_works() {
 			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
 
 			assert_ok!(MarginProtocol::ensure_can_withdraw(MOCK_POOL, 10));
-			let amount = Fixed128::max_value().deconstruct() as u128 + 1;
-			assert_noop!(
-				MarginProtocol::ensure_can_withdraw(MOCK_POOL, amount),
-				Error::<Runtime>::PoolWouldBeUnsafe
-			);
-			assert_noop!(
-				MarginProtocol::_check_pool(MOCK_POOL, Action::Withdraw(amount)),
-				Error::<Runtime>::NumOutOfBound
-			);
 
 			LiquidityPoolELLThreshold::put(risk_threshold(100, 0));
 
