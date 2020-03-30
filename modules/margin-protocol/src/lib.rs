@@ -1,7 +1,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use frame_support::{debug, decl_error, decl_event, decl_module, decl_storage, ensure, IsSubType};
+use frame_support::{
+	debug, decl_error, decl_event, decl_module, decl_storage, ensure, storage::IterableStorageMap, IsSubType,
+};
 use sp_arithmetic::{
 	traits::{Bounded, Saturating},
 	Permill,
@@ -81,14 +83,14 @@ pub struct RiskThreshold {
 decl_storage! {
 	trait Store for Module<T: Trait> as MarginProtocol {
 		NextPositionId get(next_position_id): PositionId;
-		Positions get(positions): map hasher(blake2_256) PositionId => Option<Position<T>>;
+		Positions get(positions): map hasher(blake2_128_concat) PositionId => Option<Position<T>>;
 		PositionsByTrader get(positions_by_trader): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) LiquidityPoolId => Vec<PositionId>;
 		PositionsByPool get(positions_by_pool): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => Vec<PositionId>;
 		// SwapPeriods get(swap_periods): map hasher(black2_256) TradingPair => Option<SwapPeriod>;
-		Balances get(balances): map hasher(blake2_256) T::AccountId => Balance;
-		MinLiquidationPercent get(min_liquidation_percent): map hasher(blake2_256) TradingPair => Fixed128;
-		MarginCalledTraders get(margin_called_traders): map hasher(blake2_256) T::AccountId => Option<()>;
-		MarginCalledPools get(margin_called_pools): map hasher(blake2_256) LiquidityPoolId => Option<()>;
+		Balances get(balances): map hasher(blake2_128_concat) T::AccountId => Balance;
+		MinLiquidationPercent get(min_liquidation_percent): map hasher(blake2_128_concat) TradingPair => Fixed128;
+		MarginCalledTraders get(margin_called_traders): map hasher(blake2_128_concat) T::AccountId => Option<()>;
+		MarginCalledPools get(margin_called_pools): map hasher(blake2_128_concat) LiquidityPoolId => Option<()>;
 		TraderRiskThreshold get(trader_risk_threshold) config(): RiskThreshold;
 		LiquidityPoolENPThreshold get(liquidity_pool_enp_threshold) config(): RiskThreshold;
 		LiquidityPoolELLThreshold get(liquidity_pool_ell_threshold) config(): RiskThreshold;
@@ -977,7 +979,7 @@ impl<T: Trait> Module<T> {
 	/// Get a list of traders
 	fn _get_traders() -> Vec<T::AccountId> {
 		// TODO: use key iter after this gets closed https://github.com/paritytech/substrate/issues/5319
-		let mut traders: Vec<T::AccountId> = <Positions<T>>::iter().map(|x| x.owner).collect();
+		let mut traders: Vec<T::AccountId> = <Positions<T>>::iter().map(|(_, p)| p.owner).collect();
 		traders.sort();
 		traders.dedup(); // dedup works as unique for sorted vec, so we sort first
 		traders
@@ -986,7 +988,7 @@ impl<T: Trait> Module<T> {
 	/// Get a list of pools
 	fn _get_pools() -> Vec<LiquidityPoolId> {
 		// TODO: use key iter after this gets closed https://github.com/paritytech/substrate/issues/5319
-		let mut pools: Vec<LiquidityPoolId> = <Positions<T>>::iter().map(|x| x.pool).collect();
+		let mut pools: Vec<LiquidityPoolId> = <Positions<T>>::iter().map(|(_, p)| p.pool).collect();
 		pools.sort();
 		pools.dedup(); // dedup works as unique for sorted vec, so we sort first
 		pools

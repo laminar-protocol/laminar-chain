@@ -219,11 +219,16 @@ impl pallet_sudo::Trait for Runtime {
 	type Call = Call;
 }
 
+parameter_types! {
+	pub const GeneralCouncilMotionDuration: BlockNumber = 5 * DAYS; // TODO: update this
+}
+
 type GeneralCouncilInstance = pallet_collective::Instance1;
 impl pallet_collective::Trait<GeneralCouncilInstance> for Runtime {
 	type Origin = Origin;
 	type Proposal = Call;
 	type Event = Event;
+	type MotionDuration = GeneralCouncilMotionDuration;
 }
 
 type GeneralCouncilMembershipInstance = pallet_membership::Instance1;
@@ -233,8 +238,13 @@ impl pallet_membership::Trait<GeneralCouncilMembershipInstance> for Runtime {
 	type RemoveOrigin = pallet_collective::EnsureProportionMoreThan<_3, _4, AccountId, GeneralCouncilInstance>;
 	type SwapOrigin = pallet_collective::EnsureProportionMoreThan<_3, _4, AccountId, GeneralCouncilInstance>;
 	type ResetOrigin = pallet_collective::EnsureProportionMoreThan<_3, _4, AccountId, GeneralCouncilInstance>;
+	type PrimeOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, GeneralCouncilInstance>;
 	type MembershipInitialized = GeneralCouncil;
 	type MembershipChanged = GeneralCouncil;
+}
+
+parameter_types! {
+	pub const FinancialCouncilMotionDuration: BlockNumber = 5 * DAYS; // TODO: update this
 }
 
 type FinancialCouncilInstance = pallet_collective::Instance2;
@@ -242,17 +252,23 @@ impl pallet_collective::Trait<FinancialCouncilInstance> for Runtime {
 	type Origin = Origin;
 	type Proposal = Call;
 	type Event = Event;
+	type MotionDuration = FinancialCouncilMotionDuration;
 }
 
 type FinancialCouncilMembershipInstance = pallet_membership::Instance2;
 impl pallet_membership::Trait<FinancialCouncilMembershipInstance> for Runtime {
 	type Event = Event;
-	type AddOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, GeneralCouncilInstance>;
-	type RemoveOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, GeneralCouncilInstance>;
-	type SwapOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, GeneralCouncilInstance>;
-	type ResetOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, GeneralCouncilInstance>;
+	type AddOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
+	type RemoveOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
+	type SwapOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
+	type ResetOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
+	type PrimeOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
 	type MembershipInitialized = FinancialCouncil;
 	type MembershipChanged = FinancialCouncil;
+}
+
+parameter_types! {
+	pub const OperatorCollectiveMotionDuration: BlockNumber = 5 * DAYS; // TODO: update this
 }
 
 type OperatorCollectiveInstance = pallet_collective::Instance3;
@@ -260,15 +276,17 @@ impl pallet_collective::Trait<OperatorCollectiveInstance> for Runtime {
 	type Origin = Origin;
 	type Proposal = Call;
 	type Event = Event;
+	type MotionDuration = OperatorCollectiveMotionDuration;
 }
 
 type OperatorMembershipInstance = pallet_membership::Instance3;
 impl pallet_membership::Trait<OperatorMembershipInstance> for Runtime {
 	type Event = Event;
-	type AddOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, GeneralCouncilInstance>;
-	type RemoveOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, GeneralCouncilInstance>;
-	type SwapOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, GeneralCouncilInstance>;
-	type ResetOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, GeneralCouncilInstance>;
+	type AddOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, OperatorCollectiveInstance>;
+	type RemoveOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, OperatorCollectiveInstance>;
+	type SwapOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, OperatorCollectiveInstance>;
+	type ResetOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, OperatorCollectiveInstance>;
+	type PrimeOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, OperatorCollectiveInstance>;
 	type MembershipInitialized = OperatorCollective;
 	type MembershipChanged = OperatorCollective;
 }
@@ -370,6 +388,7 @@ parameter_types! {
 	pub const BondingDuration: pallet_staking::EraIndex = 24 * 28;
 	pub const SlashDeferDuration: pallet_staking::EraIndex = 24 * 7; // 1/4 the bonding duration.
 	pub const RewardCurve: &'static PiecewiseLinear<'static> = &REWARD_CURVE;
+	pub const MaxNominatorRewardedPerValidator: u32 = 64; // TODO: update this
 }
 
 impl pallet_staking::Trait for Runtime {
@@ -387,6 +406,7 @@ impl pallet_staking::Trait for Runtime {
 	type SlashCancelOrigin = pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, GeneralCouncilInstance>;
 	type SessionInterface = Self;
 	type RewardCurve = RewardCurve;
+	type MaxNominatorRewardedPerValidator = MaxNominatorRewardedPerValidator;
 }
 
 pub struct OperatorCollectiveProvider;
@@ -618,10 +638,6 @@ impl_runtime_apis! {
 	impl sp_block_builder::BlockBuilder<Block> for Runtime {
 		fn apply_extrinsic(extrinsic: <Block as BlockT>::Extrinsic) -> ApplyExtrinsicResult {
 			Executive::apply_extrinsic(extrinsic)
-		}
-
-		fn apply_trusted_extrinsic(extrinsic: <Block as BlockT>::Extrinsic) -> ApplyExtrinsicResult {
-			Executive::apply_trusted_extrinsic(extrinsic)
 		}
 
 		fn finalize_block() -> <Block as BlockT>::Header {
