@@ -2,7 +2,8 @@
 
 use codec::{Decode, Encode};
 use frame_support::{
-	debug, decl_error, decl_event, decl_module, decl_storage, ensure, storage::IterableStorageMap, IsSubType,
+	debug, decl_error, decl_event, decl_module, decl_storage, ensure, storage::IterableStorageMap, traits::Get,
+	IsSubType,
 };
 use sp_arithmetic::{
 	traits::{Bounded, Saturating},
@@ -50,6 +51,8 @@ pub trait Trait: frame_system::Trait {
 	type Treasury: Treasury<Self::AccountId>;
 	type SubmitTransaction: SubmitUnsignedTransaction<Self, <Self as Trait>::Call>;
 	type Call: From<Call<Self>> + IsSubType<Module<Self>, Self>;
+	type GetTraderMaxOpenPositions: Get<usize>;
+	type GetPoolMaxOpenPositions: Get<usize>;
 }
 
 pub type PositionId = u64;
@@ -67,9 +70,6 @@ pub struct Position<T: Trait> {
 	open_accumulated_swap_rate: Fixed128,
 	open_margin: Balance,
 }
-
-//TODO: set this value
-const MAX_POSITIONS_COUNT: u16 = u16::max_value();
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Copy, Clone, RuntimeDebug, Eq, PartialEq, Default)]
@@ -150,6 +150,7 @@ decl_error! {
 		BalanceTooLow,
 		PositionNotAllowed,
 		CannotOpenPosition,
+		CannotOpenMorePosition,
 	}
 }
 
@@ -267,6 +268,14 @@ impl<T: Trait> Module<T> {
 		leveraged_amount: Balance,
 		price: Price,
 	) -> DispatchResult {
+		ensure!(
+			PositionsByPool::get(pool, pair).len() < T::GetPoolMaxOpenPositions::get(),
+			Error::<T>::CannotOpenMorePosition
+		);
+		ensure!(
+			<PositionsByTrader<T>>::get(who, pool).len() < T::GetTraderMaxOpenPositions::get(),
+			Error::<T>::CannotOpenMorePosition
+		);
 		ensure!(
 			Self::margin_called_traders(who).is_none(),
 			Error::<T>::MarginCalledTrader
