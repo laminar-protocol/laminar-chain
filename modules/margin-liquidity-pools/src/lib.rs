@@ -4,7 +4,9 @@ mod mock;
 mod tests;
 
 use codec::{Decode, Encode, FullCodec};
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get, Parameter};
+use frame_support::{
+	decl_error, decl_event, decl_module, decl_storage, ensure, storage::IterableStorageMap, traits::Get, Parameter,
+};
 use frame_system::{self as system, ensure_root, ensure_signed};
 use orml_traits::{BasicCurrency, MultiCurrency};
 use orml_utilities::Fixed128;
@@ -49,17 +51,17 @@ pub trait Trait: frame_system::Trait {
 decl_storage! {
 	trait Store for Module<T: Trait> as MarginLiquidityPools {
 		pub NextPoolId get(fn next_pool_id): T::LiquidityPoolId;
-		pub Owners get(fn owners): map hasher(blake2_256) T::LiquidityPoolId => Option<(T::AccountId, T::LiquidityPoolId)>;
-		pub LiquidityPoolOptions get(fn liquidity_pool_options): double_map hasher(blake2_256) T::LiquidityPoolId, hasher(blake2_256) TradingPair => Option<MarginLiquidityPoolOption>;
-		pub Balances get(fn balances): map hasher(blake2_256) T::LiquidityPoolId => Balance;
-		pub SwapRates get(fn swap_rate): double_map hasher(blake2_256) T::LiquidityPoolId, hasher(blake2_256) TradingPair => Fixed128;
-		pub AccumulatedSwapRates get(fn accumulated_swap_rate): double_map hasher(blake2_256) T::LiquidityPoolId, hasher(blake2_256) TradingPair => Fixed128;
-		pub MaxSpread get(fn max_spread): map hasher(blake2_256) TradingPair => Permill;
-		pub Accumulates get(fn accumulate): map hasher(blake2_256) TradingPair => Option<(AccumulateConfig<T::BlockNumber>, TradingPair)>;
-		pub EnabledTradingPairs get(fn enabled_trading_pair): map hasher(blake2_256) TradingPair => Option<TradingPair>;
-		pub LiquidityPoolEnabledTradingPairs get(fn liquidity_pool_enabled_trading_pair): double_map hasher(blake2_256) T::LiquidityPoolId, hasher(blake2_256) TradingPair => Option<TradingPair>;
+		pub Owners get(fn owners): map hasher(blake2_128_concat) T::LiquidityPoolId => Option<(T::AccountId, T::LiquidityPoolId)>;
+		pub LiquidityPoolOptions get(fn liquidity_pool_options): double_map hasher(blake2_128_concat) T::LiquidityPoolId, hasher(blake2_128_concat) TradingPair => Option<MarginLiquidityPoolOption>;
+		pub Balances get(fn balances): map hasher(blake2_128_concat) T::LiquidityPoolId => Balance;
+		pub SwapRates get(fn swap_rate): double_map hasher(blake2_128_concat) T::LiquidityPoolId, hasher(blake2_128_concat) TradingPair => Fixed128;
+		pub AccumulatedSwapRates get(fn accumulated_swap_rate): double_map hasher(blake2_128_concat) T::LiquidityPoolId, hasher(blake2_128_concat) TradingPair => Fixed128;
+		pub MaxSpread get(fn max_spread): map hasher(blake2_128_concat) TradingPair => Permill;
+		pub Accumulates get(fn accumulate): map hasher(blake2_128_concat) TradingPair => Option<(AccumulateConfig<T::BlockNumber>, TradingPair)>;
+		pub EnabledTradingPairs get(fn enabled_trading_pair): map hasher(blake2_128_concat) TradingPair => Option<TradingPair>;
+		pub LiquidityPoolEnabledTradingPairs get(fn liquidity_pool_enabled_trading_pair): double_map hasher(blake2_128_concat) T::LiquidityPoolId, hasher(blake2_128_concat) TradingPair => Option<TradingPair>;
 		pub DefaultMinLeveragedAmount get(fn default_min_leveraged_amount) config(): Balance;
-		pub MinLeveragedAmount get(fn min_leveraged_amount): map hasher(blake2_256) T::LiquidityPoolId => Option<Balance>;
+		pub MinLeveragedAmount get(fn min_leveraged_amount): map hasher(blake2_128_concat) T::LiquidityPoolId => Option<Balance>;
 	}
 }
 
@@ -142,8 +144,8 @@ decl_module! {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
 
+			Self::ensure_liquidity(pool_id, amount)?;
 			let new_balance = Self::balances(&pool_id).checked_sub(amount).ok_or(Error::<T>::CannotWithdrawAmount)?;
-
 			// check minimum balance
 			if new_balance < T::ExistentialDeposit::get() {
 				return Err(Error::<T>::CannotWithdrawExistentialDeposit.into());
@@ -237,7 +239,7 @@ decl_module! {
 		}
 
 		fn on_initialize(n: T::BlockNumber) {
-			for (accumulate_config, pair) in <Accumulates<T>>::iter() {
+			for (_, (accumulate_config, pair)) in <Accumulates<T>>::iter() {
 				if n % accumulate_config.frequency == accumulate_config.offset {
 					Self::_accumulate_rates(pair);
 				}
@@ -388,6 +390,8 @@ impl<T: Trait> Module<T> {
 		<LiquidityPoolOptions<T>>::remove_prefix(&pool_id);
 		<SwapRates<T>>::remove_prefix(&pool_id);
 		<AccumulatedSwapRates<T>>::remove_prefix(&pool_id);
+		<LiquidityPoolEnabledTradingPairs<T>>::remove_prefix(&pool_id);
+		<MinLeveragedAmount<T>>::remove(pool_id);
 
 		Ok(())
 	}
@@ -406,7 +410,6 @@ impl<T: Trait> Module<T> {
 	fn _withdraw_liquidity(who: &T::AccountId, pool_id: T::LiquidityPoolId, amount: Balance) -> DispatchResult {
 		ensure!(<Owners<T>>::contains_key(&pool_id), Error::<T>::PoolNotFound);
 
-		Self::ensure_liquidity(pool_id, amount)?;
 		let new_balance = Self::balances(&pool_id)
 			.checked_sub(amount)
 			.ok_or(Error::<T>::CannotWithdrawAmount)?;
@@ -452,7 +455,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _accumulate_rates(pair: TradingPair) {
-		for pool_id in <Owners<T>>::iter().map(|(_, pool_id)| pool_id) {
+		for pool_id in <Owners<T>>::iter().map(|(_, (_, pool_id))| pool_id) {
 			let rate = Self::swap_rate(pool_id, pair);
 			let accumulated = Self::accumulated_swap_rate(pool_id, pair);
 			let one = Fixed128::from_natural(1);
