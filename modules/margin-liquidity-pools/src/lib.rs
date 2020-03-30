@@ -4,7 +4,9 @@ mod mock;
 mod tests;
 
 use codec::{Decode, Encode, FullCodec};
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get, Parameter};
+use frame_support::{
+	decl_error, decl_event, decl_module, decl_storage, ensure, storage::IterableStorageMap, traits::Get, Parameter,
+};
 use frame_system::{self as system, ensure_root, ensure_signed};
 use orml_traits::{BasicCurrency, MultiCurrency};
 use orml_utilities::Fixed128;
@@ -237,7 +239,7 @@ decl_module! {
 		}
 
 		fn on_initialize(n: T::BlockNumber) {
-			for (accumulate_config, pair) in <Accumulates<T>>::iter() {
+			for (_, (accumulate_config, pair)) in <Accumulates<T>>::iter() {
 				if n % accumulate_config.frequency == accumulate_config.offset {
 					Self::_accumulate_rates(pair);
 				}
@@ -452,7 +454,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _accumulate_rates(pair: TradingPair) {
-		for pool_id in <Owners<T>>::iter().map(|(_, pool_id)| pool_id) {
+		for pool_id in <Owners<T>>::iter().map(|(_, (_, pool_id))| pool_id) {
 			let rate = Self::swap_rate(pool_id, pair);
 			let accumulated = Self::accumulated_swap_rate(pool_id, pair);
 			let one = Fixed128::from_natural(1);

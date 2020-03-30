@@ -1,7 +1,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use frame_support::{debug, decl_error, decl_event, decl_module, decl_storage, ensure, IsSubType};
+use frame_support::{
+	debug, decl_error, decl_event, decl_module, decl_storage, ensure, storage::IterableStorageMap, IsSubType,
+};
 use sp_arithmetic::{
 	traits::{Bounded, Saturating},
 	Permill,
@@ -977,7 +979,7 @@ impl<T: Trait> Module<T> {
 	/// Get a list of traders
 	fn _get_traders() -> Vec<T::AccountId> {
 		// TODO: use key iter after this gets closed https://github.com/paritytech/substrate/issues/5319
-		let mut traders: Vec<T::AccountId> = <Positions<T>>::iter().map(|x| x.owner).collect();
+		let mut traders: Vec<T::AccountId> = <Positions<T>>::iter().map(|(_, p)| p.owner).collect();
 		traders.sort();
 		traders.dedup(); // dedup works as unique for sorted vec, so we sort first
 		traders
@@ -986,7 +988,7 @@ impl<T: Trait> Module<T> {
 	/// Get a list of pools
 	fn _get_pools() -> Vec<LiquidityPoolId> {
 		// TODO: use key iter after this gets closed https://github.com/paritytech/substrate/issues/5319
-		let mut pools: Vec<LiquidityPoolId> = <Positions<T>>::iter().map(|x| x.pool).collect();
+		let mut pools: Vec<LiquidityPoolId> = <Positions<T>>::iter().map(|(_, p)| p.pool).collect();
 		pools.sort();
 		pools.dedup(); // dedup works as unique for sorted vec, so we sort first
 		pools
