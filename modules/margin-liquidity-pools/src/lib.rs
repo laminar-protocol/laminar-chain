@@ -49,17 +49,17 @@ pub trait Trait: frame_system::Trait {
 decl_storage! {
 	trait Store for Module<T: Trait> as MarginLiquidityPools {
 		pub NextPoolId get(fn next_pool_id): T::LiquidityPoolId;
-		pub Owners get(fn owners): map hasher(blake2_256) T::LiquidityPoolId => Option<(T::AccountId, T::LiquidityPoolId)>;
-		pub LiquidityPoolOptions get(fn liquidity_pool_options): double_map hasher(blake2_256) T::LiquidityPoolId, hasher(blake2_256) TradingPair => Option<MarginLiquidityPoolOption>;
-		pub Balances get(fn balances): map hasher(blake2_256) T::LiquidityPoolId => Balance;
-		pub SwapRates get(fn swap_rate): double_map hasher(blake2_256) T::LiquidityPoolId, hasher(blake2_256) TradingPair => Fixed128;
-		pub AccumulatedSwapRates get(fn accumulated_swap_rate): double_map hasher(blake2_256) T::LiquidityPoolId, hasher(blake2_256) TradingPair => Fixed128;
-		pub MaxSpread get(fn max_spread): map hasher(blake2_256) TradingPair => Permill;
-		pub Accumulates get(fn accumulate): map hasher(blake2_256) TradingPair => Option<(AccumulateConfig<T::BlockNumber>, TradingPair)>;
-		pub EnabledTradingPairs get(fn enabled_trading_pair): map hasher(blake2_256) TradingPair => Option<TradingPair>;
-		pub LiquidityPoolEnabledTradingPairs get(fn liquidity_pool_enabled_trading_pair): double_map hasher(blake2_256) T::LiquidityPoolId, hasher(blake2_256) TradingPair => Option<TradingPair>;
+		pub Owners get(fn owners): map hasher(blake2_128_concat) T::LiquidityPoolId => Option<(T::AccountId, T::LiquidityPoolId)>;
+		pub LiquidityPoolOptions get(fn liquidity_pool_options): double_map hasher(blake2_128_concat) T::LiquidityPoolId, hasher(blake2_128_concat) TradingPair => Option<MarginLiquidityPoolOption>;
+		pub Balances get(fn balances): map hasher(blake2_128_concat) T::LiquidityPoolId => Balance;
+		pub SwapRates get(fn swap_rate): double_map hasher(blake2_128_concat) T::LiquidityPoolId, hasher(blake2_128_concat) TradingPair => Fixed128;
+		pub AccumulatedSwapRates get(fn accumulated_swap_rate): double_map hasher(blake2_128_concat) T::LiquidityPoolId, hasher(blake2_128_concat) TradingPair => Fixed128;
+		pub MaxSpread get(fn max_spread): map hasher(blake2_128_concat) TradingPair => Permill;
+		pub Accumulates get(fn accumulate): map hasher(blake2_128_concat) TradingPair => Option<(AccumulateConfig<T::BlockNumber>, TradingPair)>;
+		pub EnabledTradingPairs get(fn enabled_trading_pair): map hasher(blake2_128_concat) TradingPair => Option<TradingPair>;
+		pub LiquidityPoolEnabledTradingPairs get(fn liquidity_pool_enabled_trading_pair): double_map hasher(blake2_128_concat) T::LiquidityPoolId, hasher(blake2_128_concat) TradingPair => Option<TradingPair>;
 		pub DefaultMinLeveragedAmount get(fn default_min_leveraged_amount) config(): Balance;
-		pub MinLeveragedAmount get(fn min_leveraged_amount): map hasher(blake2_256) T::LiquidityPoolId => Option<Balance>;
+		pub MinLeveragedAmount get(fn min_leveraged_amount): map hasher(blake2_128_concat) T::LiquidityPoolId => Option<Balance>;
 	}
 }
 

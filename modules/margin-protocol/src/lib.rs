@@ -81,14 +81,14 @@ pub struct RiskThreshold {
 decl_storage! {
 	trait Store for Module<T: Trait> as MarginProtocol {
 		NextPositionId get(next_position_id): PositionId;
-		Positions get(positions): map hasher(blake2_256) PositionId => Option<Position<T>>;
+		Positions get(positions): map hasher(blake2_128_concat) PositionId => Option<Position<T>>;
 		PositionsByTrader get(positions_by_trader): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) LiquidityPoolId => Vec<PositionId>;
 		PositionsByPool get(positions_by_pool): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => Vec<PositionId>;
 		// SwapPeriods get(swap_periods): map hasher(black2_256) TradingPair => Option<SwapPeriod>;
-		Balances get(balances): map hasher(blake2_256) T::AccountId => Balance;
-		MinLiquidationPercent get(min_liquidation_percent): map hasher(blake2_256) TradingPair => Fixed128;
-		MarginCalledTraders get(margin_called_traders): map hasher(blake2_256) T::AccountId => Option<()>;
-		MarginCalledPools get(margin_called_pools): map hasher(blake2_256) LiquidityPoolId => Option<()>;
+		Balances get(balances): map hasher(blake2_128_concat) T::AccountId => Balance;
+		MinLiquidationPercent get(min_liquidation_percent): map hasher(blake2_128_concat) TradingPair => Fixed128;
+		MarginCalledTraders get(margin_called_traders): map hasher(blake2_128_concat) T::AccountId => Option<()>;
+		MarginCalledPools get(margin_called_pools): map hasher(blake2_128_concat) LiquidityPoolId => Option<()>;
 		TraderRiskThreshold get(trader_risk_threshold) config(): RiskThreshold;
 		LiquidityPoolENPThreshold get(liquidity_pool_enp_threshold) config(): RiskThreshold;
 		LiquidityPoolELLThreshold get(liquidity_pool_ell_threshold) config(): RiskThreshold;
