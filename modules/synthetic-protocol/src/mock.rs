@@ -34,7 +34,7 @@ impl_outer_event! {
 	pub enum TestEvent for Runtime {
 		frame_system<T>,
 		orml_tokens<T>, orml_currencies<T>,
-		module_synthetic_tokens<T>, synthetic_protocol<T>,
+		module_synthetic_tokens, synthetic_protocol<T>,
 	}
 }
 
@@ -114,9 +114,6 @@ pub type SyntheticCurrency = orml_currencies::Currency<Runtime, GetSyntheticCurr
 
 impl module_synthetic_tokens::Trait for Runtime {
 	type Event = TestEvent;
-	type CurrencyId = CurrencyId;
-	type Balance = Balance;
-	type LiquidityPoolId = LiquidityPoolId;
 	type DefaultExtremeRatio = DefaultExtremeRatio;
 	type DefaultLiquidationRatio = DefaultLiquidationRatio;
 	type DefaultCollateralRatio = DefaultCollateralRatio;
