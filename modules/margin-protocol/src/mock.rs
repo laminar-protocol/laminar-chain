@@ -242,6 +242,11 @@ impl Treasury<AccountId> for MockTreasury {
 pub type Extrinsic = TestXt<Call, ()>;
 type SubmitTransaction = frame_system::offchain::TransactionSubmitter<(), Call, Extrinsic>;
 
+parameter_types! {
+	pub const GetTraderMaxOpenPositions: usize = 200;
+	pub const GetPoolMaxOpenPositions: usize = 1000;
+}
+
 impl Trait for Runtime {
 	type Event = TestEvent;
 	type MultiCurrency = OrmlTokens;
@@ -250,6 +255,8 @@ impl Trait for Runtime {
 	type Treasury = MockTreasury;
 	type SubmitTransaction = SubmitTransaction;
 	type Call = Call;
+	type GetTraderMaxOpenPositions = GetTraderMaxOpenPositions;
+	type GetPoolMaxOpenPositions = GetPoolMaxOpenPositions;
 }
 pub type MarginProtocol = Module<Runtime>;
 

@@ -1834,3 +1834,81 @@ fn liquidity_pool_manager_get_required_deposit_works() {
 			);
 		});
 }
+
+#[test]
+fn trader_open_positions_limit() {
+	ExtBuilder::default()
+		.spread(Permill::zero())
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(-1), Fixed128::from_natural(1))
+		.price(CurrencyId::FEUR, (1, 1))
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(1000_00))
+		.liquidity_pool_ell_threshold(risk_threshold(90, 0))
+		.liquidity_pool_enp_threshold(risk_threshold(100, 0))
+		.build()
+		.execute_with(|| {
+			// give alice $100
+			<Balances<Runtime>>::insert(&ALICE, balance_from_natural_currency_cent(100_00));
+
+			// trader has no open positions
+			assert_eq!(<PositionsByTrader<Runtime>>::get(&ALICE, MOCK_POOL).len(), 0);
+
+			// reach the limit of 200 open positions for a trader
+			let positions = (0..200).collect::<Vec<u64>>();
+			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, positions.clone());
+
+			// trader has 200 open positions
+			assert_eq!(<PositionsByTrader<Runtime>>::get(&ALICE, MOCK_POOL).len(), 200);
+
+			// try open another position
+			assert_noop!(
+				MarginProtocol::open_position(
+					Origin::signed(ALICE),
+					MOCK_POOL,
+					EUR_USD_PAIR,
+					Leverage::LongTen,
+					balance_from_natural_currency_cent(10_00),
+					Price::from_natural(100)
+				),
+				Error::<Runtime>::CannotOpenMorePosition
+			);
+		});
+}
+
+#[test]
+fn pool_open_positions_limit() {
+	ExtBuilder::default()
+		.spread(Permill::zero())
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(-1), Fixed128::from_natural(1))
+		.price(CurrencyId::FEUR, (1, 1))
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(1000_00))
+		.liquidity_pool_ell_threshold(risk_threshold(90, 0))
+		.liquidity_pool_enp_threshold(risk_threshold(100, 0))
+		.build()
+		.execute_with(|| {
+			// give alice $100
+			<Balances<Runtime>>::insert(&ALICE, balance_from_natural_currency_cent(100_00));
+
+			// pool & pair has no open positions
+			assert_eq!(PositionsByPool::get(MOCK_POOL, EUR_USD_PAIR).len(), 0);
+
+			// reach the limit of 1000 open positions for a pool & pair
+			let positions = (0..1000).collect::<Vec<u64>>();
+			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, positions.clone());
+
+			// pool & pair has 1000 open positions
+			assert_eq!(PositionsByPool::get(MOCK_POOL, EUR_USD_PAIR).len(), 1000);
+
+			// try open another position
+			assert_noop!(
+				MarginProtocol::open_position(
+					Origin::signed(ALICE),
+					MOCK_POOL,
+					EUR_USD_PAIR,
+					Leverage::LongTen,
+					balance_from_natural_currency_cent(10_00),
+					Price::from_natural(100)
+				),
+				Error::<Runtime>::CannotOpenMorePosition
+			);
+		});
+}
