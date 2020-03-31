@@ -41,7 +41,7 @@ pub trait Trait: frame_system::Trait {
 	type PoolManager: LiquidityPoolManager<LiquidityPoolId, Balance>;
 	type ExistentialDeposit: Get<Balance>;
 	type UpdateOrigin: EnsureOrigin<Self::Origin>;
-	type MaxSwap: Get<Fixed128>;
+	type MaxSwap: Get<(Fixed128, Fixed128)>;
 }
 
 decl_storage! {
@@ -269,6 +269,7 @@ decl_error! {
 		CannotWithdrawAmount,
 		CannotWithdrawExistentialDeposit,
 		SwapRateTooHigh,
+		SwapRateTooLow,
 		SpreadTooHigh,
 		PoolNotFound,
 		TradingPairNotEnabled,
