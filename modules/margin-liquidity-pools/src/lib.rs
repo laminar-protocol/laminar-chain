@@ -43,7 +43,7 @@ pub trait Trait: frame_system::Trait {
 	type PoolManager: LiquidityPoolManager<Self::LiquidityPoolId, Balance>;
 	type ExistentialDeposit: Get<Balance>;
 	type UpdateOrigin: EnsureOrigin<Self::Origin>;
-	type MaxSwap: Get<Fixed128>;
+	type MaxSwap: Get<(Fixed128, Fixed128)>;
 }
 
 decl_storage! {
@@ -52,8 +52,9 @@ decl_storage! {
 		pub Owners get(fn owners): map hasher(blake2_256) T::LiquidityPoolId => Option<(T::AccountId, T::LiquidityPoolId)>;
 		pub LiquidityPoolOptions get(fn liquidity_pool_options): double_map hasher(blake2_256) T::LiquidityPoolId, hasher(blake2_256) TradingPair => Option<MarginLiquidityPoolOption>;
 		pub Balances get(fn balances): map hasher(blake2_256) T::LiquidityPoolId => Balance;
-		pub SwapRates get(fn swap_rate): double_map hasher(blake2_256) T::LiquidityPoolId, hasher(blake2_256) TradingPair => Fixed128;
-		pub AccumulatedSwapRates get(fn accumulated_swap_rate): double_map hasher(blake2_256) T::LiquidityPoolId, hasher(blake2_256) TradingPair => Fixed128;
+		pub SwapRates get(fn swap_rate): map hasher(blake2_256) TradingPair => Option<(Fixed128, Fixed128)>;
+		pub AccumulatedSwapRates get(fn accumulated_swap_rate): double_map hasher(blake2_256) T::LiquidityPoolId, hasher(blake2_256) TradingPair => Option<(Fixed128, Fixed128)>;
+		pub AdditionalSwapRate get(fn additional_swap_rate): map hasher(blake2_256) T::LiquidityPoolId => Option<Fixed128>;
 		pub MaxSpread get(fn max_spread): map hasher(blake2_256) TradingPair => Permill;
 		pub Accumulates get(fn accumulate): map hasher(blake2_256) TradingPair => Option<(AccumulateConfig<T::BlockNumber>, TradingPair)>;
 		pub EnabledTradingPairs get(fn enabled_trading_pair): map hasher(blake2_256) TradingPair => Option<TradingPair>;
@@ -83,10 +84,12 @@ decl_event!(
 		SetSpread(AccountId, LiquidityPoolId, TradingPair, Permill, Permill),
 		/// Set enabled trades (who, pool_id, pair, enabled)
 		SetEnabledTrades(AccountId, LiquidityPoolId, TradingPair, Leverages),
-		/// Swap rate updated (who, pool_id, pair, swap_rate)
-		SwapRateUpdated(AccountId, LiquidityPoolId, TradingPair, Fixed128),
-		/// Accumulated swap rate updated (pool_id, pair, accumulated_swap_rate)
-		AccumulatedSwapRateUpdated(LiquidityPoolId, TradingPair, Fixed128),
+		/// Swap rate updated (pair, long_rate, short_rate)
+		SwapRateUpdated(TradingPair, Fixed128, Fixed128),
+		/// Accumulated swap rate updated (pool_id, pair, accumulated_long_swap_rate, accumulated_short_swap_rate)
+		AccumulatedSwapRateUpdated(LiquidityPoolId, TradingPair, Fixed128, Fixed128),
+		/// Additional swap rate updated (who, pool_id, additional_swap_rate)
+		AdditionalSwapRateUpdated(AccountId, LiquidityPoolId, Fixed128),
 		/// Max spread updated (pair, spread)
 		MaxSpreadUpdated(TradingPair, Permill),
 		/// Set accumulate (pair, frequency, offset)
@@ -165,12 +168,27 @@ decl_module! {
 			Self::deposit_event(RawEvent::SetEnabledTrades(who, pool_id, pair, enabled));
 		}
 
-		pub fn update_swap(origin, pool_id: T::LiquidityPoolId, pair: TradingPair, rate: Fixed128) {
+		pub fn set_swap_rate(origin, pair: TradingPair, long_rate: Fixed128, short_rate: Fixed128) {
+			T::UpdateOrigin::try_origin(origin)
+				.map(|_| ())
+				.or_else(ensure_root)?;
+			ensure!(long_rate >= T::MaxSwap::get().0 && long_rate <= Fixed128::zero(), Error::<T>::SwapRateTooLow);
+			ensure!(short_rate >= Fixed128::zero() && short_rate <= T::MaxSwap::get().1, Error::<T>::SwapRateTooHigh);
+			SwapRates::insert(pair, (long_rate, short_rate));
+			Self::deposit_event(RawEvent::SwapRateUpdated(pair, long_rate, short_rate));
+		}
+
+		pub fn set_additional_swap(origin, pool_id: T::LiquidityPoolId, pair: TradingPair, rate: Fixed128) {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
-			ensure!(rate <= T::MaxSwap::get(), Error::<T>::SwapRateTooHigh);
-			<SwapRates<T>>::insert(pool_id, pair, rate);
-			Self::deposit_event(RawEvent::SwapRateUpdated(who, pool_id, pair, rate));
+
+			let swap_rate = Self::swap_rate(pair).unwrap_or_default();
+			let long_rate = swap_rate.0.checked_sub(&rate).ok_or(Error::<T>::NumOutOfBound)?;
+			let short_rate = swap_rate.1.checked_add(&rate).ok_or(Error::<T>::NumOutOfBound)?;
+			ensure!(long_rate >= T::MaxSwap::get().0 && long_rate <= Fixed128::zero(), Error::<T>::SwapRateTooLow);
+			ensure!(short_rate >= Fixed128::zero() && short_rate <= T::MaxSwap::get().1, Error::<T>::SwapRateTooHigh);
+			<AdditionalSwapRate<T>>::insert(pool_id, rate);
+			Self::deposit_event(RawEvent::AdditionalSwapRateUpdated(who, pool_id, rate));
 		}
 
 		pub fn set_max_spread(origin, pair: TradingPair, max_spread: Permill) {
@@ -256,9 +274,11 @@ decl_error! {
 		CannotWithdrawAmount,
 		CannotWithdrawExistentialDeposit,
 		SwapRateTooHigh,
+		SwapRateTooLow,
 		SpreadTooHigh,
 		PoolNotFound,
 		TradingPairNotEnabled,
+		NumOutOfBound,
 	}
 }
 
@@ -334,12 +354,30 @@ impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
 		Self::liquidity_pool_options(&pool_id, &pair).map(|pool| pool.ask_spread)
 	}
 
-	fn get_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128 {
-		Self::swap_rate(pool_id, pair)
+	fn get_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair, is_long: bool) -> Fixed128 {
+		if is_long {
+			let rate = Self::swap_rate(pair).unwrap_or_default().0;
+			if let Some(additional) = Self::additional_swap_rate(pool_id) {
+				rate.saturating_sub(additional)
+			} else {
+				rate
+			}
+		} else {
+			let rate = Self::swap_rate(pair).unwrap_or_default().1;
+			if let Some(additional) = Self::additional_swap_rate(pool_id) {
+				rate.saturating_add(additional)
+			} else {
+				rate
+			}
+		}
 	}
 
-	fn get_accumulated_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128 {
-		Self::accumulated_swap_rate(pool_id, pair)
+	fn get_accumulated_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair, is_long: bool) -> Fixed128 {
+		if is_long {
+			Self::accumulated_swap_rate(pool_id, pair).unwrap_or_default().0
+		} else {
+			Self::accumulated_swap_rate(pool_id, pair).unwrap_or_default().1
+		}
 	}
 
 	fn can_open_position(
@@ -386,8 +424,8 @@ impl<T: Trait> Module<T> {
 		<Balances<T>>::remove(&pool_id);
 		<Owners<T>>::remove(&pool_id);
 		<LiquidityPoolOptions<T>>::remove_prefix(&pool_id);
-		<SwapRates<T>>::remove_prefix(&pool_id);
 		<AccumulatedSwapRates<T>>::remove_prefix(&pool_id);
+		<AdditionalSwapRate<T>>::remove(&pool_id);
 		<LiquidityPoolEnabledTradingPairs<T>>::remove_prefix(&pool_id);
 		<MinLeveragedAmount<T>>::remove(pool_id);
 
@@ -454,16 +492,34 @@ impl<T: Trait> Module<T> {
 
 	fn _accumulate_rates(pair: TradingPair) {
 		for pool_id in <Owners<T>>::iter().map(|(_, pool_id)| pool_id) {
-			let rate = Self::swap_rate(pool_id, pair);
-			let accumulated = Self::accumulated_swap_rate(pool_id, pair);
+			let mut rate = Self::swap_rate(pair).unwrap_or_default();
+			if let Some(additional) = Self::additional_swap_rate(pool_id) {
+				rate.0 = rate.0.saturating_sub(additional);
+				rate.1 = rate.1.saturating_add(additional);
+			}
+
+			let accumulated = Self::accumulated_swap_rate(pool_id, pair).unwrap_or_default();
 			let one = Fixed128::from_natural(1);
-			// acc_rate = (accumulated + 1) * (1 + rate) - 1
-			let acc_rate = accumulated
+			// acc_long_rate = 1 - ((accumulated - 1) * (-1 + rate))
+			let acc_long_rate = one.saturating_sub(
+				accumulated
+					.0
+					.saturating_sub(one)
+					.saturating_mul(rate.0.saturating_sub(one)),
+			);
+			// acc_short_rate = (accumulated + 1) * (1 + rate) - 1
+			let acc_short_rate = accumulated
+				.1
 				.saturating_add(one)
-				.saturating_mul(one.saturating_add(rate))
+				.saturating_mul(one.saturating_add(rate.1))
 				.saturating_sub(one);
-			<AccumulatedSwapRates<T>>::insert(pool_id, pair, acc_rate);
-			Self::deposit_event(RawEvent::AccumulatedSwapRateUpdated(pool_id, pair, acc_rate))
+			<AccumulatedSwapRates<T>>::insert(pool_id, pair, (acc_long_rate, acc_short_rate));
+			Self::deposit_event(RawEvent::AccumulatedSwapRateUpdated(
+				pool_id,
+				pair,
+				acc_long_rate,
+				acc_short_rate,
+			))
 		}
 	}
 }

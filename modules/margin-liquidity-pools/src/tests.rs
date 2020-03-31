@@ -12,12 +12,12 @@ use sp_runtime::traits::OnInitialize;
 use sp_runtime::{PerThing, Permill};
 use traits::{LiquidityPools, MarginProtocolLiquidityPools};
 
-fn swap_rate(pair: TradingPair) -> Fixed128 {
-	<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_swap_rate(0, pair)
+fn swap_rate(pair: TradingPair, is_long: bool) -> Fixed128 {
+	<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_swap_rate(0, pair, is_long)
 }
 
-fn accumulated_rate(pair: TradingPair) -> Fixed128 {
-	<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_accumulated_swap_rate(0, pair)
+fn accumulated_rate(pair: TradingPair, is_long: bool) -> Fixed128 {
+	<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_accumulated_swap_rate(0, pair, is_long)
 }
 
 #[test]
@@ -290,19 +290,34 @@ fn should_set_enabled_trades() {
 }
 
 #[test]
-fn should_update_swap() {
+fn should_set_swap_rate() {
 	new_test_ext().execute_with(|| {
 		let pair = TradingPair {
 			base: CurrencyId::LAMI,
 			quote: CurrencyId::AUSD,
 		};
-		let rate = Fixed128::from_natural(1);
-		let bad_rate = Fixed128::from_natural(3);
+		let long_rate = Fixed128::from_natural(-1);
+		let short_rate = Fixed128::from_natural(1);
+		let bad_long_rate = Fixed128::from_natural(-3);
+		let bad_short_rate = Fixed128::from_natural(3);
 		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_ok!(ModuleLiquidityPools::update_swap(Origin::signed(ALICE), 0, pair, rate));
+		assert_ok!(ModuleLiquidityPools::set_swap_rate(
+			Origin::ROOT,
+			pair,
+			long_rate,
+			short_rate
+		));
 		assert_noop!(
-			ModuleLiquidityPools::update_swap(Origin::signed(ALICE), 0, pair, bad_rate),
+			ModuleLiquidityPools::set_swap_rate(Origin::ROOT, pair, bad_long_rate, short_rate),
+			Error::<Runtime>::SwapRateTooLow
+		);
+		assert_noop!(
+			ModuleLiquidityPools::set_swap_rate(Origin::ROOT, pair, long_rate, bad_short_rate),
 			Error::<Runtime>::SwapRateTooHigh
+		);
+		assert_noop!(
+			ModuleLiquidityPools::set_swap_rate(Origin::ROOT, pair, bad_short_rate, bad_long_rate),
+			Error::<Runtime>::SwapRateTooLow
 		);
 	});
 }
@@ -314,12 +329,45 @@ fn should_get_swap() {
 			base: CurrencyId::LAMI,
 			quote: CurrencyId::AUSD,
 		};
-		let rate = Fixed128::from_natural(1);
+		let long_rate = Fixed128::from_natural(-1);
+		let short_rate = Fixed128::from_natural(1);
 		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_ok!(ModuleLiquidityPools::update_swap(Origin::signed(ALICE), 0, pair, rate));
+		assert_ok!(ModuleLiquidityPools::set_swap_rate(
+			Origin::ROOT,
+			pair,
+			long_rate,
+			short_rate
+		));
 		assert_eq!(
-			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_swap_rate(0, pair),
+			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_swap_rate(0, pair, true),
+			long_rate
+		);
+		assert_eq!(
+			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_swap_rate(0, pair, false),
+			short_rate
+		);
+
+		// add additional swap rate
+		let rate = Fixed128::from_natural(1);
+		assert_ok!(ModuleLiquidityPools::set_additional_swap(
+			Origin::signed(ALICE),
+			0,
+			pair,
 			rate
+		));
+		assert_eq!(
+			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_swap_rate(0, pair, true),
+			Fixed128::from_natural(-2)
+		);
+		assert_eq!(
+			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_swap_rate(0, pair, false),
+			Fixed128::from_natural(2)
+		);
+
+		let rate = Fixed128::from_natural(2);
+		assert_noop!(
+			ModuleLiquidityPools::set_additional_swap(Origin::signed(ALICE), 0, pair, rate),
+			Error::<Runtime>::SwapRateTooLow
 		);
 	});
 }
@@ -331,18 +379,47 @@ fn should_get_accumulated_swap() {
 			base: CurrencyId::AUSD,
 			quote: CurrencyId::FEUR,
 		};
-		let rate = Fixed128::from_rational(1, NonZeroI128::new(10).unwrap()); // 10%
+		let long_rate = Fixed128::from_rational(-1, NonZeroI128::new(10).unwrap()); // -10%
+		let short_rate = Fixed128::from_rational(1, NonZeroI128::new(10).unwrap()); // 10%
 
 		assert_ok!(ModuleLiquidityPools::set_accumulate(Origin::ROOT, pair, 1, 0));
 		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_ok!(ModuleLiquidityPools::update_swap(Origin::signed(ALICE), 0, pair, rate));
+		assert_ok!(ModuleLiquidityPools::set_swap_rate(
+			Origin::ROOT,
+			pair,
+			long_rate,
+			short_rate
+		));
 		assert_eq!(
-			accumulated_rate(pair),
+			accumulated_rate(pair, true),
+			Fixed128::from_natural(0) // 0%
+		);
+		assert_eq!(
+			accumulated_rate(pair, false),
 			Fixed128::from_natural(0) // 0%
 		);
 
 		<ModuleLiquidityPools as OnInitialize<u64>>::on_initialize(1);
-		assert_eq!(accumulated_rate(pair), rate);
+		assert_eq!(accumulated_rate(pair, true), long_rate);
+		assert_eq!(accumulated_rate(pair, false), short_rate);
+
+		// add additional swap rate
+		let rate = Fixed128::from_natural(1);
+		assert_ok!(ModuleLiquidityPools::set_additional_swap(
+			Origin::signed(ALICE),
+			0,
+			pair,
+			rate
+		));
+		<ModuleLiquidityPools as OnInitialize<u64>>::on_initialize(1);
+		assert_eq!(
+			accumulated_rate(pair, true),
+			Fixed128::from_rational(-131, NonZeroI128::new(100).unwrap())
+		);
+		assert_eq!(
+			accumulated_rate(pair, false),
+			Fixed128::from_rational(131, NonZeroI128::new(100).unwrap())
+		);
 	});
 }
 
@@ -403,31 +480,47 @@ fn should_update_accumulated_rate() {
 			base: CurrencyId::AUSD,
 			quote: CurrencyId::FEUR,
 		};
-		let rate = Fixed128::from_rational(23, NonZeroI128::new(1000).unwrap()); // 2.3%
+		let long_rate = Fixed128::from_rational(-23, NonZeroI128::new(1000).unwrap()); // -2.3%
+		let short_rate = Fixed128::from_rational(23, NonZeroI128::new(1000).unwrap()); // 2.3%
 
 		assert_ok!(ModuleLiquidityPools::set_accumulate(Origin::ROOT, pair, 1, 0));
 		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_ok!(ModuleLiquidityPools::update_swap(Origin::signed(ALICE), 0, pair, rate));
-		assert_eq!(swap_rate(pair), rate);
+		assert_ok!(ModuleLiquidityPools::set_swap_rate(
+			Origin::ROOT,
+			pair,
+			long_rate,
+			short_rate
+		));
+		assert_eq!(swap_rate(pair, true), long_rate);
+		assert_eq!(swap_rate(pair, false), short_rate);
 
 		let acc = Fixed128::from_natural(0); // 0%
-		assert_eq!(accumulated_rate(pair), acc);
+		assert_eq!(accumulated_rate(pair, true), acc);
+		assert_eq!(accumulated_rate(pair, false), acc);
 
 		<ModuleLiquidityPools as OnInitialize<u64>>::on_initialize(1);
-		let acc = Fixed128::from_rational(23, NonZeroI128::new(1000).unwrap()); // 2.3%
-		assert_eq!(accumulated_rate(pair), acc);
+		let long_acc = Fixed128::from_rational(-23, NonZeroI128::new(1000).unwrap()); // -2.3%
+		let short_acc = Fixed128::from_rational(23, NonZeroI128::new(1000).unwrap()); // 2.3%
+		assert_eq!(accumulated_rate(pair, true), long_acc);
+		assert_eq!(accumulated_rate(pair, false), short_acc);
 
 		<ModuleLiquidityPools as OnInitialize<u64>>::on_initialize(2);
-		let acc = Fixed128::from_rational(46529, NonZeroI128::new(1000000).unwrap()); // 4.6529%
-		assert_eq!(accumulated_rate(pair), acc);
+		let long_acc = Fixed128::from_rational(-46529, NonZeroI128::new(1000000).unwrap()); // -4.6529%
+		let short_acc = Fixed128::from_rational(46529, NonZeroI128::new(1000000).unwrap()); // 4.6529%
+		assert_eq!(accumulated_rate(pair, true), long_acc);
+		assert_eq!(accumulated_rate(pair, false), short_acc);
 
 		<ModuleLiquidityPools as OnInitialize<u64>>::on_initialize(3);
-		let acc = Fixed128::from_rational(70599167i128, NonZeroI128::new(1000000000).unwrap()); // 7.0599%
-		assert_eq!(accumulated_rate(pair), acc);
+		let long_acc = Fixed128::from_rational(-70599167i128, NonZeroI128::new(1000000000).unwrap()); // -7.0599%
+		let short_acc = Fixed128::from_rational(70599167i128, NonZeroI128::new(1000000000).unwrap()); // 7.0599%
+		assert_eq!(accumulated_rate(pair, true), long_acc);
+		assert_eq!(accumulated_rate(pair, false), short_acc);
 
 		<ModuleLiquidityPools as OnInitialize<u64>>::on_initialize(4);
-		let acc = Fixed128::from_rational(95222947841i128, NonZeroI128::new(1000000000000).unwrap()); // 9.5223%
-		assert_eq!(accumulated_rate(pair), acc);
+		let long_acc = Fixed128::from_rational(-95222947841i128, NonZeroI128::new(1000000000000).unwrap()); // -9.5223%
+		let short_acc = Fixed128::from_rational(95222947841i128, NonZeroI128::new(1000000000000).unwrap()); // 9.5223%
+		assert_eq!(accumulated_rate(pair, true), long_acc);
+		assert_eq!(accumulated_rate(pair, false), short_acc);
 	});
 }
 

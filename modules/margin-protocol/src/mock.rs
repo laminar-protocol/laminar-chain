@@ -117,7 +117,7 @@ impl PriceProvider<CurrencyId, Price> for MockPrices {
 
 thread_local! {
 	static SPREAD: RefCell<Permill> = RefCell::new(Permill::zero());
-	static ACC_SWAP_RATES: RefCell<BTreeMap<TradingPair, Fixed128>> = RefCell::new(BTreeMap::new());
+	static ACC_SWAP_RATES: RefCell<BTreeMap<TradingPair, (Fixed128, Fixed128)>> = RefCell::new(BTreeMap::new());
 	static LIQUIDITIES: RefCell<BTreeMap<LiquidityPoolId, Balance>> = RefCell::new(BTreeMap::new());
 }
 
@@ -133,12 +133,22 @@ impl MockLiquidityPools {
 		SPREAD.with(|v| *v.borrow_mut() = spread);
 	}
 
-	pub fn accumulated_swap_rate(pair: TradingPair) -> Fixed128 {
-		ACC_SWAP_RATES.with(|v| v.borrow_mut().get(&pair).map(|r| *r)).unwrap()
+	pub fn accumulated_swap_rate(pair: TradingPair, is_long: bool) -> Fixed128 {
+		if is_long {
+			ACC_SWAP_RATES
+				.with(|v| v.borrow_mut().get(&pair).map(|r| *r))
+				.unwrap()
+				.0
+		} else {
+			ACC_SWAP_RATES
+				.with(|v| v.borrow_mut().get(&pair).map(|r| *r))
+				.unwrap()
+				.1
+		}
 	}
 
-	pub fn set_mock_accumulated_swap_rate(pair: TradingPair, rate: Fixed128) {
-		ACC_SWAP_RATES.with(|v| v.borrow_mut().insert(pair, rate));
+	pub fn set_mock_accumulated_swap_rate(pair: TradingPair, long_rate: Fixed128, short_rate: Fixed128) {
+		ACC_SWAP_RATES.with(|v| v.borrow_mut().insert(pair, (long_rate, short_rate)));
 	}
 
 	pub fn liquidity(pool: LiquidityPoolId) -> Balance {
@@ -204,12 +214,12 @@ impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
 		Some(Self::spread())
 	}
 
-	fn get_swap_rate(_pool_id: Self::LiquidityPoolId, _pair: Self::TradingPair) -> Fixed128 {
+	fn get_swap_rate(_pool_id: Self::LiquidityPoolId, _pair: Self::TradingPair, _is_long: bool) -> Fixed128 {
 		unimplemented!()
 	}
 
-	fn get_accumulated_swap_rate(_pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128 {
-		Self::accumulated_swap_rate(pair)
+	fn get_accumulated_swap_rate(_pool_id: Self::LiquidityPoolId, pair: Self::TradingPair, is_long: bool) -> Fixed128 {
+		Self::accumulated_swap_rate(pair, is_long)
 	}
 
 	fn can_open_position(
@@ -252,7 +262,7 @@ pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	spread: Permill,
 	prices: Vec<(CurrencyId, Price)>,
-	swap_rates: Vec<(TradingPair, Fixed128)>,
+	swap_rates: Vec<(TradingPair, Fixed128, Fixed128)>,
 	trader_risk_threshold: RiskThreshold,
 	pool_liquidities: Vec<(LiquidityPoolId, Balance)>,
 	liquidity_pool_enp_threshold: RiskThreshold,
@@ -299,8 +309,8 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn accumulated_swap_rate(mut self, pair: TradingPair, rate: Fixed128) -> Self {
-		self.swap_rates.push((pair, rate));
+	pub fn accumulated_swap_rate(mut self, pair: TradingPair, long_rate: Fixed128, short_rate: Fixed128) -> Self {
+		self.swap_rates.push((pair, long_rate, short_rate));
 		self
 	}
 
@@ -333,7 +343,7 @@ impl ExtBuilder {
 		MockLiquidityPools::set_mock_spread(self.spread);
 		self.swap_rates
 			.iter()
-			.for_each(|(p, r)| MockLiquidityPools::set_mock_accumulated_swap_rate(*p, *r));
+			.for_each(|(p, lr, sr)| MockLiquidityPools::set_mock_accumulated_swap_rate(*p, *lr, *sr));
 		self.pool_liquidities
 			.iter()
 			.for_each(|(p, l)| MockLiquidityPools::set_mock_liquidity(*p, *l));

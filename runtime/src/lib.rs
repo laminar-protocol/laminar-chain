@@ -469,7 +469,8 @@ impl synthetic_tokens::Trait for Runtime {
 
 parameter_types! {
 	pub const GetLiquidityCurrencyId: CurrencyId = CurrencyId::AUSD;
-	pub const MaxSwap: Fixed128 = Fixed128::from_natural(2);
+	// MaxSwap(long rate, short rate)
+	pub const MaxSwap: (Fixed128, Fixed128) = (Fixed128::from_natural(-2), Fixed128::from_natural(2)); // TODO: set this
 }
 
 type LiquidityCurrency = orml_currencies::Currency<Runtime, GetLiquidityCurrencyId>;
