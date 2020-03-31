@@ -432,24 +432,22 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _trader_liquidate(who: &T::AccountId) -> DispatchResult {
-		let threshold = TraderRiskThreshold::get();
-		let margin_level = Self::_margin_level(who, Action::None)?;
+		match Self::_check_trader(who, Action::None) {
+			Ok(Risk::StopOut) => {
+				// Close position as much as possible
+				<PositionsByTrader<T>>::iter_prefix(who).for_each(|trading_pair_position_ids| {
+					trading_pair_position_ids.iter().for_each(|position_id| {
+						let _ = Self::_close_position(who, *position_id, None);
+					})
+				});
 
-		if margin_level > threshold.stop_out.into() {
-			return Err(Error::<T>::NotReachedRiskThreshold.into());
+				if Self::_ensure_trader_safe(who, Action::None).is_ok() && Self::_is_trader_margin_called(who) {
+					<MarginCalledTraders<T>>::remove(who);
+				}
+				Ok(())
+			}
+			_ => Err(Error::<T>::NotReachedRiskThreshold.into()),
 		}
-
-		// Close position as much as possible
-		<PositionsByTrader<T>>::iter_prefix(who).for_each(|trading_pair_position_ids| {
-			trading_pair_position_ids.iter().for_each(|position_id| {
-				let _ = Self::_close_position(who, *position_id, None);
-			})
-		});
-
-		if Self::_ensure_trader_safe(who, Action::None).is_ok() && Self::_is_trader_margin_called(who) {
-			<MarginCalledTraders<T>>::remove(who);
-		}
-		Ok(())
 	}
 
 	fn _liquidity_pool_margin_call(pool: LiquidityPoolId) -> DispatchResult {
@@ -475,23 +473,21 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _liquidity_pool_liquidate(pool: LiquidityPoolId) -> DispatchResult {
-		let (enp, ell) = Self::_enp_and_ell(pool, Action::None)?;
-		let need_liquidating = enp <= Self::liquidity_pool_enp_threshold().stop_out.into()
-			|| ell <= Self::liquidity_pool_ell_threshold().stop_out.into();
-		if !need_liquidating {
-			return Err(Error::<T>::NotReachedRiskThreshold.into());
-		}
+		match Self::_check_pool(pool, Action::None) {
+			Ok(Risk::StopOut) => {
+				PositionsByPool::iter_prefix(pool).for_each(|trading_pair_position_ids| {
+					trading_pair_position_ids.iter().for_each(|position_id| {
+						let _ = Self::_liquidity_pool_close_position(pool, *position_id);
+					});
+				});
 
-		PositionsByPool::iter_prefix(pool).for_each(|trading_pair_position_ids| {
-			trading_pair_position_ids.iter().for_each(|position_id| {
-				let _ = Self::_liquidity_pool_close_position(pool, *position_id);
-			});
-		});
-
-		if Self::_ensure_pool_safe(pool, Action::None).is_ok() && Self::_is_pool_margin_called(&pool) {
-			MarginCalledPools::remove(pool);
+				if Self::_ensure_pool_safe(pool, Action::None).is_ok() && Self::_is_pool_margin_called(&pool) {
+					MarginCalledPools::remove(pool);
+				}
+				Ok(())
+			}
+			_ => Err(Error::<T>::NotReachedRiskThreshold.into()),
 		}
-		Ok(())
 	}
 }
 
@@ -731,9 +727,10 @@ impl<T: Trait> Module<T> {
 	/// Return `Ok(Risk)`, or `Err` if check fails.
 	fn _check_trader(who: &T::AccountId, action: Action<T>) -> Result<Risk, DispatchError> {
 		let margin_level = Self::_margin_level(who, action)?;
-		if margin_level <= Self::trader_risk_threshold().stop_out.into() {
+		let threshold = Self::trader_risk_threshold();
+		if margin_level <= threshold.stop_out.into() {
 			return Ok(Risk::StopOut);
-		} else if margin_level <= Self::trader_risk_threshold().margin_call.into() {
+		} else if margin_level <= threshold.margin_call.into() {
 			return Ok(Risk::MarginCall);
 		}
 		Ok(Risk::None)
