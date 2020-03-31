@@ -495,7 +495,6 @@ impl margin_liquidity_pools::Trait for Runtime {
 	type Event = Event;
 	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type LiquidityCurrency = LiquidityCurrency;
-	type LiquidityPoolId = LiquidityPoolId;
 	type PoolManager = MarginProtocol;
 	type ExistentialDeposit = ExistentialDeposit;
 	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
@@ -506,7 +505,6 @@ impl synthetic_liquidity_pools::Trait for Runtime {
 	type Event = Event;
 	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type LiquidityCurrency = LiquidityCurrency;
-	type LiquidityPoolId = LiquidityPoolId;
 	type PoolManager = SyntheticTokens;
 	type ExistentialDeposit = ExistentialDeposit;
 	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
