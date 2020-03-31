@@ -1,39 +1,38 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, traits::Get, Parameter, StorageMap};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, traits::Get, StorageMap};
 use frame_system::{self as system, ensure_root};
 use sp_runtime::{
-	traits::{AccountIdConversion, AtLeast32Bit, EnsureOrigin, MaybeSerializeDeserialize, Member, Saturating, Zero},
+	traits::{AccountIdConversion, EnsureOrigin, Zero},
 	DispatchError, DispatchResult, ModuleId, Permill,
 };
-
-use module_traits::LiquidityPoolManager;
-use orml_utilities::FixedU128;
 use sp_std::{prelude::Vec, result};
+
+use orml_utilities::FixedU128;
+
+use module_primitives::{Balance, CurrencyId, LiquidityPoolId};
+use module_traits::LiquidityPoolManager;
 
 mod mock;
 mod tests;
 
 pub trait Trait: frame_system::Trait {
-	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
-	type CurrencyId: Parameter + Member + Copy + MaybeSerializeDeserialize;
-	type Balance: Parameter + Member + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
-	type LiquidityPoolId: Parameter + Member + Copy + MaybeSerializeDeserialize;
+	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
 	type DefaultExtremeRatio: Get<Permill>;
 	type DefaultLiquidationRatio: Get<Permill>;
 	type DefaultCollateralRatio: Get<Permill>;
-	type SyntheticCurrencyIds: Get<Vec<Self::CurrencyId>>;
+	type SyntheticCurrencyIds: Get<Vec<CurrencyId>>;
 	type UpdateOrigin: EnsureOrigin<Self::Origin>;
 }
 
 #[derive(Encode, Decode)]
-pub struct Position<T: Trait> {
-	collateral: T::Balance,
-	synthetic: T::Balance,
+pub struct Position {
+	collateral: Balance,
+	synthetic: Balance,
 }
 
-impl<T: Trait> Default for Position<T> {
+impl Default for Position {
 	fn default() -> Self {
 		Position {
 			collateral: Zero::zero(),
@@ -44,10 +43,10 @@ impl<T: Trait> Default for Position<T> {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as SyntheticTokens {
-		ExtremeRatio get(extreme_ratio): map hasher(blake2_128_concat) T::CurrencyId => Option<Permill>;
-		LiquidationRatio get(liquidation_ratio): map hasher(blake2_128_concat) T::CurrencyId => Option<Permill>;
-		CollateralRatio get(collateral_ratio): map hasher(blake2_128_concat) T::CurrencyId => Option<Permill>;
-		Positions get(positions): map hasher(blake2_128_concat) (T::LiquidityPoolId, T::CurrencyId) => Position<T>;
+		ExtremeRatio get(extreme_ratio): map hasher(blake2_128_concat) CurrencyId => Option<Permill>;
+		LiquidationRatio get(liquidation_ratio): map hasher(blake2_128_concat) CurrencyId => Option<Permill>;
+		CollateralRatio get(collateral_ratio): map hasher(blake2_128_concat) CurrencyId => Option<Permill>;
+		Positions get(positions): map hasher(blake2_128_concat) (LiquidityPoolId, CurrencyId) => Position;
 	}
 }
 
@@ -56,9 +55,7 @@ decl_error! {
 }
 
 decl_event! {
-	pub enum Event<T> where
-		CurrencyId = <T as Trait>::CurrencyId,
-	{
+	pub enum Event {
 		/// Extreme ratio updated. (currency_id, ratio)
 		ExtremeRatioUpdated(CurrencyId, Permill),
 		/// Liquidation ratio updated. (currency_id, ratio)
@@ -77,33 +74,33 @@ decl_module! {
 		const DefaultExtremeRatio: Permill = T::DefaultExtremeRatio::get();
 		const DefaultLiquidationRatio: Permill = T::DefaultLiquidationRatio::get();
 		const DefaultCollateralRatio: Permill = T::DefaultCollateralRatio::get();
-		const SyntheticCurrencyIds: Vec<T::CurrencyId> = T::SyntheticCurrencyIds::get();
+		const SyntheticCurrencyIds: Vec<CurrencyId> = T::SyntheticCurrencyIds::get();
 
-		pub fn set_extreme_ratio(origin, currency_id: T::CurrencyId, ratio: Permill) {
+		pub fn set_extreme_ratio(origin, currency_id: CurrencyId, ratio: Permill) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
-			<ExtremeRatio<T>>::insert(currency_id, ratio);
+			ExtremeRatio::insert(currency_id, ratio);
 
-			Self::deposit_event(RawEvent::ExtremeRatioUpdated(currency_id, ratio));
+			Self::deposit_event(Event::ExtremeRatioUpdated(currency_id, ratio));
 		}
 
-		pub fn set_liquidation_ratio(origin, currency_id: T::CurrencyId, ratio: Permill) {
+		pub fn set_liquidation_ratio(origin, currency_id: CurrencyId, ratio: Permill) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
-			<LiquidationRatio<T>>::insert(currency_id, ratio);
+			LiquidationRatio::insert(currency_id, ratio);
 
-			Self::deposit_event(RawEvent::LiquidationRatioUpdated(currency_id, ratio));
+			Self::deposit_event(Event::LiquidationRatioUpdated(currency_id, ratio));
 		}
 
-		pub fn set_collateral_ratio(origin, currency_id: T::CurrencyId, ratio: Permill) {
+		pub fn set_collateral_ratio(origin, currency_id: CurrencyId, ratio: Permill) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
-			<CollateralRatio<T>>::insert(currency_id, ratio);
+			CollateralRatio::insert(currency_id, ratio);
 
-			Self::deposit_event(RawEvent::CollateralRatioUpdated(currency_id, ratio));
+			Self::deposit_event(Event::CollateralRatioUpdated(currency_id, ratio));
 		}
 	}
 }
@@ -119,33 +116,23 @@ impl<T: Trait> Module<T> {
 		MODULE_ID.into_account()
 	}
 
-	pub fn add_position(
-		pool_id: T::LiquidityPoolId,
-		currency_id: T::CurrencyId,
-		collateral: T::Balance,
-		synthetic: T::Balance,
-	) {
-		<Positions<T>>::mutate((pool_id, currency_id), |p| {
+	pub fn add_position(pool_id: LiquidityPoolId, currency_id: CurrencyId, collateral: Balance, synthetic: Balance) {
+		Positions::mutate((pool_id, currency_id), |p| {
 			p.collateral = p.collateral.saturating_add(collateral);
 			p.synthetic = p.synthetic.saturating_add(synthetic)
 		});
 	}
 
-	pub fn remove_position(
-		pool_id: T::LiquidityPoolId,
-		currency_id: T::CurrencyId,
-		collateral: T::Balance,
-		synthetic: T::Balance,
-	) {
-		<Positions<T>>::mutate((pool_id, currency_id), |p| {
+	pub fn remove_position(pool_id: LiquidityPoolId, currency_id: CurrencyId, collateral: Balance, synthetic: Balance) {
+		Positions::mutate((pool_id, currency_id), |p| {
 			p.collateral = p.collateral.saturating_sub(collateral);
 			p.synthetic = p.synthetic.saturating_sub(synthetic)
 		});
 	}
 
 	/// Get position under `pool_id` and `currency_id`. Returns `(collateral_amount, synthetic_amount)`.
-	pub fn get_position(pool_id: T::LiquidityPoolId, currency_id: T::CurrencyId) -> (T::Balance, T::Balance) {
-		let Position { collateral, synthetic } = <Positions<T>>::get(&(pool_id, currency_id));
+	pub fn get_position(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> (Balance, Balance) {
+		let Position { collateral, synthetic } = Positions::get(&(pool_id, currency_id));
 		(collateral, synthetic)
 	}
 
@@ -153,7 +140,7 @@ impl<T: Trait> Module<T> {
 	///
 	/// If `ratio < extreme_ratio`, return `1`; if `ratio >= liquidation_ratio`, return `0`; Otherwise return
 	/// `(liquidation_ratio - ratio) / (liquidation_ratio - extreme_ratio)`.
-	pub fn incentive_ratio(currency_id: T::CurrencyId, current_ratio: FixedU128) -> FixedU128 {
+	pub fn incentive_ratio(currency_id: CurrencyId, current_ratio: FixedU128) -> FixedU128 {
 		let one = FixedU128::from_rational(1, 1);
 		if current_ratio < one {
 			return FixedU128::from_parts(0);
@@ -186,34 +173,32 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> Module<T> {
-	pub fn liquidation_ratio_or_default(currency_id: T::CurrencyId) -> Permill {
+	pub fn liquidation_ratio_or_default(currency_id: CurrencyId) -> Permill {
 		Self::liquidation_ratio(currency_id).unwrap_or(T::DefaultLiquidationRatio::get())
 	}
 
-	pub fn extreme_ratio_or_default(currency_id: T::CurrencyId) -> Permill {
+	pub fn extreme_ratio_or_default(currency_id: CurrencyId) -> Permill {
 		Self::extreme_ratio(currency_id).unwrap_or(T::DefaultExtremeRatio::get())
 	}
 
-	pub fn collateral_ratio_or_default(currency_id: T::CurrencyId) -> Permill {
+	pub fn collateral_ratio_or_default(currency_id: CurrencyId) -> Permill {
 		Self::collateral_ratio(currency_id).unwrap_or(T::DefaultCollateralRatio::get())
 	}
 }
 
-impl<T: Trait> LiquidityPoolManager<T::LiquidityPoolId, T::Balance> for Module<T> {
-	fn can_remove(pool_id: T::LiquidityPoolId) -> bool {
+impl<T: Trait> LiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
+	fn can_remove(pool_id: LiquidityPoolId) -> bool {
 		T::SyntheticCurrencyIds::get()
 			.iter()
-			.map(|currency_id| -> (T::Balance, T::Balance) { Self::get_position(pool_id, *currency_id) })
+			.map(|currency_id| -> (Balance, Balance) { Self::get_position(pool_id, *currency_id) })
 			.all(|x| x.1.is_zero())
 	}
 
-	fn get_required_deposit(
-		_pool: <T as Trait>::LiquidityPoolId,
-	) -> result::Result<<T as Trait>::Balance, DispatchError> {
+	fn get_required_deposit(_pool: LiquidityPoolId) -> result::Result<Balance, DispatchError> {
 		unimplemented!()
 	}
 
-	fn ensure_can_withdraw(_pool: T::LiquidityPoolId, _amount: T::Balance) -> DispatchResult {
+	fn ensure_can_withdraw(_pool: LiquidityPoolId, _amount: Balance) -> DispatchResult {
 		unimplemented!()
 	}
 }
