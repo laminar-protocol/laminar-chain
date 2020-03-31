@@ -4,11 +4,7 @@
 
 use super::*;
 use frame_support::{assert_noop, assert_ok};
-use mock::{
-	origin_of, AccountId, Balance, CollateralCurrency, CurrencyId, ExtBuilder, MockLiquidityPools, MockPrices, Runtime,
-	SyntheticCurrency, SyntheticProtocol, SyntheticTokens, System, TestEvent, ALICE, ANOTHER_MOCK_POOL, BOB, MOCK_POOL,
-	ONE_MILL,
-};
+use mock::*;
 use sp_runtime::DispatchResult;
 
 fn mint_feur(who: AccountId, amount: Balance) -> DispatchResult {
@@ -56,7 +52,7 @@ fn synthetic_balance(who: AccountId) -> Balance {
 }
 
 fn position() -> (Balance, Balance) {
-	SyntheticTokens::get_position(MOCK_POOL, CurrencyId::FEUR)
+	TestSyntheticTokens::get_position(MOCK_POOL, CurrencyId::FEUR)
 }
 
 fn set_mock_feur_price(x: u128, y: u128) {
@@ -204,7 +200,10 @@ fn mint_does_correct_math() {
 			assert_eq!(mock_pool_liquidity(), ONE_MILL - collateral_from_pool);
 
 			// collateral locked in synthetic-tokens module account
-			assert_eq!(collateral_balance(SyntheticTokens::account_id()), total_collateralized);
+			assert_eq!(
+				collateral_balance(TestSyntheticTokens::account_id()),
+				total_collateralized
+			);
 
 			// position added
 			assert_eq!(position(), (total_collateralized, synthetic));
@@ -342,7 +341,7 @@ fn redeem_fails_if_not_enough_locked_collateral() {
 
 			// mock not enough locked collateral
 			assert_ok!(CollateralCurrency::withdraw(
-				&SyntheticTokens::account_id(),
+				&TestSyntheticTokens::account_id(),
 				ONE_MILL / 2
 			));
 
@@ -434,7 +433,7 @@ fn redeem_does_correct_math() {
 
 			// locked collateral in synthetic-tokens module account got released
 			assert_eq!(
-				collateral_balance(SyntheticTokens::account_id()),
+				collateral_balance(TestSyntheticTokens::account_id()),
 				total_collateralized - redeemed_collateral - pool_refund_collateral
 			);
 
@@ -742,7 +741,7 @@ fn liquidate_does_correct_math() {
 			// locked collateral in synthetic-tokens module account got released
 			let collateral_position_delta = liquidized_collateral + available_for_incentive;
 			assert_eq!(
-				collateral_balance(SyntheticTokens::account_id()),
+				collateral_balance(TestSyntheticTokens::account_id()),
 				total_collateralized - collateral_position_delta
 			);
 
@@ -882,7 +881,7 @@ fn withdraw_collateral_fails_if_not_enough_locked_collateral() {
 
 			// mock not enough locked collateral
 			assert_ok!(CollateralCurrency::withdraw(
-				&SyntheticTokens::account_id(),
+				&TestSyntheticTokens::account_id(),
 				collateral_position
 			));
 

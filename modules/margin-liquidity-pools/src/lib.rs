@@ -273,69 +273,55 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
-	type LiquidityPoolId = LiquidityPoolId;
-	type CurrencyId = CurrencyId;
-	type Balance = Balance;
-
-	fn ensure_liquidity(pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
+	fn ensure_liquidity(pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
 		ensure!(Self::balances(&pool_id) >= amount, Error::<T>::CannotWithdrawAmount);
 		T::PoolManager::ensure_can_withdraw(pool_id, amount)
 	}
 
-	fn is_owner(pool_id: Self::LiquidityPoolId, who: &T::AccountId) -> bool {
+	fn is_owner(pool_id: LiquidityPoolId, who: &T::AccountId) -> bool {
 		Self::is_owner(pool_id, who)
 	}
 
 	/// Check collateral balance of `pool_id`.
-	fn liquidity(pool_id: Self::LiquidityPoolId) -> Self::Balance {
+	fn liquidity(pool_id: LiquidityPoolId) -> Balance {
 		Self::balances(&pool_id)
 	}
 
 	/// Deposit some amount of collateral to `pool_id`, from `source`.
-	fn deposit_liquidity(
-		source: &T::AccountId,
-		pool_id: Self::LiquidityPoolId,
-		amount: Self::Balance,
-	) -> DispatchResult {
+	fn deposit_liquidity(source: &T::AccountId, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
 		Self::_deposit_liquidity(source, pool_id, amount)
 	}
 
 	/// Withdraw some amount of collateral to `dest`, from `pool_id`.
-	fn withdraw_liquidity(
-		dest: &T::AccountId,
-		pool_id: Self::LiquidityPoolId,
-		amount: Self::Balance,
-	) -> DispatchResult {
+	fn withdraw_liquidity(dest: &T::AccountId, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
 		Self::_withdraw_liquidity(dest, pool_id, amount)
 	}
 }
 
 impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
-	type TradingPair = TradingPair;
-
-	fn is_allowed_position(pool_id: Self::LiquidityPoolId, pair: TradingPair, leverage: Leverage) -> bool {
+	fn is_allowed_position(pool_id: LiquidityPoolId, pair: TradingPair, leverage: Leverage) -> bool {
 		Self::is_enabled(pool_id, pair, leverage)
 	}
 
-	fn get_bid_spread(pool_id: Self::LiquidityPoolId, pair: TradingPair) -> Option<Permill> {
+	fn get_bid_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Permill> {
 		Self::liquidity_pool_options(&pool_id, &pair).map(|pool| pool.bid_spread)
 	}
 
-	fn get_ask_spread(pool_id: Self::LiquidityPoolId, pair: TradingPair) -> Option<Permill> {
+	fn get_ask_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Permill> {
 		Self::liquidity_pool_options(&pool_id, &pair).map(|pool| pool.ask_spread)
 	}
 
-	fn get_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128 {
+	fn get_swap_rate(pool_id: LiquidityPoolId, pair: TradingPair) -> Fixed128 {
 		Self::swap_rate(pool_id, pair)
 	}
 
-	fn get_accumulated_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128 {
+	fn get_accumulated_swap_rate(pool_id: LiquidityPoolId, pair: TradingPair) -> Fixed128 {
 		Self::accumulated_swap_rate(pool_id, pair)
 	}
 
 	fn can_open_position(
-		pool_id: Self::LiquidityPoolId,
-		pair: Self::TradingPair,
+		pool_id: LiquidityPoolId,
+		pair: TradingPair,
 		leverage: Leverage,
 		leveraged_amount: Balance,
 	) -> bool {

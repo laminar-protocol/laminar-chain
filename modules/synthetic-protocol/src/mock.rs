@@ -120,7 +120,7 @@ impl module_synthetic_tokens::Trait for Runtime {
 	type SyntheticCurrencyIds = SyntheticCurrencyIds;
 	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
 }
-pub type SyntheticTokens = module_synthetic_tokens::Module<Runtime>;
+pub type TestSyntheticTokens = module_synthetic_tokens::Module<Runtime>;
 
 thread_local! {
 	static PRICES: RefCell<BTreeMap<CurrencyId, Price>> = RefCell::new(BTreeMap::new());
@@ -183,46 +183,42 @@ impl MockLiquidityPools {
 }
 
 impl LiquidityPools<AccountId> for MockLiquidityPools {
-	type LiquidityPoolId = AccountId;
-	type CurrencyId = CurrencyId;
-	type Balance = Balance;
-
-	fn ensure_liquidity(_pool_id: Self::LiquidityPoolId, _amount: Self::Balance) -> DispatchResult {
+	fn ensure_liquidity(_pool_id: LiquidityPoolId, _amount: Balance) -> DispatchResult {
 		unimplemented!()
 	}
 
 	/// ALICE is the mock owner
-	fn is_owner(_pool_id: Self::LiquidityPoolId, who: &u32) -> bool {
+	fn is_owner(_pool_id: LiquidityPoolId, who: &u32) -> bool {
 		who == &ALICE
 	}
 
-	fn liquidity(pool_id: Self::LiquidityPoolId) -> Self::Balance {
+	fn liquidity(pool_id: LiquidityPoolId) -> Balance {
 		CollateralCurrency::free_balance(&pool_id)
 	}
 
-	fn deposit_liquidity(from: &AccountId, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
+	fn deposit_liquidity(from: &AccountId, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
 		CollateralCurrency::transfer(from, &pool_id, amount).map_err(|e| e.into())
 	}
 
-	fn withdraw_liquidity(to: &AccountId, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
+	fn withdraw_liquidity(to: &AccountId, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
 		CollateralCurrency::transfer(&pool_id, to, amount).map_err(|e| e.into())
 	}
 }
 
 impl SyntheticProtocolLiquidityPools<AccountId> for MockLiquidityPools {
-	fn get_bid_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Option<Permill> {
+	fn get_bid_spread(_pool_id: LiquidityPoolId, _currency_id: CurrencyId) -> Option<Permill> {
 		Some(Self::spread())
 	}
 
-	fn get_ask_spread(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Option<Permill> {
+	fn get_ask_spread(_pool_id: LiquidityPoolId, _currency_id: CurrencyId) -> Option<Permill> {
 		Some(Self::spread())
 	}
 
-	fn get_additional_collateral_ratio(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> Permill {
+	fn get_additional_collateral_ratio(_pool_id: LiquidityPoolId, _currency_id: CurrencyId) -> Permill {
 		Self::additional_collateral_ratio()
 	}
 
-	fn can_mint(_pool_id: Self::LiquidityPoolId, _currency_id: Self::CurrencyId) -> bool {
+	fn can_mint(_pool_id: LiquidityPoolId, _currency_id: CurrencyId) -> bool {
 		Self::is_allowed()
 	}
 }

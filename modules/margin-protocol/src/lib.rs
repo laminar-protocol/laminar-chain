@@ -40,13 +40,7 @@ const MODULE_ID: ModuleId = ModuleId(*b"lami/mgn");
 pub trait Trait: frame_system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
-	type LiquidityPools: MarginProtocolLiquidityPools<
-		Self::AccountId,
-		CurrencyId = CurrencyId,
-		Balance = Balance,
-		LiquidityPoolId = LiquidityPoolId,
-		TradingPair = TradingPair,
-	>;
+	type LiquidityPools: MarginProtocolLiquidityPools<Self::AccountId>;
 	type PriceProvider: PriceProvider<CurrencyId, Price>;
 	type Treasury: Treasury<Self::AccountId>;
 	type SubmitTransaction: SubmitUnsignedTransaction<Self, <Self as Trait>::Call>;

@@ -150,23 +150,19 @@ impl MockLiquidityPools {
 	}
 }
 impl LiquidityPools<AccountId> for MockLiquidityPools {
-	type LiquidityPoolId = LiquidityPoolId;
-	type CurrencyId = CurrencyId;
-	type Balance = Balance;
-
-	fn ensure_liquidity(_pool_id: Self::LiquidityPoolId, _amount: Self::Balance) -> DispatchResult {
+	fn ensure_liquidity(_pool_id: LiquidityPoolId, _amount: Balance) -> DispatchResult {
 		unimplemented!()
 	}
 
-	fn is_owner(_pool_id: Self::LiquidityPoolId, _who: &AccountId) -> bool {
+	fn is_owner(_pool_id: LiquidityPoolId, _who: &AccountId) -> bool {
 		unimplemented!()
 	}
 
-	fn liquidity(pool_id: Self::LiquidityPoolId) -> Self::Balance {
+	fn liquidity(pool_id: LiquidityPoolId) -> Balance {
 		Self::liquidity(pool_id)
 	}
 
-	fn deposit_liquidity(source: &u64, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
+	fn deposit_liquidity(source: &u64, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
 		<OrmlTokens as MultiCurrency<AccountId>>::transfer(
 			CurrencyId::AUSD,
 			source,
@@ -177,7 +173,7 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 		Ok(())
 	}
 
-	fn withdraw_liquidity(dest: &u64, pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
+	fn withdraw_liquidity(dest: &u64, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
 		<OrmlTokens as MultiCurrency<AccountId>>::transfer(
 			CurrencyId::AUSD,
 			&MOCK_LIQUIDITY_LOCK_ACCOUNT,
@@ -190,31 +186,29 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 }
 
 impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
-	type TradingPair = TradingPair;
-
-	fn is_allowed_position(_pool_id: Self::LiquidityPoolId, _pair: Self::TradingPair, _leverage: Leverage) -> bool {
+	fn is_allowed_position(_pool_id: LiquidityPoolId, _pair: TradingPair, _leverage: Leverage) -> bool {
 		true
 	}
 
-	fn get_bid_spread(_pool_id: Self::LiquidityPoolId, _pair: Self::TradingPair) -> Option<Permill> {
+	fn get_bid_spread(_pool_id: LiquidityPoolId, _pair: TradingPair) -> Option<Permill> {
 		Some(Self::spread())
 	}
 
-	fn get_ask_spread(_pool_id: Self::LiquidityPoolId, _pair: Self::TradingPair) -> Option<Permill> {
+	fn get_ask_spread(_pool_id: LiquidityPoolId, _pair: TradingPair) -> Option<Permill> {
 		Some(Self::spread())
 	}
 
-	fn get_swap_rate(_pool_id: Self::LiquidityPoolId, _pair: Self::TradingPair) -> Fixed128 {
+	fn get_swap_rate(_pool_id: LiquidityPoolId, _pair: TradingPair) -> Fixed128 {
 		unimplemented!()
 	}
 
-	fn get_accumulated_swap_rate(_pool_id: Self::LiquidityPoolId, pair: Self::TradingPair) -> Fixed128 {
+	fn get_accumulated_swap_rate(_pool_id: LiquidityPoolId, pair: TradingPair) -> Fixed128 {
 		Self::accumulated_swap_rate(pair)
 	}
 
 	fn can_open_position(
-		_pool_id: Self::LiquidityPoolId,
-		_pair: Self::TradingPair,
+		_pool_id: LiquidityPoolId,
+		_pair: TradingPair,
 		_leverage: Leverage,
 		_leveraged_amount: Balance,
 	) -> bool {

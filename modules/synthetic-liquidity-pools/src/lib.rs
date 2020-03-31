@@ -180,53 +180,41 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
-	type LiquidityPoolId = LiquidityPoolId;
-	type CurrencyId = CurrencyId;
-	type Balance = Balance;
-
-	fn ensure_liquidity(pool_id: Self::LiquidityPoolId, amount: Self::Balance) -> DispatchResult {
+	fn ensure_liquidity(pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
 		ensure!(Self::balances(&pool_id) >= amount, Error::<T>::CannotWithdrawAmount);
 		Ok(())
 	}
 
-	fn is_owner(pool_id: Self::LiquidityPoolId, who: &T::AccountId) -> bool {
+	fn is_owner(pool_id: LiquidityPoolId, who: &T::AccountId) -> bool {
 		Self::is_owner(pool_id, who)
 	}
 
 	/// Check collateral balance of `pool_id`.
-	fn liquidity(pool_id: Self::LiquidityPoolId) -> Self::Balance {
+	fn liquidity(pool_id: LiquidityPoolId) -> Balance {
 		Self::balances(&pool_id)
 	}
 
 	/// Deposit some amount of collateral to `pool_id`, from `source`.
-	fn deposit_liquidity(
-		source: &T::AccountId,
-		pool_id: Self::LiquidityPoolId,
-		amount: Self::Balance,
-	) -> DispatchResult {
+	fn deposit_liquidity(source: &T::AccountId, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
 		Self::_deposit_liquidity(source, pool_id, amount)
 	}
 
 	/// Withdraw some amount of collateral to `dest`, from `pool_id`.
-	fn withdraw_liquidity(
-		dest: &T::AccountId,
-		pool_id: Self::LiquidityPoolId,
-		amount: Self::Balance,
-	) -> DispatchResult {
+	fn withdraw_liquidity(dest: &T::AccountId, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
 		Self::_withdraw_liquidity(dest, pool_id, amount)
 	}
 }
 
 impl<T: Trait> SyntheticProtocolLiquidityPools<T::AccountId> for Module<T> {
-	fn get_bid_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill> {
+	fn get_bid_spread(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Permill> {
 		Self::liquidity_pool_options(&pool_id, &currency_id).map(|pool| pool.bid_spread)
 	}
 
-	fn get_ask_spread(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Option<Permill> {
+	fn get_ask_spread(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Permill> {
 		Self::liquidity_pool_options(&pool_id, &currency_id).map(|pool| pool.ask_spread)
 	}
 
-	fn get_additional_collateral_ratio(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> Permill {
+	fn get_additional_collateral_ratio(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Permill {
 		let min_ratio = Self::min_additional_collateral_ratio();
 
 		Self::liquidity_pool_options(&pool_id, &currency_id).map_or(min_ratio, |pool| {
@@ -234,7 +222,7 @@ impl<T: Trait> SyntheticProtocolLiquidityPools<T::AccountId> for Module<T> {
 		})
 	}
 
-	fn can_mint(pool_id: Self::LiquidityPoolId, currency_id: Self::CurrencyId) -> bool {
+	fn can_mint(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> bool {
 		Self::liquidity_pool_options(&pool_id, &currency_id).map_or(false, |pool| pool.synthetic_enabled)
 	}
 }

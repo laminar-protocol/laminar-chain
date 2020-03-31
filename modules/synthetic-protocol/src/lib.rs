@@ -27,18 +27,8 @@ pub trait Trait: module_synthetic_tokens::Trait {
 	type CollateralCurrency: BasicCurrency<Self::AccountId, Balance = Balance>;
 	type GetCollateralCurrencyId: Get<CurrencyId>;
 	type PriceProvider: PriceProvider<CurrencyId, Price>;
-	type LiquidityPools: LiquidityPools<
-		Self::AccountId,
-		CurrencyId = CurrencyId,
-		Balance = Balance,
-		LiquidityPoolId = LiquidityPoolId,
-	>;
-	type SyntheticProtocolLiquidityPools: SyntheticProtocolLiquidityPools<
-		Self::AccountId,
-		CurrencyId = CurrencyId,
-		Balance = Balance,
-		LiquidityPoolId = LiquidityPoolId,
-	>;
+	type LiquidityPools: LiquidityPools<Self::AccountId>;
+	type SyntheticProtocolLiquidityPools: SyntheticProtocolLiquidityPools<Self::AccountId>;
 	type BalanceToPrice: Convert<Balance, Price>;
 	type PriceToBalance: Convert<Price, Balance>;
 }
