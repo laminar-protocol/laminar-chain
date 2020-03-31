@@ -3,9 +3,13 @@
 #![cfg(test)]
 
 use super::*;
+use mock::*;
+
 use frame_support::{assert_noop, assert_ok};
-use mock::{alice, bob, ExtBuilder, Runtime, SyntheticTokens, System, TestEvent, FEUR, ROOT};
-use sp_runtime::{traits::BadOrigin, PerThing, Permill};
+use sp_runtime::{
+	traits::{BadOrigin, Saturating},
+	PerThing, Permill,
+};
 
 #[allow(unused_macros)]
 macro_rules! assert_noop_root {
@@ -17,13 +21,17 @@ macro_rules! assert_noop_root {
 #[test]
 fn root_set_extreme_ratio() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_eq!(SyntheticTokens::extreme_ratio(FEUR), None);
+		assert_eq!(SyntheticTokens::extreme_ratio(CurrencyId::FEUR), None);
 
 		let ratio = Permill::from_percent(1);
-		assert_ok!(SyntheticTokens::set_extreme_ratio(ROOT, FEUR, ratio));
-		assert_eq!(SyntheticTokens::extreme_ratio(FEUR), Some(ratio));
+		assert_ok!(SyntheticTokens::set_extreme_ratio(
+			Origin::ROOT,
+			CurrencyId::FEUR,
+			ratio
+		));
+		assert_eq!(SyntheticTokens::extreme_ratio(CurrencyId::FEUR), Some(ratio));
 
-		let event = TestEvent::synthetic_tokens(RawEvent::ExtremeRatioUpdated(FEUR, ratio));
+		let event = TestEvent::synthetic_tokens(Event::ExtremeRatioUpdated(CurrencyId::FEUR, ratio));
 		assert!(System::events().iter().any(|record| record.event == event));
 	});
 }
@@ -33,22 +41,29 @@ fn non_root_set_extreme_ratio_fails() {
 	ExtBuilder::default().build().execute_with(|| {
 		let ratio = Permill::from_percent(1);
 
-		assert_noop!(SyntheticTokens::set_extreme_ratio(bob(), FEUR, ratio), BadOrigin);
+		assert_noop!(
+			SyntheticTokens::set_extreme_ratio(bob(), CurrencyId::FEUR, ratio),
+			BadOrigin
+		);
 
-		assert_ok!(SyntheticTokens::set_extreme_ratio(alice(), FEUR, ratio));
+		assert_ok!(SyntheticTokens::set_extreme_ratio(alice(), CurrencyId::FEUR, ratio));
 	});
 }
 
 #[test]
 fn root_set_liquidation_ratio() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_eq!(SyntheticTokens::liquidation_ratio(FEUR), None);
+		assert_eq!(SyntheticTokens::liquidation_ratio(CurrencyId::FEUR), None);
 
 		let ratio = Permill::from_percent(1);
-		assert_ok!(SyntheticTokens::set_liquidation_ratio(ROOT, FEUR, ratio));
-		assert_eq!(SyntheticTokens::liquidation_ratio(FEUR), Some(ratio));
+		assert_ok!(SyntheticTokens::set_liquidation_ratio(
+			Origin::ROOT,
+			CurrencyId::FEUR,
+			ratio
+		));
+		assert_eq!(SyntheticTokens::liquidation_ratio(CurrencyId::FEUR), Some(ratio));
 
-		let event = TestEvent::synthetic_tokens(RawEvent::LiquidationRatioUpdated(FEUR, ratio));
+		let event = TestEvent::synthetic_tokens(Event::LiquidationRatioUpdated(CurrencyId::FEUR, ratio));
 		assert!(System::events().iter().any(|record| record.event == event));
 	});
 }
@@ -57,22 +72,29 @@ fn root_set_liquidation_ratio() {
 fn non_root_set_liquidation_ratio_fails() {
 	ExtBuilder::default().build().execute_with(|| {
 		let ratio = Permill::from_percent(1);
-		assert_noop!(SyntheticTokens::set_liquidation_ratio(bob(), FEUR, ratio), BadOrigin);
+		assert_noop!(
+			SyntheticTokens::set_liquidation_ratio(bob(), CurrencyId::FEUR, ratio),
+			BadOrigin
+		);
 
-		assert_ok!(SyntheticTokens::set_liquidation_ratio(alice(), FEUR, ratio));
+		assert_ok!(SyntheticTokens::set_liquidation_ratio(alice(), CurrencyId::FEUR, ratio));
 	});
 }
 
 #[test]
 fn root_set_collateral_ratio() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_eq!(SyntheticTokens::collateral_ratio(FEUR), None);
+		assert_eq!(SyntheticTokens::collateral_ratio(CurrencyId::FEUR), None);
 
 		let ratio = Permill::from_percent(1);
-		assert_ok!(SyntheticTokens::set_collateral_ratio(ROOT, FEUR, ratio));
-		assert_eq!(SyntheticTokens::collateral_ratio(FEUR), Some(ratio));
+		assert_ok!(SyntheticTokens::set_collateral_ratio(
+			Origin::ROOT,
+			CurrencyId::FEUR,
+			ratio
+		));
+		assert_eq!(SyntheticTokens::collateral_ratio(CurrencyId::FEUR), Some(ratio));
 
-		let event = TestEvent::synthetic_tokens(RawEvent::CollateralRatioUpdated(FEUR, ratio));
+		let event = TestEvent::synthetic_tokens(Event::CollateralRatioUpdated(CurrencyId::FEUR, ratio));
 		assert!(System::events().iter().any(|record| record.event == event));
 	});
 }
@@ -81,9 +103,12 @@ fn root_set_collateral_ratio() {
 fn non_root_set_collateral_ratio_fails() {
 	ExtBuilder::default().build().execute_with(|| {
 		let ratio = Permill::from_percent(1);
-		assert_noop!(SyntheticTokens::set_collateral_ratio(bob(), FEUR, ratio), BadOrigin);
+		assert_noop!(
+			SyntheticTokens::set_collateral_ratio(bob(), CurrencyId::FEUR, ratio),
+			BadOrigin
+		);
 
-		assert_ok!(SyntheticTokens::set_collateral_ratio(alice(), FEUR, ratio));
+		assert_ok!(SyntheticTokens::set_collateral_ratio(alice(), CurrencyId::FEUR, ratio));
 	});
 }
 
@@ -91,13 +116,17 @@ fn non_root_set_collateral_ratio_fails() {
 fn liquidation_ratio_or_default() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_eq!(
-			SyntheticTokens::liquidation_ratio_or_default(FEUR),
+			SyntheticTokens::liquidation_ratio_or_default(CurrencyId::FEUR),
 			<Runtime as Trait>::DefaultLiquidationRatio::get()
 		);
 
 		let ratio = Permill::from_percent(1);
-		assert_ok!(SyntheticTokens::set_liquidation_ratio(ROOT, FEUR, ratio));
-		assert_eq!(SyntheticTokens::liquidation_ratio_or_default(FEUR), ratio);
+		assert_ok!(SyntheticTokens::set_liquidation_ratio(
+			Origin::ROOT,
+			CurrencyId::FEUR,
+			ratio
+		));
+		assert_eq!(SyntheticTokens::liquidation_ratio_or_default(CurrencyId::FEUR), ratio);
 	});
 }
 
@@ -105,13 +134,17 @@ fn liquidation_ratio_or_default() {
 fn extreme_ratio_or_default() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_eq!(
-			SyntheticTokens::extreme_ratio_or_default(FEUR),
+			SyntheticTokens::extreme_ratio_or_default(CurrencyId::FEUR),
 			<Runtime as Trait>::DefaultExtremeRatio::get()
 		);
 
 		let ratio = Permill::from_percent(1);
-		assert_ok!(SyntheticTokens::set_extreme_ratio(ROOT, FEUR, ratio));
-		assert_eq!(SyntheticTokens::extreme_ratio_or_default(FEUR), ratio);
+		assert_ok!(SyntheticTokens::set_extreme_ratio(
+			Origin::ROOT,
+			CurrencyId::FEUR,
+			ratio
+		));
+		assert_eq!(SyntheticTokens::extreme_ratio_or_default(CurrencyId::FEUR), ratio);
 	});
 }
 
@@ -119,13 +152,17 @@ fn extreme_ratio_or_default() {
 fn collateral_ratio_or_default() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_eq!(
-			SyntheticTokens::collateral_ratio_or_default(FEUR),
+			SyntheticTokens::collateral_ratio_or_default(CurrencyId::FEUR),
 			<Runtime as Trait>::DefaultCollateralRatio::get()
 		);
 
 		let ratio = Permill::from_percent(1);
-		assert_ok!(SyntheticTokens::set_collateral_ratio(ROOT, FEUR, ratio));
-		assert_eq!(SyntheticTokens::collateral_ratio_or_default(FEUR), ratio);
+		assert_ok!(SyntheticTokens::set_collateral_ratio(
+			Origin::ROOT,
+			CurrencyId::FEUR,
+			ratio
+		));
+		assert_eq!(SyntheticTokens::collateral_ratio_or_default(CurrencyId::FEUR), ratio);
 	});
 }
 
@@ -133,7 +170,10 @@ fn collateral_ratio_or_default() {
 fn no_incentive_if_collateral_less_than_synthetic_value() {
 	ExtBuilder::default().build().execute_with(|| {
 		let ratio = FixedU128::from_rational(1, 2);
-		assert_eq!(SyntheticTokens::incentive_ratio(FEUR, ratio), FixedU128::from_parts(0));
+		assert_eq!(
+			SyntheticTokens::incentive_ratio(CurrencyId::FEUR, ratio),
+			FixedU128::from_parts(0)
+		);
 	});
 }
 
@@ -147,7 +187,7 @@ fn no_incentive_if_equal_or_above_liquidation_ratio() {
 		// equal
 		assert_eq!(
 			SyntheticTokens::incentive_ratio(
-				FEUR,
+				CurrencyId::FEUR,
 				plus_one(<Runtime as Trait>::DefaultLiquidationRatio::get().into())
 			),
 			FixedU128::from_parts(0)
@@ -155,9 +195,9 @@ fn no_incentive_if_equal_or_above_liquidation_ratio() {
 
 		// above
 		let ratio = FixedU128::from_rational(11, 100);
-		assert!(ratio > SyntheticTokens::liquidation_ratio_or_default(FEUR).into());
+		assert!(ratio > SyntheticTokens::liquidation_ratio_or_default(CurrencyId::FEUR).into());
 		assert_eq!(
-			SyntheticTokens::incentive_ratio(FEUR, plus_one(ratio)),
+			SyntheticTokens::incentive_ratio(CurrencyId::FEUR, plus_one(ratio)),
 			FixedU128::from_parts(0)
 		);
 	});
@@ -168,15 +208,18 @@ fn full_incentive_if_equal_or_below_extreme_ratio() {
 	ExtBuilder::default().build().execute_with(|| {
 		// equal
 		assert_eq!(
-			SyntheticTokens::incentive_ratio(FEUR, plus_one(<Runtime as Trait>::DefaultExtremeRatio::get().into())),
+			SyntheticTokens::incentive_ratio(
+				CurrencyId::FEUR,
+				plus_one(<Runtime as Trait>::DefaultExtremeRatio::get().into())
+			),
 			FixedU128::from_rational(1, 1)
 		);
 
 		// below
 		let ratio = FixedU128::from_parts(0);
-		assert!(ratio < SyntheticTokens::extreme_ratio_or_default(FEUR).into());
+		assert!(ratio < SyntheticTokens::extreme_ratio_or_default(CurrencyId::FEUR).into());
 		assert_eq!(
-			SyntheticTokens::incentive_ratio(FEUR, plus_one(ratio)),
+			SyntheticTokens::incentive_ratio(CurrencyId::FEUR, plus_one(ratio)),
 			FixedU128::from_rational(1, 1)
 		);
 	});
@@ -187,12 +230,20 @@ fn full_incentive_if_equal_or_below_extreme_ratio() {
 #[test]
 fn proportional_incentive_between_extreme_and_liquidation() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_ok!(SyntheticTokens::set_extreme_ratio(ROOT, FEUR, Permill::zero()));
-		assert_ok!(SyntheticTokens::set_liquidation_ratio(ROOT, FEUR, Permill::one()));
+		assert_ok!(SyntheticTokens::set_extreme_ratio(
+			Origin::ROOT,
+			CurrencyId::FEUR,
+			Permill::zero()
+		));
+		assert_ok!(SyntheticTokens::set_liquidation_ratio(
+			Origin::ROOT,
+			CurrencyId::FEUR,
+			Permill::one()
+		));
 
 		let ten_percent = FixedU128::from_rational(1, 10);
 		assert_eq!(
-			SyntheticTokens::incentive_ratio(FEUR, plus_one(ten_percent)),
+			SyntheticTokens::incentive_ratio(CurrencyId::FEUR, plus_one(ten_percent)),
 			FixedU128::from_rational(9, 10)
 		);
 	});
