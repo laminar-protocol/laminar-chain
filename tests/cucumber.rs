@@ -237,15 +237,9 @@ mod steps {
 				world.execute_with(|| {
 					let iter = get_rows(step)
 						.iter()
-<<<<<<< HEAD
 						.map(|x| (parse_pair(x.get(0)), parse_fixed128(x.get(1)), parse_fixed128(x.get(2))));
 					for (pair, long, short) in iter {
 						assert_ok!(margin_set_swap_rate(pair, long, short));
-=======
-						.map(|x| (parse_pair(x.get(0)), parse_fixed128(x.get(1))));
-					for (pair, value) in iter {
-						assert_ok!(margin_update_swap(pair, value));
->>>>>>> add cucumber tests
 					}
 				})
 			})
@@ -336,10 +330,8 @@ mod steps {
 
 		builder.build()
 	}
-<<<<<<< HEAD
 }
 
-=======
 
 	// Any type that implements cucumber::World + Default can be the world
 	// steps!(crate::World => {
@@ -384,34 +376,10 @@ mod steps {
 	// });
 }
 
-// Declares a before handler function named `a_before_fn`
-before!(a_before_fn => |_scenario| {
-
-});
-
-// Declares an after handler function named `an_after_fn`
-after!(an_after_fn => |_scenario| {
-
-});
-
-// A setup function to be called before everything else
-fn setup() {}
-
->>>>>>> add cucumber tests
 cucumber! {
 	features: "./features", // Path to our feature files
 	world: ::World, // The world needs to be the same for steps and the main cucumber call
 	steps: &[
 		steps::steps // the `steps!` macro creates a `steps` function in a module
-<<<<<<< HEAD
-=======
-	],
-	setup: setup, // Optional; called once before everything
-	before: &[
-		a_before_fn // Optional; called before each scenario
-	],
-	after: &[
-		an_after_fn // Optional; called after each scenario
->>>>>>> add cucumber tests
 	]
 }
