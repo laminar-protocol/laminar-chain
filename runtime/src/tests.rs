@@ -8,7 +8,10 @@ use crate::{
 };
 use frame_support::{assert_noop, assert_ok, parameter_types};
 
+<<<<<<< HEAD
 use margin_liquidity_pools::SwapRate;
+=======
+>>>>>>> add cucumber tests
 use margin_protocol::RiskThreshold;
 use module_primitives::{
 	Balance,
@@ -134,7 +137,10 @@ pub fn set_oracle_price(prices: Vec<(CurrencyId, Price)>) -> DispatchResult {
 			prices.clone()
 		));
 	}
+<<<<<<< HEAD
 	get_price();
+=======
+>>>>>>> add cucumber tests
 	Ok(())
 }
 
@@ -150,10 +156,13 @@ pub fn one_percent() -> Fixed128 {
 	Fixed128::recip(&Fixed128::from_natural(100)).unwrap()
 }
 
+<<<<<<< HEAD
 pub fn negative_one_percent() -> Fixed128 {
 	Fixed128::recip(&Fixed128::from_natural(-100)).unwrap()
 }
 
+=======
+>>>>>>> add cucumber tests
 pub fn create_pool() -> DispatchResult {
 	MarginLiquidityPools::create_pool(origin_of(&POOL::get()))
 }
@@ -207,6 +216,7 @@ pub fn margin_liquidity_pool_disable_trading_pair(pair: TradingPair) -> Dispatch
 	MarginLiquidityPools::liquidity_pool_disable_trading_pair(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, pair)
 }
 
+<<<<<<< HEAD
 pub fn margin_set_swap_rate(pair: TradingPair, long_rate: Fixed128, short_rate: Fixed128) -> DispatchResult {
 	let swap_rate: SwapRate = SwapRate {
 		long: long_rate,
@@ -226,6 +236,10 @@ pub fn margin_set_mock_swap_rate(pair: TradingPair) -> DispatchResult {
 
 pub fn margin_set_additional_swap(rate: Fixed128) -> DispatchResult {
 	MarginLiquidityPools::set_additional_swap(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, rate)
+=======
+pub fn margin_update_swap(pair: TradingPair, rate: Fixed128) -> DispatchResult {
+	MarginLiquidityPools::update_swap(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, pair, rate)
+>>>>>>> add cucumber tests
 }
 
 pub fn margin_set_max_spread(pair: TradingPair, max_spread: Permill) -> DispatchResult {
