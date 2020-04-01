@@ -46,7 +46,7 @@ fn eur_jpy_long() -> Position<Runtime> {
 		leveraged_debits: Fixed128::from_natural(-14_104_090),
 		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(-131_813_93),
 		open_accumulated_swap_rate: Fixed128::from_natural(1),
-		open_margin: balance_from_natural_currency_cent(6_591_00),
+		margin_held: balance_from_natural_currency_cent(6_591_00),
 	}
 }
 
@@ -60,7 +60,7 @@ fn eur_jpy_short() -> Position<Runtime> {
 		leveraged_debits: Fixed128::from_natural(14_175_810),
 		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(133_734_06),
 		open_accumulated_swap_rate: Fixed128::from_natural(1),
-		open_margin: balance_from_natural_currency_cent(6_687_00),
+		margin_held: balance_from_natural_currency_cent(6_687_00),
 	}
 }
 
@@ -116,7 +116,7 @@ fn unrealized_pl_of_trader_sums_all_positions() {
 }
 
 #[test]
-fn margin_held_sums_all_open_margin() {
+fn margin_held_sums_all_margin_held() {
 	ExtBuilder::default().build().execute_with(|| {
 		<Positions<Runtime>>::insert(0, eur_jpy_long());
 		<Positions<Runtime>>::insert(1, eur_jpy_short());
@@ -170,7 +170,7 @@ fn eur_usd_long_1() -> Position<Runtime> {
 		leveraged_debits: fixed128_from_natural_currency_cent(-120_420_30),
 		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(-120_420_30),
 		open_accumulated_swap_rate: open_rate,
-		open_margin: balance_from_natural_currency_cent(24_084_00),
+		margin_held: balance_from_natural_currency_cent(24_084_00),
 	}
 }
 
@@ -186,7 +186,7 @@ fn eur_usd_long_2() -> Position<Runtime> {
 		leveraged_debits: fixed128_from_natural_currency_cent(-119_419_30),
 		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(-119_419_30),
 		open_accumulated_swap_rate: open_rate,
-		open_margin: balance_from_natural_currency_cent(5_971_00),
+		margin_held: balance_from_natural_currency_cent(5_971_00),
 	}
 }
 
@@ -202,7 +202,7 @@ fn eur_usd_short_1() -> Position<Runtime> {
 		leveraged_debits: fixed128_from_natural_currency_cent(119_780_10),
 		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(119_780_10),
 		open_accumulated_swap_rate: open_rate,
-		open_margin: balance_from_natural_currency_cent(11_978_00),
+		margin_held: balance_from_natural_currency_cent(11_978_00),
 	}
 }
 
@@ -218,7 +218,7 @@ fn eur_usd_short_2() -> Position<Runtime> {
 		leveraged_debits: fixed128_from_natural_currency_cent(237_362_40),
 		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(237_362_40),
 		open_accumulated_swap_rate: open_rate,
-		open_margin: balance_from_natural_currency_cent(4_747_00),
+		margin_held: balance_from_natural_currency_cent(4_747_00),
 	}
 }
 
@@ -370,7 +370,7 @@ fn ensure_trader_safe_works() {
 				leveraged_debits: fixed128_from_natural_currency_cent(100),
 				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
-				open_margin: balance_from_natural_currency_cent(100),
+				margin_held: balance_from_natural_currency_cent(100),
 			};
 			assert_eq!(
 				MarginProtocol::_margin_level(&ALICE, Action::OpenPosition(position.clone())),
@@ -524,7 +524,7 @@ fn ensure_liquidity_works() {
 				leveraged_debits: fixed128_from_natural_currency_cent(100),
 				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
-				open_margin: balance_from_natural_currency_cent(100),
+				margin_held: balance_from_natural_currency_cent(100),
 			};
 
 			<Positions<Runtime>>::insert(0, position);
@@ -561,7 +561,7 @@ fn ensure_pool_safe_works() {
 				leveraged_debits: fixed128_from_natural_currency_cent(100),
 				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
-				open_margin: balance_from_natural_currency_cent(100),
+				margin_held: balance_from_natural_currency_cent(100),
 			};
 
 			// with new position
@@ -639,7 +639,7 @@ fn trader_margin_call_should_work() {
 				leveraged_debits: fixed128_from_natural_currency_cent(100),
 				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
-				open_margin: balance_from_natural_currency_cent(100),
+				margin_held: balance_from_natural_currency_cent(100),
 			};
 
 			assert_eq!(
@@ -689,7 +689,7 @@ fn trader_become_safe_should_work() {
 				leveraged_debits: fixed128_from_natural_currency_cent(100),
 				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
-				open_margin: balance_from_natural_currency_cent(100),
+				margin_held: balance_from_natural_currency_cent(100),
 			};
 
 			// without position
@@ -750,7 +750,7 @@ fn trader_liquidate_should_work() {
 				leveraged_debits: fixed128_from_natural_currency_cent(100),
 				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
-				open_margin: balance_from_natural_currency_cent(100),
+				margin_held: balance_from_natural_currency_cent(100),
 			};
 
 			// without position
@@ -805,7 +805,7 @@ fn liquidity_pool_margin_call_and_become_safe_work() {
 				leveraged_debits: fixed128_from_natural_currency_cent(100),
 				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
-				open_margin: balance_from_natural_currency_cent(100),
+				margin_held: balance_from_natural_currency_cent(100),
 			};
 
 			<Positions<Runtime>>::insert(0, position);
@@ -925,7 +925,7 @@ fn open_long_position_works() {
 				// with higher precision level
 				p.leveraged_debits = Fixed128::from_parts(-14104090000000000732500000);
 				p.leveraged_debits_in_usd = Fixed128::from_parts(-131813925233644859804554);
-				p.open_margin = 6590696261682242990227;
+				p.margin_held = 6590696261682242990227;
 				p
 			};
 			let id = 0;
@@ -973,7 +973,7 @@ fn open_short_position_works() {
 				// with higher precision level
 				p.leveraged_debits = Fixed128::from_parts(14175810000000000585500000);
 				p.leveraged_debits_in_usd = Fixed128::from_parts(133734056603773584812414);
-				p.open_margin = 6686702830188679240620;
+				p.margin_held = 6686702830188679240620;
 				p
 			};
 			assert_eq!(MarginProtocol::positions(0), Some(position));
@@ -1600,7 +1600,7 @@ fn withdraw_fails_if_trader_would_not_be_safe() {
 				leveraged_debits: fixed128_from_natural_currency_cent(100),
 				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
-				open_margin: balance_from_natural_currency_cent(100),
+				margin_held: balance_from_natural_currency_cent(100),
 			};
 			<Positions<Runtime>>::insert(0, position);
 			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
@@ -1807,7 +1807,7 @@ fn liquidity_pool_manager_get_required_deposit_works() {
 				leveraged_debits: fixed128_from_natural_currency_cent(100),
 				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
-				open_margin: balance_from_natural_currency_cent(100),
+				margin_held: balance_from_natural_currency_cent(100),
 			};
 			let id = 0;
 			<Positions<Runtime>>::insert(id, position);

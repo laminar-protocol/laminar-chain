@@ -62,7 +62,7 @@ pub struct Position<T: Trait> {
 	/// USD value of leveraged debits on open position.
 	leveraged_debits_in_usd: Fixed128,
 	open_accumulated_swap_rate: Fixed128,
-	open_margin: Balance,
+	margin_held: Balance,
 }
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -298,12 +298,12 @@ impl<T: Trait> Module<T> {
 			Error::<T>::CannotOpenPosition
 		);
 
-		let open_margin = {
+		let margin_held = {
 			let leverage_value = Fixed128::from_natural(leverage.value().into());
-			let m = leveraged_held_in_usd
+			leveraged_held_in_usd
 				.checked_div(&leverage_value)
-				.expect("leveraged value cannot be zero; qed");
-			u128_from_fixed_128(m)
+				.map(u128_from_fixed_128)
+				.expect("leveraged value cannot be zero; qed")
 		};
 		let open_accumulated_swap_rate = T::LiquidityPools::get_accumulated_swap_rate(pool, pair);
 		let position: Position<T> = Position {
@@ -315,7 +315,7 @@ impl<T: Trait> Module<T> {
 			leveraged_debits: fixed_128_mul_signum(leveraged_debits, debit_signum),
 			leveraged_debits_in_usd: fixed_128_mul_signum(leveraged_held_in_usd, debit_signum),
 			open_accumulated_swap_rate,
-			open_margin,
+			margin_held,
 		};
 
 		Self::_ensure_trader_safe(who, Action::OpenPosition(position.clone()))?;
@@ -620,7 +620,7 @@ impl<T: Trait> Module<T> {
 		<PositionsByTrader<T>>::iter_prefix(who)
 			.flatten()
 			.filter_map(|position_id| Self::positions(position_id))
-			.map(|p| p.open_margin)
+			.map(|p| p.margin_held)
 			.sum()
 	}
 
