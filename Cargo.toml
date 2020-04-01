@@ -12,6 +12,10 @@ panic = "unwind"
 name = "laminar"
 path = "src/main.rs"
 
+[[test]]
+name = "cucumber"
+harness = false # Allows Cucumber to print output instead of libtest
+
 [dependencies]
 codec = { package = "parity-scale-codec", version = "1.2.0" }
 futures = "0.3.1"
@@ -57,6 +61,11 @@ margin-protocol = { package = "module-margin-protocol", path = "modules/margin-p
 orml-oracle-rpc = { path = "orml/oracle/rpc" }
 orml-utilities = { path = "orml/utilities" }
 runtime = { package = "laminar-runtime", path = "runtime" }
+
+[dev-dependencies]
+cucumber = { package = "cucumber_rust", version = "^0.6.0" }
+module-primitives = { path = "./modules/primitives" }
+frame-support = { version = "2.0.0-alpha.5" }
 
 [build-dependencies]
 vergen = "3.0.4"
