@@ -68,8 +68,21 @@ mod tests {
 				assert_noop!(
 					margin_set_swap_rate(
 						EUR_USD,
+<<<<<<< HEAD
 						negative_one_percent(),
 						MaxSwap::get().checked_add(&one_percent()).unwrap()
+=======
+						MaxSwap::get().long.checked_sub(&one_percent()).unwrap(),
+						one_percent()
+					),
+					margin_liquidity_pools::Error::<Runtime>::SwapRateTooLow
+				);
+				assert_noop!(
+					margin_set_swap_rate(
+						EUR_USD,
+						negative_one_percent(),
+						MaxSwap::get().short.checked_add(&one_percent()).unwrap()
+>>>>>>> fix implement
 					),
 					margin_liquidity_pools::Error::<Runtime>::SwapRateTooHigh
 				);

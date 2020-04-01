@@ -63,7 +63,7 @@ parameter_types! {
 	pub const ExistentialDeposit: u128 = 50;
 	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::LAMI;
 	pub const GetLiquidityCurrencyId: CurrencyId = CurrencyId::AUSD;
-	pub const MaxSwap: (Fixed128, Fixed128) = (Fixed128::from_natural(-2), Fixed128::from_natural(2));
+	pub const MaxSwap: SwapRate = SwapRate{long: Fixed128::from_natural(-2), short: Fixed128::from_natural(2)};
 }
 
 type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
