@@ -2778,6 +2778,7 @@ dependencies = [
  "frame-support 2.0.0-alpha.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-system 2.0.0-alpha.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "orml-traits 0.0.1",
+ "orml-utilities 0.0.1",
  "parity-scale-codec 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.105 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-core 2.0.0-alpha.5 (registry+https://github.com/rust-lang/crates.io-index)",

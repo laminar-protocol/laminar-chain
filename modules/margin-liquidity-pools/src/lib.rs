@@ -17,7 +17,7 @@ use sp_runtime::{
 	},
 	DispatchResult, ModuleId, PerThing, Permill, RuntimeDebug,
 };
-use sp_std::cmp::max;
+use sp_std::cmp::{max, min};
 use sp_std::{prelude::*, result};
 use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools};
 
@@ -26,6 +26,12 @@ pub struct MarginLiquidityPoolOption {
 	pub bid_spread: Permill,
 	pub ask_spread: Permill,
 	pub enabled_trades: Leverages,
+}
+
+#[derive(Clone, Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct SwapRate {
+	pub long: Fixed128,
+	pub short: Fixed128,
 }
 
 const MODULE_ID: ModuleId = ModuleId(*b"lami/mlp");
@@ -45,7 +51,7 @@ pub trait Trait: frame_system::Trait {
 	type PoolManager: LiquidityPoolManager<Self::LiquidityPoolId, Balance>;
 	type ExistentialDeposit: Get<Balance>;
 	type UpdateOrigin: EnsureOrigin<Self::Origin>;
-	type MaxSwap: Get<(Fixed128, Fixed128)>;
+	type MaxSwap: Get<SwapRate>;
 }
 
 decl_storage! {
@@ -54,8 +60,8 @@ decl_storage! {
 		pub Owners get(fn owners): map hasher(blake2_128_concat) T::LiquidityPoolId => Option<(T::AccountId, T::LiquidityPoolId)>;
 		pub LiquidityPoolOptions get(fn liquidity_pool_options): double_map hasher(blake2_128_concat) T::LiquidityPoolId, hasher(blake2_128_concat) TradingPair => Option<MarginLiquidityPoolOption>;
 		pub Balances get(fn balances): map hasher(blake2_128_concat) T::LiquidityPoolId => Balance;
-		pub SwapRates get(fn swap_rate): map hasher(blake2_128_concat) TradingPair => Option<(Fixed128, Fixed128)>;
-		pub AccumulatedSwapRates get(fn accumulated_swap_rate): double_map hasher(blake2_128_concat) T::LiquidityPoolId, hasher(blake2_128_concat) TradingPair => Option<(Fixed128, Fixed128)>;
+		pub SwapRates get(fn swap_rate): map hasher(blake2_128_concat) TradingPair => Option<SwapRate>;
+		pub AccumulatedSwapRates get(fn accumulated_swap_rate): double_map hasher(blake2_128_concat) T::LiquidityPoolId, hasher(blake2_128_concat) TradingPair => SwapRate;
 		pub AdditionalSwapRate get(fn additional_swap_rate): map hasher(blake2_128_concat) T::LiquidityPoolId => Option<Fixed128>;
 		pub MaxSpread get(fn max_spread): map hasher(blake2_128_concat) TradingPair => Permill;
 		pub Accumulates get(fn accumulate): map hasher(blake2_128_concat) TradingPair => Option<(AccumulateConfig<T::BlockNumber>, TradingPair)>;
@@ -86,10 +92,10 @@ decl_event!(
 		SetSpread(AccountId, LiquidityPoolId, TradingPair, Permill, Permill),
 		/// Set enabled trades (who, pool_id, pair, enabled)
 		SetEnabledTrades(AccountId, LiquidityPoolId, TradingPair, Leverages),
-		/// Swap rate updated (pair, long_rate, short_rate)
-		SwapRateUpdated(TradingPair, Fixed128, Fixed128),
-		/// Accumulated swap rate updated (pool_id, pair, accumulated_long_swap_rate, accumulated_short_swap_rate)
-		AccumulatedSwapRateUpdated(LiquidityPoolId, TradingPair, Fixed128, Fixed128),
+		/// Swap rate updated (pair, swap_rate)
+		SwapRateUpdated(TradingPair, SwapRate),
+		/// Accumulated swap rate updated (pool_id, pair, accumulated_swap_rate)
+		AccumulatedSwapRateUpdated(LiquidityPoolId, TradingPair, SwapRate),
 		/// Additional swap rate updated (who, pool_id, additional_swap_rate)
 		AdditionalSwapRateUpdated(AccountId, LiquidityPoolId, Fixed128),
 		/// Max spread updated (pair, spread)
@@ -170,25 +176,26 @@ decl_module! {
 			Self::deposit_event(RawEvent::SetEnabledTrades(who, pool_id, pair, enabled));
 		}
 
-		pub fn set_swap_rate(origin, pair: TradingPair, long_rate: Fixed128, short_rate: Fixed128) {
+		pub fn set_swap_rate(origin, pair: TradingPair, rate: SwapRate) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
-			ensure!(long_rate >= T::MaxSwap::get().0 && long_rate <= Fixed128::zero(), Error::<T>::SwapRateTooLow);
-			ensure!(short_rate >= Fixed128::zero() && short_rate <= T::MaxSwap::get().1, Error::<T>::SwapRateTooHigh);
-			SwapRates::insert(pair, (long_rate, short_rate));
-			Self::deposit_event(RawEvent::SwapRateUpdated(pair, long_rate, short_rate));
+
+			let max_swap = T::MaxSwap::get();
+			ensure!(rate.long >= max_swap.long, Error::<T>::SwapRateTooLow);
+			ensure!(rate.short <= max_swap.short, Error::<T>::SwapRateTooHigh);
+			SwapRates::insert(pair, rate.clone());
+			Self::deposit_event(RawEvent::SwapRateUpdated(pair, rate));
 		}
 
-		pub fn set_additional_swap(origin, pool_id: T::LiquidityPoolId, pair: TradingPair, rate: Fixed128) {
+		pub fn set_additional_swap(origin, pool_id: T::LiquidityPoolId, rate: Fixed128) {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
 
-			let swap_rate = Self::swap_rate(pair).unwrap_or_default();
-			let long_rate = swap_rate.0.checked_sub(&rate).ok_or(Error::<T>::NumOutOfBound)?;
-			let short_rate = swap_rate.1.checked_add(&rate).ok_or(Error::<T>::NumOutOfBound)?;
-			ensure!(long_rate >= T::MaxSwap::get().0 && long_rate <= Fixed128::zero(), Error::<T>::SwapRateTooLow);
-			ensure!(short_rate >= Fixed128::zero() && short_rate <= T::MaxSwap::get().1, Error::<T>::SwapRateTooHigh);
+			let max_swap = T::MaxSwap::get();
+			ensure!(Fixed128::zero().checked_sub(&rate).unwrap() >= max_swap.long, Error::<T>::SwapRateTooLow);
+			ensure!(rate <= max_swap.short, Error::<T>::SwapRateTooHigh);
+
 			<AdditionalSwapRate<T>>::insert(pool_id, rate);
 			Self::deposit_event(RawEvent::AdditionalSwapRateUpdated(who, pool_id, rate));
 		}
@@ -357,28 +364,29 @@ impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
 	}
 
 	fn get_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair, is_long: bool) -> Fixed128 {
+		let max_swap = T::MaxSwap::get();
+		let rate = Self::swap_rate(pair).unwrap_or_default();
 		if is_long {
-			let rate = Self::swap_rate(pair).unwrap_or_default().0;
 			if let Some(additional) = Self::additional_swap_rate(pool_id) {
-				rate.saturating_sub(additional)
+				max(rate.long.saturating_sub(additional), max_swap.long)
 			} else {
-				rate
+				rate.long
 			}
 		} else {
-			let rate = Self::swap_rate(pair).unwrap_or_default().1;
 			if let Some(additional) = Self::additional_swap_rate(pool_id) {
-				rate.saturating_add(additional)
+				min(rate.short.saturating_sub(additional), max_swap.short)
 			} else {
-				rate
+				rate.short
 			}
 		}
 	}
 
 	fn get_accumulated_swap_rate(pool_id: Self::LiquidityPoolId, pair: Self::TradingPair, is_long: bool) -> Fixed128 {
+		let accumulated_swap_rate = Self::accumulated_swap_rate(pool_id, pair);
 		if is_long {
-			Self::accumulated_swap_rate(pool_id, pair).unwrap_or_default().0
+			accumulated_swap_rate.long
 		} else {
-			Self::accumulated_swap_rate(pool_id, pair).unwrap_or_default().1
+			accumulated_swap_rate.short
 		}
 	}
 
@@ -494,34 +502,26 @@ impl<T: Trait> Module<T> {
 
 	fn _accumulate_rates(pair: TradingPair) {
 		for pool_id in <Owners<T>>::iter().map(|(_, (_, pool_id))| pool_id) {
-			let mut rate = Self::swap_rate(pair).unwrap_or_default();
-			if let Some(additional) = Self::additional_swap_rate(pool_id) {
-				rate.0 = rate.0.saturating_sub(additional);
-				rate.1 = rate.1.saturating_add(additional);
-			}
+			let long_rate = Self::get_swap_rate(pool_id, pair, true);
+			let short_rate = Self::get_swap_rate(pool_id, pair, false);
 
-			let accumulated = Self::accumulated_swap_rate(pool_id, pair).unwrap_or_default();
+			let mut accumulated = Self::accumulated_swap_rate(pool_id, pair);
 			let one = Fixed128::from_natural(1);
 			// acc_long_rate = 1 - ((accumulated - 1) * (-1 + rate))
-			let acc_long_rate = one.saturating_sub(
+			accumulated.long = one.saturating_sub(
 				accumulated
-					.0
+					.long
 					.saturating_sub(one)
-					.saturating_mul(rate.0.saturating_sub(one)),
+					.saturating_mul(long_rate.saturating_sub(one)),
 			);
 			// acc_short_rate = (accumulated + 1) * (1 + rate) - 1
-			let acc_short_rate = accumulated
-				.1
+			accumulated.short = accumulated
+				.short
 				.saturating_add(one)
-				.saturating_mul(one.saturating_add(rate.1))
+				.saturating_mul(one.saturating_add(short_rate))
 				.saturating_sub(one);
-			<AccumulatedSwapRates<T>>::insert(pool_id, pair, (acc_long_rate, acc_short_rate));
-			Self::deposit_event(RawEvent::AccumulatedSwapRateUpdated(
-				pool_id,
-				pair,
-				acc_long_rate,
-				acc_short_rate,
-			))
+			<AccumulatedSwapRates<T>>::insert(pool_id, pair, accumulated.clone());
+			Self::deposit_event(RawEvent::AccumulatedSwapRateUpdated(pool_id, pair, accumulated))
 		}
 	}
 }
