@@ -9,6 +9,7 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 mod constants;
+pub mod tests;
 mod types;
 
 use pallet_grandpa::fg_primitives;
