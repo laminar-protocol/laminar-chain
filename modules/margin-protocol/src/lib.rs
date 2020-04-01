@@ -591,11 +591,24 @@ impl<T: Trait> Module<T> {
 				Self::_ask_price(position.pool, position.pair, price)?
 			}
 		};
-		let price_delta = curr_price
-			.checked_sub(&open_price)
-			.expect("Non-negative integers sub can't overflow; qed");
-		let unrealized = position
+		let price_delta = {
+			if position.leverage.is_long() {
+				curr_price
+					.checked_sub(&open_price)
+					.expect("Non-negative integers sub can't overflow; qed");
+			} else {
+				&open_price
+					.checked_sub(curr_price)
+					.expect("Non-negative integers sub can't overflow; qed");
+			}
+		};
+		
+		let leveraged_held_abs = position
 			.leveraged_held
+			.saturating_abs();
+
+		let unrealized = position
+			.leveraged_held_abs
 			.checked_mul(&price_delta)
 			.ok_or(Error::<T>::NumOutOfBound)?;
 		let usd_value = Self::_usd_value(position.pair.base, unrealized)?;
