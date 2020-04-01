@@ -145,6 +145,7 @@ decl_error! {
 		PositionNotAllowed,
 		CannotOpenPosition,
 		CannotOpenMorePosition,
+		InsufficientFreeMargin,
 	}
 }
 
@@ -318,7 +319,8 @@ impl<T: Trait> Module<T> {
 			open_margin,
 		};
 
-		Self::_ensure_trader_safe(who, Action::OpenPosition(position.clone()))?;
+		let free_margin = Self::_free_margin(who)?;
+		ensure!(free_margin >= open_margin, Error::<T>::InsufficientFreeMargin);
 		Self::_ensure_pool_safe(pool, Action::OpenPosition(position.clone()))?;
 
 		Self::_insert_position(who, pool, pair, position)?;
@@ -393,9 +395,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _withdraw(who: &T::AccountId, amount: Balance) -> DispatchResult {
-		ensure!(Self::balances(who) >= amount, Error::<T>::BalanceTooLow);
-
-		Self::_ensure_trader_safe(who, Action::Withdraw(amount))?;
+		// TODO: ensure free margin
 
 		T::MultiCurrency::transfer(CurrencyId::AUSD, &Self::account_id(), who, amount)?;
 		<Balances<T>>::mutate(who, |b| *b -= amount);
@@ -405,7 +405,7 @@ impl<T: Trait> Module<T> {
 
 	fn _trader_margin_call(who: &T::AccountId) -> DispatchResult {
 		if !Self::_is_trader_margin_called(who) {
-			if Self::_ensure_trader_safe(who, Action::None).is_err() {
+			if Self::_ensure_trader_safe(who).is_err() {
 				<MarginCalledTraders<T>>::insert(who, ());
 			} else {
 				return Err(Error::<T>::SafeTrader.into());
@@ -416,7 +416,7 @@ impl<T: Trait> Module<T> {
 
 	fn _trader_become_safe(who: &T::AccountId) -> DispatchResult {
 		if Self::_is_trader_margin_called(who) {
-			if Self::_ensure_trader_safe(who, Action::None).is_ok() {
+			if Self::_ensure_trader_safe(who).is_ok() {
 				<MarginCalledTraders<T>>::remove(who);
 			} else {
 				return Err(Error::<T>::UnsafeTrader.into());
@@ -426,8 +426,9 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _trader_liquidate(who: &T::AccountId) -> DispatchResult {
-		match Self::_check_trader(who, Action::None) {
-			Ok(Risk::StopOut) => {
+		let risk = Self::_check_trader(who)?;
+		match risk {
+			Risk::StopOut => {
 				// Close position as much as possible
 				<PositionsByTrader<T>>::iter_prefix(who).for_each(|trading_pair_position_ids| {
 					trading_pair_position_ids.iter().for_each(|position_id| {
@@ -435,7 +436,7 @@ impl<T: Trait> Module<T> {
 					})
 				});
 
-				if Self::_ensure_trader_safe(who, Action::None).is_ok() && Self::_is_trader_margin_called(who) {
+				if Self::_ensure_trader_safe(who).is_ok() && Self::_is_trader_margin_called(who) {
 					<MarginCalledTraders<T>>::remove(who);
 				}
 				Ok(())
@@ -511,6 +512,7 @@ impl<T: Trait> Module<T> {
 
 type PriceResult = result::Result<Price, DispatchError>;
 type Fixed128Result = result::Result<Fixed128, DispatchError>;
+type BalanceResult = result::Result<Balance, DispatchError>;
 
 // Price helpers
 impl<T: Trait> Module<T> {
@@ -670,64 +672,57 @@ impl<T: Trait> Module<T> {
 			.ok_or(Error::<T>::NumOutOfBound.into())
 	}
 
-	/// Margin level of a given user.
-	fn _margin_level(who: &T::AccountId, action: Action<T>) -> Fixed128Result {
-		let mut equity = Self::_equity_of_trader(who)?;
-		let mut leveraged_debits_in_usd = Self::_leveraged_debits_in_usd(who)?;
-		// if no leveraged held, margin level is max
-		match action {
-			Action::Withdraw(amount) => {
-				equity = equity
-					.checked_sub(&fixed_128_from_u128(amount))
-					.ok_or(Error::<T>::NumOutOfBound)?;
-			}
-			Action::OpenPosition(p) => {
-				leveraged_debits_in_usd = leveraged_debits_in_usd
-					.checked_add(&p.leveraged_debits_in_usd.saturating_abs())
-					.ok_or(Error::<T>::NumOutOfBound)?;
-			}
-			_ => {}
-		};
-		Ok(equity
-			.checked_div(&leveraged_debits_in_usd)
-			.unwrap_or(Fixed128::max_value()))
+	/// Free margin of a user.
+	fn _free_margin(who: &T::AccountId) -> BalanceResult {
+		let equity = Self::_equity_of_trader(who).map(u128_from_fixed_128)?;
+		let margin_held = Self::_margin_held(who);
+		Ok(equity.saturating_sub(margin_held))
 	}
 
-	fn _leveraged_debits_in_usd(who: &T::AccountId) -> Fixed128Result {
-		<PositionsByTrader<T>>::iter_prefix(who)
+	/// Margin level of a given user.
+	fn _margin_level(who: &T::AccountId) -> Fixed128Result {
+		let equity = Self::_equity_of_trader(who)?;
+		let leveraged_debits_in_usd = <PositionsByTrader<T>>::iter_prefix(who)
 			.flatten()
 			.filter_map(|position_id| Self::positions(position_id))
 			.try_fold(Fixed128::zero(), |acc, p| {
 				acc.checked_add(&p.leveraged_debits_in_usd.saturating_abs())
-					.ok_or(Error::<T>::NumOutOfBound.into())
-			})
+					.ok_or(Error::<T>::NumOutOfBound)
+			})?;
+
+		Ok(equity
+			.checked_div(&leveraged_debits_in_usd)
+			// if no leveraged held, margin level is max
+			.unwrap_or(Fixed128::max_value()))
 	}
 
-	/// Ensure a trader is safe after performing an action.
+	/// Ensure a trader is safe.
 	///
 	/// Return `Ok` if ensured safe, or `Err` if not.
-	fn _ensure_trader_safe(who: &T::AccountId, action: Action<T>) -> DispatchResult {
-		match Self::_check_trader(who, action.clone()) {
-			Ok(Risk::None) => Ok(()),
-			_ => match action {
-				Action::None => Err(Error::<T>::UnsafeTrader.into()),
-				_ => Err(Error::<T>::TraderWouldBeUnsafe.into()),
-			},
+	fn _ensure_trader_safe(who: &T::AccountId) -> DispatchResult {
+		let risk = Self::_check_trader(who)?;
+		match risk {
+			Risk::None => Ok(()),
+			_ => Err(Error::<T>::UnsafeTrader.into()),
 		}
 	}
 
 	/// Check trader risk after performing an action.
 	///
 	/// Return `Ok(Risk)`, or `Err` if check fails.
-	fn _check_trader(who: &T::AccountId, action: Action<T>) -> Result<Risk, DispatchError> {
-		let margin_level = Self::_margin_level(who, action)?;
-		let threshold = Self::trader_risk_threshold();
-		if margin_level <= threshold.stop_out.into() {
-			return Ok(Risk::StopOut);
-		} else if margin_level <= threshold.margin_call.into() {
-			return Ok(Risk::MarginCall);
-		}
-		Ok(Risk::None)
+	fn _check_trader(who: &T::AccountId) -> Result<Risk, DispatchError> {
+		let margin_level = Self::_margin_level(who)?;
+		let RiskThreshold { stop_out, margin_call } = Self::trader_risk_threshold();
+
+		let risk = if margin_level <= stop_out.into() {
+			Risk::StopOut
+		} else if margin_level <= margin_call.into() {
+			Risk::MarginCall
+		} else {
+			Risk::None
+		};
+
+		Ok(risk)
 	}
 }
 
@@ -1007,7 +1002,7 @@ impl<T: Trait> Module<T> {
 		debug::native::trace!(target: TAG, "Started [block_number = {:?}]", block_number);
 
 		for trader in Self::_get_traders() {
-			match Self::_check_trader(&trader, Action::None).map_err(|_| OffchainErr::CheckFail)? {
+			match Self::_check_trader(&trader).map_err(|_| OffchainErr::CheckFail)? {
 				Risk::StopOut => {
 					let who = T::Lookup::unlookup(trader.clone());
 					let call = Call::<T>::trader_liquidate(who);
@@ -1106,7 +1101,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _should_liquidate_trader(who: &T::AccountId) -> Result<bool, OffchainErr> {
-		match Self::_check_trader(who, Action::None).map_err(|_| OffchainErr::CheckFail)? {
+		match Self::_check_trader(who).map_err(|_| OffchainErr::CheckFail)? {
 			Risk::StopOut => Ok(true),
 			_ => Ok(false),
 		}
