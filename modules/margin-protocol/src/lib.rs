@@ -617,7 +617,7 @@ impl<T: Trait> Module<T> {
 			})
 	}
 
-	/// Sum of all open margin of a given trader.
+	/// Sum of all margin held of a given trader.
 	fn _margin_held(who: &T::AccountId) -> Balance {
 		<PositionsByTrader<T>>::iter_prefix(who)
 			.flatten()
