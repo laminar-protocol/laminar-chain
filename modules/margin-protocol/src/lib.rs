@@ -331,7 +331,7 @@ impl<T: Trait> Module<T> {
 	fn _close_position(who: &T::AccountId, position_id: PositionId, price: Option<Price>) -> DispatchResult {
 		let position = Self::positions(position_id).ok_or(Error::<T>::PositionNotFound)?;
 		ensure!(
-			Self::positions_by_trader(who, (position.pool, position_id)).is_some(),
+			<PositionsByTrader<T>>::contains_key(who, (position.pool, position_id)),
 			Error::<T>::PositionNotOpenedByTrader
 		);
 		let (unrealized_pl, market_price) = Self::_unrealized_pl_and_market_price_of_position(&position, price)?;
