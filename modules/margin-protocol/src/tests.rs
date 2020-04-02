@@ -1501,7 +1501,7 @@ fn trader_can_withdraw_unrealized_profit() {
 				margin_held: fixed128_from_natural_currency_cent(50),
 			};
 			<Positions<Runtime>>::insert(0, position);
-			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
 
 			assert_eq!(
 				MarginProtocol::_free_margin(&ALICE),
@@ -1536,7 +1536,7 @@ fn withdraw_fails_if_insufficient_free_margin() {
 				margin_held: fixed128_from_natural_currency_cent(100),
 			};
 			<Positions<Runtime>>::insert(0, position);
-			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
 
 			assert_eq!(
 				MarginProtocol::_free_margin(&ALICE),
