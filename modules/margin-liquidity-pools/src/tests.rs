@@ -326,10 +326,6 @@ fn should_set_swap_rate() {
 			ModuleLiquidityPools::set_swap_rate(Origin::ROOT, pair, bad_short_rate),
 			Error::<Runtime>::SwapRateTooHigh
 		);
-		assert_noop!(
-			ModuleLiquidityPools::set_swap_rate(Origin::ROOT, pair, bad_short_rate),
-			Error::<Runtime>::SwapRateTooHigh
-		);
 	});
 }
 

@@ -5,7 +5,7 @@ Feature: Margin Protocol
       | Name  | Amount  |
       | Pool  | $10 000 |
       | Alice | $10 000 |
-    And create liquidity pool
+    And margin create liquidity pool
     And margin deposit liquidity
       | Name  | Amount  | Result        |
       | Pool  | $10 000 | Ok            |
@@ -18,7 +18,7 @@ Feature: Margin Protocol
       | Name  | Amount  |
       | Pool  | $10 000 |
       | Alice | $10 000 |
-    And create liquidity pool
+    And margin create liquidity pool
     And margin deposit liquidity
       | Name  | Amount  |
       | Pool  | $10 000 |
@@ -37,7 +37,7 @@ Feature: Margin Protocol
       | EURUSD | 10        | 1      |
     And margin set min leveraged amount to $100
     And margin set default min leveraged amount to $100
-    And margin update swap
+    And margin set swap rate
       | Pair    | Long | Short |
       | EURUSD  | -1%  | 1%    |
     And margin enable trading pair EURUSD
@@ -54,7 +54,7 @@ Feature: Margin Protocol
       | Name  | Free  | Margin |
       | Alice | $5000 | $4700  |
     And margin liquidity is $10 300
-    When withdraw
+    When margin withdraw
       | Name  | Amount |
       | Alice | $4700  |
     Then margin balances are
@@ -356,4 +356,3 @@ Feature: Margin Protocol
       | Alice | $1000 | 8882935483870967742000  |
       | BOB   | $1000 | 10082000000000000008400 |
     And margin liquidity is 19035064516129032249600
->>>>>>> add synthetic.feature

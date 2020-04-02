@@ -27,7 +27,6 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
-use margin_liquidity_pools::SwapRate;
 pub use module_primitives::{CurrencyId, LiquidityPoolId};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_oracle::OperatorProvider;

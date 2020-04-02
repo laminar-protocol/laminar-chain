@@ -1,12 +1,12 @@
 #![cfg(test)]
 
-use cucumber::{after, before, cucumber};
+use cucumber::cucumber;
 
-use frame_support::{assert_noop, assert_ok, parameter_types};
-use module_primitives::{Balance, Leverage, Leverages, TradingPair};
+use frame_support::{assert_noop, assert_ok};
+use module_primitives::{Balance, Leverage, TradingPair};
 use orml_utilities::{Fixed128, FixedU128};
 use runtime::tests::*;
-use runtime::{AccountId, BlockNumber, CurrencyId, LiquidityPoolId};
+use runtime::{AccountId, BlockNumber, CurrencyId};
 use sp_runtime::{DispatchResult, PerThing, Permill};
 
 #[derive(Default)]
@@ -153,13 +153,13 @@ impl AssertResult {
 
 mod steps {
 	use super::*;
-	use cucumber::{typed_regex, Step, Steps, StepsBuilder};
+	use cucumber::{Step, Steps, StepsBuilder};
 
 	fn get_rows(step: &Step) -> &Vec<Vec<String>> {
 		&step.table.as_ref().expect("require a table").rows
 	}
 
-	pub fn steps() -> Steps<crate::World> {
+	pub fn margin_steps() -> Steps<crate::World> {
 		let mut builder: StepsBuilder<crate::World> = StepsBuilder::new();
 
 		builder
@@ -175,10 +175,10 @@ mod steps {
 						.build(),
 				);
 			})
-			.given("create liquidity pool", |world, _step| {
+			.given("margin create liquidity pool", |world, _step| {
 				world.execute_with(|| {
-					assert_ok!(create_pool());
-					assert_ok!(set_enabled_trades());
+					assert_ok!(margin_create_pool());
+					assert_ok!(margin_set_enabled_trades());
 				});
 			})
 			.given("margin deposit liquidity", |world, step| {
@@ -233,7 +233,7 @@ mod steps {
 					}
 				})
 			})
-			.given("margin update swap", |world, step| {
+			.given("margin set swap rate", |world, step| {
 				world.execute_with(|| {
 					let iter = get_rows(step)
 						.iter()
@@ -245,7 +245,7 @@ mod steps {
 			})
 			.given_regex(
 				r"margin set min leveraged amount to (\$?[\W\d]+)",
-				|world, matches, step| {
+				|world, matches, _step| {
 					world.execute_with(|| {
 						let amount = parse_dollar(matches.get(1));
 						assert_ok!(margin_set_min_leveraged_amount(amount));
@@ -254,14 +254,14 @@ mod steps {
 			)
 			.given_regex(
 				r"margin set default min leveraged amount to (\$?[\W\d]+)",
-				|world, matches, step| {
+				|world, matches, _step| {
 					world.execute_with(|| {
 						let amount = parse_dollar(matches.get(1));
 						assert_ok!(margin_set_default_min_leveraged_amount(amount));
 					})
 				},
 			)
-			.given_regex(r"margin enable trading pair (.+)", |world, matches, step| {
+			.given_regex(r"margin enable trading pair (.+)", |world, matches, _step| {
 				world.execute_with(|| {
 					let pair = parse_pair(matches.get(1));
 					assert_ok!(margin_enable_trading_pair(pair));
@@ -272,7 +272,7 @@ mod steps {
 				world.execute_with(|| {
 					let iter = get_rows(step).iter().map(|x| {
 						(
-							parse_name((x.get(0))),
+							parse_name(x.get(0)),
 							parse_pair(x.get(1)),
 							parse_leverage(x.get(2)),
 							parse_dollar(x.get(3)),
@@ -285,11 +285,55 @@ mod steps {
 					}
 				})
 			})
+			.then("oracle price", |world, step| {
+				world.execute_with(|| {
+					let iter = get_rows(step)
+						.iter()
+						.map(|x| (parse_currency(x.get(0)), parse_price(x.get(1))));
+					assert_ok!(set_oracle_price(iter.collect()));
+				})
+			})
+			.then("margin trader margin call", |world, step| {
+				world.execute_with(|| {
+					let iter = get_rows(step)
+						.iter()
+						.map(|x| (parse_name(x.get(0)), parse_result(x.get(1))));
+					for (name, result) in iter {
+						result.assert(margin_trader_margin_call(&name));
+					}
+				})
+			})
+			.then("margin trader liquidate", |world, step| {
+				world.execute_with(|| {
+					let iter = get_rows(step)
+						.iter()
+						.map(|x| (parse_name(x.get(0)), parse_result(x.get(1))));
+					for (name, result) in iter {
+						result.assert(margin_trader_liquidate(&name));
+					}
+				})
+			})
+			.then("margin liquidity pool margin call", |world, step| {
+				world.execute_with(|| {
+					let iter = get_rows(step).iter().map(|x| parse_result(x.get(0)));
+					for result in iter {
+						result.assert(margin_liquidity_pool_margin_call());
+					}
+				})
+			})
+			.then("margin liquidity pool liquidate", |world, step| {
+				world.execute_with(|| {
+					let iter = get_rows(step).iter().map(|x| parse_result(x.get(0)));
+					for result in iter {
+						result.assert(margin_liquidity_pool_liquidate());
+					}
+				})
+			})
 			.when("close positions", |world, step| {
 				world.execute_with(|| {
 					let iter = get_rows(step).iter().map(|x| {
 						(
-							parse_name((x.get(0))),
+							parse_name(x.get(0)),
 							parse_position_id(x.get(1)),
 							parse_price(x.get(2)),
 							parse_result(x.get(3)),
@@ -300,11 +344,11 @@ mod steps {
 					}
 				})
 			})
-			.when("withdraw", |world, step| {
+			.when("margin withdraw", |world, step| {
 				world.execute_with(|| {
 					let iter = get_rows(step)
 						.iter()
-						.map(|x| (parse_name((x.get(0))), parse_dollar(x.get(1)), parse_result(x.get(2))));
+						.map(|x| (parse_name(x.get(0)), parse_dollar(x.get(1)), parse_result(x.get(2))));
 					for (name, amount, result) in iter {
 						result.assert(margin_withdraw(&name, amount));
 					}
@@ -314,7 +358,7 @@ mod steps {
 				world.execute_with(|| {
 					let iter = get_rows(step)
 						.iter()
-						.map(|x| (parse_name((x.get(0))), parse_dollar(x.get(1)), parse_dollar(x.get(2))));
+						.map(|x| (parse_name(x.get(0)), parse_dollar(x.get(1)), parse_dollar(x.get(2))));
 					for (name, free, margin) in iter {
 						assert_eq!(collateral_balance(&name), free);
 						assert_eq!(margin_balance(&name), margin);
@@ -330,8 +374,9 @@ mod steps {
 
 		builder.build()
 	}
-}
 
+	pub fn synthetic_steps() -> Steps<crate::World> {
+		let mut builder: StepsBuilder<crate::World> = StepsBuilder::new();
 
 		builder
 			.given("accounts", |world, step| {
@@ -433,6 +478,9 @@ mod steps {
 					assert_eq!(synthetic_liquidity(), amount);
 				})
 			});
+
+		builder.build()
+	}
 }
 
 cucumber! {

@@ -15,7 +15,7 @@ use sp_runtime::{
 	traits::{AccountIdConversion, EnsureOrigin, One, Saturating},
 	DispatchResult, ModuleId, PerThing, Permill, RuntimeDebug,
 };
-use sp_std::cmp::{max, min};
+use sp_std::cmp::max;
 use sp_std::{prelude::*, result};
 use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools};
 
@@ -41,7 +41,7 @@ pub trait Trait: frame_system::Trait {
 	type PoolManager: LiquidityPoolManager<LiquidityPoolId, Balance>;
 	type ExistentialDeposit: Get<Balance>;
 	type UpdateOrigin: EnsureOrigin<Self::Origin>;
-	type MaxSwap: Get<SwapRate>;
+	type MaxSwap: Get<Fixed128>;
 }
 
 decl_storage! {
