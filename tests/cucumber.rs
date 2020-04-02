@@ -310,7 +310,7 @@ mod steps {
 					}
 				})
 			})
-			.then("balances are", |world, step| {
+			.then("margin balances are", |world, step| {
 				world.execute_with(|| {
 					let iter = get_rows(step)
 						.iter()
@@ -321,7 +321,7 @@ mod steps {
 					}
 				})
 			})
-			.then_regex(r"margin liquidity is (\$?[\W\d]+)", |world, matches, step| {
+			.then_regex(r"margin liquidity is (\$?[\W\d]+)", |world, matches, _step| {
 				world.execute_with(|| {
 					let amount = parse_dollar(matches.get(1));
 					assert_eq!(margin_liquidity(), amount);
@@ -333,53 +333,113 @@ mod steps {
 }
 
 
-	// Any type that implements cucumber::World + Default can be the world
-	// steps!(crate::World => {
-	//     given "I am trying out Cucumber" |world, _step| {
-	//         world.foo = "Some string".to_string();
-	//         // Set up your context in given steps
-	//     };
-
-	//     when "I consider what I am doing" |world, _step| {
-	//         // Take actions
-	//         let new_string = format!("{}.", &world.foo);
-	//         world.foo = new_string;
-	//     };
-
-	//     then "I am interested in ATDD" |world, _step| {
-	//         // Check that the outcomes to be observed have occurred
-	//         assert_eq!(world.foo, "Some string.");
-	//     };
-
-	//     then regex r"^we can (.*) rules with regex$" |_world, matches, _step| {
-	//         // And access them as an array
-	//         assert_eq!(matches[1], "implement");
-	//     };
-
-	//     then regex r"^we can also match (\d+) (.+) types$" (usize, String) |_world, num, word, _step| {
-	//         // `num` will be of type usize, `word` of type String
-	//         assert_eq!(num, 42);
-	//         assert_eq!(word, "olika");
-	//     };
-
-	//     then "we can use data tables to provide more parameters" |_world, step| {
-	//         let table = step.table().unwrap().clone();
-
-	//         assert_eq!(table.header, vec!["key", "value"]);
-
-	//         let expected_keys = table.rows.iter().map(|row| row[0].to_owned()).collect::<Vec<_>>();
-	//         let expected_values = table.rows.iter().map(|row| row[1].to_owned()).collect::<Vec<_>>();
-
-	//         assert_eq!(expected_keys, vec!["a", "b"]);
-	//         assert_eq!(expected_values, vec!["fizz", "buzz"]);
-	//     };
-	// });
+		builder
+			.given("accounts", |world, step| {
+				world.ext = Some(
+					ExtBuilder::default()
+						.balances(
+							get_rows(step)
+								.iter()
+								.map(|x| (parse_name(x.get(0)), CurrencyId::AUSD, parse_dollar(x.get(1))))
+								.collect::<Vec<_>>(),
+						)
+						.build(),
+				);
+			})
+			.given("synthetic create liquidity pool", |world, _step| {
+				world.execute_with(|| {
+					assert_ok!(synthetic_create_pool());
+					assert_ok!(synthetic_set_enabled_trades());
+				});
+			})
+			.given("synthetic deposit liquidity", |world, step| {
+				world.execute_with(|| {
+					let iter = get_rows(step)
+						.iter()
+						.map(|x| (parse_name(x.get(0)), parse_dollar(x.get(1)), parse_result(x.get(2))));
+					for (account, amount, expected) in iter {
+						expected.assert(synthetic_deposit_liquidity(&account, amount));
+					}
+				})
+			})
+			.given_regex(
+				r"synthetic set min additional collateral ratio to (\$?[\W\d]+)",
+				|world, matches, _step| {
+					world.execute_with(|| {
+						let ratio = parse_permill(matches.get(1));
+						assert_ok!(synthetic_set_min_additional_collateral_ratio(ratio));
+					})
+				},
+			)
+			.given("synthetic set additional collateral ratio", |world, step| {
+				world.execute_with(|| {
+					let iter = get_rows(step)
+						.iter()
+						.map(|x| (parse_currency(x.get(0)), parse_permill(x.get(1))));
+					for (currency, ratio) in iter {
+						assert_ok!(synthetic_set_additional_collateral_ratio(currency, ratio));
+					}
+				})
+			})
+			.when("synthetic buy", |world, step| {
+				world.execute_with(|| {
+					let iter = get_rows(step).iter().map(|x| {
+						(
+							parse_name(x.get(0)),
+							parse_currency(x.get(1)),
+							parse_dollar(x.get(2)),
+							parse_result(x.get(3)),
+						)
+					});
+					for (name, currency, amount, result) in iter {
+						result.assert(synthetic_buy(&name, currency, amount));
+					}
+				})
+			})
+			.when("synthetic sell", |world, step| {
+				world.execute_with(|| {
+					let iter = get_rows(step).iter().map(|x| {
+						(
+							parse_name(x.get(0)),
+							parse_currency(x.get(1)),
+							parse_dollar(x.get(2)),
+							parse_result(x.get(3)),
+						)
+					});
+					for (name, currency, amount, result) in iter {
+						result.assert(synthetic_buy(&name, currency, amount));
+					}
+				})
+			})
+			.then("synthetic balances are", |world, step| {
+				world.execute_with(|| {
+					let iter = get_rows(step).iter().map(|x| {
+						(
+							parse_name(x.get(0)),
+							parse_dollar(x.get(1)),
+							parse_currency(x.get(2)),
+							parse_dollar(x.get(3)),
+						)
+					});
+					for (name, free, currency, synthetic) in iter {
+						assert_eq!(collateral_balance(&name), free);
+						assert_eq!(multi_currency_balance(&name, currency), synthetic);
+					}
+				})
+			})
+			.then_regex(r"synthetic liquidity is (\$?[\W\d]+)", |world, matches, _step| {
+				world.execute_with(|| {
+					let amount = parse_dollar(matches.get(1));
+					assert_eq!(synthetic_liquidity(), amount);
+				})
+			});
 }
 
 cucumber! {
 	features: "./features", // Path to our feature files
 	world: ::World, // The world needs to be the same for steps and the main cucumber call
 	steps: &[
-		steps::steps // the `steps!` macro creates a `steps` function in a module
+		steps::margin_steps, // the `steps!` macro creates a `steps` function in a module
+		steps::synthetic_steps, // the `steps!` macro creates a `steps` function in a module
 	]
 }
