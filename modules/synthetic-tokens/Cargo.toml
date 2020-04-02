@@ -18,6 +18,7 @@ orml-traits = { path = "../../orml/traits", default-features = false }
 orml-utilities = { path = "../../orml/utilities", default-features = false }
 
 module-traits = { path = "../traits", default-features = false }
+module-primitives = { path = "../primitives", default-features = false }
 
 [dev-dependencies]
 sp-core = { version = "2.0.0-alpha.5", default-features = false }
@@ -35,4 +36,5 @@ std = [
 	"orml-traits/std",
 	"orml-utilities/std",
 	"module-traits/std",
+	"module-primitives/std",
 ]

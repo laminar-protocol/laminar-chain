@@ -40,13 +40,7 @@ const MODULE_ID: ModuleId = ModuleId(*b"lami/mgn");
 pub trait Trait: frame_system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
-	type LiquidityPools: MarginProtocolLiquidityPools<
-		Self::AccountId,
-		CurrencyId = CurrencyId,
-		Balance = Balance,
-		LiquidityPoolId = LiquidityPoolId,
-		TradingPair = TradingPair,
-	>;
+	type LiquidityPools: MarginProtocolLiquidityPools<Self::AccountId>;
 	type PriceProvider: PriceProvider<CurrencyId, Price>;
 	type Treasury: Treasury<Self::AccountId>;
 	type SubmitTransaction: SubmitUnsignedTransaction<Self, <Self as Trait>::Call>;
@@ -311,7 +305,7 @@ impl<T: Trait> Module<T> {
 				.expect("leveraged value cannot be zero; qed");
 			u128_from_fixed_128(m)
 		};
-		let open_accumulated_swap_rate = T::LiquidityPools::get_accumulated_swap_rate(pool, pair);
+		let open_accumulated_swap_rate = T::LiquidityPools::get_accumulated_swap_rate(pool, pair, leverage.is_long());
 		let position: Position<T> = Position {
 			owner: who.clone(),
 			pool,
@@ -643,12 +637,12 @@ impl<T: Trait> Module<T> {
 	///
 	/// accumulated_swap_rate_of_position = (current_accumulated - open_accumulated) * leveraged_held
 	fn _accumulated_swap_rate_of_position(position: &Position<T>) -> Fixed128Result {
-		let rate = T::LiquidityPools::get_accumulated_swap_rate(position.pool, position.pair)
-			.checked_sub(&position.open_accumulated_swap_rate)
-			.ok_or(Error::<T>::NumOutOfBound)?;
+		let rate =
+			T::LiquidityPools::get_accumulated_swap_rate(position.pool, position.pair, position.leverage.is_long())
+				.checked_sub(&position.open_accumulated_swap_rate)
+				.ok_or(Error::<T>::NumOutOfBound)?;
 		position
 			.leveraged_held
-			.saturating_abs()
 			.checked_mul(&rate)
 			.ok_or(Error::<T>::NumOutOfBound.into())
 	}

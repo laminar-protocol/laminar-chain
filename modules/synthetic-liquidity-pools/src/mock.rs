@@ -104,7 +104,6 @@ impl Trait for Runtime {
 	type Event = ();
 	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type LiquidityCurrency = LiquidityCurrency;
-	type LiquidityPoolId = LiquidityPoolId;
 	type PoolManager = PoolManager;
 	type ExistentialDeposit = ExistentialDeposit;
 	type UpdateOrigin = EnsureSignedBy<One, AccountId>;

@@ -21,7 +21,7 @@ mod synthetic_tokens {
 impl_outer_event! {
 	pub enum TestEvent for Runtime {
 		frame_system<T>,
-		synthetic_tokens<T>,
+		synthetic_tokens,
 	}
 }
 
@@ -37,7 +37,7 @@ parameter_types! {
 	pub const MaximumBlockWeight: u32 = 1024;
 	pub const MaximumBlockLength: u32 = 2 * 1024;
 	pub const AvailableBlockRatio: Perbill = Perbill::one();
-	pub const SyntheticCurrencyIds: Vec<CurrencyId> = vec![FEUR];
+	pub const SyntheticCurrencyIds: Vec<CurrencyId> = vec![CurrencyId::FEUR];
 	pub const DefaultExtremeRatio: Permill = Permill::from_percent(1);
 	pub const DefaultLiquidationRatio: Permill = Permill::from_percent(5);
 	pub const DefaultCollateralRatio: Permill = Permill::from_percent(10);
@@ -67,12 +67,8 @@ impl frame_system::Trait for Runtime {
 }
 pub type System = system::Module<Runtime>;
 
-type CurrencyId = u32;
 impl Trait for Runtime {
 	type Event = TestEvent;
-	type CurrencyId = CurrencyId;
-	type Balance = u64;
-	type LiquidityPoolId = u32;
 	type SyntheticCurrencyIds = SyntheticCurrencyIds;
 	type DefaultExtremeRatio = DefaultExtremeRatio;
 	type DefaultLiquidationRatio = DefaultLiquidationRatio;
@@ -81,10 +77,6 @@ impl Trait for Runtime {
 }
 
 pub type SyntheticTokens = Module<Runtime>;
-
-pub const FEUR: CurrencyId = 0;
-
-pub const ROOT: Origin = Origin::ROOT;
 
 const ALICE_ACC_ID: AccountId = 0;
 pub fn alice() -> Origin {

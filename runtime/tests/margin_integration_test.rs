@@ -3,26 +3,17 @@
 #[cfg(test)]
 
 mod tests {
-	use frame_support::{assert_noop, assert_ok, parameter_types};
+	use frame_support::{assert_noop, assert_ok};
 	use laminar_runtime::{
 		tests::*,
-		AccountId, BlockNumber,
-		CurrencyId::{self, AUSD, FEUR, FJPY},
-		LiquidityPoolId, MaxSwap, MinimumCount, MockLaminarTreasury, Runtime,
+		CurrencyId::{AUSD, FEUR, FJPY},
+		MaxSwap, MockLaminarTreasury, Runtime,
 	};
 
-	use margin_protocol::RiskThreshold;
-	use module_primitives::{
-		Balance,
-		Leverage::{self, *},
-		Leverages, TradingPair,
-	};
-	use module_traits::{LiquidityPoolManager, MarginProtocolLiquidityPools, Treasury};
+	use module_primitives::Leverage::*;
+	use module_traits::{MarginProtocolLiquidityPools, Treasury};
 	use orml_prices::Price;
-	use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
-	use orml_utilities::Fixed128;
-	use pallet_indices::address::Address;
-	use sp_runtime::{traits::OnFinalize, traits::OnInitialize, DispatchResult, Permill};
+	use sp_runtime::{traits::OnInitialize, Permill};
 
 	#[test]
 	fn test_margin_liquidity_pools() {
@@ -33,7 +24,7 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				assert_ok!(create_pool());
+				assert_ok!(margin_create_pool());
 				assert_eq!(collateral_balance(&POOL::get()), dollar(10_000));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
 				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(10_000)));
@@ -59,14 +50,26 @@ mod tests {
 				);
 				assert_ok!(margin_set_spread(EUR_USD, Permill::from_percent(1)));
 
-				assert_ok!(set_enabled_trades());
+				assert_ok!(margin_set_enabled_trades());
 
 				assert_ok!(margin_set_accumulate(EUR_USD, 10, 1));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
 				assert_ok!(margin_set_default_min_leveraged_amount(dollar(1000)));
-				assert_ok!(margin_update_swap(EUR_USD, one_percent()));
+				assert_ok!(margin_set_mock_swap_rate(EUR_USD));
 				assert_noop!(
-					margin_update_swap(EUR_USD, MaxSwap::get().checked_add(&one_percent()).unwrap()),
+					margin_set_swap_rate(
+						EUR_USD,
+						MaxSwap::get().long.checked_sub(&one_percent()).unwrap(),
+						one_percent()
+					),
+					margin_liquidity_pools::Error::<Runtime>::SwapRateTooLow
+				);
+				assert_noop!(
+					margin_set_swap_rate(
+						EUR_USD,
+						negative_one_percent(),
+						MaxSwap::get().short.checked_add(&one_percent()).unwrap()
+					),
 					margin_liquidity_pools::Error::<Runtime>::SwapRateTooHigh
 				);
 
@@ -96,7 +99,7 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				assert_ok!(create_pool());
+				assert_ok!(margin_create_pool());
 				assert_eq!(collateral_balance(&POOL::get()), dollar(10_000));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
 				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(10_000)));
@@ -109,13 +112,13 @@ mod tests {
 					(AUSD, Price::from_rational(1, 1)),
 					(FEUR, Price::from_rational(3, 1))
 				]));
-				assert_ok!(set_enabled_trades());
+				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, Permill::from_percent(1)));
 
 				assert_ok!(margin_set_accumulate(EUR_USD, 10, 1));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
 				assert_ok!(margin_set_default_min_leveraged_amount(dollar(1000)));
-				assert_ok!(margin_update_swap(EUR_USD, one_percent()));
+				assert_ok!(margin_set_mock_swap_rate(EUR_USD));
 
 				assert_ok!(margin_enable_trading_pair(EUR_USD));
 				assert_ok!(margin_liquidity_pool_enable_trading_pair(EUR_USD));
@@ -144,7 +147,7 @@ mod tests {
 	}
 
 	#[test]
-	fn test_margin_take_profit() {
+	fn test_margin_trader_take_profit() {
 		ExtBuilder::default()
 			.balances(vec![
 				(POOL::get(), AUSD, dollar(10_000)),
@@ -152,7 +155,7 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				assert_ok!(create_pool());
+				assert_ok!(margin_create_pool());
 				assert_eq!(collateral_balance(&POOL::get()), dollar(10_000));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
 				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(10_000)));
@@ -165,13 +168,13 @@ mod tests {
 					(AUSD, Price::from_rational(1, 1)),
 					(FEUR, Price::from_rational(3, 1))
 				]));
-				assert_ok!(set_enabled_trades());
+				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, Permill::from_percent(1)));
 
 				assert_ok!(margin_set_accumulate(EUR_USD, 10, 1));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
 				assert_ok!(margin_set_default_min_leveraged_amount(dollar(1000)));
-				assert_ok!(margin_update_swap(EUR_USD, one_percent()));
+				assert_ok!(margin_set_mock_swap_rate(EUR_USD));
 
 				assert_ok!(margin_enable_trading_pair(EUR_USD));
 				assert_ok!(margin_liquidity_pool_enable_trading_pair(EUR_USD));
@@ -199,7 +202,7 @@ mod tests {
 	}
 
 	#[test]
-	fn test_margin_stop_lost() {
+	fn test_margin_trader_stop_lost() {
 		ExtBuilder::default()
 			.balances(vec![
 				(POOL::get(), AUSD, dollar(10_000)),
@@ -207,7 +210,7 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				assert_ok!(create_pool());
+				assert_ok!(margin_create_pool());
 				assert_eq!(collateral_balance(&POOL::get()), dollar(10_000));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
 				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(10_000)));
@@ -220,13 +223,13 @@ mod tests {
 					(AUSD, Price::from_rational(1, 1)),
 					(FEUR, Price::from_rational(3, 1))
 				]));
-				assert_ok!(set_enabled_trades());
+				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, Permill::from_percent(1)));
 
 				assert_ok!(margin_set_accumulate(EUR_USD, 10, 1));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
 				assert_ok!(margin_set_default_min_leveraged_amount(dollar(1000)));
-				assert_ok!(margin_update_swap(EUR_USD, one_percent()));
+				assert_ok!(margin_set_mock_swap_rate(EUR_USD));
 
 				assert_ok!(margin_enable_trading_pair(EUR_USD));
 				assert_ok!(margin_liquidity_pool_enable_trading_pair(EUR_USD));
@@ -262,7 +265,7 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				assert_ok!(create_pool());
+				assert_ok!(margin_create_pool());
 				assert_eq!(collateral_balance(&POOL::get()), dollar(10_000));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
 				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(10_000)));
@@ -275,13 +278,13 @@ mod tests {
 					(AUSD, Price::from_rational(1, 1)),
 					(FEUR, Price::from_rational(3, 1))
 				]));
-				assert_ok!(set_enabled_trades());
+				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, Permill::from_percent(1)));
 
 				assert_ok!(margin_set_accumulate(EUR_USD, 10, 1));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
 				assert_ok!(margin_set_default_min_leveraged_amount(dollar(1000)));
-				assert_ok!(margin_update_swap(EUR_USD, one_percent()));
+				assert_ok!(margin_set_mock_swap_rate(EUR_USD));
 
 				assert_ok!(margin_enable_trading_pair(EUR_USD));
 				assert_ok!(margin_liquidity_pool_enable_trading_pair(EUR_USD));
@@ -299,7 +302,6 @@ mod tests {
 				// 1505 = 5000 * 3.01 / 10
 				// 2.12409 = 3 * (1 - 1505 * 97% / 5000)
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(22, 10))]));
-				get_price();
 				assert_noop!(
 					margin_trader_margin_call(&ALICE::get()),
 					margin_protocol::Error::<Runtime>::SafeTrader
@@ -343,7 +345,7 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				assert_ok!(create_pool());
+				assert_ok!(margin_create_pool());
 				assert_eq!(collateral_balance(&POOL::get()), dollar(20_000));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
 				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(10_000)));
@@ -356,13 +358,13 @@ mod tests {
 					(AUSD, Price::from_rational(1, 1)),
 					(FEUR, Price::from_rational(3, 1))
 				]));
-				assert_ok!(set_enabled_trades());
+				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, Permill::from_percent(1)));
 
 				assert_ok!(margin_set_accumulate(EUR_USD, 10, 1));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
 				assert_ok!(margin_set_default_min_leveraged_amount(dollar(1000)));
-				assert_ok!(margin_update_swap(EUR_USD, one_percent()));
+				assert_ok!(margin_set_mock_swap_rate(EUR_USD));
 
 				assert_ok!(margin_enable_trading_pair(EUR_USD));
 				assert_ok!(margin_liquidity_pool_enable_trading_pair(EUR_USD));
@@ -378,7 +380,6 @@ mod tests {
 				assert_eq!(margin_balance(&ALICE::get()), dollar(5000));
 				// 4.4 = 3 * (1 + 10000 * 70% / 3.01 / 5000)
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(41, 10))]));
-				get_price();
 				assert_noop!(
 					margin_liquidity_pool_margin_call(),
 					margin_protocol::Error::<Runtime>::SafePool
@@ -432,7 +433,7 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				assert_ok!(create_pool());
+				assert_ok!(margin_create_pool());
 				assert_eq!(collateral_balance(&POOL::get()), dollar(20_000));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
 				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(20_000)));
@@ -448,13 +449,13 @@ mod tests {
 					(AUSD, Price::from_rational(1, 1)),
 					(FEUR, Price::from_rational(3, 1))
 				]));
-				assert_ok!(set_enabled_trades());
+				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, Permill::from_percent(1)));
 
 				assert_ok!(margin_set_accumulate(EUR_USD, 10, 1));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
 				assert_ok!(margin_set_default_min_leveraged_amount(dollar(1000)));
-				assert_ok!(margin_update_swap(EUR_USD, one_percent()));
+				assert_ok!(margin_set_mock_swap_rate(EUR_USD));
 
 				assert_ok!(margin_enable_trading_pair(EUR_USD));
 				assert_ok!(margin_liquidity_pool_enable_trading_pair(EUR_USD));
@@ -543,7 +544,7 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				assert_ok!(create_pool());
+				assert_ok!(margin_create_pool());
 				assert_eq!(collateral_balance(&POOL::get()), dollar(20_000));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
 				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(20_000)));
@@ -560,7 +561,7 @@ mod tests {
 					(FEUR, Price::from_rational(3, 1)),
 					(FJPY, Price::from_rational(5, 1))
 				]));
-				assert_ok!(set_enabled_trades());
+				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, Permill::from_percent(1)));
 				assert_ok!(margin_set_spread(JPY_EUR, Permill::from_percent(1)));
 
@@ -568,8 +569,8 @@ mod tests {
 				assert_ok!(margin_set_accumulate(JPY_EUR, 10, 1));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
 				assert_ok!(margin_set_default_min_leveraged_amount(dollar(1000)));
-				assert_ok!(margin_update_swap(EUR_USD, one_percent()));
-				assert_ok!(margin_update_swap(JPY_EUR, one_percent()));
+				assert_ok!(margin_set_mock_swap_rate(EUR_USD));
+				assert_ok!(margin_set_mock_swap_rate(JPY_EUR));
 
 				assert_ok!(margin_enable_trading_pair(EUR_USD));
 				assert_ok!(margin_enable_trading_pair(JPY_EUR));
@@ -659,8 +660,7 @@ mod tests {
 			});
 	}
 
-	//TODO: should set long and short swaps for each trading pair.
-	//#[test]
+	#[test]
 	fn test_margin_accumulate_swap() {
 		ExtBuilder::default()
 			.balances(vec![
@@ -669,7 +669,7 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				assert_ok!(create_pool());
+				assert_ok!(margin_create_pool());
 				assert_eq!(collateral_balance(&POOL::get()), dollar(10_000));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
 				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(10_000)));
@@ -682,13 +682,13 @@ mod tests {
 					(AUSD, Price::from_rational(1, 1)),
 					(FEUR, Price::from_rational(3, 1))
 				]));
-				assert_ok!(set_enabled_trades());
+				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, Permill::from_percent(1)));
 
 				assert_ok!(margin_set_accumulate(EUR_USD, 10, 1));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
 				assert_ok!(margin_set_default_min_leveraged_amount(dollar(1000)));
-				assert_ok!(margin_update_swap(EUR_USD, one_percent()));
+				assert_ok!(margin_set_mock_swap_rate(EUR_USD));
 
 				assert_ok!(margin_enable_trading_pair(EUR_USD));
 				assert_ok!(margin_liquidity_pool_enable_trading_pair(EUR_USD));
@@ -714,7 +714,7 @@ mod tests {
 				// close_price = 3 * (1 - 0.01) = 2.97
 				// profit = leveraged_held * (close_price - open_price)
 				// -300 = 5000 * (2.97 - 3.03)
-				// penalty = leveraged_held * (accumulated_swap_rate - open_accumulated_swap_rate)
+				// accumulated_swap = leveraged_held * (accumulated_swap_rate - open_accumulated_swap_rate)
 				// 50 = 5000 * (0.01 - 0)
 				assert_eq!(margin_balance(&ALICE::get()), dollar(4650));
 				assert_eq!(margin_liquidity(), dollar(10350));
@@ -730,11 +730,12 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(margin_balance(&ALICE::get()), dollar(4650));
 
-				for i in 1..12 {
+				for i in 9..22 {
 					MarginLiquidityPools::on_initialize(i);
 					println!(
-						"accumulated_swap_rate = {:?}",
-						MarginLiquidityPools::get_accumulated_swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD)
+						"accumulated_long_rate = {:?}, accumulated_short_rate = {:?}",
+						MarginLiquidityPools::get_accumulated_swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD, true),
+						MarginLiquidityPools::get_accumulated_swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD, false)
 					);
 				}
 
@@ -744,12 +745,111 @@ mod tests {
 				// close_price = 3 * (1 - 0.01) = 2.97
 				// profit = leveraged_held * (close_price - open_price)
 				// -300 = 5000 * (2.97 - 3.03)
-				// penalty = leveraged_held * (accumulated_swap_rate - open_accumulated_swap_rate)
+				// accumulated_swap = leveraged_held * (accumulated_swap_rate - open_accumulated_swap_rate)
 				// 101.505 = 5000 * (0.030301 - 0.01)
-				assert_eq!(margin_balance(&ALICE::get()), 4451505000000000000000);
-				assert_eq!(margin_liquidity(), 10548495000000000000000);
-				assert_ok!(margin_withdraw(&ALICE::get(), 4451505000000000000000));
-				assert_eq!(collateral_balance(&ALICE::get()), 9451505000000000000000);
+				assert_eq!(margin_balance(&ALICE::get()), 4248495000000000000000);
+				assert_eq!(margin_liquidity(), 10751505000000000000000);
+				assert_ok!(margin_withdraw(&ALICE::get(), 4248495000000000000000));
+				assert_eq!(collateral_balance(&ALICE::get()), 9248495000000000000000);
+			});
+	}
+
+	#[test]
+	fn test_margin_accumulate_swap_with_additional_swap() {
+		ExtBuilder::default()
+			.balances(vec![
+				(POOL::get(), AUSD, dollar(10_000)),
+				(ALICE::get(), AUSD, dollar(10_000)),
+			])
+			.build()
+			.execute_with(|| {
+				assert_ok!(margin_create_pool());
+				assert_eq!(collateral_balance(&POOL::get()), dollar(10_000));
+				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
+				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(10_000)));
+				assert_ok!(margin_deposit(&ALICE::get(), dollar(5000)));
+				assert_eq!(margin_liquidity(), dollar(10_000));
+				assert_eq!(margin_balance(&ALICE::get()), dollar(5000));
+				assert_eq!(collateral_balance(&POOL::get()), 0);
+				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
+				assert_ok!(set_oracle_price(vec![
+					(AUSD, Price::from_rational(1, 1)),
+					(FEUR, Price::from_rational(3, 1))
+				]));
+				assert_ok!(margin_set_enabled_trades());
+				assert_ok!(margin_set_spread(EUR_USD, Permill::from_percent(1)));
+
+				assert_ok!(margin_set_accumulate(EUR_USD, 10, 1));
+				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
+				assert_ok!(margin_set_default_min_leveraged_amount(dollar(1000)));
+				assert_ok!(margin_set_mock_swap_rate(EUR_USD));
+
+				assert_ok!(margin_enable_trading_pair(EUR_USD));
+				assert_ok!(margin_liquidity_pool_enable_trading_pair(EUR_USD));
+
+				// set_additional_swap
+				assert_ok!(margin_set_additional_swap(one_percent()));
+				println!(
+					"long_rate = {:?}, short_rate = {:?}",
+					MarginLiquidityPools::get_swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD, true),
+					MarginLiquidityPools::get_swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD, false)
+				);
+				// LongTen
+				assert_ok!(margin_open_position(
+					&ALICE::get(),
+					EUR_USD,
+					LongTen,
+					dollar(5000),
+					Price::from_rational(4, 1)
+				));
+				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), dollar(5000));
+
+				for i in 1..9 {
+					MarginLiquidityPools::on_initialize(i);
+				}
+
+				assert_ok!(margin_close_position(&ALICE::get(), 0, Price::from_rational(2, 1)));
+				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
+				// open_price = 3 * (1 + 0.01) = 3.03
+				// close_price = 3 * (1 - 0.01) = 2.97
+				// profit = leveraged_held * (close_price - open_price)
+				// -300 = 5000 * (2.97 - 3.03)
+				// accumulated_swap = leveraged_held * (accumulated_swap_rate - open_accumulated_swap_rate)
+				// -100 = 5000 * -0.02
+				assert_eq!(margin_balance(&ALICE::get()), dollar(4600));
+				assert_eq!(margin_liquidity(), dollar(10400));
+
+				// ShortTen
+				assert_ok!(margin_open_position(
+					&ALICE::get(),
+					EUR_USD,
+					ShortTen,
+					dollar(5000),
+					Price::from_rational(2, 1)
+				));
+				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), dollar(4600));
+
+				for i in 9..22 {
+					MarginLiquidityPools::on_initialize(i);
+					println!(
+						"accumulated_long_rate = {:?}, accumulated_short_rate = {:?}",
+						MarginLiquidityPools::get_accumulated_swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD, true),
+						MarginLiquidityPools::get_accumulated_swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD, false)
+					);
+				}
+
+				assert_ok!(margin_close_position(&ALICE::get(), 1, Price::from_rational(4, 1)));
+				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
+				// open_price = 3 * (1 + 0.01) = 3.03
+				// close_price = 3 * (1 - 0.01) = 2.97
+				// profit = leveraged_held * (close_price - open_price)
+				// -300 = 5000 * (2.97 - 3.03)
+				// accumulated_swap = leveraged_held * (accumulated_swap_rate - open_accumulated_swap_rate)
+				// 0 = 5000 * 0
+				assert_eq!(margin_balance(&ALICE::get()), dollar(4300));
+				assert_eq!(margin_liquidity(), dollar(10700));
 			});
 	}
 }

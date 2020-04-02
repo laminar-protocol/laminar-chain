@@ -27,6 +27,7 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
+use margin_liquidity_pools::SwapRate;
 pub use module_primitives::{CurrencyId, LiquidityPoolId};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_oracle::OperatorProvider;
@@ -478,9 +479,6 @@ impl orml_prices::Trait for Runtime {
 
 impl synthetic_tokens::Trait for Runtime {
 	type Event = Event;
-	type CurrencyId = CurrencyId;
-	type Balance = Balance;
-	type LiquidityPoolId = LiquidityPoolId;
 	type DefaultExtremeRatio = DefaultExtremeRatio;
 	type DefaultLiquidationRatio = DefaultLiquidationRatio;
 	type DefaultCollateralRatio = DefaultCollateralRatio;
@@ -490,7 +488,7 @@ impl synthetic_tokens::Trait for Runtime {
 
 parameter_types! {
 	pub const GetLiquidityCurrencyId: CurrencyId = CurrencyId::AUSD;
-	pub const MaxSwap: Fixed128 = Fixed128::from_natural(2);
+	pub const MaxSwap: SwapRate = SwapRate{long: Fixed128::from_natural(-2), short: Fixed128::from_natural(2)}; // TODO: set this
 }
 
 type LiquidityCurrency = orml_currencies::Currency<Runtime, GetLiquidityCurrencyId>;
@@ -499,7 +497,6 @@ impl margin_liquidity_pools::Trait for Runtime {
 	type Event = Event;
 	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type LiquidityCurrency = LiquidityCurrency;
-	type LiquidityPoolId = LiquidityPoolId;
 	type PoolManager = MarginProtocol;
 	type ExistentialDeposit = ExistentialDeposit;
 	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
@@ -510,7 +507,6 @@ impl synthetic_liquidity_pools::Trait for Runtime {
 	type Event = Event;
 	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type LiquidityCurrency = LiquidityCurrency;
-	type LiquidityPoolId = LiquidityPoolId;
 	type PoolManager = SyntheticTokens;
 	type ExistentialDeposit = ExistentialDeposit;
 	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
@@ -587,7 +583,7 @@ construct_runtime!(
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		Prices: orml_prices::{Module, Storage},
-		SyntheticTokens: synthetic_tokens::{Module, Storage, Call, Event<T>},
+		SyntheticTokens: synthetic_tokens::{Module, Storage, Call, Event},
 		SyntheticProtocol: synthetic_protocol::{Module, Call, Event<T>},
 		MarginProtocol: margin_protocol::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned },
 		MarginLiquidityPools: margin_liquidity_pools::{Module, Storage, Call, Event<T>},
