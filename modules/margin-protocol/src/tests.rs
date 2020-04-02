@@ -169,7 +169,7 @@ fn eur_usd_long_2() -> Position<Runtime> {
 
 fn eur_usd_short_1() -> Position<Runtime> {
 	let open_rate =
-		Fixed128::from_natural(1).saturating_sub(Fixed128::from_rational(10_96, NonZeroI128::new(100_000_00).unwrap()));
+		Fixed128::from_natural(1).saturating_add(Fixed128::from_rational(10_96, NonZeroI128::new(100_000_00).unwrap()));
 	Position {
 		owner: ALICE,
 		pool: MOCK_POOL,
@@ -185,7 +185,7 @@ fn eur_usd_short_1() -> Position<Runtime> {
 
 fn eur_usd_short_2() -> Position<Runtime> {
 	let open_rate =
-		Fixed128::from_natural(1).saturating_sub(Fixed128::from_rational(3_65, NonZeroI128::new(100_000_00).unwrap()));
+		Fixed128::from_natural(1).saturating_add(Fixed128::from_rational(3_65, NonZeroI128::new(100_000_00).unwrap()));
 	Position {
 		owner: ALICE,
 		pool: MOCK_POOL,
