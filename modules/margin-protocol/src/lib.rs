@@ -81,7 +81,7 @@ decl_storage! {
 		PositionsByTrader get(positions_by_trader): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) LiquidityPoolId => Vec<PositionId>;
 		PositionsByPool get(positions_by_pool): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => Vec<PositionId>;
 		// SwapPeriods get(swap_periods): map hasher(black2_256) TradingPair => Option<SwapPeriod>;
-		Balances get(balances): map hasher(blake2_128_concat) T::AccountId => Balance;
+		Balances get(balances): map hasher(blake2_128_concat) T::AccountId => Fixed128;
 		MinLiquidationPercent get(min_liquidation_percent): map hasher(blake2_128_concat) TradingPair => Fixed128;
 		MarginCalledTraders get(margin_called_traders): map hasher(blake2_128_concat) T::AccountId => Option<()>;
 		MarginCalledPools get(margin_called_pools): map hasher(blake2_128_concat) LiquidityPoolId => Option<()>;
@@ -350,28 +350,26 @@ impl<T: Trait> Module<T> {
 			.ok_or(Error::<T>::NumOutOfBound)?;
 
 		// realizing
-		let balance_delta_abs = u128_from_fixed_128(balance_delta.saturating_abs());
 		if balance_delta.is_positive() {
-			// trader has profit
-			let realized = cmp::min(
-				<T::LiquidityPools as LiquidityPools<T::AccountId>>::liquidity(position.pool),
-				balance_delta_abs,
-			);
+			// trader has profit, max realizable is the pool's liquidity
+			let pool_liquidity = fixed_128_from_u128(<T::LiquidityPools as LiquidityPools<T::AccountId>>::liquidity(
+				position.pool,
+			));
+			let realized = cmp::min(pool_liquidity, balance_delta);
 			<T::LiquidityPools as LiquidityPools<T::AccountId>>::withdraw_liquidity(
 				&Self::account_id(),
 				position.pool,
-				realized,
+				u128_from_fixed_128(realized),
 			)?;
-			<Balances<T>>::mutate(who, |b| *b += realized);
+			Self::_update_balance(who, realized);
 		} else {
 			// trader has loss
-			let realized = cmp::min(Self::balances(who), balance_delta_abs);
 			<T::LiquidityPools as LiquidityPools<T::AccountId>>::deposit_liquidity(
 				&Self::account_id(),
 				position.pool,
-				realized,
+				u128_from_fixed_128(balance_delta.saturating_abs()),
 			)?;
-			<Balances<T>>::mutate(who, |b| *b -= realized);
+			Self::_update_balance(who, balance_delta);
 		}
 
 		// remove position
@@ -390,15 +388,17 @@ impl<T: Trait> Module<T> {
 
 	fn _deposit(who: &T::AccountId, amount: Balance) -> DispatchResult {
 		T::MultiCurrency::transfer(CurrencyId::AUSD, who, &Self::account_id(), amount)?;
-		<Balances<T>>::mutate(who, |b| *b += amount);
+		Self::_update_balance(who, fixed_128_from_u128(amount));
+
 		Ok(())
 	}
 
 	fn _withdraw(who: &T::AccountId, amount: Balance) -> DispatchResult {
-		// TODO: ensure free margin
+		let free_margin = Self::_free_margin(who)?;
+		ensure!(free_margin >= amount, Error::<T>::InsufficientFreeMargin);
 
 		T::MultiCurrency::transfer(CurrencyId::AUSD, &Self::account_id(), who, amount)?;
-		<Balances<T>>::mutate(who, |b| *b -= amount);
+		Self::_update_balance(who, fixed_128_mul_signum(fixed_128_from_u128(amount), -1));
 
 		Ok(())
 	}
@@ -507,6 +507,14 @@ impl<T: Trait> Module<T> {
 		PositionsByPool::mutate(pool, pair, |ids| ids.push(id));
 
 		Ok(())
+	}
+
+	/// Update `who` balance by `amount`.
+	///
+	/// Note this function guarantees op, don't use in possible no-op scenario.
+	fn _update_balance(who: &T::AccountId, amount: Fixed128) {
+		let new_balance = Self::balances(who).saturating_add(amount);
+		<Balances<T>>::insert(who, new_balance);
 	}
 }
 
@@ -626,15 +634,6 @@ impl<T: Trait> Module<T> {
 			.sum()
 	}
 
-	/// Free balance: the balance available for withdraw.
-	///
-	/// free_balance = max(balance - margin_held, zero)
-	fn _free_balance(who: &T::AccountId) -> Balance {
-		Self::balances(who)
-			.checked_sub(Self::_margin_held(who))
-			.unwrap_or_default()
-	}
-
 	/// Accumulated swap rate of a position(USD value).
 	///
 	/// accumulated_swap_rate_of_position = (current_accumulated - open_accumulated) * leveraged_held
@@ -663,7 +662,7 @@ impl<T: Trait> Module<T> {
 	/// equity_of_trader = balance + unrealized_pl + accumulated_swap_rate
 	fn _equity_of_trader(who: &T::AccountId) -> Fixed128Result {
 		let unrealized = Self::_unrealized_pl_of_trader(who)?;
-		let with_unrealized = fixed_128_from_u128(Self::balances(who))
+		let with_unrealized = Self::balances(who)
 			.checked_add(&unrealized)
 			.ok_or(Error::<T>::NumOutOfBound)?;
 		let accumulated_swap_rate = Self::_accumulated_swap_rate_of_trader(who)?;
