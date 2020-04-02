@@ -237,9 +237,9 @@ mod steps {
 				world.execute_with(|| {
 					let iter = get_rows(step)
 						.iter()
-						.map(|x| (parse_pair(x.get(0)), parse_fixed128(x.get(1))));
-					for (pair, value) in iter {
-						assert_ok!(margin_update_swap(pair, value));
+						.map(|x| (parse_pair(x.get(0)), parse_fixed128(x.get(1)), parse_fixed128(x.get(2))));
+					for (pair, long, short) in iter {
+						assert_ok!(margin_set_swap_rate(pair, long, short));
 					}
 				})
 			})
