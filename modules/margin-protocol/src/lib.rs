@@ -2,8 +2,8 @@
 
 use codec::{Decode, Encode};
 use frame_support::{
-	debug, decl_error, decl_event, decl_module, decl_storage, ensure, storage::IterableStorageMap, traits::Get,
-	IsSubType,
+	debug, decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get, IsSubType, IterableStorageDoubleMap,
+	IterableStorageMap,
 };
 use sp_arithmetic::{
 	traits::{Bounded, Saturating},
@@ -62,7 +62,7 @@ pub struct Position<T: Trait> {
 	/// USD value of leveraged debits on open position.
 	leveraged_debits_in_usd: Fixed128,
 	open_accumulated_swap_rate: Fixed128,
-	open_margin: Balance,
+	margin_held: Balance,
 }
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -72,14 +72,12 @@ pub struct RiskThreshold {
 	pub stop_out: Permill,
 }
 
-//TODO: Refactor `PositionsByPool` to `double_map LiquidityPoolId, (TradingPair, PositionId) => Option<()>`
-// once iteration on key and values of `StorageDoubleMap` ready.
 decl_storage! {
 	trait Store for Module<T: Trait> as MarginProtocol {
 		NextPositionId get(next_position_id): PositionId;
 		Positions get(positions): map hasher(blake2_128_concat) PositionId => Option<Position<T>>;
-		PositionsByTrader get(positions_by_trader): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) LiquidityPoolId => Vec<PositionId>;
-		PositionsByPool get(positions_by_pool): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => Vec<PositionId>;
+		PositionsByTrader get(positions_by_trader): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) (LiquidityPoolId, PositionId) => Option<()>;
+		PositionsByPool get(positions_by_pool): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) (TradingPair, PositionId) => Option<()>;
 		// SwapPeriods get(swap_periods): map hasher(black2_256) TradingPair => Option<SwapPeriod>;
 		Balances get(balances): map hasher(blake2_128_concat) T::AccountId => Balance;
 		MinLiquidationPercent get(min_liquidation_percent): map hasher(blake2_128_concat) TradingPair => Fixed128;
@@ -145,6 +143,7 @@ decl_error! {
 		PositionNotAllowed,
 		CannotOpenPosition,
 		CannotOpenMorePosition,
+		InsufficientFreeMargin,
 	}
 }
 
@@ -262,14 +261,7 @@ impl<T: Trait> Module<T> {
 		leveraged_amount: Balance,
 		price: Price,
 	) -> DispatchResult {
-		ensure!(
-			PositionsByPool::get(pool, pair).len() < T::GetPoolMaxOpenPositions::get(),
-			Error::<T>::CannotOpenMorePosition
-		);
-		ensure!(
-			<PositionsByTrader<T>>::get(who, pool).len() < T::GetTraderMaxOpenPositions::get(),
-			Error::<T>::CannotOpenMorePosition
-		);
+		Self::_ensure_can_open_more_position(who, pool, pair)?;
 		ensure!(
 			Self::margin_called_traders(who).is_none(),
 			Error::<T>::MarginCalledTrader
@@ -298,12 +290,12 @@ impl<T: Trait> Module<T> {
 			Error::<T>::CannotOpenPosition
 		);
 
-		let open_margin = {
+		let margin_held = {
 			let leverage_value = Fixed128::from_natural(leverage.value().into());
-			let m = leveraged_held_in_usd
+			leveraged_held_in_usd
 				.checked_div(&leverage_value)
-				.expect("leveraged value cannot be zero; qed");
-			u128_from_fixed_128(m)
+				.map(u128_from_fixed_128)
+				.expect("leveraged value cannot be zero; qed")
 		};
 		let open_accumulated_swap_rate = T::LiquidityPools::get_accumulated_swap_rate(pool, pair, leverage.is_long());
 		let position: Position<T> = Position {
@@ -315,10 +307,11 @@ impl<T: Trait> Module<T> {
 			leveraged_debits: fixed_128_mul_signum(leveraged_debits, debit_signum),
 			leveraged_debits_in_usd: fixed_128_mul_signum(leveraged_held_in_usd, debit_signum),
 			open_accumulated_swap_rate,
-			open_margin,
+			margin_held,
 		};
 
-		Self::_ensure_trader_safe(who, Action::OpenPosition(position.clone()))?;
+		let free_margin = Self::_free_margin(who)?;
+		ensure!(free_margin >= margin_held, Error::<T>::InsufficientFreeMargin);
 		Self::_ensure_pool_safe(pool, Action::OpenPosition(position.clone()))?;
 
 		Self::_insert_position(who, pool, pair, position)?;
@@ -337,10 +330,10 @@ impl<T: Trait> Module<T> {
 
 	fn _close_position(who: &T::AccountId, position_id: PositionId, price: Option<Price>) -> DispatchResult {
 		let position = Self::positions(position_id).ok_or(Error::<T>::PositionNotFound)?;
-		let index = Self::positions_by_trader(who, position.pool)
-			.iter()
-			.position(|id| *id == position_id)
-			.ok_or(Error::<T>::PositionNotOpenedByTrader)?;
+		ensure!(
+			<PositionsByTrader<T>>::contains_key(who, (position.pool, position_id)),
+			Error::<T>::PositionNotOpenedByTrader
+		);
 		let (unrealized_pl, market_price) = Self::_unrealized_pl_and_market_price_of_position(&position, price)?;
 		let accumulated_swap_rate = Self::_accumulated_swap_rate_of_position(&position)?;
 		let balance_delta = unrealized_pl
@@ -374,8 +367,8 @@ impl<T: Trait> Module<T> {
 
 		// remove position
 		<Positions<T>>::remove(position_id);
-		<PositionsByTrader<T>>::mutate(who, position.pool, |v| v.remove(index));
-		PositionsByPool::mutate(position.pool, position.pair, |v| v.retain(|id| *id != position_id));
+		<PositionsByTrader<T>>::remove(who, (position.pool, position_id));
+		PositionsByPool::remove(position.pool, (position.pair, position_id));
 
 		Self::deposit_event(RawEvent::PositionClosed(
 			who.clone(),
@@ -393,9 +386,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _withdraw(who: &T::AccountId, amount: Balance) -> DispatchResult {
-		ensure!(Self::balances(who) >= amount, Error::<T>::BalanceTooLow);
-
-		Self::_ensure_trader_safe(who, Action::Withdraw(amount))?;
+		// TODO: ensure free margin
 
 		T::MultiCurrency::transfer(CurrencyId::AUSD, &Self::account_id(), who, amount)?;
 		<Balances<T>>::mutate(who, |b| *b -= amount);
@@ -405,7 +396,7 @@ impl<T: Trait> Module<T> {
 
 	fn _trader_margin_call(who: &T::AccountId) -> DispatchResult {
 		if !Self::_is_trader_margin_called(who) {
-			if Self::_ensure_trader_safe(who, Action::None).is_err() {
+			if Self::_ensure_trader_safe(who).is_err() {
 				<MarginCalledTraders<T>>::insert(who, ());
 			} else {
 				return Err(Error::<T>::SafeTrader.into());
@@ -416,7 +407,7 @@ impl<T: Trait> Module<T> {
 
 	fn _trader_become_safe(who: &T::AccountId) -> DispatchResult {
 		if Self::_is_trader_margin_called(who) {
-			if Self::_ensure_trader_safe(who, Action::None).is_ok() {
+			if Self::_ensure_trader_safe(who).is_ok() {
 				<MarginCalledTraders<T>>::remove(who);
 			} else {
 				return Err(Error::<T>::UnsafeTrader.into());
@@ -426,16 +417,15 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _trader_liquidate(who: &T::AccountId) -> DispatchResult {
-		match Self::_check_trader(who, Action::None) {
-			Ok(Risk::StopOut) => {
+		let risk = Self::_check_trader(who)?;
+		match risk {
+			Risk::StopOut => {
 				// Close position as much as possible
-				<PositionsByTrader<T>>::iter_prefix(who).for_each(|trading_pair_position_ids| {
-					trading_pair_position_ids.iter().for_each(|position_id| {
-						let _ = Self::_close_position(who, *position_id, None);
-					})
+				<PositionsByTrader<T>>::iter(who).for_each(|((_, position_id), _)| {
+					let _ = Self::_close_position(who, position_id, None);
 				});
 
-				if Self::_ensure_trader_safe(who, Action::None).is_ok() && Self::_is_trader_margin_called(who) {
+				if Self::_ensure_trader_safe(who).is_ok() && Self::_is_trader_margin_called(who) {
 					<MarginCalledTraders<T>>::remove(who);
 				}
 				Ok(())
@@ -469,10 +459,8 @@ impl<T: Trait> Module<T> {
 	fn _liquidity_pool_liquidate(pool: LiquidityPoolId) -> DispatchResult {
 		match Self::_check_pool(pool, Action::None) {
 			Ok(Risk::StopOut) => {
-				PositionsByPool::iter_prefix(pool).for_each(|trading_pair_position_ids| {
-					trading_pair_position_ids.iter().for_each(|position_id| {
-						let _ = Self::_liquidity_pool_close_position(pool, *position_id);
-					});
+				PositionsByPool::iter(pool).for_each(|((_, position_id), _)| {
+					let _ = Self::_liquidity_pool_close_position(pool, position_id);
 				});
 
 				if Self::_ensure_pool_safe(pool, Action::None).is_ok() && Self::_is_pool_margin_called(&pool) {
@@ -502,15 +490,32 @@ impl<T: Trait> Module<T> {
 		NextPositionId::mutate(|id| *id += 1);
 
 		<Positions<T>>::insert(id, position);
-		<PositionsByTrader<T>>::mutate(who, pool, |ids| ids.push(id));
-		PositionsByPool::mutate(pool, pair, |ids| ids.push(id));
+		<PositionsByTrader<T>>::insert(who, (pool, id), ());
+		PositionsByPool::insert(pool, (pair, id), ());
 
+		Ok(())
+	}
+
+	fn _ensure_can_open_more_position(who: &T::AccountId, pool: LiquidityPoolId, pair: TradingPair) -> DispatchResult {
+		let count = PositionsByPool::iter(pool).filter(|((p, _), _)| *p == pair).count();
+		ensure!(
+			count < T::GetPoolMaxOpenPositions::get(),
+			Error::<T>::CannotOpenMorePosition
+		);
+		let count = <PositionsByTrader<T>>::iter(who)
+			.filter(|((p, _), _)| *p == pool)
+			.count();
+		ensure!(
+			count < T::GetTraderMaxOpenPositions::get(),
+			Error::<T>::CannotOpenMorePosition
+		);
 		Ok(())
 	}
 }
 
 type PriceResult = result::Result<Price, DispatchError>;
 type Fixed128Result = result::Result<Fixed128, DispatchError>;
+type BalanceResult = result::Result<Balance, DispatchError>;
 
 // Price helpers
 impl<T: Trait> Module<T> {
@@ -606,21 +611,19 @@ impl<T: Trait> Module<T> {
 	/// Unrealized profit and loss of a given trader(USD value). It is the sum of unrealized profit and loss of all positions
 	/// opened by a trader.
 	fn _unrealized_pl_of_trader(who: &T::AccountId) -> Fixed128Result {
-		<PositionsByTrader<T>>::iter_prefix(who)
-			.flatten()
-			.filter_map(|position_id| Self::positions(position_id))
+		<PositionsByTrader<T>>::iter(who)
+			.filter_map(|((_, position_id), _)| Self::positions(position_id))
 			.try_fold(Fixed128::zero(), |acc, p| {
 				let unrealized = Self::_unrealized_pl_of_position(&p)?;
 				acc.checked_add(&unrealized).ok_or(Error::<T>::NumOutOfBound.into())
 			})
 	}
 
-	/// Sum of all open margin of a given trader.
+	/// Sum of all margin held of a given trader.
 	fn _margin_held(who: &T::AccountId) -> Balance {
-		<PositionsByTrader<T>>::iter_prefix(who)
-			.flatten()
-			.filter_map(|position_id| Self::positions(position_id))
-			.map(|p| p.open_margin)
+		<PositionsByTrader<T>>::iter(who)
+			.filter_map(|((_, position_id), _)| Self::positions(position_id))
+			.map(|p| p.margin_held)
 			.sum()
 	}
 
@@ -649,9 +652,8 @@ impl<T: Trait> Module<T> {
 
 	/// Accumulated swap of all open positions of a given trader(USD value).
 	fn _accumulated_swap_rate_of_trader(who: &T::AccountId) -> Fixed128Result {
-		<PositionsByTrader<T>>::iter_prefix(who)
-			.flatten()
-			.filter_map(|position_id| Self::positions(position_id))
+		<PositionsByTrader<T>>::iter(who)
+			.filter_map(|((_, position_id), _)| Self::positions(position_id))
 			.try_fold(Fixed128::zero(), |acc, p| {
 				let rate_of_p = Self::_accumulated_swap_rate_of_position(&p)?;
 				acc.checked_add(&rate_of_p).ok_or(Error::<T>::NumOutOfBound.into())
@@ -670,64 +672,56 @@ impl<T: Trait> Module<T> {
 			.ok_or(Error::<T>::NumOutOfBound.into())
 	}
 
+	/// Free margin of a user.
+	fn _free_margin(who: &T::AccountId) -> BalanceResult {
+		let equity = Self::_equity_of_trader(who).map(u128_from_fixed_128)?;
+		let margin_held = Self::_margin_held(who);
+		Ok(equity.saturating_sub(margin_held))
+	}
+
 	/// Margin level of a given user.
-	fn _margin_level(who: &T::AccountId, action: Action<T>) -> Fixed128Result {
-		let mut equity = Self::_equity_of_trader(who)?;
-		let mut leveraged_debits_in_usd = Self::_leveraged_debits_in_usd(who)?;
-		// if no leveraged held, margin level is max
-		match action {
-			Action::Withdraw(amount) => {
-				equity = equity
-					.checked_sub(&fixed_128_from_u128(amount))
-					.ok_or(Error::<T>::NumOutOfBound)?;
-			}
-			Action::OpenPosition(p) => {
-				leveraged_debits_in_usd = leveraged_debits_in_usd
-					.checked_add(&p.leveraged_debits_in_usd.saturating_abs())
-					.ok_or(Error::<T>::NumOutOfBound)?;
-			}
-			_ => {}
-		};
+	fn _margin_level(who: &T::AccountId) -> Fixed128Result {
+		let equity = Self::_equity_of_trader(who)?;
+		let leveraged_debits_in_usd = <PositionsByTrader<T>>::iter(who)
+			.filter_map(|((_, position_id), _)| Self::positions(position_id))
+			.try_fold(Fixed128::zero(), |acc, p| {
+				acc.checked_add(&p.leveraged_debits_in_usd.saturating_abs())
+					.ok_or(Error::<T>::NumOutOfBound)
+			})?;
+
 		Ok(equity
 			.checked_div(&leveraged_debits_in_usd)
+			// if no leveraged held, margin level is max
 			.unwrap_or(Fixed128::max_value()))
 	}
 
-	fn _leveraged_debits_in_usd(who: &T::AccountId) -> Fixed128Result {
-		<PositionsByTrader<T>>::iter_prefix(who)
-			.flatten()
-			.filter_map(|position_id| Self::positions(position_id))
-			.try_fold(Fixed128::zero(), |acc, p| {
-				acc.checked_add(&p.leveraged_debits_in_usd.saturating_abs())
-					.ok_or(Error::<T>::NumOutOfBound.into())
-			})
-	}
-
-	/// Ensure a trader is safe after performing an action.
+	/// Ensure a trader is safe.
 	///
 	/// Return `Ok` if ensured safe, or `Err` if not.
-	fn _ensure_trader_safe(who: &T::AccountId, action: Action<T>) -> DispatchResult {
-		match Self::_check_trader(who, action.clone()) {
-			Ok(Risk::None) => Ok(()),
-			_ => match action {
-				Action::None => Err(Error::<T>::UnsafeTrader.into()),
-				_ => Err(Error::<T>::TraderWouldBeUnsafe.into()),
-			},
+	fn _ensure_trader_safe(who: &T::AccountId) -> DispatchResult {
+		let risk = Self::_check_trader(who)?;
+		match risk {
+			Risk::None => Ok(()),
+			_ => Err(Error::<T>::UnsafeTrader.into()),
 		}
 	}
 
 	/// Check trader risk after performing an action.
 	///
 	/// Return `Ok(Risk)`, or `Err` if check fails.
-	fn _check_trader(who: &T::AccountId, action: Action<T>) -> Result<Risk, DispatchError> {
-		let margin_level = Self::_margin_level(who, action)?;
-		let threshold = Self::trader_risk_threshold();
-		if margin_level <= threshold.stop_out.into() {
-			return Ok(Risk::StopOut);
-		} else if margin_level <= threshold.margin_call.into() {
-			return Ok(Risk::MarginCall);
-		}
-		Ok(Risk::None)
+	fn _check_trader(who: &T::AccountId) -> Result<Risk, DispatchError> {
+		let margin_level = Self::_margin_level(who)?;
+		let RiskThreshold { stop_out, margin_call } = Self::trader_risk_threshold();
+
+		let risk = if margin_level <= stop_out.into() {
+			Risk::StopOut
+		} else if margin_level <= margin_call.into() {
+			Risk::MarginCall
+		} else {
+			Risk::None
+		};
+
+		Ok(risk)
 	}
 }
 
@@ -755,9 +749,8 @@ impl<T: Trait> Module<T> {
 		};
 
 		// all_unrealized_pl + all_accumulated_swap_rate
-		let unrealized_pl_and_rate = PositionsByPool::iter_prefix(pool)
-			.flatten()
-			.filter_map(|position_id| Self::positions(position_id))
+		let unrealized_pl_and_rate = PositionsByPool::iter(pool)
+			.filter_map(|((_, position_id), _)| Self::positions(position_id))
 			.try_fold::<_, _, Fixed128Result>(Fixed128::zero(), |acc, p| {
 				let rate = Self::_accumulated_swap_rate_of_position(&p)?;
 				let unrealized = Self::_unrealized_pl_of_position(&p)?;
@@ -772,9 +765,8 @@ impl<T: Trait> Module<T> {
 
 	/// Returns `(net_position, longest_leg)` of a liquidity pool.
 	fn _net_position_and_longest_leg(pool: LiquidityPoolId, new_position: Option<Position<T>>) -> (Fixed128, Fixed128) {
-		let (net, positive, non_positive) = PositionsByPool::iter_prefix(pool)
-			.flatten()
-			.filter_map(|position_id| Self::positions(position_id))
+		let (net, positive, non_positive) = PositionsByPool::iter(pool)
+			.filter_map(|((_, position_id), _)| Self::positions(position_id))
 			.chain(new_position.map_or(vec![], |p| vec![p]))
 			.fold(
 				(Fixed128::zero(), Fixed128::zero(), Fixed128::zero()),
@@ -920,7 +912,7 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> LiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
 	/// Returns if `pool` has liability in margin protocol.
 	fn can_remove(pool: LiquidityPoolId) -> bool {
-		PositionsByPool::iter_prefix(pool).flatten().count() == 0
+		PositionsByPool::iter(pool).count() == 0
 	}
 
 	/// Returns required deposit amount to make pool safe.
@@ -1007,7 +999,7 @@ impl<T: Trait> Module<T> {
 		debug::native::trace!(target: TAG, "Started [block_number = {:?}]", block_number);
 
 		for trader in Self::_get_traders() {
-			match Self::_check_trader(&trader, Action::None).map_err(|_| OffchainErr::CheckFail)? {
+			match Self::_check_trader(&trader).map_err(|_| OffchainErr::CheckFail)? {
 				Risk::StopOut => {
 					let who = T::Lookup::unlookup(trader.clone());
 					let call = Call::<T>::trader_liquidate(who);
@@ -1106,7 +1098,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _should_liquidate_trader(who: &T::AccountId) -> Result<bool, OffchainErr> {
-		match Self::_check_trader(who, Action::None).map_err(|_| OffchainErr::CheckFail)? {
+		match Self::_check_trader(who).map_err(|_| OffchainErr::CheckFail)? {
 			Risk::StopOut => Ok(true),
 			_ => Ok(false),
 		}
