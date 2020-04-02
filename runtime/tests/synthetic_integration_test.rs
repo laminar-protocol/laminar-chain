@@ -5,24 +5,16 @@
 mod tests {
 	use frame_support::{assert_noop, assert_ok, parameter_types};
 	use laminar_runtime::{
-		AccountId, BlockNumber,
+		AccountId,
 		CurrencyId::{self, AUSD, FEUR, FJPY},
-		LiquidityPoolId, MaxSwap, MinimumCount, MockLaminarTreasury, Runtime,
+		LiquidityPoolId, MinimumCount, Runtime,
 	};
 
-	type PositionId = u64;
 	use margin_protocol::RiskThreshold;
-	use module_primitives::{
-		Balance,
-		Leverage::{self, *},
-		Leverages, TradingPair,
-	};
-	use module_traits::{LiquidityPoolManager, MarginProtocolLiquidityPools, Treasury};
+	use module_primitives::Balance;
 	use orml_prices::Price;
 	use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
-	use orml_utilities::Fixed128;
-	use pallet_indices::address::Address;
-	use sp_runtime::{traits::OnFinalize, traits::OnInitialize, DispatchResult, Permill};
+	use sp_runtime::{traits::OnFinalize, DispatchResult, Permill};
 
 	fn origin_of(who: &AccountId) -> <Runtime as system::Trait>::Origin {
 		<Runtime as system::Trait>::Origin::signed((*who).clone())
@@ -36,16 +28,6 @@ mod tests {
 
 	const LIQUIDITY_POOL_ID_0: LiquidityPoolId = 0;
 	const LIQUIDITY_POOL_ID_1: LiquidityPoolId = 1;
-
-	const EUR_USD: TradingPair = TradingPair {
-		base: CurrencyId::AUSD,
-		quote: CurrencyId::FEUR,
-	};
-
-	const JPY_EUR: TradingPair = TradingPair {
-		base: CurrencyId::FEUR,
-		quote: CurrencyId::FJPY,
-	};
 
 	parameter_types! {
 		pub const POOL: AccountId = AccountId::from([0u8; 32]);
@@ -133,6 +115,12 @@ mod tests {
 			LIQUIDITY_POOL_ID_0,
 			CurrencyId::FJPY,
 			true,
+		)?;
+		SyntheticLiquidityPools::set_synthetic_enabled(
+			origin_of(&POOL::get()),
+			LIQUIDITY_POOL_ID_1,
+			CurrencyId::FJPY,
+			true,
 		)
 	}
 
@@ -144,6 +132,7 @@ mod tests {
 				prices.clone()
 			));
 		}
+		get_price();
 		Ok(())
 	}
 
@@ -153,10 +142,6 @@ mod tests {
 
 	fn dollar(amount: u128) -> u128 {
 		amount.saturating_mul(Price::accuracy())
-	}
-
-	fn one_percent() -> Fixed128 {
-		Fixed128::recip(&Fixed128::from_natural(100)).unwrap()
 	}
 
 	fn create_pool() -> DispatchResult {

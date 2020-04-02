@@ -38,8 +38,8 @@ Feature: Margin Protocol
     And margin set min leveraged amount to $100
     And margin set default min leveraged amount to $100
     And margin update swap
-      | Pair    | Value |
-      | EURUSD  | 1%    |
+      | Pair    | Long | Short |
+      | EURUSD  | -1%  | 1%    |
     And margin enable trading pair EURUSD
     When open positions
       | Name  | Pair   | Leverage | Amount | Price |
