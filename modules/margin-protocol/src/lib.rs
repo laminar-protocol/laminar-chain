@@ -141,7 +141,6 @@ decl_error! {
 		NoAvailablePositionId,
 		PositionNotFound,
 		PositionNotOpenedByTrader,
-		BalanceTooLow,
 		PositionNotAllowed,
 		CannotOpenPosition,
 		CannotOpenMorePosition,

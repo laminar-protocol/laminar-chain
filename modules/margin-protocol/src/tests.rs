@@ -1456,8 +1456,74 @@ fn withdraw_works() {
 }
 
 #[test]
+fn trader_can_withdraw_unrealized_profit() {
+	ExtBuilder::default()
+		.module_balance(fixed128_from_natural_currency_cent(10_00))
+		.spread(Permill::zero())
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.price(CurrencyId::FEUR, (1, 1))
+		.trader_risk_threshold(risk_threshold(100, 0))
+		.build()
+		.execute_with(|| {
+			<Balances<Runtime>>::insert(ALICE, fixed128_from_natural_currency_cent(100));
+			let position: Position<Runtime> = Position {
+				owner: ALICE,
+				pool: MOCK_POOL,
+				pair: EUR_USD_PAIR,
+				leverage: Leverage::LongTwo,
+				leveraged_held: fixed128_from_natural_currency_cent(10_00),
+				leveraged_debits: fixed128_from_natural_currency_cent(100),
+				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
+				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				margin_held: fixed128_from_natural_currency_cent(50),
+			};
+			<Positions<Runtime>>::insert(0, position);
+			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
+
+			assert_eq!(
+				MarginProtocol::_free_margin(&ALICE),
+				Ok(fixed128_from_natural_currency_cent(9_50))
+			);
+			assert_ok!(MarginProtocol::withdraw(
+				Origin::signed(ALICE),
+				balance_from_natural_currency_cent(9_50)
+			));
+		});
+}
+
+#[test]
 fn withdraw_fails_if_insufficient_free_margin() {
-	// TODO: impl
+	ExtBuilder::default()
+		.spread(Permill::zero())
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.price(CurrencyId::FEUR, (1, 1))
+		.trader_risk_threshold(risk_threshold(100, 0))
+		.build()
+		.execute_with(|| {
+			<Balances<Runtime>>::insert(ALICE, fixed128_from_natural_currency_cent(100));
+			let position: Position<Runtime> = Position {
+				owner: ALICE,
+				pool: MOCK_POOL,
+				pair: EUR_USD_PAIR,
+				leverage: Leverage::LongTwo,
+				leveraged_held: fixed128_from_natural_currency_cent(100),
+				leveraged_debits: fixed128_from_natural_currency_cent(100),
+				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
+				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				margin_held: fixed128_from_natural_currency_cent(100),
+			};
+			<Positions<Runtime>>::insert(0, position);
+			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
+
+			assert_eq!(
+				MarginProtocol::_free_margin(&ALICE),
+				Ok(fixed128_from_natural_currency_cent(0))
+			);
+			assert_noop!(
+				MarginProtocol::withdraw(Origin::signed(ALICE), balance_from_natural_currency_cent(1)),
+				Error::<Runtime>::InsufficientFreeMargin
+			);
+		});
 }
 
 #[test]
