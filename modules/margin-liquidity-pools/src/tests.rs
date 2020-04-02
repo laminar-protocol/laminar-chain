@@ -316,11 +316,11 @@ fn should_set_swap_rate() {
 		assert_ok!(ModuleLiquidityPools::set_swap_rate(Origin::ROOT, pair, rate));
 		assert_noop!(
 			ModuleLiquidityPools::set_swap_rate(Origin::ROOT, pair, bad_rate),
-			Error::<Runtime>::SwapRateTooLow
+			Error::<Runtime>::SwapRateTooHigh
 		);
 		assert_noop!(
 			ModuleLiquidityPools::set_swap_rate(Origin::ROOT, pair, bad_long_rate),
-			Error::<Runtime>::SwapRateTooLow
+			Error::<Runtime>::SwapRateTooHigh
 		);
 		assert_noop!(
 			ModuleLiquidityPools::set_swap_rate(Origin::ROOT, pair, bad_short_rate),
@@ -381,7 +381,7 @@ fn should_get_swap() {
 		));
 		assert_eq!(
 			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_swap_rate(0, pair, true),
-			MaxSwap::get().long
+			MaxSwap::get()
 		);
 		assert_eq!(
 			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_swap_rate(0, pair, false),

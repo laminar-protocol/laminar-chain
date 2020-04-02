@@ -26,7 +26,6 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
-use margin_liquidity_pools::SwapRate;
 pub use module_primitives::{CurrencyId, LiquidityPoolId};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_oracle::OperatorProvider;
@@ -487,7 +486,7 @@ impl synthetic_tokens::Trait for Runtime {
 
 parameter_types! {
 	pub const GetLiquidityCurrencyId: CurrencyId = CurrencyId::AUSD;
-	pub const MaxSwap: SwapRate = SwapRate{long: Fixed128::from_natural(-2), short: Fixed128::from_natural(2)}; // TODO: set this
+	pub const MaxSwap: Fixed128 = Fixed128::from_natural(2); // TODO: set this
 }
 
 type LiquidityCurrency = orml_currencies::Currency<Runtime, GetLiquidityCurrencyId>;

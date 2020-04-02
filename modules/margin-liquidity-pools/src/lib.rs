@@ -15,7 +15,7 @@ use sp_runtime::{
 	traits::{AccountIdConversion, EnsureOrigin, One, Saturating},
 	DispatchResult, ModuleId, PerThing, Permill, RuntimeDebug,
 };
-use sp_std::cmp::{max, min};
+use sp_std::cmp::max;
 use sp_std::{prelude::*, result};
 use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools};
 
@@ -41,7 +41,7 @@ pub trait Trait: frame_system::Trait {
 	type PoolManager: LiquidityPoolManager<LiquidityPoolId, Balance>;
 	type ExistentialDeposit: Get<Balance>;
 	type UpdateOrigin: EnsureOrigin<Self::Origin>;
-	type MaxSwap: Get<SwapRate>;
+	type MaxSwap: Get<Fixed128>;
 }
 
 decl_storage! {
@@ -170,9 +170,8 @@ decl_module! {
 				.map(|_| ())
 				.or_else(ensure_root)?;
 
-			let max_swap = T::MaxSwap::get();
-			ensure!(rate.long >= max_swap.long, Error::<T>::SwapRateTooLow);
-			ensure!(rate.short <= max_swap.short, Error::<T>::SwapRateTooHigh);
+			ensure!(rate.long.saturating_abs() <= T::MaxSwap::get(), Error::<T>::SwapRateTooHigh);
+			ensure!(rate.short.saturating_abs() <= T::MaxSwap::get(), Error::<T>::SwapRateTooHigh);
 			SwapRates::insert(pair, rate.clone());
 			Self::deposit_event(RawEvent::SwapRateUpdated(pair, rate));
 		}
@@ -181,9 +180,7 @@ decl_module! {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
 
-			let max_swap = T::MaxSwap::get();
-			ensure!(Fixed128::zero().checked_sub(&rate).unwrap() >= max_swap.long, Error::<T>::SwapRateTooLow);
-			ensure!(rate <= max_swap.short, Error::<T>::SwapRateTooHigh);
+			ensure!(rate.saturating_abs() <= T::MaxSwap::get(), Error::<T>::SwapRateTooHigh);
 
 			AdditionalSwapRate::insert(pool_id, rate);
 			Self::deposit_event(RawEvent::AdditionalSwapRateUpdated(who, pool_id, rate));
@@ -272,7 +269,6 @@ decl_error! {
 		CannotWithdrawAmount,
 		CannotWithdrawExistentialDeposit,
 		SwapRateTooHigh,
-		SwapRateTooLow,
 		SpreadTooHigh,
 		PoolNotFound,
 		TradingPairNotEnabled,
@@ -340,19 +336,21 @@ impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
 
 	fn get_swap_rate(pool_id: LiquidityPoolId, pair: TradingPair, is_long: bool) -> Fixed128 {
 		let max_swap = T::MaxSwap::get();
-		let rate = Self::swap_rate(pair).unwrap_or_default();
+		let swap_rate = Self::swap_rate(pair).unwrap_or_default();
+		let adjust_rate: Fixed128;
 		if is_long {
-			if let Some(additional) = Self::additional_swap_rate(pool_id) {
-				max(rate.long.saturating_sub(additional), max_swap.long)
-			} else {
-				rate.long
-			}
+			adjust_rate = swap_rate
+				.long
+				.saturating_sub(Self::additional_swap_rate(pool_id).unwrap_or_default());
 		} else {
-			if let Some(additional) = Self::additional_swap_rate(pool_id) {
-				min(rate.short.saturating_sub(additional), max_swap.short)
-			} else {
-				rate.short
-			}
+			adjust_rate = swap_rate
+				.short
+				.saturating_sub(Self::additional_swap_rate(pool_id).unwrap_or_default());
+		}
+		if adjust_rate.saturating_abs() <= max_swap {
+			adjust_rate
+		} else {
+			max_swap
 		}
 	}
 
