@@ -297,7 +297,7 @@ impl<T: Trait> Module<T> {
 				.map(u128_from_fixed_128)
 				.expect("leveraged value cannot be zero; qed")
 		};
-		let open_accumulated_swap_rate = T::LiquidityPools::get_accumulated_swap_rate(pool, pair);
+		let open_accumulated_swap_rate = T::LiquidityPools::get_accumulated_swap_rate(pool, pair, leverage.is_long());
 		let position: Position<T> = Position {
 			owner: who.clone(),
 			pool,
@@ -640,12 +640,12 @@ impl<T: Trait> Module<T> {
 	///
 	/// accumulated_swap_rate_of_position = (current_accumulated - open_accumulated) * leveraged_held
 	fn _accumulated_swap_rate_of_position(position: &Position<T>) -> Fixed128Result {
-		let rate = T::LiquidityPools::get_accumulated_swap_rate(position.pool, position.pair)
-			.checked_sub(&position.open_accumulated_swap_rate)
-			.ok_or(Error::<T>::NumOutOfBound)?;
+		let rate =
+			T::LiquidityPools::get_accumulated_swap_rate(position.pool, position.pair, position.leverage.is_long())
+				.checked_sub(&position.open_accumulated_swap_rate)
+				.ok_or(Error::<T>::NumOutOfBound)?;
 		position
 			.leveraged_held
-			.saturating_abs()
 			.checked_mul(&rate)
 			.ok_or(Error::<T>::NumOutOfBound.into())
 	}
