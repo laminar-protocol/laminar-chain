@@ -352,10 +352,10 @@ impl<T: Trait> Module<T> {
 			)?;
 			Self::_update_balance(who, realized);
 		} else {
-			// trader has loss, max realizable is the margin protocol module's balance
-			let module_account_balance =
-				fixed_128_from_u128(T::MultiCurrency::free_balance(CurrencyId::AUSD, &Self::account_id()));
-			let realized = cmp::min(module_account_balance, balance_delta.saturating_abs());
+			// trader has loss, max realizable is the trader's equity
+			let equity = Self::_equity_of_trader(who)?;
+			let balance_delta_abs = balance_delta.saturating_abs();
+			let realized = cmp::min(equity.saturating_add(balance_delta_abs), balance_delta_abs);
 			<T::LiquidityPools as LiquidityPools<T::AccountId>>::deposit_liquidity(
 				&Self::account_id(),
 				position.pool,
