@@ -426,6 +426,16 @@ mod steps {
 					}
 				})
 			})
+			.given("synthetic set spread", |world, step| {
+				world.execute_with(|| {
+					let iter = get_rows(step)
+						.iter()
+						.map(|x| (parse_currency(x.get(0)), parse_permill(x.get(1))));
+					for (currency, spread) in iter {
+						assert_ok!(synthetic_set_spread(currency, spread));
+					}
+				})
+			})
 			.when("synthetic buy", |world, step| {
 				world.execute_with(|| {
 					let iter = get_rows(step).iter().map(|x| {
@@ -452,7 +462,7 @@ mod steps {
 						)
 					});
 					for (name, currency, amount, result) in iter {
-						result.assert(synthetic_buy(&name, currency, amount));
+						result.assert(synthetic_sell(&name, currency, amount));
 					}
 				})
 			})
@@ -470,6 +480,12 @@ mod steps {
 						assert_eq!(collateral_balance(&name), free);
 						assert_eq!(multi_currency_balance(&name, currency), synthetic);
 					}
+				})
+			})
+			.then_regex(r"synthetic module balance is (\$?[\W\d]+)", |world, matches, _step| {
+				world.execute_with(|| {
+					let amount = parse_dollar(matches.get(1));
+					assert_eq!(synthetic_balance(), amount);
 				})
 			})
 			.then_regex(r"synthetic liquidity is (\$?[\W\d]+)", |world, matches, _step| {
