@@ -631,6 +631,7 @@ fn trader_become_safe_should_work() {
 #[test]
 fn trader_liquidate_should_work() {
 	ExtBuilder::default()
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100))
 		.spread(Permill::zero())
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.price(CurrencyId::FEUR, (1, 1))
@@ -1425,6 +1426,7 @@ fn deposit_works() {
 			OrmlTokens::free_balance(CurrencyId::AUSD, &MarginProtocol::account_id()),
 			500
 		);
+		assert_eq!(MarginProtocol::balances(&ALICE), Fixed128::from_parts(500));
 
 		let event = TestEvent::margin_protocol(RawEvent::Deposited(ALICE, 500));
 		assert!(System::events().iter().any(|record| record.event == event));
