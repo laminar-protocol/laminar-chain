@@ -107,7 +107,8 @@ fn unrealized_pl_of_trader_sums_all_positions() {
 		.execute_with(|| {
 			<Positions<Runtime>>::insert(0, eur_jpy_long());
 			<Positions<Runtime>>::insert(1, eur_jpy_short());
-			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0, 1]);
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 1), ());
 			assert_eq!(
 				MarginProtocol::_unrealized_pl_of_trader(&ALICE),
 				Ok(Fixed128::from_parts(397454545454545390254))
@@ -120,7 +121,8 @@ fn margin_held_sums_all_margin_held() {
 	ExtBuilder::default().build().execute_with(|| {
 		<Positions<Runtime>>::insert(0, eur_jpy_long());
 		<Positions<Runtime>>::insert(1, eur_jpy_short());
-		<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0, 1]);
+		<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
+		<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 1), ());
 		assert_eq!(
 			MarginProtocol::_margin_held(&ALICE),
 			fixed128_from_natural_currency_cent(13_278_00)
@@ -231,7 +233,8 @@ fn accumulated_swap_rate_of_trader_sums_all_positions() {
 		.execute_with(|| {
 			<Positions<Runtime>>::insert(0, eur_usd_long_1());
 			<Positions<Runtime>>::insert(1, eur_usd_short_1());
-			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0, 1]);
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 1), ());
 			assert_eq!(
 				MarginProtocol::_accumulated_swap_rate_of_trader(&ALICE),
 				Ok(fixed128_from_natural_currency_cent(-25_91))
@@ -251,7 +254,10 @@ fn equity_of_trader_works() {
 			<Positions<Runtime>>::insert(1, eur_usd_long_2());
 			<Positions<Runtime>>::insert(2, eur_usd_short_1());
 			<Positions<Runtime>>::insert(3, eur_usd_short_2());
-			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0, 1, 2, 3]);
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 1), ());
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 2), ());
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 3), ());
 			assert_eq!(
 				MarginProtocol::_equity_of_trader(&ALICE),
 				Ok(fixed128_from_natural_currency_cent(116_665_86))
@@ -271,7 +277,10 @@ fn margin_level_works() {
 			<Positions<Runtime>>::insert(1, eur_usd_long_2());
 			<Positions<Runtime>>::insert(2, eur_usd_short_1());
 			<Positions<Runtime>>::insert(3, eur_usd_short_2());
-			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0, 1, 2, 3]);
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 1), ());
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 2), ());
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 3), ());
 			assert_eq!(
 				MarginProtocol::_margin_level(&ALICE),
 				// 19.44%
@@ -310,7 +319,7 @@ fn ensure_trader_safe_works() {
 				margin_held: fixed128_from_natural_currency_cent(100),
 			};
 			<Positions<Runtime>>::insert(0, position);
-			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
 			assert_eq!(MarginProtocol::_margin_level(&ALICE), Ok(Fixed128::from_natural(1)));
 
 			// 100% == 100%, unsafe
@@ -337,7 +346,10 @@ fn equity_of_pool_works() {
 			<Positions<Runtime>>::insert(1, eur_usd_long_2());
 			<Positions<Runtime>>::insert(2, eur_usd_short_1());
 			<Positions<Runtime>>::insert(3, eur_usd_short_2());
-			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0, 1, 2, 3]);
+			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), ());
+			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 1), ());
+			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 2), ());
+			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 3), ());
 			assert_eq!(
 				MarginProtocol::_equity_of_pool(MOCK_POOL),
 				Ok(fixed128_from_natural_currency_cent(103_334_14))
@@ -357,7 +369,10 @@ fn enp_and_ell_without_new_position_works() {
 			<Positions<Runtime>>::insert(1, eur_usd_long_2());
 			<Positions<Runtime>>::insert(2, eur_usd_short_1());
 			<Positions<Runtime>>::insert(3, eur_usd_short_2());
-			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0, 1, 2, 3]);
+			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), ());
+			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 1), ());
+			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 2), ());
+			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 3), ());
 
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::None),
@@ -398,7 +413,10 @@ fn enp_and_ell_without_position_with_liquidity_works() {
 			<Positions<Runtime>>::insert(1, eur_usd_long_2());
 			<Positions<Runtime>>::insert(2, eur_usd_short_1());
 			<Positions<Runtime>>::insert(3, eur_usd_short_2());
-			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0, 1, 2, 3]);
+			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), ());
+			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 1), ());
+			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 2), ());
+			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 3), ());
 
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::Withdraw(balance_from_natural_currency_cent(10))),
@@ -434,7 +452,7 @@ fn ensure_liquidity_works() {
 			};
 
 			<Positions<Runtime>>::insert(0, position);
-			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
+			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), ());
 
 			assert_ok!(MarginProtocol::ensure_can_withdraw(MOCK_POOL, 10));
 
@@ -499,7 +517,7 @@ fn ensure_pool_safe_works() {
 
 			// without new position
 			<Positions<Runtime>>::insert(0, position);
-			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
+			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), ());
 			LiquidityPoolELLThreshold::put(risk_threshold(99, 0));
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::None),
@@ -557,7 +575,7 @@ fn trader_margin_call_should_work() {
 			);
 
 			<Positions<Runtime>>::insert(0, position);
-			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
 			assert_eq!(MarginProtocol::_margin_level(&ALICE), Ok(Fixed128::from_natural(1)));
 
 			MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(1, 20)));
@@ -596,7 +614,7 @@ fn trader_become_safe_should_work() {
 			assert_ok!(MarginProtocol::trader_become_safe(Origin::NONE, ALICE));
 
 			<Positions<Runtime>>::insert(0, position);
-			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
 			assert_eq!(MarginProtocol::_margin_level(&ALICE), Ok(Fixed128::from_natural(1)));
 
 			MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(4, 100)));
@@ -658,7 +676,7 @@ fn trader_liquidate_should_work() {
 			);
 
 			<Positions<Runtime>>::insert(0, position);
-			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
 			assert_eq!(MarginProtocol::_margin_level(&ALICE), Ok(Fixed128::from_natural(1)));
 
 			// trader_liquidate without trader_margin_call
@@ -696,7 +714,7 @@ fn liquidity_pool_margin_call_and_become_safe_work() {
 			};
 
 			<Positions<Runtime>>::insert(0, position);
-			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
+			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), ());
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::None),
 				Ok((Fixed128::from_natural(1), Fixed128::from_natural(1)))
@@ -817,8 +835,11 @@ fn open_long_position_works() {
 			};
 			let id = 0;
 			assert_eq!(MarginProtocol::positions(id), Some(position));
-			assert_eq!(MarginProtocol::positions_by_trader(ALICE, MOCK_POOL), vec![id]);
-			assert_eq!(MarginProtocol::positions_by_pool(MOCK_POOL, EUR_JPY_PAIR), vec![id]);
+			assert_eq!(MarginProtocol::positions_by_trader(ALICE, (MOCK_POOL, id)), Some(()));
+			assert_eq!(
+				MarginProtocol::positions_by_pool(MOCK_POOL, (EUR_JPY_PAIR, id)),
+				Some(())
+			);
 			assert_eq!(MarginProtocol::next_position_id(), 1);
 
 			let event = TestEvent::margin_protocol(RawEvent::PositionOpened(
@@ -1163,8 +1184,8 @@ fn close_loss_position_works() {
 			let position = eur_usd_long_1();
 			let id = 0;
 			<Positions<Runtime>>::insert(id, position);
-			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
-			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
+			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), ());
 
 			assert_ok!(MarginProtocol::close_position(
 				Origin::signed(ALICE),
@@ -1188,8 +1209,8 @@ fn close_loss_position_works() {
 
 			// position removed
 			assert!(MarginProtocol::positions(id).is_none());
-			assert_eq!(MarginProtocol::positions_by_trader(ALICE, MOCK_POOL), vec![]);
-			assert_eq!(MarginProtocol::positions_by_pool(MOCK_POOL, EUR_USD_PAIR), vec![]);
+			assert_eq!(MarginProtocol::positions_by_trader(ALICE, (MOCK_POOL, id)), None);
+			assert_eq!(MarginProtocol::positions_by_pool(MOCK_POOL, (EUR_USD_PAIR, id)), None);
 
 			let event =
 				TestEvent::margin_protocol(RawEvent::PositionClosed(ALICE, id, Price::from_rational(11988, 10000)));
@@ -1213,8 +1234,8 @@ fn close_profit_position_works() {
 			let position = eur_usd_long_2();
 			let id = 0;
 			<Positions<Runtime>>::insert(id, position);
-			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
-			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
+			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), ());
 
 			assert_ok!(MarginProtocol::close_position(
 				Origin::signed(ALICE),
@@ -1273,8 +1294,8 @@ fn close_position_fails_if_position_not_opened_by_trader() {
 			let position = eur_usd_long_1();
 			let id = 0;
 			<Positions<Runtime>>::insert(id, position);
-			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
-			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
+			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), ());
 
 			assert_noop!(
 				MarginProtocol::close_position(Origin::signed(BOB), 0, Price::from_rational(11, 10)),
@@ -1298,8 +1319,8 @@ fn close_position_fails_if_unrealized_out_of_bound() {
 			let position = eur_usd_long_1();
 			let id = 0;
 			<Positions<Runtime>>::insert(id, position);
-			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
-			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
+			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), ());
 
 			assert_noop!(
 				MarginProtocol::close_position(Origin::signed(ALICE), 0, Price::from_rational(11, 10)),
@@ -1323,8 +1344,8 @@ fn close_position_fails_if_no_base_price() {
 			let position = eur_jpy_long();
 			let id = 0;
 			<Positions<Runtime>>::insert(id, position);
-			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
-			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
+			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), ());
 
 			assert_noop!(
 				MarginProtocol::close_position(Origin::signed(ALICE), 0, Price::from_rational(1410, 1070)),
@@ -1348,8 +1369,8 @@ fn close_position_fails_if_no_quote_price() {
 			let position = eur_jpy_long();
 			let id = 0;
 			<Positions<Runtime>>::insert(id, position);
-			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
-			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
+			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), ());
 
 			assert_noop!(
 				MarginProtocol::close_position(Origin::signed(ALICE), 0, Price::from_rational(1390, 1070)),
@@ -1374,8 +1395,8 @@ fn close_long_position_fails_if_market_price_too_low() {
 			let position = eur_usd_long_1();
 			let id = 0;
 			<Positions<Runtime>>::insert(id, position);
-			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
-			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
+			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), ());
 
 			assert_noop!(
 				MarginProtocol::close_position(Origin::signed(ALICE), 0, Price::from_rational(12, 10)),
@@ -1400,8 +1421,8 @@ fn close_short_position_fails_if_market_price_too_high() {
 			let position = eur_usd_short_1();
 			let id = 0;
 			<Positions<Runtime>>::insert(id, position);
-			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, vec![0]);
-			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![0]);
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
+			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), ());
 
 			assert_noop!(
 				MarginProtocol::close_position(Origin::signed(ALICE), 0, Price::from_rational(12, 10)),
@@ -1694,7 +1715,7 @@ fn liquidity_pool_manager_can_remove_works() {
 		assert!(<MarginProtocol as LiquidityPoolManager<LiquidityPoolId, Balance>>::can_remove(MOCK_POOL));
 
 		<Positions<Runtime>>::insert(0, eur_jpy_long());
-		PositionsByPool::insert(MOCK_POOL, EUR_JPY_PAIR, vec![0]);
+		PositionsByPool::insert(MOCK_POOL, (EUR_JPY_PAIR, 0), ());
 		assert!(!<MarginProtocol as LiquidityPoolManager<LiquidityPoolId, Balance>>::can_remove(MOCK_POOL));
 	});
 }
@@ -1723,7 +1744,7 @@ fn liquidity_pool_manager_get_required_deposit_works() {
 			};
 			let id = 0;
 			<Positions<Runtime>>::insert(id, position);
-			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, vec![id]);
+			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, id), ());
 
 			// need deposit because of ENP
 			assert_eq!(
@@ -1762,14 +1783,25 @@ fn trader_open_positions_limit() {
 			<Balances<Runtime>>::insert(&ALICE, fixed128_from_natural_currency_cent(100_00));
 
 			// trader has no open positions
-			assert_eq!(<PositionsByTrader<Runtime>>::get(&ALICE, MOCK_POOL).len(), 0);
+			assert_eq!(
+				<PositionsByTrader<Runtime>>::iter(&ALICE)
+					.filter(|((p, _), _)| *p == MOCK_POOL)
+					.count(),
+				0
+			);
 
 			// reach the limit of 200 open positions for a trader
-			let positions = (0..200).collect::<Vec<u64>>();
-			<PositionsByTrader<Runtime>>::insert(ALICE, MOCK_POOL, positions.clone());
+			(0..200u64).for_each(|position_id| {
+				<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, position_id), ());
+			});
 
 			// trader has 200 open positions
-			assert_eq!(<PositionsByTrader<Runtime>>::get(&ALICE, MOCK_POOL).len(), 200);
+			assert_eq!(
+				<PositionsByTrader<Runtime>>::iter(&ALICE)
+					.filter(|((p, _), _)| *p == MOCK_POOL)
+					.count(),
+				200
+			);
 
 			// try open another position
 			assert_noop!(
@@ -1801,14 +1833,25 @@ fn pool_open_positions_limit() {
 			<Balances<Runtime>>::insert(&ALICE, fixed128_from_natural_currency_cent(100_00));
 
 			// pool & pair has no open positions
-			assert_eq!(PositionsByPool::get(MOCK_POOL, EUR_USD_PAIR).len(), 0);
+			assert_eq!(
+				PositionsByPool::iter(MOCK_POOL)
+					.filter(|((p, _), _)| *p == EUR_USD_PAIR)
+					.count(),
+				0
+			);
 
 			// reach the limit of 1000 open positions for a pool & pair
-			let positions = (0..1000).collect::<Vec<u64>>();
-			PositionsByPool::insert(MOCK_POOL, EUR_USD_PAIR, positions.clone());
+			(0..1000u64).for_each(|position_id| {
+				PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, position_id), ());
+			});
 
 			// pool & pair has 1000 open positions
-			assert_eq!(PositionsByPool::get(MOCK_POOL, EUR_USD_PAIR).len(), 1000);
+			assert_eq!(
+				PositionsByPool::iter(MOCK_POOL)
+					.filter(|((p, _), _)| *p == EUR_USD_PAIR)
+					.count(),
+				1000
+			);
 
 			// try open another position
 			assert_noop!(
