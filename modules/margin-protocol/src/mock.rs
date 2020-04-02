@@ -282,9 +282,12 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn module_balance(mut self, balance: Balance) -> Self {
-		self.endowed_accounts
-			.push((MarginProtocol::account_id(), CurrencyId::AUSD, balance));
+	pub fn module_balance(mut self, balance: Fixed128) -> Self {
+		self.endowed_accounts.push((
+			MarginProtocol::account_id(),
+			CurrencyId::AUSD,
+			u128_from_fixed_128(balance),
+		));
 		self
 	}
 
