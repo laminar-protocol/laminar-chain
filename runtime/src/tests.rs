@@ -3,39 +3,31 @@
 
 use crate::{
 	AccountId, BlockNumber,
-	CurrencyId::{self, AUSD, FEUR, FJPY},
-	LiquidityPoolId, MaxSwap, MinimumCount, MockLaminarTreasury, Runtime,
+	CurrencyId::{self, AUSD, FEUR},
+	LiquidityPoolId, MinimumCount, Runtime,
 };
-use frame_support::{assert_noop, assert_ok, parameter_types};
+use frame_support::{assert_ok, parameter_types};
 
 use margin_liquidity_pools::SwapRate;
 use margin_protocol::RiskThreshold;
-use module_primitives::{
-	Balance,
-	Leverage::{self, *},
-	Leverages, TradingPair,
-};
-use module_traits::{LiquidityPoolManager, MarginProtocolLiquidityPools, Treasury};
+use module_primitives::{arithmetic::u128_from_fixed_128, Balance, Leverage, Leverages, TradingPair};
+use module_traits::LiquidityPoolManager;
 use orml_prices::Price;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
 use orml_utilities::Fixed128;
 use pallet_indices::address::Address;
-use sp_runtime::{traits::OnFinalize, traits::OnInitialize, DispatchResult, Permill};
+use sp_runtime::{traits::OnFinalize, DispatchResult, Permill};
 
 pub type PositionId = u64;
-
-pub fn origin_of(who: &AccountId) -> <Runtime as system::Trait>::Origin {
-	<Runtime as system::Trait>::Origin::signed((*who).clone())
-}
-
+pub type ModuleSyntheticProtocol = synthetic_protocol::Module<Runtime>;
 pub type ModuleMarginProtocol = margin_protocol::Module<Runtime>;
 pub type ModuleTokens = synthetic_tokens::Module<Runtime>;
 pub type ModuleOracle = orml_oracle::Module<Runtime>;
 pub type ModulePrices = orml_prices::Module<Runtime>;
 pub type MarginLiquidityPools = margin_liquidity_pools::Module<Runtime>;
+pub type SyntheticLiquidityPools = synthetic_liquidity_pools::Module<Runtime>;
 
 pub const LIQUIDITY_POOL_ID_0: LiquidityPoolId = 0;
-pub const LIQUIDITY_POOL_ID_1: LiquidityPoolId = 1;
 
 pub const EUR_USD: TradingPair = TradingPair {
 	base: CurrencyId::AUSD,
@@ -64,6 +56,10 @@ parameter_types! {
 		AccountId::from([108u8; 32]),
 		AccountId::from([109u8; 32]),
 	];
+}
+
+pub fn origin_of(who: &AccountId) -> <Runtime as system::Trait>::Origin {
+	<Runtime as system::Trait>::Origin::signed((*who).clone())
 }
 
 pub struct ExtBuilder {
@@ -121,11 +117,6 @@ impl ExtBuilder {
 	}
 }
 
-pub fn set_enabled_trades() -> DispatchResult {
-	MarginLiquidityPools::set_enabled_trades(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, EUR_USD, Leverages::all())?;
-	MarginLiquidityPools::set_enabled_trades(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, JPY_EUR, Leverages::all())
-}
-
 pub fn set_oracle_price(prices: Vec<(CurrencyId, Price)>) -> DispatchResult {
 	ModuleOracle::on_finalize(0);
 	for i in 1..=MinimumCount::get() {
@@ -154,17 +145,107 @@ pub fn negative_one_percent() -> Fixed128 {
 	Fixed128::recip(&Fixed128::from_natural(-100)).unwrap()
 }
 
-pub fn create_pool() -> DispatchResult {
-	MarginLiquidityPools::create_pool(origin_of(&POOL::get()))
-}
-
 pub fn multi_currency_balance(who: &AccountId, currency_id: CurrencyId) -> Balance {
 	<Runtime as synthetic_protocol::Trait>::MultiCurrency::free_balance(currency_id, &who)
+}
+
+pub fn synthetic_create_pool() -> DispatchResult {
+	SyntheticLiquidityPools::create_pool(origin_of(&POOL::get()))?;
+	SyntheticLiquidityPools::create_pool(origin_of(&POOL::get()))
+}
+
+pub fn synthetic_disable_pool(who: &AccountId) -> DispatchResult {
+	SyntheticLiquidityPools::disable_pool(origin_of(who), LIQUIDITY_POOL_ID_0)
+}
+
+pub fn synthetic_remove_pool(who: &AccountId) -> DispatchResult {
+	SyntheticLiquidityPools::remove_pool(origin_of(who), LIQUIDITY_POOL_ID_0)
+}
+
+pub fn synthetic_set_enabled_trades() -> DispatchResult {
+	SyntheticLiquidityPools::set_synthetic_enabled(
+		origin_of(&POOL::get()),
+		LIQUIDITY_POOL_ID_0,
+		CurrencyId::FEUR,
+		true,
+	)?;
+	SyntheticLiquidityPools::set_synthetic_enabled(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, CurrencyId::FJPY, true)
+}
+
+pub fn synthetic_deposit_liquidity(who: &AccountId, amount: Balance) -> DispatchResult {
+	SyntheticLiquidityPools::deposit_liquidity(origin_of(who), LIQUIDITY_POOL_ID_0, amount)
+}
+
+pub fn synthetic_withdraw_liquidity(who: &AccountId, amount: Balance) -> DispatchResult {
+	SyntheticLiquidityPools::withdraw_liquidity(origin_of(who), LIQUIDITY_POOL_ID_0, amount)
+}
+
+pub fn synthetic_buy(who: &AccountId, currency_id: CurrencyId, amount: Balance) -> DispatchResult {
+	ModuleSyntheticProtocol::mint(
+		origin_of(who),
+		LIQUIDITY_POOL_ID_0,
+		currency_id,
+		amount,
+		Permill::from_percent(10),
+	)
+}
+
+pub fn synthetic_sell(who: &AccountId, currency_id: CurrencyId, amount: Balance) -> DispatchResult {
+	ModuleSyntheticProtocol::redeem(
+		origin_of(who),
+		LIQUIDITY_POOL_ID_0,
+		currency_id,
+		amount,
+		Permill::from_percent(10),
+	)
 }
 
 // AUSD balance
 pub fn collateral_balance(who: &AccountId) -> Balance {
 	<Runtime as synthetic_protocol::Trait>::CollateralCurrency::free_balance(&who)
+}
+
+pub fn synthetic_balance() -> Balance {
+	<Runtime as synthetic_protocol::Trait>::CollateralCurrency::free_balance(&ModuleTokens::account_id())
+}
+
+pub fn synthetic_set_min_additional_collateral_ratio(permill: Permill) -> DispatchResult {
+	SyntheticLiquidityPools::set_min_additional_collateral_ratio(<Runtime as system::Trait>::Origin::ROOT, permill)
+}
+
+pub fn synthetic_set_additional_collateral_ratio(currency_id: CurrencyId, permill: Permill) -> DispatchResult {
+	SyntheticLiquidityPools::set_additional_collateral_ratio(
+		origin_of(&POOL::get()),
+		LIQUIDITY_POOL_ID_0,
+		currency_id,
+		Some(permill),
+	)
+}
+
+pub fn synthetic_set_spread(currency_id: CurrencyId, spread: Permill) -> DispatchResult {
+	SyntheticLiquidityPools::set_spread(
+		origin_of(&POOL::get()),
+		LIQUIDITY_POOL_ID_0,
+		currency_id,
+		spread,
+		spread,
+	)
+}
+
+pub fn synthetic_liquidity() -> Balance {
+	SyntheticLiquidityPools::balances(LIQUIDITY_POOL_ID_0)
+}
+
+pub fn synthetic_add_collateral(who: &AccountId, currency_id: CurrencyId, amount: Balance) -> DispatchResult {
+	ModuleSyntheticProtocol::add_collateral(origin_of(who), LIQUIDITY_POOL_ID_0, currency_id, amount)
+}
+
+pub fn synthetic_liquidate(who: &AccountId, currency_id: CurrencyId, amount: Balance) -> DispatchResult {
+	ModuleSyntheticProtocol::liquidate(origin_of(who), LIQUIDITY_POOL_ID_0, currency_id, amount)
+}
+
+pub fn margin_create_pool() -> DispatchResult {
+	MarginLiquidityPools::create_pool(origin_of(&POOL::get()))
 }
 
 pub fn margin_disable_pool(who: &AccountId) -> DispatchResult {
@@ -177,6 +258,11 @@ pub fn margin_remove_pool(who: &AccountId) -> DispatchResult {
 
 pub fn margin_deposit_liquidity(who: &AccountId, amount: Balance) -> DispatchResult {
 	MarginLiquidityPools::deposit_liquidity(origin_of(who), LIQUIDITY_POOL_ID_0, amount)
+}
+
+pub fn margin_set_enabled_trades() -> DispatchResult {
+	MarginLiquidityPools::set_enabled_trades(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, EUR_USD, Leverages::all())?;
+	MarginLiquidityPools::set_enabled_trades(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, JPY_EUR, Leverages::all())
 }
 
 pub fn margin_withdraw_liquidity(who: &AccountId, amount: Balance) -> DispatchResult {
@@ -207,14 +293,6 @@ pub fn margin_liquidity_pool_disable_trading_pair(pair: TradingPair) -> Dispatch
 	MarginLiquidityPools::liquidity_pool_disable_trading_pair(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, pair)
 }
 
-pub fn margin_set_swap_rate(pair: TradingPair, long_rate: Fixed128, short_rate: Fixed128) -> DispatchResult {
-	let swap_rate: SwapRate = SwapRate {
-		long: long_rate,
-		short: short_rate,
-	};
-	MarginLiquidityPools::set_swap_rate(<Runtime as system::Trait>::Origin::ROOT, pair, swap_rate)
-}
-
 pub fn margin_set_mock_swap_rate(pair: TradingPair) -> DispatchResult {
 	let mock_swap_rate: SwapRate = SwapRate {
 		long: Fixed128::recip(&Fixed128::from_natural(-100)).unwrap(),
@@ -222,6 +300,14 @@ pub fn margin_set_mock_swap_rate(pair: TradingPair) -> DispatchResult {
 	};
 
 	MarginLiquidityPools::set_swap_rate(<Runtime as system::Trait>::Origin::ROOT, pair, mock_swap_rate)
+}
+
+pub fn margin_set_swap_rate(pair: TradingPair, long_rate: Fixed128, short_rate: Fixed128) -> DispatchResult {
+	let swap_rate: SwapRate = SwapRate {
+		long: long_rate,
+		short: short_rate,
+	};
+	MarginLiquidityPools::set_swap_rate(<Runtime as system::Trait>::Origin::ROOT, pair, swap_rate)
 }
 
 pub fn margin_set_additional_swap(rate: Fixed128) -> DispatchResult {
@@ -241,7 +327,7 @@ pub fn margin_set_default_min_leveraged_amount(amount: Balance) -> DispatchResul
 }
 
 pub fn margin_balance(who: &AccountId) -> Balance {
-	ModuleMarginProtocol::balances(who)
+	u128_from_fixed_128(ModuleMarginProtocol::balances(who))
 }
 
 pub fn margin_liquidity() -> Balance {
