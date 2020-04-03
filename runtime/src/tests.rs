@@ -10,7 +10,7 @@ use frame_support::{assert_ok, parameter_types};
 
 use margin_liquidity_pools::SwapRate;
 use margin_protocol::RiskThreshold;
-use module_primitives::{Balance, Leverage, Leverages, TradingPair};
+use module_primitives::{arithmetic::u128_from_fixed_128, Balance, Leverage, Leverages, TradingPair};
 use module_traits::LiquidityPoolManager;
 use orml_prices::Price;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
@@ -327,7 +327,7 @@ pub fn margin_set_default_min_leveraged_amount(amount: Balance) -> DispatchResul
 }
 
 pub fn margin_balance(who: &AccountId) -> Balance {
-	ModuleMarginProtocol::balances(who)
+	u128_from_fixed_128(ModuleMarginProtocol::balances(who))
 }
 
 pub fn margin_liquidity() -> Balance {
