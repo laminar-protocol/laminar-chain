@@ -3,235 +3,14 @@
 #[cfg(test)]
 
 mod tests {
-	use frame_support::{assert_noop, assert_ok, parameter_types};
+	use frame_support::{assert_noop, assert_ok};
 	use laminar_runtime::{
-		AccountId,
-		CurrencyId::{self, AUSD, FEUR, FJPY},
-		LiquidityPoolId, MinimumCount, Runtime,
+		tests::*,
+		CurrencyId::{AUSD, FEUR, FJPY},
+		Runtime,
 	};
-
-	use margin_protocol::RiskThreshold;
-	use module_primitives::Balance;
 	use orml_prices::Price;
-	use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
-	use sp_runtime::{traits::OnFinalize, DispatchResult, Permill};
-
-	fn origin_of(who: &AccountId) -> <Runtime as system::Trait>::Origin {
-		<Runtime as system::Trait>::Origin::signed((*who).clone())
-	}
-
-	type ModuleSyntheticProtocol = synthetic_protocol::Module<Runtime>;
-	type ModuleTokens = synthetic_tokens::Module<Runtime>;
-	type ModuleOracle = orml_oracle::Module<Runtime>;
-	type ModulePrices = orml_prices::Module<Runtime>;
-	type SyntheticLiquidityPools = synthetic_liquidity_pools::Module<Runtime>;
-
-	const LIQUIDITY_POOL_ID_0: LiquidityPoolId = 0;
-	const LIQUIDITY_POOL_ID_1: LiquidityPoolId = 1;
-
-	parameter_types! {
-		pub const POOL: AccountId = AccountId::from([0u8; 32]);
-		pub const ALICE: AccountId = AccountId::from([1u8; 32]);
-		pub const BOB: AccountId = AccountId::from([2u8; 32]);
-
-		pub const OracleList: Vec<AccountId> = vec![
-			AccountId::from([100u8; 32]),
-			AccountId::from([101u8; 32]),
-			AccountId::from([102u8; 32]),
-			AccountId::from([103u8; 32]),
-			AccountId::from([104u8; 32]),
-			AccountId::from([105u8; 32]),
-			AccountId::from([106u8; 32]),
-			AccountId::from([107u8; 32]),
-			AccountId::from([108u8; 32]),
-			AccountId::from([109u8; 32]),
-		];
-	}
-
-	pub struct ExtBuilder {
-		endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
-	}
-
-	impl Default for ExtBuilder {
-		fn default() -> Self {
-			Self {
-				endowed_accounts: vec![],
-			}
-		}
-	}
-
-	impl ExtBuilder {
-		pub fn balances(mut self, endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
-			self.endowed_accounts = endowed_accounts;
-			self
-		}
-
-		pub fn build(self) -> sp_io::TestExternalities {
-			let mut t = system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
-
-			orml_tokens::GenesisConfig::<Runtime> {
-				endowed_accounts: self.endowed_accounts,
-			}
-			.assimilate_storage(&mut t)
-			.unwrap();
-
-			pallet_collective::GenesisConfig::<Runtime, pallet_collective::Instance3> {
-				members: OracleList::get(),
-				phantom: Default::default(),
-			}
-			.assimilate_storage(&mut t)
-			.unwrap();
-
-			margin_protocol::GenesisConfig {
-				trader_risk_threshold: RiskThreshold {
-					margin_call: Permill::from_percent(3),
-					stop_out: Permill::from_percent(1),
-				},
-				liquidity_pool_enp_threshold: RiskThreshold {
-					margin_call: Permill::from_percent(30),
-					stop_out: Permill::from_percent(10),
-				},
-				liquidity_pool_ell_threshold: RiskThreshold {
-					margin_call: Permill::from_percent(30),
-					stop_out: Permill::from_percent(10),
-				},
-			}
-			.assimilate_storage(&mut t)
-			.unwrap();
-
-			t.into()
-		}
-	}
-
-	fn set_enabled_trades() -> DispatchResult {
-		SyntheticLiquidityPools::set_synthetic_enabled(
-			origin_of(&POOL::get()),
-			LIQUIDITY_POOL_ID_0,
-			CurrencyId::FEUR,
-			true,
-		)?;
-		SyntheticLiquidityPools::set_synthetic_enabled(
-			origin_of(&POOL::get()),
-			LIQUIDITY_POOL_ID_0,
-			CurrencyId::FJPY,
-			true,
-		)?;
-		SyntheticLiquidityPools::set_synthetic_enabled(
-			origin_of(&POOL::get()),
-			LIQUIDITY_POOL_ID_1,
-			CurrencyId::FJPY,
-			true,
-		)
-	}
-
-	fn set_oracle_price(prices: Vec<(CurrencyId, Price)>) -> DispatchResult {
-		ModuleOracle::on_finalize(0);
-		for i in 1..=MinimumCount::get() {
-			assert_ok!(ModuleOracle::feed_values(
-				origin_of(&OracleList::get()[i as usize]),
-				prices.clone()
-			));
-		}
-		get_price();
-		Ok(())
-	}
-
-	fn get_price() {
-		ModulePrices::get_price(AUSD, FEUR);
-	}
-
-	fn dollar(amount: u128) -> u128 {
-		amount.saturating_mul(Price::accuracy())
-	}
-
-	fn create_pool() -> DispatchResult {
-		SyntheticLiquidityPools::create_pool(origin_of(&POOL::get()))?;
-		SyntheticLiquidityPools::create_pool(origin_of(&POOL::get()))
-	}
-
-	fn multi_currency_balance(who: &AccountId, currency_id: CurrencyId) -> Balance {
-		<Runtime as synthetic_protocol::Trait>::MultiCurrency::free_balance(currency_id, &who)
-	}
-
-	fn synthetic_disable_pool(who: &AccountId) -> DispatchResult {
-		SyntheticLiquidityPools::disable_pool(origin_of(who), LIQUIDITY_POOL_ID_0)
-	}
-
-	fn synthetic_remove_pool(who: &AccountId) -> DispatchResult {
-		SyntheticLiquidityPools::remove_pool(origin_of(who), LIQUIDITY_POOL_ID_0)
-	}
-
-	fn synthetic_deposit_liquidity(who: &AccountId, amount: Balance) -> DispatchResult {
-		SyntheticLiquidityPools::deposit_liquidity(origin_of(who), LIQUIDITY_POOL_ID_0, amount)
-	}
-
-	fn synthetic_withdraw_liquidity(who: &AccountId, amount: Balance) -> DispatchResult {
-		SyntheticLiquidityPools::withdraw_liquidity(origin_of(who), LIQUIDITY_POOL_ID_0, amount)
-	}
-
-	fn synthetic_buy(who: &AccountId, currency_id: CurrencyId, amount: Balance) -> DispatchResult {
-		ModuleSyntheticProtocol::mint(
-			origin_of(who),
-			LIQUIDITY_POOL_ID_0,
-			currency_id,
-			amount,
-			Permill::from_percent(10),
-		)
-	}
-
-	fn synthetic_sell(who: &AccountId, currency_id: CurrencyId, amount: Balance) -> DispatchResult {
-		ModuleSyntheticProtocol::redeem(
-			origin_of(who),
-			LIQUIDITY_POOL_ID_0,
-			currency_id,
-			amount,
-			Permill::from_percent(10),
-		)
-	}
-
-	// AUSD balance
-	fn collateral_balance(who: &AccountId) -> Balance {
-		<Runtime as synthetic_protocol::Trait>::CollateralCurrency::free_balance(&who)
-	}
-
-	fn synthetic_balance() -> Balance {
-		<Runtime as synthetic_protocol::Trait>::CollateralCurrency::free_balance(&ModuleTokens::account_id())
-	}
-
-	fn synthetic_set_min_additional_collateral_ratio(permill: Permill) -> DispatchResult {
-		SyntheticLiquidityPools::set_min_additional_collateral_ratio(<Runtime as system::Trait>::Origin::ROOT, permill)
-	}
-
-	fn synthetic_set_additional_collateral_ratio(currency_id: CurrencyId, permill: Permill) -> DispatchResult {
-		SyntheticLiquidityPools::set_additional_collateral_ratio(
-			origin_of(&POOL::get()),
-			LIQUIDITY_POOL_ID_0,
-			currency_id,
-			Some(permill),
-		)
-	}
-
-	fn synthetic_set_spread(currency_id: CurrencyId, spread: Permill) -> DispatchResult {
-		SyntheticLiquidityPools::set_spread(
-			origin_of(&POOL::get()),
-			LIQUIDITY_POOL_ID_0,
-			currency_id,
-			spread,
-			spread,
-		)
-	}
-
-	fn synthetic_liquidity() -> Balance {
-		SyntheticLiquidityPools::balances(LIQUIDITY_POOL_ID_0)
-	}
-
-	fn synthetic_add_collateral(who: &AccountId, currency_id: CurrencyId, amount: Balance) -> DispatchResult {
-		ModuleSyntheticProtocol::add_collateral(origin_of(who), LIQUIDITY_POOL_ID_0, currency_id, amount)
-	}
-
-	fn synthetic_liquidate(who: &AccountId, currency_id: CurrencyId, amount: Balance) -> DispatchResult {
-		ModuleSyntheticProtocol::liquidate(origin_of(who), LIQUIDITY_POOL_ID_0, currency_id, amount)
-	}
+	use sp_runtime::Permill;
 
 	#[test]
 	fn test_synthetic_buy_and_sell() {
@@ -242,8 +21,8 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				assert_ok!(create_pool());
-				assert_ok!(set_enabled_trades());
+				assert_ok!(synthetic_create_pool());
+				assert_ok!(synthetic_set_enabled_trades());
 				assert_ok!(synthetic_deposit_liquidity(&POOL::get(), dollar(10_000)));
 				assert_ok!(synthetic_set_min_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(synthetic_set_additional_collateral_ratio(
@@ -300,8 +79,8 @@ mod tests {
 			.balances(vec![(POOL::get(), AUSD, 1000), (ALICE::get(), AUSD, 1000)])
 			.build()
 			.execute_with(|| {
-				assert_ok!(create_pool());
-				assert_ok!(set_enabled_trades());
+				assert_ok!(synthetic_create_pool());
+				assert_ok!(synthetic_set_enabled_trades());
 				assert_ok!(synthetic_deposit_liquidity(&POOL::get(), 1000));
 				assert_ok!(synthetic_set_additional_collateral_ratio(
 					FEUR,
@@ -352,7 +131,7 @@ mod tests {
 	}
 
 	#[test]
-	fn test_synthetic_take_profit() {
+	fn test_synthetic_trader_take_profit() {
 		ExtBuilder::default()
 			.balances(vec![
 				(POOL::get(), AUSD, dollar(10_000)),
@@ -360,8 +139,8 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				assert_ok!(create_pool());
-				assert_ok!(set_enabled_trades());
+				assert_ok!(synthetic_create_pool());
+				assert_ok!(synthetic_set_enabled_trades());
 				assert_ok!(synthetic_deposit_liquidity(&POOL::get(), dollar(10_000)));
 				assert_ok!(synthetic_set_min_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(synthetic_set_additional_collateral_ratio(
@@ -403,7 +182,7 @@ mod tests {
 	}
 
 	#[test]
-	fn test_synthetic_stop_lost() {
+	fn test_synthetic_trader_stop_lost() {
 		ExtBuilder::default()
 			.balances(vec![
 				(POOL::get(), AUSD, dollar(10_000)),
@@ -411,8 +190,8 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				assert_ok!(create_pool());
-				assert_ok!(set_enabled_trades());
+				assert_ok!(synthetic_create_pool());
+				assert_ok!(synthetic_set_enabled_trades());
 				assert_ok!(synthetic_deposit_liquidity(&POOL::get(), dollar(10_000)));
 				assert_ok!(synthetic_set_min_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(synthetic_set_additional_collateral_ratio(
@@ -463,8 +242,8 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				assert_ok!(create_pool());
-				assert_ok!(set_enabled_trades());
+				assert_ok!(synthetic_create_pool());
+				assert_ok!(synthetic_set_enabled_trades());
 				assert_ok!(synthetic_deposit_liquidity(&POOL::get(), dollar(20_000)));
 				assert_ok!(synthetic_set_min_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(synthetic_set_additional_collateral_ratio(
@@ -553,8 +332,8 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				assert_ok!(create_pool());
-				assert_ok!(set_enabled_trades());
+				assert_ok!(synthetic_create_pool());
+				assert_ok!(synthetic_set_enabled_trades());
 				assert_ok!(synthetic_deposit_liquidity(&POOL::get(), dollar(40_000)));
 				assert_ok!(synthetic_set_min_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(synthetic_set_additional_collateral_ratio(
@@ -647,8 +426,8 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				assert_ok!(create_pool());
-				assert_ok!(set_enabled_trades());
+				assert_ok!(synthetic_create_pool());
+				assert_ok!(synthetic_set_enabled_trades());
 				assert_ok!(synthetic_deposit_liquidity(&POOL::get(), dollar(20_000)));
 				assert_ok!(synthetic_set_min_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(synthetic_set_additional_collateral_ratio(
@@ -688,8 +467,8 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				assert_ok!(create_pool());
-				assert_ok!(set_enabled_trades());
+				assert_ok!(synthetic_create_pool());
+				assert_ok!(synthetic_set_enabled_trades());
 				assert_ok!(synthetic_deposit_liquidity(&POOL::get(), dollar(20_000)));
 				assert_ok!(synthetic_set_min_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(synthetic_set_additional_collateral_ratio(
@@ -725,8 +504,8 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				assert_ok!(create_pool());
-				assert_ok!(set_enabled_trades());
+				assert_ok!(synthetic_create_pool());
+				assert_ok!(synthetic_set_enabled_trades());
 				assert_ok!(synthetic_deposit_liquidity(&POOL::get(), dollar(20_000)));
 				assert_ok!(synthetic_set_min_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(synthetic_set_additional_collateral_ratio(
@@ -773,8 +552,8 @@ mod tests {
 			])
 			.build()
 			.execute_with(|| {
-				assert_ok!(create_pool());
-				assert_ok!(set_enabled_trades());
+				assert_ok!(synthetic_create_pool());
+				assert_ok!(synthetic_set_enabled_trades());
 				assert_ok!(synthetic_deposit_liquidity(&POOL::get(), dollar(20_000)));
 				assert_ok!(synthetic_set_min_additional_collateral_ratio(Permill::from_percent(10)));
 				assert_ok!(synthetic_set_additional_collateral_ratio(
