@@ -100,10 +100,7 @@ mod tests {
 				assert_eq!(margin_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_ok!(set_oracle_price(vec![
-					(AUSD, Price::from_rational(1, 1)),
-					(FEUR, Price::from_rational(3, 1))
-				]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
 				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, Permill::from_percent(1)));
 
@@ -156,10 +153,7 @@ mod tests {
 				assert_eq!(margin_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_ok!(set_oracle_price(vec![
-					(AUSD, Price::from_rational(1, 1)),
-					(FEUR, Price::from_rational(3, 1))
-				]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
 				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, Permill::from_percent(1)));
 
@@ -211,10 +205,7 @@ mod tests {
 				assert_eq!(margin_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_ok!(set_oracle_price(vec![
-					(AUSD, Price::from_rational(1, 1)),
-					(FEUR, Price::from_rational(3, 1))
-				]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
 				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, Permill::from_percent(1)));
 
@@ -266,10 +257,7 @@ mod tests {
 				assert_eq!(margin_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_ok!(set_oracle_price(vec![
-					(AUSD, Price::from_rational(1, 1)),
-					(FEUR, Price::from_rational(3, 1))
-				]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
 				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, Permill::from_percent(1)));
 
@@ -346,10 +334,7 @@ mod tests {
 				assert_eq!(margin_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(collateral_balance(&POOL::get()), dollar(10_000));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_ok!(set_oracle_price(vec![
-					(AUSD, Price::from_rational(1, 1)),
-					(FEUR, Price::from_rational(3, 1))
-				]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
 				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, Permill::from_percent(1)));
 
@@ -437,10 +422,7 @@ mod tests {
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(1000));
 				assert_eq!(collateral_balance(&BOB::get()), dollar(1000));
-				assert_ok!(set_oracle_price(vec![
-					(AUSD, Price::from_rational(1, 1)),
-					(FEUR, Price::from_rational(3, 1))
-				]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
 				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, Permill::from_percent(1)));
 
@@ -549,7 +531,6 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(1000));
 				assert_eq!(collateral_balance(&BOB::get()), dollar(1000));
 				assert_ok!(set_oracle_price(vec![
-					(AUSD, Price::from_rational(1, 1)),
 					(FEUR, Price::from_rational(3, 1)),
 					(FJPY, Price::from_rational(5, 1))
 				]));
@@ -670,10 +651,7 @@ mod tests {
 				assert_eq!(margin_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_ok!(set_oracle_price(vec![
-					(AUSD, Price::from_rational(1, 1)),
-					(FEUR, Price::from_rational(3, 1))
-				]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
 				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, Permill::from_percent(1)));
 
@@ -764,10 +742,7 @@ mod tests {
 				assert_eq!(margin_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_ok!(set_oracle_price(vec![
-					(AUSD, Price::from_rational(1, 1)),
-					(FEUR, Price::from_rational(3, 1))
-				]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
 				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, Permill::from_percent(1)));
 
