@@ -28,7 +28,6 @@ pub type MarginLiquidityPools = margin_liquidity_pools::Module<Runtime>;
 pub type SyntheticLiquidityPools = synthetic_liquidity_pools::Module<Runtime>;
 
 pub const LIQUIDITY_POOL_ID_0: LiquidityPoolId = 0;
-pub const LIQUIDITY_POOL_ID_1: LiquidityPoolId = 1;
 
 pub const EUR_USD: TradingPair = TradingPair {
 	base: CurrencyId::AUSD,
@@ -170,13 +169,7 @@ pub fn synthetic_set_enabled_trades() -> DispatchResult {
 		CurrencyId::FEUR,
 		true,
 	)?;
-	SyntheticLiquidityPools::set_synthetic_enabled(
-		origin_of(&POOL::get()),
-		LIQUIDITY_POOL_ID_0,
-		CurrencyId::FJPY,
-		true,
-	)?;
-	SyntheticLiquidityPools::set_synthetic_enabled(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_1, CurrencyId::FJPY, true)
+	SyntheticLiquidityPools::set_synthetic_enabled(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, CurrencyId::FJPY, true)
 }
 
 pub fn synthetic_deposit_liquidity(who: &AccountId, amount: Balance) -> DispatchResult {
