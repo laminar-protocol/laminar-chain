@@ -269,6 +269,7 @@ decl_error! {
 		CannotWithdrawAmount,
 		CannotWithdrawExistentialDeposit,
 		SwapRateTooHigh,
+		SwapRateTooLow,
 		SpreadTooHigh,
 		PoolNotFound,
 		TradingPairNotEnabled,
