@@ -55,6 +55,7 @@ module-primitives = { path = "../modules/primitives", default-features = false }
 margin-liquidity-pools = { package = "module-margin-liquidity-pools", path = "../modules/margin-liquidity-pools", default-features = false }
 synthetic-liquidity-pools = { package = "module-synthetic-liquidity-pools", path = "../modules/synthetic-liquidity-pools", default-features = false }
 margin-protocol = { package = "module-margin-protocol", path = "../modules/margin-protocol", default-features = false }
+margin-protocol-rpc-runtime-api = { path = "../modules/margin-protocol/rpc/runtime-api", default-features = false }
 module-traits = { package = "module-traits", path = "../modules/traits", default-features = false }
 
 [build-dependencies]
@@ -112,5 +113,6 @@ std = [
 	"synthetic-protocol/std",
 	"synthetic-tokens/std",
 	"margin-protocol/std",
+	"margin-protocol-rpc-runtime-api/std",
 	"module-traits/std",
 ]

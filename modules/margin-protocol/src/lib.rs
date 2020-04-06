@@ -308,7 +308,7 @@ impl<T: Trait> Module<T> {
 			margin_held,
 		};
 
-		let free_margin = Self::_free_margin(who)?;
+		let free_margin = Self::free_margin(who)?;
 		ensure!(free_margin >= margin_held, Error::<T>::InsufficientFreeMargin);
 		Self::_ensure_pool_safe(pool, Action::OpenPosition(position.clone()))?;
 
@@ -353,7 +353,7 @@ impl<T: Trait> Module<T> {
 			Self::_update_balance(who, realized);
 		} else {
 			// trader has loss, max realizable is the trader's equity
-			let equity = Self::_equity_of_trader(who)?;
+			let equity = Self::equity_of_trader(who)?;
 			let balance_delta_abs = balance_delta.saturating_abs();
 			let realizable = equity.saturating_add(balance_delta_abs);
 
@@ -392,7 +392,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _withdraw(who: &T::AccountId, amount: Balance) -> DispatchResult {
-		let free_margin = Self::_free_margin(who)?;
+		let free_margin = Self::free_margin(who)?;
 		let amount_fixed128 = fixed_128_from_u128(amount);
 		ensure!(free_margin >= amount_fixed128, Error::<T>::InsufficientFreeMargin);
 
@@ -625,7 +625,7 @@ impl<T: Trait> Module<T> {
 
 	/// Unrealized profit and loss of a given trader(USD value). It is the sum of unrealized profit and loss of all positions
 	/// opened by a trader.
-	fn _unrealized_pl_of_trader(who: &T::AccountId) -> Fixed128Result {
+	pub fn unrealized_pl_of_trader(who: &T::AccountId) -> Fixed128Result {
 		<PositionsByTrader<T>>::iter(who)
 			.filter_map(|((_, position_id), _)| Self::positions(position_id))
 			.try_fold(Fixed128::zero(), |acc, p| {
@@ -635,7 +635,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// Sum of all margin held of a given trader.
-	fn _margin_held(who: &T::AccountId) -> Fixed128 {
+	pub fn margin_held(who: &T::AccountId) -> Fixed128 {
 		<PositionsByTrader<T>>::iter(who)
 			.filter_map(|((_, position_id), _)| Self::positions(position_id))
 			.fold(Fixed128::zero(), |acc, p| {
@@ -669,8 +669,8 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// equity_of_trader = balance + unrealized_pl + accumulated_swap_rate
-	fn _equity_of_trader(who: &T::AccountId) -> Fixed128Result {
-		let unrealized = Self::_unrealized_pl_of_trader(who)?;
+	pub fn equity_of_trader(who: &T::AccountId) -> Fixed128Result {
+		let unrealized = Self::unrealized_pl_of_trader(who)?;
 		let with_unrealized = Self::balances(who)
 			.checked_add(&unrealized)
 			.ok_or(Error::<T>::NumOutOfBound)?;
@@ -681,15 +681,15 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// Free margin of a user.
-	fn _free_margin(who: &T::AccountId) -> Fixed128Result {
-		let equity = Self::_equity_of_trader(who)?;
-		let margin_held = Self::_margin_held(who);
+	pub fn free_margin(who: &T::AccountId) -> Fixed128Result {
+		let equity = Self::equity_of_trader(who)?;
+		let margin_held = Self::margin_held(who);
 		Ok(equity.saturating_sub(margin_held))
 	}
 
 	/// Margin level of a given user.
-	fn _margin_level(who: &T::AccountId) -> Fixed128Result {
-		let equity = Self::_equity_of_trader(who)?;
+	pub fn margin_level(who: &T::AccountId) -> Fixed128Result {
+		let equity = Self::equity_of_trader(who)?;
 		let leveraged_debits_in_usd = <PositionsByTrader<T>>::iter(who)
 			.filter_map(|((_, position_id), _)| Self::positions(position_id))
 			.try_fold(Fixed128::zero(), |acc, p| {
@@ -718,7 +718,7 @@ impl<T: Trait> Module<T> {
 	///
 	/// Return `Ok(Risk)`, or `Err` if check fails.
 	fn _check_trader(who: &T::AccountId) -> Result<Risk, DispatchError> {
-		let margin_level = Self::_margin_level(who)?;
+		let margin_level = Self::margin_level(who)?;
 		let RiskThreshold { stop_out, margin_call } = Self::trader_risk_threshold();
 
 		let risk = if margin_level <= stop_out.into() {

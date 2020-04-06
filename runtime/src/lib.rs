@@ -31,7 +31,7 @@ pub use module_primitives::{CurrencyId, LiquidityPoolId};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_oracle::OperatorProvider;
 use orml_traits::DataProvider;
-use orml_utilities::Fixed128;
+pub use orml_utilities::Fixed128;
 
 use module_primitives::{BalancePriceConverter, Price};
 
@@ -749,6 +749,28 @@ impl_runtime_apis! {
 	> for Runtime {
 		fn get_value(key: CurrencyId) -> Option<TimeStampedPrice> {
 			Oracle::get_no_op(&key)
+		}
+	}
+
+	impl margin_protocol_rpc_runtime_api::MarginProtocolApi<Block, AccountId, Fixed128> for Runtime {
+		fn equity_of_trader(who: AccountId) -> Option<Fixed128> {
+			MarginProtocol::equity_of_trader(&who).ok()
+		}
+
+		fn margin_level(who: AccountId) -> Option<Fixed128> {
+			MarginProtocol::margin_level(&who).ok()
+		}
+
+		fn free_margin(who: AccountId) -> Option<Fixed128> {
+			MarginProtocol::free_margin(&who).ok()
+		}
+
+		fn margin_held(who: AccountId) -> Fixed128 {
+			MarginProtocol::margin_held(&who)
+		}
+
+		fn unrealized_pl_of_trader(who: AccountId) -> Option<Fixed128> {
+			MarginProtocol::unrealized_pl_of_trader(&who).ok()
 		}
 	}
 }

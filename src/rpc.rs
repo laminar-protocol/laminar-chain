@@ -2,7 +2,7 @@
 
 use std::{fmt, sync::Arc};
 
-use runtime::{opaque::Block, AccountId, Balance, CurrencyId, Index, TimeStampedPrice, UncheckedExtrinsic};
+use runtime::{opaque::Block, AccountId, Balance, CurrencyId, Fixed128, Index, TimeStampedPrice, UncheckedExtrinsic};
 use sc_client::blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sc_consensus_babe::{Config, Epoch};
 use sc_consensus_babe_rpc::BabeRPCHandler;
@@ -58,11 +58,13 @@ where
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance, UncheckedExtrinsic>,
 	C::Api: BabeApi<Block>,
 	C::Api: orml_oracle_rpc::OracleRuntimeApi<Block, CurrencyId, TimeStampedPrice>,
+	C::Api: margin_protocol_rpc::MarginProtocolRuntimeApi<Block, AccountId, Fixed128>,
 	<C::Api as sp_api::ApiErrorExt>::Error: fmt::Debug,
 	P: TransactionPool + 'static,
 	M: jsonrpc_core::Metadata + Default,
 	SC: SelectChain<Block> + 'static,
 {
+	use margin_protocol_rpc::{MarginProtocol, MarginProtocolApi};
 	use orml_oracle_rpc::{Oracle, OracleApi};
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
 	use substrate_frame_rpc_system::{FullSystem, SystemApi};
@@ -92,6 +94,7 @@ where
 		select_chain,
 	)));
 	io.extend_with(OracleApi::to_delegate(Oracle::new(client.clone())));
+	io.extend_with(MarginProtocolApi::to_delegate(MarginProtocol::new(client.clone())));
 
 	io
 }
