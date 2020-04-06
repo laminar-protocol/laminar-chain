@@ -260,10 +260,10 @@ pub fn print_trader_summary(who: &AccountId, name: Option<&'static str>) {
 		.collect();
 	println!("Positions: {:?}", position_ids);
 	println!("Balance: {:?}", MarginProtocol::balances(who));
-	println!("Free margin: {:?}", MarginProtocol::_free_margin(who));
-	println!("Unrealized PL: {:?}", MarginProtocol::_unrealized_pl_of_trader(who));
-	println!("Equity: {:?}", MarginProtocol::_equity_of_trader(who));
-	println!("Margin level: {:?}", MarginProtocol::_margin_level(who));
+	println!("Free margin: {:?}", MarginProtocol::free_margin(who));
+	println!("Unrealized PL: {:?}", MarginProtocol::unrealized_pl_of_trader(who));
+	println!("Equity: {:?}", MarginProtocol::equity_of_trader(who));
+	println!("Margin level: {:?}", MarginProtocol::margin_level(who));
 	println!("------------------------------");
 }
 

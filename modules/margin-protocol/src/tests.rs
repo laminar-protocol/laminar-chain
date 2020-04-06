@@ -1288,7 +1288,7 @@ fn close_loss_position_realizing_nothing_on_negative_equity() {
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 1), ());
 
 			MockPrices::set_mock_price(CurrencyId::FEUR, Some(Price::from_rational(1, 1)));
-			assert!(MarginProtocol::_equity_of_trader(&ALICE).unwrap() < Fixed128::zero());
+			assert!(MarginProtocol::equity_of_trader(&ALICE).unwrap() < Fixed128::zero());
 
 			assert_ok!(MarginProtocol::close_position(
 				Origin::signed(ALICE),
