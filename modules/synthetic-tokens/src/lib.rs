@@ -3,16 +3,14 @@
 use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, traits::Get, StorageMap};
 use frame_system::{self as system, ensure_root};
+use module_primitives::{Balance, CurrencyId, LiquidityPoolId};
+use module_traits::LiquidityPoolManager;
+use orml_utilities::FixedU128;
 use sp_runtime::{
 	traits::{AccountIdConversion, EnsureOrigin, Zero},
 	DispatchError, DispatchResult, ModuleId, Permill,
 };
 use sp_std::{prelude::Vec, result};
-
-use orml_utilities::FixedU128;
-
-use module_primitives::{Balance, CurrencyId, LiquidityPoolId};
-use module_traits::LiquidityPoolManager;
 
 mod mock;
 mod tests;
