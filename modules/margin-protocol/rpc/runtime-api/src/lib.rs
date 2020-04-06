@@ -11,6 +11,8 @@ sp_api::decl_runtime_apis! {
 	{
 		fn equity_of_trader(who: AccountId) -> Option<Fixed128>;
 		fn margin_level(who: AccountId) -> Option<Fixed128>;
+		fn free_margin(who: AccountId) -> Option<Fixed128>;
+		fn margin_held(who: AccountId) -> Fixed128;
 		fn unrealized_pl_of_trader(who: AccountId) -> Option<Fixed128>;
 	}
 }

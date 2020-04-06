@@ -761,6 +761,14 @@ impl_runtime_apis! {
 			MarginProtocol::margin_level(&who).ok()
 		}
 
+		fn free_margin(who: AccountId) -> Option<Fixed128> {
+			MarginProtocol::free_margin(&who).ok()
+		}
+
+		fn margin_held(who: AccountId) -> Fixed128 {
+			MarginProtocol::margin_held(&who)
+		}
+
 		fn unrealized_pl_of_trader(who: AccountId) -> Option<Fixed128> {
 			MarginProtocol::unrealized_pl_of_trader(&who).ok()
 		}

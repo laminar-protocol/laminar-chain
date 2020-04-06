@@ -15,6 +15,12 @@ pub trait MarginProtocolApi<BlockHash, AccountId, Fixed128> {
 	#[rpc(name = "marginProtocol_margin_level")]
 	fn margin_level(&self, who: AccountId, at: Option<BlockHash>) -> Result<Option<Fixed128>>;
 
+	#[rpc(name = "marginProtocol_free_margin")]
+	fn free_margin(&self, who: AccountId, at: Option<BlockHash>) -> Result<Option<Fixed128>>;
+
+	#[rpc(name = "marginProtocol_margin_held")]
+	fn margin_held(&self, who: AccountId, at: Option<BlockHash>) -> Result<Fixed128>;
+
 	#[rpc(name = "marginProtocol_unrealized_pl_of_trader")]
 	fn unrealized_pl_of_trader(&self, who: AccountId, at: Option<BlockHash>) -> Result<Option<Fixed128>>;
 }
@@ -79,6 +85,34 @@ where
 			.map_err(|e| RpcError {
 				code: ErrorCode::ServerError(Error::RuntimeError.into()),
 				message: "Unable to get margin level.".into(),
+				data: Some(format!("{:?}", e).into()),
+			})
+			.into()
+	}
+
+	fn free_margin(&self, who: AccountId, at: Option<<Block as BlockT>::Hash>) -> Result<Option<Fixed128>> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(||
+			// If the block hash is not supplied assume the best block.
+			self.client.info().best_hash));
+		api.free_margin(&at, who)
+			.map_err(|e| RpcError {
+				code: ErrorCode::ServerError(Error::RuntimeError.into()),
+				message: "Unable to get free margin.".into(),
+				data: Some(format!("{:?}", e).into()),
+			})
+			.into()
+	}
+
+	fn margin_held(&self, who: AccountId, at: Option<<Block as BlockT>::Hash>) -> Result<Fixed128> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(||
+			// If the block hash is not supplied assume the best block.
+			self.client.info().best_hash));
+		api.margin_held(&at, who)
+			.map_err(|e| RpcError {
+				code: ErrorCode::ServerError(Error::RuntimeError.into()),
+				message: "Unable to get margin held.".into(),
 				data: Some(format!("{:?}", e).into()),
 			})
 			.into()
