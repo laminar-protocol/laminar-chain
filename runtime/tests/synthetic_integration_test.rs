@@ -30,11 +30,7 @@ mod tests {
 					Permill::from_percent(10)
 				));
 				assert_ok!(synthetic_set_spread(FEUR, Permill::from_percent(1)));
-				assert_ok!(set_oracle_price(vec![
-					// collateral price set to `1` for calculation simplicity.
-					(AUSD, Price::from_rational(1, 1)),
-					(FEUR, Price::from_rational(3, 1))
-				]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
 
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
@@ -87,11 +83,7 @@ mod tests {
 					Permill::from_percent(100)
 				));
 				assert_ok!(synthetic_set_spread(FEUR, Permill::from_percent(1)));
-				assert_ok!(set_oracle_price(vec![
-					// collateral price set to `1` for calculation simplicity.
-					(AUSD, Price::from_rational(1, 1)),
-					(FEUR, Price::from_rational(1, 1))
-				]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(1, 1))]));
 
 				assert_eq!(collateral_balance(&ALICE::get()), 1000);
 				assert_eq!(collateral_balance(&POOL::get()), 0);
@@ -148,11 +140,7 @@ mod tests {
 					Permill::from_percent(10)
 				));
 				assert_ok!(synthetic_set_spread(FEUR, Permill::from_percent(1)));
-				assert_ok!(set_oracle_price(vec![
-					// collateral price set to `1` for calculation simplicity.
-					(AUSD, Price::from_rational(1, 1)),
-					(FEUR, Price::from_rational(3, 1))
-				]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
 
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
@@ -199,11 +187,7 @@ mod tests {
 					Permill::from_percent(10)
 				));
 				assert_ok!(synthetic_set_spread(FEUR, Permill::from_percent(1)));
-				assert_ok!(set_oracle_price(vec![
-					// collateral price set to `1` for calculation simplicity.
-					(AUSD, Price::from_rational(1, 1)),
-					(FEUR, Price::from_rational(3, 1))
-				]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
 
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
@@ -251,11 +235,7 @@ mod tests {
 					Permill::from_percent(10)
 				));
 				assert_ok!(synthetic_set_spread(FEUR, Permill::from_percent(1)));
-				assert_ok!(set_oracle_price(vec![
-					// collateral price set to `1` for calculation simplicity.
-					(AUSD, Price::from_rational(1, 1)),
-					(FEUR, Price::from_rational(3, 1))
-				]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
 
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
@@ -347,8 +327,6 @@ mod tests {
 				assert_ok!(synthetic_set_spread(FEUR, Permill::from_percent(1)));
 				assert_ok!(synthetic_set_spread(FJPY, Permill::from_percent(1)));
 				assert_ok!(set_oracle_price(vec![
-					// collateral price set to `1` for calculation simplicity.
-					(AUSD, Price::from_rational(1, 1)),
 					(FEUR, Price::from_rational(3, 1)),
 					(FJPY, Price::from_rational(4, 1))
 				]));
@@ -435,11 +413,7 @@ mod tests {
 					Permill::from_percent(10)
 				));
 				assert_ok!(synthetic_set_spread(FEUR, Permill::from_percent(1)));
-				assert_ok!(set_oracle_price(vec![
-					// collateral price set to `1` for calculation simplicity.
-					(AUSD, Price::from_rational(1, 1)),
-					(FEUR, Price::from_rational(3, 1))
-				]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
 
 				assert_ok!(synthetic_buy(&ALICE::get(), FEUR, dollar(5000)));
 
@@ -476,11 +450,7 @@ mod tests {
 					Permill::from_percent(1)
 				));
 				assert_ok!(synthetic_set_spread(FEUR, Permill::from_percent(1)));
-				assert_ok!(set_oracle_price(vec![
-					// collateral price set to `1` for calculation simplicity.
-					(AUSD, Price::from_rational(1, 1)),
-					(FEUR, Price::from_rational(3, 1))
-				]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
 
 				assert_ok!(synthetic_buy(&ALICE::get(), FEUR, dollar(5000)));
 
@@ -513,11 +483,7 @@ mod tests {
 					Permill::from_percent(10)
 				));
 				assert_ok!(synthetic_set_spread(FEUR, Permill::from_percent(1)));
-				assert_ok!(set_oracle_price(vec![
-					// collateral price set to `1` for calculation simplicity.
-					(AUSD, Price::from_rational(1, 1)),
-					(FEUR, Price::from_rational(3, 1))
-				]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
 
 				assert_ok!(synthetic_buy(&ALICE::get(), FEUR, dollar(5000)));
 
@@ -561,11 +527,7 @@ mod tests {
 					Permill::from_percent(10)
 				));
 				assert_ok!(synthetic_set_spread(FEUR, Permill::from_percent(1)));
-				assert_ok!(set_oracle_price(vec![
-					// collateral price set to `1` for calculation simplicity.
-					(AUSD, Price::from_rational(1, 1)),
-					(FEUR, Price::from_rational(3, 1))
-				]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
 
 				assert_ok!(synthetic_buy(&ALICE::get(), FEUR, dollar(5000)));
 				assert_eq!(multi_currency_balance(&ALICE::get(), FEUR), 1650165016501650165016);
