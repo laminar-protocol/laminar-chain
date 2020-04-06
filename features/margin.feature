@@ -27,7 +27,6 @@ Feature: Margin Protocol
       | Alice | $5 000  |
     And oracle price
       | Currency  | Price  |
-      | AUSD      | $1     |
       | FEUR      | $3     |
     And margin spread
       | Pair    | Value |
@@ -75,7 +74,6 @@ Feature: Margin Protocol
       | Alice | $5 000  |
     And oracle price
       | Currency  | Price  |
-      | AUSD      | $1     |
       | FEUR      | $3     |
     And margin spread
       | Pair    | Value |
@@ -120,7 +118,6 @@ Feature: Margin Protocol
       | Alice | $5 000  |
     And oracle price
       | Currency  | Price  |
-      | AUSD      | $1     |
       | FEUR      | $3     |
     And margin spread
       | Pair    | Value |
@@ -165,7 +162,6 @@ Feature: Margin Protocol
       | Alice | $5 000  |
     And oracle price
       | Currency  | Price  |
-      | AUSD      | $1     |
       | FEUR      | $3     |
     And margin spread
       | Pair    | Value |
@@ -208,7 +204,7 @@ Feature: Margin Protocol
       | Alice | Ok     |
     Then margin balances are
       | Name  | Free  | Margin |
-      | Alice | $5000 | $0     |
+      | Alice | $5000 | $-745  |
     Then margin liquidity is $15000
 
   Scenario: margin liquidity pool liquidate
@@ -225,7 +221,6 @@ Feature: Margin Protocol
       | Alice | $5 000  |
     And oracle price
       | Currency  | Price  |
-      | AUSD      | $1     |
       | FEUR      | $3     |
     And margin spread
       | Pair    | Value |
@@ -287,7 +282,6 @@ Feature: Margin Protocol
       | BOB   | $9 000  |
     And oracle price
       | Currency  | Price  |
-      | AUSD      | $1     |
       | FEUR      | $3     |
       | FJPY      | $5     |
     And margin spread

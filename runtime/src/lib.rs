@@ -30,6 +30,7 @@ use sp_version::RuntimeVersion;
 pub use module_primitives::{CurrencyId, LiquidityPoolId};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_oracle::OperatorProvider;
+use orml_traits::DataProvider;
 pub use orml_utilities::Fixed128;
 
 use module_primitives::{BalancePriceConverter, Price};
@@ -471,9 +472,19 @@ impl orml_currencies::Trait for Runtime {
 	type GetNativeCurrencyId = GetLaminarTokenId;
 }
 
+pub struct LaminarDataProvider;
+impl DataProvider<CurrencyId, Price> for LaminarDataProvider {
+	fn get(currency: &CurrencyId) -> Option<Price> {
+		match currency {
+			CurrencyId::AUSD => Some(Price::from_natural(1)),
+			_ => <Oracle as DataProvider<CurrencyId, Price>>::get(currency),
+		}
+	}
+}
+
 impl orml_prices::Trait for Runtime {
 	type CurrencyId = CurrencyId;
-	type Source = orml_oracle::Module<Runtime>;
+	type Source = LaminarDataProvider;
 }
 
 impl synthetic_tokens::Trait for Runtime {

@@ -1219,6 +1219,91 @@ fn close_loss_position_works() {
 }
 
 #[test]
+fn close_loss_position_realizing_part_on_not_enough_equity() {
+	ExtBuilder::default()
+		.module_balance(fixed128_from_natural_currency_cent(1_00))
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(1_000_00))
+		.spread(Permill::zero())
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.price(CurrencyId::FEUR, (10, 1))
+		.trader_risk_threshold(risk_threshold(100, 0))
+		.build()
+		.execute_with(|| {
+			<Balances<Runtime>>::insert(ALICE, fixed128_from_natural_currency_cent(1_00));
+			let position: Position<Runtime> = Position {
+				owner: ALICE,
+				pool: MOCK_POOL,
+				pair: EUR_USD_PAIR,
+				leverage: Leverage::LongTen,
+				leveraged_held: fixed128_from_natural_currency_cent(10_00),
+				leveraged_debits: fixed128_from_natural_currency_cent(100_00),
+				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100_00),
+				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				margin_held: fixed128_from_natural_currency_cent(1_00),
+			};
+			<Positions<Runtime>>::insert(0, position);
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
+
+			MockPrices::set_mock_price(CurrencyId::FEUR, Some(Price::from_rational(1, 1)));
+
+			assert_ok!(MarginProtocol::close_position(
+				Origin::signed(ALICE),
+				0,
+				Price::from_natural(0)
+			));
+			assert_eq!(
+				MockLiquidityPools::liquidity(MOCK_POOL),
+				balance_from_natural_currency_cent(1_001_00)
+			);
+			assert_eq!(MarginProtocol::balances(&ALICE), Fixed128::from_natural(-89));
+		});
+}
+
+#[test]
+fn close_loss_position_realizing_nothing_on_negative_equity() {
+	ExtBuilder::default()
+		.module_balance(fixed128_from_natural_currency_cent(2_00))
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(1_000_00))
+		.spread(Permill::zero())
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.price(CurrencyId::FEUR, (10, 1))
+		.trader_risk_threshold(risk_threshold(100, 0))
+		.build()
+		.execute_with(|| {
+			<Balances<Runtime>>::insert(ALICE, fixed128_from_natural_currency_cent(2_00));
+			let position: Position<Runtime> = Position {
+				owner: ALICE,
+				pool: MOCK_POOL,
+				pair: EUR_USD_PAIR,
+				leverage: Leverage::LongTen,
+				leveraged_held: fixed128_from_natural_currency_cent(10_00),
+				leveraged_debits: fixed128_from_natural_currency_cent(100_00),
+				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100_00),
+				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				margin_held: fixed128_from_natural_currency_cent(1_00),
+			};
+			<Positions<Runtime>>::insert(0, position.clone());
+			<Positions<Runtime>>::insert(1, position);
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 1), ());
+
+			MockPrices::set_mock_price(CurrencyId::FEUR, Some(Price::from_rational(1, 1)));
+			assert!(MarginProtocol::_equity_of_trader(&ALICE).unwrap() < Fixed128::zero());
+
+			assert_ok!(MarginProtocol::close_position(
+				Origin::signed(ALICE),
+				0,
+				Price::from_natural(0)
+			));
+			assert_eq!(
+				MockLiquidityPools::liquidity(MOCK_POOL),
+				balance_from_natural_currency_cent(1_000_00)
+			);
+			assert_eq!(MarginProtocol::balances(&ALICE), Fixed128::from_natural(-88));
+		});
+}
+
+#[test]
 fn close_profit_position_works() {
 	let alice_initial = fixed128_from_natural_currency_cent(10_000_00);
 	ExtBuilder::default()

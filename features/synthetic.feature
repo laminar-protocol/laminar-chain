@@ -31,7 +31,6 @@ Feature: Synthetic Protocol
       | FEUR     | 1%    |
     And oracle price
       | Currency  | Price  |
-      | AUSD      | $1     |
       | FEUR      | $3     |
     When synthetic buy
       | Name  | Currency | Amount |
@@ -67,7 +66,6 @@ Feature: Synthetic Protocol
       | FEUR     | 1%    |
     And oracle price
       | Currency  | Price  |
-      | AUSD      | $1     |
       | FEUR      | $3     |
     When synthetic buy
       | Name  | Currency | Amount |
@@ -107,7 +105,6 @@ Feature: Synthetic Protocol
       | FEUR     | 1%    |
     And oracle price
       | Currency  | Price  |
-      | AUSD      | $1     |
       | FEUR      | $3     |
     When synthetic buy
       | Name  | Currency | Amount |
@@ -149,7 +146,6 @@ Feature: Synthetic Protocol
       | FJPY     | 1%    |
     And oracle price
       | Currency  | Price  |
-      | AUSD      | $1     |
       | FEUR      | $3     |
       | FJPY      | $4     |
     When synthetic buy
