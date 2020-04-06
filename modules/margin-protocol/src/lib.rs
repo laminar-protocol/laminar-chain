@@ -357,6 +357,7 @@ impl<T: Trait> Module<T> {
 			let balance_delta_abs = balance_delta.saturating_abs();
 			let realizable = equity.saturating_add(balance_delta_abs);
 
+			// pool get nothing if no realizable from traders
 			if realizable.is_positive() {
 				let realized = cmp::min(realizable, balance_delta_abs);
 				<T::LiquidityPools as LiquidityPools<T::AccountId>>::deposit_liquidity(
@@ -364,11 +365,9 @@ impl<T: Trait> Module<T> {
 					position.pool,
 					u128_from_fixed_128(realized),
 				)?;
-				Self::_update_balance(who, fixed_128_mul_signum(realized, -1));
-			} else {
-				// cannot realize, pool get nothing
-				Self::_update_balance(who, balance_delta);
 			}
+
+			Self::_update_balance(who, balance_delta);
 		}
 
 		// remove position

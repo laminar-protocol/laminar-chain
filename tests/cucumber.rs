@@ -43,6 +43,18 @@ fn parse_dollar(value: Option<&String>) -> Balance {
 	}
 }
 
+fn parse_fixed_128_dollar(value: Option<&String>) -> Fixed128 {
+	let value = value.expect("Missing balance");
+	let value = value.replace(" ", "").replace("_", "");
+	let dollar = if value.starts_with("$") {
+		let num = value[1..].parse::<f64>().expect("Invalid dollar value");
+		((num * (10u64.pow(10) as f64)) as i128) * 10i128.pow(8) // to avoid accuracy issue when doing conversion
+	} else {
+		value.parse::<i128>().expect("invalid dollar value")
+	};
+	Fixed128::from_parts(dollar)
+}
+
 fn parse_price(value: Option<&String>) -> FixedU128 {
 	FixedU128::from_parts(parse_dollar(value))
 }
@@ -356,9 +368,13 @@ mod steps {
 			})
 			.then("margin balances are", |world, step| {
 				world.execute_with(|| {
-					let iter = get_rows(step)
-						.iter()
-						.map(|x| (parse_name(x.get(0)), parse_dollar(x.get(1)), parse_dollar(x.get(2))));
+					let iter = get_rows(step).iter().map(|x| {
+						(
+							parse_name(x.get(0)),
+							parse_dollar(x.get(1)),
+							parse_fixed_128_dollar(x.get(2)),
+						)
+					});
 					for (name, free, margin) in iter {
 						assert_eq!(collateral_balance(&name), free);
 						assert_eq!(margin_balance(&name), margin);

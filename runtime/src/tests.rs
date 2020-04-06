@@ -10,7 +10,7 @@ use frame_support::{assert_ok, parameter_types};
 
 use margin_liquidity_pools::SwapRate;
 use margin_protocol::RiskThreshold;
-use module_primitives::{arithmetic::u128_from_fixed_128, Balance, Leverage, Leverages, TradingPair};
+use module_primitives::{Balance, Leverage, Leverages, TradingPair};
 use module_traits::LiquidityPoolManager;
 use orml_prices::Price;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
@@ -135,6 +135,10 @@ pub fn get_price() {
 
 pub fn dollar(amount: u128) -> u128 {
 	amount.saturating_mul(Price::accuracy())
+}
+
+pub fn fixed_128_dollar(amount: i128) -> Fixed128 {
+	Fixed128::from_natural(amount)
 }
 
 pub fn one_percent() -> Fixed128 {
@@ -326,8 +330,8 @@ pub fn margin_set_default_min_leveraged_amount(amount: Balance) -> DispatchResul
 	MarginLiquidityPools::set_default_min_leveraged_amount(<Runtime as system::Trait>::Origin::ROOT, amount)
 }
 
-pub fn margin_balance(who: &AccountId) -> Balance {
-	u128_from_fixed_128(ModuleMarginProtocol::balances(who))
+pub fn margin_balance(who: &AccountId) -> Fixed128 {
+	ModuleMarginProtocol::balances(who)
 }
 
 pub fn margin_liquidity() -> Balance {

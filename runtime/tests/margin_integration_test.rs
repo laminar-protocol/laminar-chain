@@ -13,6 +13,7 @@ mod tests {
 	use module_primitives::Leverage::*;
 	use module_traits::{MarginProtocolLiquidityPools, Treasury};
 	use orml_prices::Price;
+	use orml_utilities::Fixed128;
 	use sp_runtime::{traits::OnInitialize, Permill};
 
 	#[test]
@@ -97,7 +98,7 @@ mod tests {
 				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(10_000)));
 				assert_ok!(margin_deposit(&ALICE::get(), dollar(5000)));
 				assert_eq!(margin_liquidity(), dollar(10_000));
-				assert_eq!(margin_balance(&ALICE::get()), dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_ok!(set_oracle_price(vec![
@@ -123,7 +124,7 @@ mod tests {
 					Price::from_rational(4, 1)
 				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_eq!(margin_balance(&ALICE::get()), dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
 
 				assert_ok!(margin_close_position(&ALICE::get(), 0, Price::from_rational(2, 1)));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
@@ -131,7 +132,7 @@ mod tests {
 				// close_price = 3 * (1 - 0.01) = 2.97
 				// profit = leveraged_held * (close_price - open_price)
 				// -300 = 5000 * (2.97 - 3.03)
-				assert_eq!(margin_balance(&ALICE::get()), dollar(4700));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(4700));
 				assert_eq!(margin_liquidity(), dollar(10_300));
 				assert_ok!(margin_withdraw(&ALICE::get(), dollar(4700)));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(9700));
@@ -153,7 +154,7 @@ mod tests {
 				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(10_000)));
 				assert_ok!(margin_deposit(&ALICE::get(), dollar(5000)));
 				assert_eq!(margin_liquidity(), dollar(10_000));
-				assert_eq!(margin_balance(&ALICE::get()), dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_ok!(set_oracle_price(vec![
@@ -179,7 +180,7 @@ mod tests {
 					Price::from_rational(4, 1)
 				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_eq!(margin_balance(&ALICE::get()), dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(4, 1))]));
 
 				assert_ok!(margin_close_position(&ALICE::get(), 0, Price::from_rational(2, 1)));
@@ -188,7 +189,7 @@ mod tests {
 				// close_price = 4 * (1 - 0.01) = 3.96
 				// profit = leveraged_held * (close_price - open_price)
 				// 4650 = 5000 * (3.96 - 3.03)
-				assert_eq!(margin_balance(&ALICE::get()), dollar(9650));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(9650));
 				assert_eq!(margin_liquidity(), dollar(5350));
 			});
 	}
@@ -208,7 +209,7 @@ mod tests {
 				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(10_000)));
 				assert_ok!(margin_deposit(&ALICE::get(), dollar(5000)));
 				assert_eq!(margin_liquidity(), dollar(10_000));
-				assert_eq!(margin_balance(&ALICE::get()), dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_ok!(set_oracle_price(vec![
@@ -234,7 +235,7 @@ mod tests {
 					Price::from_rational(4, 1)
 				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_eq!(margin_balance(&ALICE::get()), dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(28, 10))]));
 
 				assert_ok!(margin_close_position(&ALICE::get(), 0, Price::from_rational(1, 1)));
@@ -243,7 +244,7 @@ mod tests {
 				// close_price = 2.8 * (1 - 0.01) = 2.772
 				// profit = leveraged_held * (close_price - open_price)
 				// -1290 = 5000 * (2.772 - 3.03)
-				assert_eq!(margin_balance(&ALICE::get()), dollar(3710));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(3710));
 				assert_eq!(margin_liquidity(), dollar(11_290));
 			});
 	}
@@ -263,7 +264,7 @@ mod tests {
 				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(10_000)));
 				assert_ok!(margin_deposit(&ALICE::get(), dollar(5000)));
 				assert_eq!(margin_liquidity(), dollar(10_000));
-				assert_eq!(margin_balance(&ALICE::get()), dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_ok!(set_oracle_price(vec![
@@ -289,7 +290,7 @@ mod tests {
 					Price::from_rational(4, 1)
 				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_eq!(margin_balance(&ALICE::get()), dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
 				// margin = leveraged_amount * price / leverage
 				// 1505 = 5000 * 3.01 / 10
 				// 2.12409 = 3 * (1 - 1505 * 97% / 5000)
@@ -323,7 +324,7 @@ mod tests {
 				assert_ok!(margin_trader_liquidate(&ALICE::get()));
 
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(4500));
-				assert_eq!(margin_balance(&ALICE::get()), 0);
+				assert_eq!(margin_balance(&ALICE::get()), Fixed128::from_natural(-245));
 				assert_eq!(margin_liquidity(), dollar(15_500));
 			});
 	}
@@ -343,7 +344,7 @@ mod tests {
 				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(10_000)));
 				assert_ok!(margin_deposit(&ALICE::get(), dollar(5000)));
 				assert_eq!(margin_liquidity(), dollar(10_000));
-				assert_eq!(margin_balance(&ALICE::get()), dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
 				assert_eq!(collateral_balance(&POOL::get()), dollar(10_000));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_ok!(set_oracle_price(vec![
@@ -369,7 +370,7 @@ mod tests {
 					Price::from_rational(4, 1)
 				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_eq!(margin_balance(&ALICE::get()), dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
 				// 4.4 = 3 * (1 + 10000 * 70% / 3.01 / 5000)
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(41, 10))]));
 				assert_noop!(
@@ -399,14 +400,14 @@ mod tests {
 
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(50, 10))]));
 				assert_eq!(collateral_balance(&MockLaminarTreasury::account_id()), 0);
-				assert_eq!(margin_balance(&ALICE::get()), dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
 				assert_ok!(margin_liquidity_pool_liquidate());
 
 				// open_price = 3 * (1 + 0.01) = 3.03
 				// close_price = 5 * (1 - 0.01) = 4.95
 				// profit = leveraged_held * (close_price - open_price)
 				// 9600 = 5000 * (4.95 - 3.03)
-				assert_eq!(margin_balance(&ALICE::get()), dollar(14600));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(14600));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(margin_liquidity(), dollar(400));
 				// penalty = leveraged_held * price * spread * 2
@@ -432,8 +433,8 @@ mod tests {
 				assert_ok!(margin_deposit(&ALICE::get(), dollar(9000)));
 				assert_ok!(margin_deposit(&BOB::get(), dollar(9000)));
 				assert_eq!(margin_liquidity(), dollar(20_000));
-				assert_eq!(margin_balance(&ALICE::get()), dollar(9000));
-				assert_eq!(margin_balance(&BOB::get()), dollar(9000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(9000));
+				assert_eq!(margin_balance(&BOB::get()), fixed_128_dollar(9000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(1000));
 				assert_eq!(collateral_balance(&BOB::get()), dollar(1000));
@@ -460,7 +461,7 @@ mod tests {
 					dollar(5000),
 					Price::from_rational(4, 1)
 				));
-				assert_eq!(margin_balance(&ALICE::get()), dollar(9000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(9000));
 
 				// BOB open position
 				assert_ok!(margin_open_position(
@@ -470,7 +471,7 @@ mod tests {
 					dollar(6000),
 					Price::from_rational(2, 1)
 				));
-				assert_eq!(margin_balance(&BOB::get()), dollar(9000));
+				assert_eq!(margin_balance(&BOB::get()), fixed_128_dollar(9000));
 
 				// ALICE open position and BOB close position
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(31, 10))]));
@@ -481,13 +482,13 @@ mod tests {
 					dollar(1000),
 					Price::from_rational(4, 1)
 				));
-				assert_eq!(margin_balance(&ALICE::get()), dollar(9000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(9000));
 				assert_ok!(margin_close_position(&BOB::get(), 1, Price::from_rational(4, 1)));
 				// open_price = 3 * (1 - 0.01) = 2.97
 				// close_price = 3.1 * (1 + 0.01) = 3.131
 				// profit = leveraged_held * (close_price - open_price)
 				// 966 = 6000 * (3.131 - 2.97)
-				assert_eq!(margin_balance(&BOB::get()), dollar(8034));
+				assert_eq!(margin_balance(&BOB::get()), fixed_128_dollar(8034));
 
 				// ALICE close position and BOB open position
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(29, 10))]));
@@ -496,7 +497,7 @@ mod tests {
 				// close_price = 2.9 * (1 - 0.01) = 2.871
 				// profit = leveraged_held * (close_price - open_price)
 				// -795 = 5000 * (2.871 - 3.03)
-				assert_eq!(margin_balance(&ALICE::get()), dollar(8205));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(8205));
 				assert_ok!(margin_open_position(
 					&BOB::get(),
 					EUR_USD,
@@ -504,7 +505,7 @@ mod tests {
 					dollar(2000),
 					Price::from_rational(2, 1)
 				));
-				assert_eq!(margin_balance(&BOB::get()), dollar(8034));
+				assert_eq!(margin_balance(&BOB::get()), fixed_128_dollar(8034));
 
 				// close all
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(28, 10))]));
@@ -513,13 +514,13 @@ mod tests {
 				// close_price = 2.8 * (1 - 0.01) = 2.772
 				// profit = leveraged_held * (close_price - open_price)
 				// -359 = 1000 * (2.772 - 3.131)
-				assert_eq!(margin_balance(&ALICE::get()), dollar(7846));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(7846));
 				assert_ok!(margin_close_position(&BOB::get(), 3, Price::from_rational(4, 1)));
 				// open_price = 2.9 * (1 - 0.01) = 2.871
 				// close_price = 2.8 * (1 + 0.01) = 2.828
 				// profit = leveraged_held * (close_price - open_price)
 				// -86 = 2000 * (2.828 - 2.871)
-				assert_eq!(margin_balance(&BOB::get()), dollar(8120));
+				assert_eq!(margin_balance(&BOB::get()), fixed_128_dollar(8120));
 				assert_eq!(margin_liquidity(), dollar(22_034));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(1000));
 				assert_eq!(collateral_balance(&BOB::get()), dollar(1000));
@@ -543,8 +544,8 @@ mod tests {
 				assert_ok!(margin_deposit(&ALICE::get(), dollar(9000)));
 				assert_ok!(margin_deposit(&BOB::get(), dollar(9000)));
 				assert_eq!(margin_liquidity(), dollar(20_000));
-				assert_eq!(margin_balance(&ALICE::get()), dollar(9000));
-				assert_eq!(margin_balance(&BOB::get()), dollar(9000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(9000));
+				assert_eq!(margin_balance(&BOB::get()), fixed_128_dollar(9000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(1000));
 				assert_eq!(collateral_balance(&BOB::get()), dollar(1000));
@@ -577,7 +578,7 @@ mod tests {
 					dollar(5000),
 					Price::from_rational(4, 1)
 				));
-				assert_eq!(margin_balance(&ALICE::get()), dollar(9000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(9000));
 
 				// BOB open position
 				assert_ok!(margin_open_position(
@@ -587,7 +588,7 @@ mod tests {
 					dollar(6000),
 					Price::from_rational(1, 1)
 				));
-				assert_eq!(margin_balance(&BOB::get()), dollar(9000));
+				assert_eq!(margin_balance(&BOB::get()), fixed_128_dollar(9000));
 
 				// ALICE open position and BOB close position
 				assert_ok!(set_oracle_price(vec![
@@ -601,13 +602,16 @@ mod tests {
 					dollar(1000),
 					Price::from_rational(4, 1)
 				));
-				assert_eq!(margin_balance(&ALICE::get()), dollar(9000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(9000));
 				assert_ok!(margin_close_position(&BOB::get(), 1, Price::from_rational(4, 1)));
 				// open_price = 5/3 * (1 - 0.01) = 1.65
 				// close_price = 4.9/3.1 * (1 + 0.01) = 1.596451612903226
 				// profit = leveraged_held * (close_price - open_price)
 				// -995.9999999999964 = 6000 * (1.596451612903226 - 1.65) * 3.1
-				assert_eq!(margin_balance(&BOB::get()), 9996000000000000008400);
+				assert_eq!(
+					margin_balance(&BOB::get()),
+					Fixed128::from_parts(9996000000000000008400)
+				);
 
 				// ALICE close position and BOB open position
 				assert_ok!(set_oracle_price(vec![
@@ -619,7 +623,7 @@ mod tests {
 				// close_price = 2.9 * (1 - 0.01) = 2.871
 				// profit = leveraged_held * (close_price - open_price)
 				// -795 = 5000 * (2.871 - 3.03)
-				assert_eq!(margin_balance(&ALICE::get()), dollar(8205));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(8205));
 				assert_ok!(margin_open_position(
 					&BOB::get(),
 					EUR_USD,
@@ -627,7 +631,10 @@ mod tests {
 					dollar(2000),
 					Price::from_rational(2, 1)
 				));
-				assert_eq!(margin_balance(&BOB::get()), 9996000000000000008400);
+				assert_eq!(
+					margin_balance(&BOB::get()),
+					Fixed128::from_parts(9996000000000000008400)
+				);
 
 				// close all
 				assert_ok!(set_oracle_price(vec![
@@ -639,13 +646,19 @@ mod tests {
 				// close_price = 5.2/2.8 * (1 - 0.01) = 1.838571428571429
 				// profit = leveraged_held * (close_price - open_price)
 				// 677.9354838709672 = 1000 * (1.838571428571429 - 1.596451612903226) * 2.8
-				assert_eq!(margin_balance(&ALICE::get()), 8882935483870967742000);
+				assert_eq!(
+					margin_balance(&ALICE::get()),
+					Fixed128::from_parts(8882935483870967742000)
+				);
 				assert_ok!(margin_close_position(&BOB::get(), 3, Price::from_rational(4, 1)));
 				// open_price = 2.9 * (1 - 0.01) = 2.871
 				// close_price = 2.8 * (1 + 0.01) = 2.828
 				// profit = leveraged_held * (close_price - open_price)
 				// -86 = 2000 * (2.828 - 2.871)
-				assert_eq!(margin_balance(&BOB::get()), 10082000000000000008400);
+				assert_eq!(
+					margin_balance(&BOB::get()),
+					Fixed128::from_parts(10082000000000000008400)
+				);
 				assert_eq!(margin_liquidity(), 19035064516129032249600);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(1000));
 				assert_eq!(collateral_balance(&BOB::get()), dollar(1000));
@@ -667,7 +680,7 @@ mod tests {
 				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(10_000)));
 				assert_ok!(margin_deposit(&ALICE::get(), dollar(5000)));
 				assert_eq!(margin_liquidity(), dollar(10_000));
-				assert_eq!(margin_balance(&ALICE::get()), dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_ok!(set_oracle_price(vec![
@@ -694,7 +707,7 @@ mod tests {
 					Price::from_rational(4, 1)
 				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_eq!(margin_balance(&ALICE::get()), dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
 
 				for i in 1..9 {
 					MarginLiquidityPools::on_initialize(i);
@@ -708,7 +721,7 @@ mod tests {
 				// -300 = 5000 * (2.97 - 3.03)
 				// accumulated_swap = leveraged_held * (accumulated_swap_rate - open_accumulated_swap_rate)
 				// 50 = 5000 * (0.01 - 0)
-				assert_eq!(margin_balance(&ALICE::get()), dollar(4650));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(4650));
 				assert_eq!(margin_liquidity(), dollar(10350));
 
 				// ShortTen
@@ -720,7 +733,7 @@ mod tests {
 					Price::from_rational(2, 1)
 				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_eq!(margin_balance(&ALICE::get()), dollar(4650));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(4650));
 
 				for i in 9..22 {
 					MarginLiquidityPools::on_initialize(i);
@@ -739,7 +752,10 @@ mod tests {
 				// -300 = 5000 * (2.97 - 3.03)
 				// accumulated_swap = leveraged_held * (accumulated_swap_rate - open_accumulated_swap_rate)
 				// 101.505 = 5000 * (0.030301 - 0.01)
-				assert_eq!(margin_balance(&ALICE::get()), 4248495000000000000000);
+				assert_eq!(
+					margin_balance(&ALICE::get()),
+					Fixed128::from_parts(4248495000000000000000)
+				);
 				assert_eq!(margin_liquidity(), 10751505000000000000000);
 				assert_ok!(margin_withdraw(&ALICE::get(), 4248495000000000000000));
 				assert_eq!(collateral_balance(&ALICE::get()), 9248495000000000000000);
@@ -761,7 +777,7 @@ mod tests {
 				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(10_000)));
 				assert_ok!(margin_deposit(&ALICE::get(), dollar(5000)));
 				assert_eq!(margin_liquidity(), dollar(10_000));
-				assert_eq!(margin_balance(&ALICE::get()), dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_ok!(set_oracle_price(vec![
@@ -795,7 +811,7 @@ mod tests {
 					Price::from_rational(4, 1)
 				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_eq!(margin_balance(&ALICE::get()), dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
 
 				for i in 1..9 {
 					MarginLiquidityPools::on_initialize(i);
@@ -809,7 +825,7 @@ mod tests {
 				// -300 = 5000 * (2.97 - 3.03)
 				// accumulated_swap = leveraged_held * (accumulated_swap_rate - open_accumulated_swap_rate)
 				// -100 = 5000 * -0.02
-				assert_eq!(margin_balance(&ALICE::get()), dollar(4600));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(4600));
 				assert_eq!(margin_liquidity(), dollar(10400));
 
 				// ShortTen
@@ -821,7 +837,7 @@ mod tests {
 					Price::from_rational(2, 1)
 				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_eq!(margin_balance(&ALICE::get()), dollar(4600));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(4600));
 
 				for i in 9..22 {
 					MarginLiquidityPools::on_initialize(i);
@@ -840,7 +856,7 @@ mod tests {
 				// -300 = 5000 * (2.97 - 3.03)
 				// accumulated_swap = leveraged_held * (accumulated_swap_rate - open_accumulated_swap_rate)
 				// 0 = 5000 * 0
-				assert_eq!(margin_balance(&ALICE::get()), dollar(4300));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(4300));
 				assert_eq!(margin_liquidity(), dollar(10700));
 			});
 	}
