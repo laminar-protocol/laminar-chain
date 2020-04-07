@@ -2,12 +2,12 @@
 
 use super::*;
 use mock::*;
-use sp_std::num::NonZeroI128;
 
 use frame_support::{assert_noop, assert_ok};
-use primitives::{CurrencyId, Leverage, Leverages};
 use sp_runtime::traits::OnInitialize;
-use sp_runtime::{PerThing, Permill};
+use sp_std::num::NonZeroI128;
+
+use primitives::{CurrencyId, Leverage, Leverages};
 use traits::{LiquidityPools, MarginProtocolLiquidityPools};
 
 fn swap_rate(pair: TradingPair, is_long: bool) -> Fixed128 {

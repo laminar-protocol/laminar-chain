@@ -503,18 +503,32 @@ parameter_types! {
 
 type LiquidityCurrency = orml_currencies::Currency<Runtime, GetLiquidityCurrencyId>;
 
-pub type BaseLiquidityPoolMarginInstance = base_liquidity_pools::Instance1;
+pub type BaseLiquidityPoolsMarginInstance = base_liquidity_pools::Instance1;
 parameter_types! {
-	pub const MarginLiquidityPoolModuleId: ModuleId = margin_liquidity_pools::MODULE_ID;
+	pub const MarginLiquidityPoolsModuleId: ModuleId = margin_liquidity_pools::MODULE_ID;
 }
-impl base_liquidity_pools::Trait<BaseLiquidityPoolMarginInstance> for Runtime {
+impl base_liquidity_pools::Trait<BaseLiquidityPoolsMarginInstance> for Runtime {
 	type Event = Event;
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = MarginProtocol;
 	type ExistentialDeposit = ExistentialDeposit;
-	type ModuleId = MarginLiquidityPoolModuleId;
+	type ModuleId = MarginLiquidityPoolsModuleId;
 	type OnDisableLiquidityPool = MarginLiquidityPools;
 	type OnRemoveLiquidityPool = MarginLiquidityPools;
+}
+
+pub type BaseLiquidityPoolsSyntheticInstance = base_liquidity_pools::Instance2;
+parameter_types! {
+	pub const SyntheticLiquidityPoolsModuleId: ModuleId = synthetic_liquidity_pools::MODULE_ID;
+}
+impl base_liquidity_pools::Trait<BaseLiquidityPoolsSyntheticInstance> for Runtime {
+	type Event = Event;
+	type LiquidityCurrency = LiquidityCurrency;
+	type PoolManager = SyntheticTokens;
+	type ExistentialDeposit = ExistentialDeposit;
+	type ModuleId = SyntheticLiquidityPoolsModuleId;
+	type OnDisableLiquidityPool = SyntheticLiquidityPools;
+	type OnRemoveLiquidityPool = SyntheticLiquidityPools;
 }
 
 impl margin_liquidity_pools::Trait for Runtime {
@@ -527,10 +541,8 @@ impl margin_liquidity_pools::Trait for Runtime {
 
 impl synthetic_liquidity_pools::Trait for Runtime {
 	type Event = Event;
+	type BaseLiquidityPools = BaseLiquidityPoolsForSynthetic;
 	type MultiCurrency = orml_currencies::Module<Runtime>;
-	type LiquidityCurrency = LiquidityCurrency;
-	type PoolManager = SyntheticTokens;
-	type ExistentialDeposit = ExistentialDeposit;
 	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
 }
 
@@ -610,6 +622,7 @@ construct_runtime!(
 		MarginProtocol: margin_protocol::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned },
 		BaseLiquidityPoolsForMargin: base_liquidity_pools::<Instance1>::{Module, Storage, Call, Event<T>},
 		MarginLiquidityPools: margin_liquidity_pools::{Module, Storage, Call, Event<T>},
+		BaseLiquidityPoolsForSynthetic: base_liquidity_pools::<Instance2>::{Module, Storage, Call, Event<T>},
 		SyntheticLiquidityPools: synthetic_liquidity_pools::{Module, Storage, Call, Event<T>, Config},
 	}
 );
