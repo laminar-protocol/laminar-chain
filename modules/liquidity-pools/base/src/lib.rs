@@ -15,7 +15,7 @@ mod mock;
 mod tests;
 
 pub trait Trait<I: Instance = DefaultInstance>: system::Trait {
-	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+	type Event: From<Event<Self, I>> + Into<<Self as frame_system::Trait>::Event>;
 	type LiquidityCurrency: BasicCurrency<Self::AccountId, Balance = Balance>;
 	type PoolManager: LiquidityPoolManager<LiquidityPoolId, Balance>;
 	type ExistentialDeposit: Get<Balance>;

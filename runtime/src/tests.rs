@@ -1,6 +1,8 @@
 #![cfg(feature = "std")]
 // #[cfg(test)] doesn't work for some reason
 
+use super::*;
+
 use crate::{
 	AccountId, BlockNumber,
 	CurrencyId::{self, AUSD, FEUR},
@@ -249,19 +251,19 @@ pub fn synthetic_liquidate(who: &AccountId, currency_id: CurrencyId, amount: Bal
 }
 
 pub fn margin_create_pool() -> DispatchResult {
-	MarginLiquidityPools::create_pool(origin_of(&POOL::get()))
+	BaseLiquidityPoolsForMargin::create_pool(origin_of(&POOL::get()))
 }
 
 pub fn margin_disable_pool(who: &AccountId) -> DispatchResult {
-	MarginLiquidityPools::disable_pool(origin_of(who), LIQUIDITY_POOL_ID_0)
+	BaseLiquidityPoolsForMargin::disable_pool(origin_of(who), LIQUIDITY_POOL_ID_0)
 }
 
 pub fn margin_remove_pool(who: &AccountId) -> DispatchResult {
-	MarginLiquidityPools::remove_pool(origin_of(who), LIQUIDITY_POOL_ID_0)
+	BaseLiquidityPoolsForMargin::remove_pool(origin_of(who), LIQUIDITY_POOL_ID_0)
 }
 
 pub fn margin_deposit_liquidity(who: &AccountId, amount: Balance) -> DispatchResult {
-	MarginLiquidityPools::deposit_liquidity(origin_of(who), LIQUIDITY_POOL_ID_0, amount)
+	BaseLiquidityPoolsForMargin::deposit_liquidity(origin_of(who), LIQUIDITY_POOL_ID_0, amount)
 }
 
 pub fn margin_set_enabled_trades() -> DispatchResult {
@@ -270,7 +272,7 @@ pub fn margin_set_enabled_trades() -> DispatchResult {
 }
 
 pub fn margin_withdraw_liquidity(who: &AccountId, amount: Balance) -> DispatchResult {
-	MarginLiquidityPools::withdraw_liquidity(origin_of(who), LIQUIDITY_POOL_ID_0, amount)
+	BaseLiquidityPoolsForMargin::withdraw_liquidity(origin_of(who), LIQUIDITY_POOL_ID_0, amount)
 }
 
 pub fn margin_set_spread(pair: TradingPair, spread: Permill) -> DispatchResult {
@@ -335,7 +337,7 @@ pub fn margin_balance(who: &AccountId) -> Fixed128 {
 }
 
 pub fn margin_liquidity() -> Balance {
-	MarginLiquidityPools::balances(LIQUIDITY_POOL_ID_0)
+	BaseLiquidityPoolsForMargin::balances(LIQUIDITY_POOL_ID_0)
 }
 
 pub fn margin_open_position(

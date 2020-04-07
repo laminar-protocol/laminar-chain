@@ -52,6 +52,7 @@ orml-utilities = { path = "../orml/utilities", default-features = false }
 synthetic-tokens = { package = "module-synthetic-tokens", path = "../modules/synthetic-tokens", default-features = false }
 synthetic-protocol = { package = "module-synthetic-protocol", path = "../modules/synthetic-protocol", default-features = false }
 module-primitives = { path = "../modules/primitives", default-features = false }
+base-liquidity-pools = { package = "module-base-liquidity-pools", path = "../modules/liquidity-pools/base", default-features = false }
 margin-liquidity-pools = { package = "module-margin-liquidity-pools", path = "../modules/liquidity-pools/margin", default-features = false }
 synthetic-liquidity-pools = { package = "module-synthetic-liquidity-pools", path = "../modules/liquidity-pools/synthetic", default-features = false }
 margin-protocol = { package = "module-margin-protocol", path = "../modules/margin-protocol", default-features = false }

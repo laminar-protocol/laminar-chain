@@ -183,6 +183,10 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
+	fn all() -> Vec<LiquidityPoolId> {
+		unimplemented!()
+	}
+
 	fn is_owner(pool_id: LiquidityPoolId, who: &T::AccountId) -> bool {
 		Self::is_owner(pool_id, who)
 	}
