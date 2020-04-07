@@ -78,9 +78,7 @@ decl_storage! {
 		Positions get(positions): map hasher(twox_64_concat) PositionId => Option<Position<T>>;
 		PositionsByTrader get(positions_by_trader): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) (LiquidityPoolId, PositionId) => Option<()>;
 		PositionsByPool get(positions_by_pool): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) (TradingPair, PositionId) => Option<()>;
-		// SwapPeriods get(swap_periods): map hasher(black2_256) TradingPair => Option<SwapPeriod>;
 		Balances get(balances): map hasher(twox_64_concat) T::AccountId => Fixed128;
-		MinLiquidationPercent get(min_liquidation_percent): map hasher(blake2_128_concat) TradingPair => Fixed128;
 		MarginCalledTraders get(margin_called_traders): map hasher(blake2_128_concat) T::AccountId => Option<()>;
 		MarginCalledPools get(margin_called_pools): map hasher(blake2_128_concat) LiquidityPoolId => Option<()>;
 		TraderRiskThreshold get(trader_risk_threshold) config(): RiskThreshold;

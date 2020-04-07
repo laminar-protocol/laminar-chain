@@ -48,15 +48,15 @@ decl_storage! {
 	trait Store for Module<T: Trait> as MarginLiquidityPools {
 		pub NextPoolId get(fn next_pool_id): LiquidityPoolId;
 		pub Owners get(fn owners): map hasher(twox_64_concat) LiquidityPoolId => Option<(T::AccountId, LiquidityPoolId)>;
-		pub LiquidityPoolOptions get(fn liquidity_pool_options): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(blake2_128_concat) TradingPair => Option<MarginLiquidityPoolOption>;
+		pub LiquidityPoolOptions get(fn liquidity_pool_options): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => Option<MarginLiquidityPoolOption>;
 		pub Balances get(fn balances): map hasher(twox_64_concat) LiquidityPoolId => Balance;
-		pub SwapRates get(fn swap_rate): map hasher(blake2_128_concat) TradingPair => Option<SwapRate>;
+		pub SwapRates get(fn swap_rate): map hasher(twox_64_concat) TradingPair => Option<SwapRate>;
 		pub AccumulatedSwapRates get(fn accumulated_swap_rate): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => SwapRate;
 		pub AdditionalSwapRate get(fn additional_swap_rate): map hasher(twox_64_concat) LiquidityPoolId => Option<Fixed128>;
-		pub MaxSpread get(fn max_spread): map hasher(blake2_128_concat) TradingPair => Permill;
-		pub Accumulates get(fn accumulate): map hasher(blake2_128_concat) TradingPair => Option<(AccumulateConfig<T::BlockNumber>, TradingPair)>;
-		pub EnabledTradingPairs get(fn enabled_trading_pair): map hasher(blake2_128_concat) TradingPair => Option<TradingPair>;
-		pub LiquidityPoolEnabledTradingPairs get(fn liquidity_pool_enabled_trading_pair): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(blake2_128_concat) TradingPair => Option<TradingPair>;
+		pub MaxSpread get(fn max_spread): map hasher(twox_64_concat) TradingPair => Permill;
+		pub Accumulates get(fn accumulate): map hasher(twox_64_concat) TradingPair => Option<(AccumulateConfig<T::BlockNumber>, TradingPair)>;
+		pub EnabledTradingPairs get(fn enabled_trading_pair): map hasher(twox_64_concat) TradingPair => Option<TradingPair>;
+		pub LiquidityPoolEnabledTradingPairs get(fn liquidity_pool_enabled_trading_pair): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => Option<TradingPair>;
 		pub DefaultMinLeveragedAmount get(fn default_min_leveraged_amount) config(): Balance;
 		pub MinLeveragedAmount get(fn min_leveraged_amount): map hasher(twox_64_concat) LiquidityPoolId => Option<Balance>;
 	}
