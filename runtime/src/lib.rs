@@ -503,7 +503,7 @@ parameter_types! {
 
 type LiquidityCurrency = orml_currencies::Currency<Runtime, GetLiquidityCurrencyId>;
 
-type BaseLiquidityPoolMarginInstance = base_liquidity_pools::Instance1;
+pub type BaseLiquidityPoolMarginInstance = base_liquidity_pools::Instance1;
 parameter_types! {
 	pub const MarginLiquidityPoolModuleId: ModuleId = margin_liquidity_pools::MODULE_ID;
 }

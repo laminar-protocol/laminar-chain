@@ -97,6 +97,9 @@ decl_module! {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T, I>::NoPermission);
 
+			ensure!(Self::balances(&pool_id) >= amount, Error::<T, I>::CannotWithdrawAmount);
+			T::PoolManager::ensure_can_withdraw(pool_id, amount)?;
+
 			let new_balance = Self::balances(&pool_id).checked_sub(amount).ok_or(Error::<T, I>::CannotWithdrawAmount)?;
 
 			// check minimum balance
@@ -203,7 +206,6 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 		let new_balance = Self::balances(&pool_id)
 			.checked_sub(amount)
 			.ok_or(Error::<T, I>::CannotWithdrawAmount)?;
-		T::PoolManager::ensure_can_withdraw(pool_id, amount)?;
 
 		// transfer amount to account
 		T::LiquidityCurrency::transfer(&Self::account_id(), who, amount)?;
