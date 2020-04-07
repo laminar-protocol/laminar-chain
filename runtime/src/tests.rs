@@ -156,16 +156,16 @@ pub fn multi_currency_balance(who: &AccountId, currency_id: CurrencyId) -> Balan
 }
 
 pub fn synthetic_create_pool() -> DispatchResult {
-	SyntheticLiquidityPools::create_pool(origin_of(&POOL::get()))?;
-	SyntheticLiquidityPools::create_pool(origin_of(&POOL::get()))
+	BaseLiquidityPoolsForSynthetic::create_pool(origin_of(&POOL::get()))?;
+	BaseLiquidityPoolsForSynthetic::create_pool(origin_of(&POOL::get()))
 }
 
 pub fn synthetic_disable_pool(who: &AccountId) -> DispatchResult {
-	SyntheticLiquidityPools::disable_pool(origin_of(who), LIQUIDITY_POOL_ID_0)
+	BaseLiquidityPoolsForSynthetic::disable_pool(origin_of(who), LIQUIDITY_POOL_ID_0)
 }
 
 pub fn synthetic_remove_pool(who: &AccountId) -> DispatchResult {
-	SyntheticLiquidityPools::remove_pool(origin_of(who), LIQUIDITY_POOL_ID_0)
+	BaseLiquidityPoolsForSynthetic::remove_pool(origin_of(who), LIQUIDITY_POOL_ID_0)
 }
 
 pub fn synthetic_set_enabled_trades() -> DispatchResult {
@@ -179,11 +179,11 @@ pub fn synthetic_set_enabled_trades() -> DispatchResult {
 }
 
 pub fn synthetic_deposit_liquidity(who: &AccountId, amount: Balance) -> DispatchResult {
-	SyntheticLiquidityPools::deposit_liquidity(origin_of(who), LIQUIDITY_POOL_ID_0, amount)
+	BaseLiquidityPoolsForSynthetic::deposit_liquidity(origin_of(who), LIQUIDITY_POOL_ID_0, amount)
 }
 
 pub fn synthetic_withdraw_liquidity(who: &AccountId, amount: Balance) -> DispatchResult {
-	SyntheticLiquidityPools::withdraw_liquidity(origin_of(who), LIQUIDITY_POOL_ID_0, amount)
+	BaseLiquidityPoolsForSynthetic::withdraw_liquidity(origin_of(who), LIQUIDITY_POOL_ID_0, amount)
 }
 
 pub fn synthetic_buy(who: &AccountId, currency_id: CurrencyId, amount: Balance) -> DispatchResult {
@@ -239,7 +239,7 @@ pub fn synthetic_set_spread(currency_id: CurrencyId, spread: Permill) -> Dispatc
 }
 
 pub fn synthetic_liquidity() -> Balance {
-	SyntheticLiquidityPools::balances(LIQUIDITY_POOL_ID_0)
+	BaseLiquidityPoolsForSynthetic::balances(LIQUIDITY_POOL_ID_0)
 }
 
 pub fn synthetic_add_collateral(who: &AccountId, currency_id: CurrencyId, amount: Balance) -> DispatchResult {
