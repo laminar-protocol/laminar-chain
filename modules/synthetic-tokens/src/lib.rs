@@ -1,11 +1,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, traits::Get, StorageMap};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, traits::Get};
 use frame_system::{self as system, ensure_root};
 use sp_runtime::{
 	traits::{AccountIdConversion, EnsureOrigin, Zero},
-	DispatchError, DispatchResult, ModuleId, Permill,
+	DispatchError, DispatchResult, ModuleId, Permill, RuntimeDebug,
 };
 use sp_std::{prelude::Vec, result};
 
@@ -26,7 +26,7 @@ pub trait Trait: frame_system::Trait {
 	type UpdateOrigin: EnsureOrigin<Self::Origin>;
 }
 
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode, Eq, PartialEq, RuntimeDebug)]
 pub struct Position {
 	collateral: Balance,
 	synthetic: Balance,
@@ -46,7 +46,7 @@ decl_storage! {
 		ExtremeRatio get(extreme_ratio): map hasher(blake2_128_concat) CurrencyId => Option<Permill>;
 		LiquidationRatio get(liquidation_ratio): map hasher(blake2_128_concat) CurrencyId => Option<Permill>;
 		CollateralRatio get(collateral_ratio): map hasher(blake2_128_concat) CurrencyId => Option<Permill>;
-		Positions get(positions): map hasher(blake2_128_concat) (LiquidityPoolId, CurrencyId) => Position;
+		Positions get(positions): double_map hasher(blake2_128_concat) LiquidityPoolId, hasher(blake2_128_concat) CurrencyId => Position;
 	}
 }
 
@@ -117,14 +117,14 @@ impl<T: Trait> Module<T> {
 	}
 
 	pub fn add_position(pool_id: LiquidityPoolId, currency_id: CurrencyId, collateral: Balance, synthetic: Balance) {
-		Positions::mutate((pool_id, currency_id), |p| {
+		Positions::mutate(&pool_id, currency_id, |p| {
 			p.collateral = p.collateral.saturating_add(collateral);
 			p.synthetic = p.synthetic.saturating_add(synthetic)
 		});
 	}
 
 	pub fn remove_position(pool_id: LiquidityPoolId, currency_id: CurrencyId, collateral: Balance, synthetic: Balance) {
-		Positions::mutate((pool_id, currency_id), |p| {
+		Positions::mutate(&pool_id, currency_id, |p| {
 			p.collateral = p.collateral.saturating_sub(collateral);
 			p.synthetic = p.synthetic.saturating_sub(synthetic)
 		});
@@ -132,7 +132,7 @@ impl<T: Trait> Module<T> {
 
 	/// Get position under `pool_id` and `currency_id`. Returns `(collateral_amount, synthetic_amount)`.
 	pub fn get_position(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> (Balance, Balance) {
-		let Position { collateral, synthetic } = Positions::get(&(pool_id, currency_id));
+		let Position { collateral, synthetic } = Positions::get(&pool_id, currency_id);
 		(collateral, synthetic)
 	}
 

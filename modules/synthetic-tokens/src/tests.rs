@@ -248,3 +248,38 @@ fn proportional_incentive_between_extreme_and_liquidation() {
 		);
 	});
 }
+
+#[test]
+fn should_add_remove_get_position() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert_eq!(SyntheticTokens::positions(0, CurrencyId::FEUR), Position::default());
+		assert_eq!(SyntheticTokens::get_position(0, CurrencyId::FEUR), (0, 0));
+
+		SyntheticTokens::add_position(0, CurrencyId::FEUR, 1, 2);
+
+		assert_eq!(
+			SyntheticTokens::positions(0, CurrencyId::FEUR),
+			Position {
+				collateral: 1,
+				synthetic: 2
+			}
+		);
+		assert_eq!(SyntheticTokens::get_position(0, CurrencyId::FEUR), (1, 2));
+
+		SyntheticTokens::remove_position(0, CurrencyId::FEUR, 1, 1);
+
+		assert_eq!(
+			SyntheticTokens::positions(0, CurrencyId::FEUR),
+			Position {
+				collateral: 0,
+				synthetic: 1
+			}
+		);
+		assert_eq!(SyntheticTokens::get_position(0, CurrencyId::FEUR), (0, 1));
+
+		SyntheticTokens::remove_position(0, CurrencyId::FEUR, 1, 1);
+
+		assert_eq!(SyntheticTokens::positions(0, CurrencyId::FEUR), Position::default());
+		assert_eq!(SyntheticTokens::get_position(0, CurrencyId::FEUR), (0, 0));
+	});
+}
