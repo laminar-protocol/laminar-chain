@@ -6,8 +6,6 @@ use sp_runtime::{DispatchError, DispatchResult, Permill};
 use sp_std::result;
 
 pub trait LiquidityPools<AccountId> {
-	fn ensure_liquidity(pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult;
-
 	fn is_owner(pool_id: LiquidityPoolId, who: &AccountId) -> bool;
 
 	/// Return collateral balance of `pool_id`.
@@ -44,6 +42,14 @@ pub trait MarginProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
 		leverage: Leverage,
 		leveraged_amount: Balance,
 	) -> bool;
+}
+
+pub trait OnDisableLiquidityPool {
+	fn on_disable(pool_id: LiquidityPoolId);
+}
+
+pub trait OnRemoveLiquidityPool {
+	fn on_remove(pool_id: LiquidityPoolId);
 }
 
 pub trait Treasury<AccountId> {

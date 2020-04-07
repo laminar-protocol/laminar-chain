@@ -13,7 +13,10 @@ use sp_runtime::{
 	DispatchResult, ModuleId, PerThing, Permill, RuntimeDebug,
 };
 use sp_std::{prelude::*, result};
-use traits::{LiquidityPoolManager, LiquidityPools, SyntheticProtocolLiquidityPools};
+use traits::{
+	LiquidityPoolManager, LiquidityPools, OnDisableLiquidityPool, OnRemoveLiquidityPool,
+	SyntheticProtocolLiquidityPools,
+};
 
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct SyntheticLiquidityPoolOption {
@@ -180,11 +183,6 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
-	fn ensure_liquidity(pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
-		ensure!(Self::balances(&pool_id) >= amount, Error::<T>::CannotWithdrawAmount);
-		Ok(())
-	}
-
 	fn is_owner(pool_id: LiquidityPoolId, who: &T::AccountId) -> bool {
 		Self::is_owner(pool_id, who)
 	}
@@ -276,7 +274,6 @@ impl<T: Trait> Module<T> {
 	fn _withdraw_liquidity(who: &T::AccountId, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
 		ensure!(<Owners<T>>::contains_key(&pool_id), Error::<T>::PoolNotFound);
 
-		Self::ensure_liquidity(pool_id, amount)?;
 		let new_balance = Self::balances(&pool_id)
 			.checked_sub(amount)
 			.ok_or(Error::<T>::CannotWithdrawAmount)?;
@@ -332,5 +329,17 @@ impl<T: Trait> Module<T> {
 		pool.synthetic_enabled = enabled;
 		LiquidityPoolOptions::insert(&pool_id, &currency_id, pool);
 		Ok(())
+	}
+}
+
+impl<T: Trait> OnDisableLiquidityPool for Module<T> {
+	fn on_disable(pool_id: LiquidityPoolId) {
+		LiquidityPoolOptions::remove_prefix(&pool_id);
+	}
+}
+
+impl<T: Trait> OnRemoveLiquidityPool for Module<T> {
+	fn on_remove(pool_id: LiquidityPoolId) {
+		LiquidityPoolOptions::remove_prefix(&pool_id);
 	}
 }

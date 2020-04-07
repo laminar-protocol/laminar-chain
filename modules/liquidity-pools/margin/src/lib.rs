@@ -17,7 +17,9 @@ use sp_runtime::{
 };
 use sp_std::cmp::max;
 use sp_std::{prelude::*, result};
-use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools};
+use traits::{
+	LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools, OnDisableLiquidityPool, OnRemoveLiquidityPool,
+};
 
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct MarginLiquidityPoolOption {
@@ -142,7 +144,6 @@ decl_module! {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
 
-			Self::ensure_liquidity(pool_id, amount)?;
 			let new_balance = Self::balances(&pool_id).checked_sub(amount).ok_or(Error::<T>::CannotWithdrawAmount)?;
 			// check minimum balance
 			if new_balance < T::ExistentialDeposit::get() {
@@ -297,11 +298,6 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
-	fn ensure_liquidity(pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
-		ensure!(Self::balances(&pool_id) >= amount, Error::<T>::CannotWithdrawAmount);
-		T::PoolManager::ensure_can_withdraw(pool_id, amount)
-	}
-
 	fn is_owner(pool_id: LiquidityPoolId, who: &T::AccountId) -> bool {
 		Self::is_owner(pool_id, who)
 	}
@@ -497,5 +493,21 @@ impl<T: Trait> Module<T> {
 			AccumulatedSwapRates::insert(pool_id, pair, accumulated.clone());
 			Self::deposit_event(RawEvent::AccumulatedSwapRateUpdated(pool_id, pair, accumulated))
 		}
+	}
+}
+
+impl<T: Trait> OnDisableLiquidityPool for Module<T> {
+	fn on_disable(pool_id: LiquidityPoolId) {
+		LiquidityPoolOptions::remove_prefix(&pool_id);
+	}
+}
+
+impl<T: Trait> OnRemoveLiquidityPool for Module<T> {
+	fn on_remove(pool_id: LiquidityPoolId) {
+		LiquidityPoolOptions::remove_prefix(&pool_id);
+		AccumulatedSwapRates::remove_prefix(&pool_id);
+		AdditionalSwapRate::remove(&pool_id);
+		LiquidityPoolEnabledTradingPairs::remove_prefix(&pool_id);
+		MinLeveragedAmount::remove(pool_id);
 	}
 }
