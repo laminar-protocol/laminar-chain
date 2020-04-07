@@ -132,13 +132,13 @@ decl_module! {
 			Self::deposit_event(RawEvent::LiquidityPoolRemoved(who, pool_id));
 		}
 
-		pub fn deposit_liquidity(origin, pool_id: LiquidityPoolId, amount: Balance) {
+		pub fn deposit_liquidity(origin, pool_id: LiquidityPoolId, #[compact] amount: Balance) {
 			let who = ensure_signed(origin)?;
 			Self::_deposit_liquidity(&who, pool_id, amount)?;
 			Self::deposit_event(RawEvent::DepositLiquidity(who, pool_id, amount));
 		}
 
-		pub fn withdraw_liquidity(origin, pool_id: LiquidityPoolId, amount: Balance) {
+		pub fn withdraw_liquidity(origin, pool_id: LiquidityPoolId, #[compact] amount: Balance) {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
 
@@ -234,7 +234,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::LiquidityPoolTradingPairDisabled(pair))
 		}
 
-		pub fn set_default_min_leveraged_amount(origin, amount: Balance) {
+		pub fn set_default_min_leveraged_amount(origin, #[compact] amount: Balance) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
@@ -242,7 +242,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::SetDefaultMinLeveragedAmount(amount))
 		}
 
-		pub fn set_min_leveraged_amount(origin, pool_id: LiquidityPoolId, amount: Balance) {
+		pub fn set_min_leveraged_amount(origin, pool_id: LiquidityPoolId, #[compact] amount: Balance) {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
 			MinLeveragedAmount::insert(pool_id, amount);
