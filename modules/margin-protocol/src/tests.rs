@@ -694,6 +694,54 @@ fn trader_stop_out_should_work() {
 }
 
 #[test]
+fn trader_stop_out_close_bigger_loss_position() {
+	ExtBuilder::default()
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100))
+		.spread(Permill::zero())
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.price(CurrencyId::FEUR, (1, 1))
+		.trader_risk_threshold(risk_threshold(70, 60))
+		.build()
+		.execute_with(|| {
+			<Balances<Runtime>>::insert(ALICE, fixed128_from_natural_currency_cent(100));
+			let loss_position: Position<Runtime> = Position {
+				owner: ALICE,
+				pool: MOCK_POOL,
+				pair: EUR_USD_PAIR,
+				leverage: Leverage::LongTwo,
+				leveraged_held: fixed128_from_natural_currency_cent(100),
+				leveraged_debits: fixed128_from_natural_currency_cent(100),
+				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
+				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				margin_held: fixed128_from_natural_currency_cent(100),
+			};
+
+			let bigger_loss_position: Position<Runtime> = Position {
+				owner: ALICE,
+				pool: MOCK_POOL,
+				pair: EUR_USD_PAIR,
+				leverage: Leverage::LongTwo,
+				leveraged_held: fixed128_from_natural_currency_cent(100),
+				leveraged_debits: fixed128_from_natural_currency_cent(100),
+				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
+				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				margin_held: fixed128_from_natural_currency_cent(150),
+			};
+
+			<Positions<Runtime>>::insert(0, loss_position);
+			<Positions<Runtime>>::insert(1, bigger_loss_position);
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 1), ());
+
+			assert_ok!(MarginProtocol::trader_stop_out(Origin::NONE, ALICE));
+
+			// position with bigger loss is closed
+			assert!(<PositionsByTrader<Runtime>>::contains_key(ALICE, (MOCK_POOL, 0)));
+			assert!(!<PositionsByTrader<Runtime>>::contains_key(ALICE, (MOCK_POOL, 1)));
+		});
+}
+
+#[test]
 fn liquidity_pool_margin_call_and_become_safe_work() {
 	ExtBuilder::default()
 		.spread(Permill::zero())
