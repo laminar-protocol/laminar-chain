@@ -1,7 +1,7 @@
 [package]
 name = "module-margin-liquidity-pools"
 version = "0.0.1"
-authors = ["Ermal Kaleci <ermal@laminar.one>"]
+authors = ["Laminar Developers <hello@laminar.one>"]
 edition = "2018"
 
 [dependencies]
