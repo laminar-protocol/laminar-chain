@@ -8,18 +8,15 @@ use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage, ensure, storage::IterableStorageMap, traits::Get,
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
-use orml_traits::{BasicCurrency, MultiCurrency};
+use orml_traits::MultiCurrency;
 use orml_utilities::Fixed128;
 use primitives::{AccumulateConfig, Balance, CurrencyId, Leverage, Leverages, LiquidityPoolId, TradingPair};
 use sp_runtime::{
-	traits::{AccountIdConversion, EnsureOrigin, One, Saturating},
+	traits::{EnsureOrigin, Saturating},
 	DispatchResult, ModuleId, PerThing, Permill, RuntimeDebug,
 };
 use sp_std::cmp::max;
-use sp_std::{prelude::*, result};
-use traits::{
-	LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools, OnDisableLiquidityPool, OnRemoveLiquidityPool,
-};
+use traits::{LiquidityPools, MarginProtocolLiquidityPools, OnDisableLiquidityPool, OnRemoveLiquidityPool};
 
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct MarginLiquidityPoolOption {

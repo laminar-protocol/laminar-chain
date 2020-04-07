@@ -19,19 +19,6 @@ fn accumulated_rate(pair: TradingPair, is_long: bool) -> Fixed128 {
 }
 
 #[test]
-fn is_owner_should_work() {
-	new_test_ext().execute_with(|| {
-		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(ModuleLiquidityPools::is_owner(0, &ALICE), true);
-		assert_eq!(ModuleLiquidityPools::is_owner(1, &ALICE), false);
-		assert_eq!(
-			<ModuleLiquidityPools as LiquidityPools<AccountId>>::is_owner(1, &ALICE),
-			false
-		);
-	});
-}
-
-#[test]
 fn is_enabled_should_work() {
 	new_test_ext().execute_with(|| {
 		let pair = TradingPair {
@@ -57,15 +44,6 @@ fn is_enabled_should_work() {
 			),
 			true
 		);
-	});
-}
-
-#[test]
-fn should_create_pool() {
-	new_test_ext().execute_with(|| {
-		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(BaseLiquidityPools::owners(0), Some((ALICE, 0)));
-		assert_eq!(BaseLiquidityPools::next_pool_id(), 1);
 	});
 }
 
@@ -112,56 +90,6 @@ fn should_remove_pool() {
 		assert_eq!(BaseLiquidityPools::owners(0), None);
 		assert_eq!(BaseLiquidityPools::balances(&0), 0);
 		assert_eq!(<ModuleLiquidityPools as LiquidityPools<AccountId>>::liquidity(0), 0);
-	})
-}
-
-#[test]
-fn should_deposit_liquidity() {
-	new_test_ext().execute_with(|| {
-		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(BaseLiquidityPools::balances(&0), 0);
-		assert_ok!(ModuleLiquidityPools::deposit_liquidity(&ALICE, 0, 1000));
-		assert_eq!(BaseLiquidityPools::balances(&0), 1000);
-		assert_eq!(<ModuleLiquidityPools as LiquidityPools<AccountId>>::liquidity(0), 1000);
-		assert_noop!(
-			ModuleLiquidityPools::deposit_liquidity(&ALICE, 1, 1000),
-			module_base_liquidity_pools::Error::<Runtime, MarginInstance>::PoolNotFound
-		);
-	})
-}
-
-#[test]
-fn should_withdraw_liquidity() {
-	new_test_ext().execute_with(|| {
-		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(BaseLiquidityPools::owners(0), Some((ALICE, 0)));
-		assert_eq!(BaseLiquidityPools::balances(&0), 0);
-		assert_ok!(ModuleLiquidityPools::deposit_liquidity(&ALICE, 0, 1000));
-		assert_eq!(BaseLiquidityPools::balances(&0), 1000);
-		assert_ok!(ModuleLiquidityPools::withdraw_liquidity(&ALICE, 0, 500));
-		assert_eq!(BaseLiquidityPools::balances(&0), 500);
-		assert_ok!(ModuleLiquidityPools::withdraw_liquidity(&BOB, 0, 100));
-		assert_eq!(BaseLiquidityPools::balances(&0), 400);
-	})
-}
-
-#[test]
-fn should_fail_withdraw_liquidity() {
-	new_test_ext().execute_with(|| {
-		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_ok!(ModuleLiquidityPools::deposit_liquidity(&ALICE, 0, 1000));
-		assert_eq!(BaseLiquidityPools::balances(&0), 1000);
-		assert_eq!(
-			ModuleLiquidityPools::withdraw_liquidity(&ALICE, 0, 5000),
-			Err(module_base_liquidity_pools::Error::<Runtime, MarginInstance>::CannotWithdrawAmount.into()),
-		);
-
-		assert_eq!(
-			ModuleLiquidityPools::withdraw_liquidity(&ALICE, 0, 1000),
-			Err(module_base_liquidity_pools::Error::<Runtime, MarginInstance>::CannotWithdrawExistentialDeposit.into()),
-		);
-
-		assert_eq!(BaseLiquidityPools::balances(&0), 1000);
 	})
 }
 

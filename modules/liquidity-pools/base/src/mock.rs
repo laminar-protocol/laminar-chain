@@ -3,19 +3,16 @@
 use super::*;
 
 use frame_support::{impl_outer_origin, ord_parameter_types, parameter_types, weights::Weight};
-use frame_system::EnsureSignedBy;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 	DispatchError, Perbill,
 };
-use sp_std::result;
 
 use orml_currencies::Currency;
 
 use primitives::{Balance, CurrencyId, LiquidityPoolId};
-use traits::LiquidityPoolManager;
 
 pub type BlockNumber = u64;
 pub type AccountId = u32;
@@ -66,7 +63,6 @@ parameter_types! {
 	pub const ExistentialDeposit: u128 = 50;
 	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::LAMI;
 	pub const GetLiquidityCurrencyId: CurrencyId = CurrencyId::AUSD;
-	pub const MaxSwap: Fixed128 = Fixed128::from_natural(2);
 }
 
 type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
@@ -103,31 +99,30 @@ impl LiquidityPoolManager<LiquidityPoolId, Balance> for PoolManager {
 	}
 }
 
-parameter_types! {
-	pub const MarginLiquidityPoolsModuleId: ModuleId = MODULE_ID;
+pub struct DummyOnDisable;
+impl OnDisableLiquidityPool for DummyOnDisable {
+	fn on_disable(_: LiquidityPoolId) {}
 }
 
-pub type MarginInstance = module_base_liquidity_pools::Instance1;
+pub struct DummyOnRemove;
+impl OnRemoveLiquidityPool for DummyOnRemove {
+	fn on_remove(_: LiquidityPoolId) {}
+}
 
-impl module_base_liquidity_pools::Trait<MarginInstance> for Runtime {
+parameter_types! {
+	pub const Instance1ModuleId: ModuleId = ModuleId(*b"test/pl1");
+}
+
+impl Trait<Instance1> for Runtime {
 	type Event = ();
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = PoolManager;
 	type ExistentialDeposit = ExistentialDeposit;
-	type ModuleId = MarginLiquidityPoolsModuleId;
-	type OnDisableLiquidityPool = ModuleLiquidityPools;
-	type OnRemoveLiquidityPool = ModuleLiquidityPools;
+	type ModuleId = Instance1ModuleId;
+	type OnDisableLiquidityPool = DummyOnDisable;
+	type OnRemoveLiquidityPool = DummyOnRemove;
 }
-pub type BaseLiquidityPools = module_base_liquidity_pools::Module<Runtime, MarginInstance>;
-
-impl Trait for Runtime {
-	type Event = ();
-	type BaseLiquidityPools = module_base_liquidity_pools::Module<Runtime, MarginInstance>;
-	type MultiCurrency = orml_currencies::Module<Runtime>;
-	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
-	type MaxSwap = MaxSwap;
-}
-pub type ModuleLiquidityPools = Module<Runtime>;
+pub type Instance1Module = Module<Runtime, Instance1>;
 
 // This function basically just builds a genesis storage key/value store according to
 // our desired mockup.

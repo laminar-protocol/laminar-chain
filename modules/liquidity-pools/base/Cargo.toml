@@ -19,6 +19,9 @@ primitives = { package = "module-primitives", path = "../../primitives", default
 
 [dev-dependencies]
 sp-core = { version = "2.0.0-alpha.5", default-features = false }
+sp-io = { version = "2.0.0-alpha.5", default-features = false }
+orml-currencies = { path = "../../../orml/currencies", default-features = false }
+orml-tokens = { path = "../../../orml/tokens", default-features = false }
 
 [features]
 default = ["std"]

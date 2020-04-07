@@ -11,6 +11,9 @@ use sp_runtime::{
 use sp_std::{prelude::*, result};
 use traits::{LiquidityPoolManager, LiquidityPools, OnDisableLiquidityPool, OnRemoveLiquidityPool};
 
+mod mock;
+mod tests;
+
 pub trait Trait<I: Instance = DefaultInstance>: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 	type LiquidityCurrency: BasicCurrency<Self::AccountId, Balance = Balance>;
