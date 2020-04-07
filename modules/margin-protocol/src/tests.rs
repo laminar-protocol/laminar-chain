@@ -647,7 +647,7 @@ fn trader_become_safe_should_work() {
 		});
 }
 #[test]
-fn trader_liquidate_should_work() {
+fn trader_stop_out_should_work() {
 	ExtBuilder::default()
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100))
 		.spread(Permill::zero())
@@ -671,7 +671,7 @@ fn trader_liquidate_should_work() {
 
 			// without position
 			assert_noop!(
-				MarginProtocol::trader_liquidate(Origin::NONE, ALICE),
+				MarginProtocol::trader_stop_out(Origin::NONE, ALICE),
 				Error::<Runtime>::NotReachedRiskThreshold
 			);
 
@@ -679,14 +679,17 @@ fn trader_liquidate_should_work() {
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
 			assert_eq!(MarginProtocol::margin_level(&ALICE), Ok(Fixed128::from_natural(1)));
 
-			// trader_liquidate without trader_margin_call
+			// trader_stop_out without trader_margin_call
 			MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(3, 100)));
 			assert_eq!(
 				MarginProtocol::margin_level(&ALICE),
 				Ok(Fixed128::from_rational(3, NonZeroI128::new(100).unwrap()))
 			);
 
-			assert_ok!(MarginProtocol::trader_liquidate(Origin::NONE, ALICE));
+			assert_ok!(MarginProtocol::trader_stop_out(Origin::NONE, ALICE));
+
+			let event = TestEvent::margin_protocol(RawEvent::TraderStoppedOut(ALICE));
+			assert!(System::events().iter().any(|record| record.event == event));
 		});
 }
 
@@ -748,7 +751,7 @@ fn liquidity_pool_margin_call_and_become_safe_work() {
 }
 
 #[test]
-fn liquidity_pool_liquidate_works() {
+fn liquidity_pool_force_close_works() {
 	ExtBuilder::default()
 		.spread(Permill::from_rational_approximation(1, 100u32))
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
@@ -775,7 +778,7 @@ fn liquidity_pool_liquidate_works() {
 
 			// ENP 100% > 99%, ELL 100% > 99%, safe
 			assert_noop!(
-				MarginProtocol::liquidity_pool_liquidate(Origin::NONE, MOCK_POOL),
+				MarginProtocol::liquidity_pool_force_close(Origin::NONE, MOCK_POOL),
 				Error::<Runtime>::NotReachedRiskThreshold
 			);
 
@@ -784,9 +787,9 @@ fn liquidity_pool_liquidate_works() {
 			// So liquidity remain 300. Total penalty is 200*2 = 400.
 			MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(2, 1)));
 			// ENP 50% < 99%, unsafe
-			assert_ok!(MarginProtocol::liquidity_pool_liquidate(Origin::NONE, MOCK_POOL));
+			assert_ok!(MarginProtocol::liquidity_pool_force_close(Origin::NONE, MOCK_POOL));
 
-			let event = TestEvent::margin_protocol(RawEvent::LiquidityPoolLiquidated(MOCK_POOL));
+			let event = TestEvent::margin_protocol(RawEvent::LiquidityPoolForceClosed(MOCK_POOL));
 			assert!(System::events().iter().any(|record| record.event == event));
 
 			assert_eq!(
@@ -1705,16 +1708,13 @@ fn offchain_worker_should_work() {
 		assert_ok!(MarginProtocol::_offchain_worker(1));
 
 		assert_eq!(pool_state.read().transactions.len(), 1);
-		let trader_liquidate_call = pool_state.write().transactions.pop().unwrap();
+		let trader_stop_out_call = pool_state.write().transactions.pop().unwrap();
 		assert!(pool_state.read().transactions.is_empty());
 
-		let tx = Extrinsic::decode(&mut &*trader_liquidate_call).unwrap();
+		let tx = Extrinsic::decode(&mut &*trader_stop_out_call).unwrap();
 
 		assert_eq!(tx.signature, None);
-		assert_eq!(
-			tx.call,
-			mock::Call::MarginProtocol(super::Call::trader_liquidate(ALICE))
-		);
+		assert_eq!(tx.call, mock::Call::MarginProtocol(super::Call::trader_stop_out(ALICE)));
 
 		// price goes up to EUR/USD 1.1/1
 		MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(110, 100)));
@@ -1760,15 +1760,15 @@ fn offchain_worker_should_work() {
 		assert_ok!(MarginProtocol::_offchain_worker(1));
 
 		assert_eq!(pool_state.read().transactions.len(), 1);
-		let liquidity_pool_liquidate = pool_state.write().transactions.pop().unwrap();
+		let liquidity_pool_force_close = pool_state.write().transactions.pop().unwrap();
 		assert!(pool_state.read().transactions.is_empty());
 
-		let tx = Extrinsic::decode(&mut &*liquidity_pool_liquidate).unwrap();
+		let tx = Extrinsic::decode(&mut &*liquidity_pool_force_close).unwrap();
 
 		assert_eq!(tx.signature, None);
 		assert_eq!(
 			tx.call,
-			mock::Call::MarginProtocol(super::Call::liquidity_pool_liquidate(MOCK_POOL))
+			mock::Call::MarginProtocol(super::Call::liquidity_pool_force_close(MOCK_POOL))
 		);
 
 		// price goes down to EUR/USD 1.1/1

@@ -241,7 +241,7 @@ mod tests {
 	}
 
 	#[test]
-	fn test_margin_trader_liquidate() {
+	fn test_margin_trader_stop_out() {
 		ExtBuilder::default()
 			.balances(vec![
 				(POOL::get(), AUSD, dollar(10_000)),
@@ -290,7 +290,7 @@ mod tests {
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(21, 10))]));
 				assert_ok!(margin_trader_margin_call(&ALICE::get()));
 				assert_noop!(
-					margin_trader_liquidate(&ALICE::get()),
+					margin_trader_stop_out(&ALICE::get()),
 					margin_protocol::Error::<Runtime>::NotReachedRiskThreshold
 				);
 
@@ -309,7 +309,7 @@ mod tests {
 				assert_ok!(margin_trader_become_safe(&ALICE::get()));
 
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(19, 10))]));
-				assert_ok!(margin_trader_liquidate(&ALICE::get()));
+				assert_ok!(margin_trader_stop_out(&ALICE::get()));
 
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(4500));
 				assert_eq!(margin_balance(&ALICE::get()), Fixed128::from_natural(-245));
@@ -318,7 +318,7 @@ mod tests {
 	}
 
 	#[test]
-	fn test_margin_liquidity_pool_liquidate() {
+	fn test_margin_liquidity_pool_force_close() {
 		ExtBuilder::default()
 			.balances(vec![
 				(POOL::get(), AUSD, dollar(20_000)),
@@ -365,7 +365,7 @@ mod tests {
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(42, 10))]));
 				assert_ok!(margin_liquidity_pool_margin_call());
 				assert_noop!(
-					margin_liquidity_pool_liquidate(),
+					margin_liquidity_pool_force_close(),
 					margin_protocol::Error::<Runtime>::NotReachedRiskThreshold
 				);
 
@@ -386,7 +386,7 @@ mod tests {
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(50, 10))]));
 				assert_eq!(collateral_balance(&MockLaminarTreasury::account_id()), 0);
 				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
-				assert_ok!(margin_liquidity_pool_liquidate());
+				assert_ok!(margin_liquidity_pool_force_close());
 
 				// open_price = 3 * (1 + 0.01) = 3.03
 				// close_price = 5 * (1 - 0.01) = 4.95

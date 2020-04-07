@@ -372,8 +372,8 @@ pub fn margin_trader_become_safe(who: &AccountId) -> DispatchResult {
 	ModuleMarginProtocol::trader_become_safe(<Runtime as system::Trait>::Origin::NONE, Address::from(who.clone()))
 }
 
-pub fn margin_trader_liquidate(who: &AccountId) -> DispatchResult {
-	ModuleMarginProtocol::trader_liquidate(<Runtime as system::Trait>::Origin::NONE, Address::from(who.clone()))
+pub fn margin_trader_stop_out(who: &AccountId) -> DispatchResult {
+	ModuleMarginProtocol::trader_stop_out(<Runtime as system::Trait>::Origin::NONE, Address::from(who.clone()))
 }
 
 pub fn margin_liquidity_pool_margin_call() -> DispatchResult {
@@ -384,6 +384,6 @@ pub fn margin_liquidity_pool_become_safe() -> DispatchResult {
 	ModuleMarginProtocol::liquidity_pool_become_safe(<Runtime as system::Trait>::Origin::NONE, LIQUIDITY_POOL_ID_0)
 }
 
-pub fn margin_liquidity_pool_liquidate() -> DispatchResult {
-	ModuleMarginProtocol::liquidity_pool_liquidate(<Runtime as system::Trait>::Origin::NONE, LIQUIDITY_POOL_ID_0)
+pub fn margin_liquidity_pool_force_close() -> DispatchResult {
+	ModuleMarginProtocol::liquidity_pool_force_close(<Runtime as system::Trait>::Origin::NONE, LIQUIDITY_POOL_ID_0)
 }
