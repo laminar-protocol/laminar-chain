@@ -100,12 +100,27 @@ impl LiquidityPoolManager<LiquidityPoolId, Balance> for PoolManager {
 	}
 }
 
-impl Trait for Runtime {
+parameter_types! {
+	pub const MARGIN_MODULE_ID: ModuleId = MODULE_ID;
+}
+
+pub type MarginInstance = module_base_liquidity_pools::Instance1;
+
+impl module_base_liquidity_pools::Trait<MarginInstance> for Runtime {
 	type Event = ();
-	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = PoolManager;
 	type ExistentialDeposit = ExistentialDeposit;
+	type ModuleId = MARGIN_MODULE_ID;
+	type OnDisableLiquidityPool = ModuleLiquidityPools;
+	type OnRemoveLiquidityPool = ModuleLiquidityPools;
+}
+pub type BaseLiquidityPools = module_base_liquidity_pools::Module<Runtime, MarginInstance>;
+
+impl Trait for Runtime {
+	type Event = ();
+	type BaseLiquidityPools = module_base_liquidity_pools::Module<Runtime, MarginInstance>;
+	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
 	type MaxSwap = MaxSwap;
 }

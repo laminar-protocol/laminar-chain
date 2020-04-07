@@ -3,10 +3,11 @@
 use orml_utilities::Fixed128;
 use primitives::{Balance, CurrencyId, Leverage, LiquidityPoolId, TradingPair};
 use sp_runtime::{DispatchError, DispatchResult, Permill};
-use sp_std::result;
+use sp_std::{prelude::*, result};
 
 pub trait LiquidityPools<AccountId> {
 	fn is_owner(pool_id: LiquidityPoolId, who: &AccountId) -> bool;
+	fn all() -> Vec<LiquidityPoolId>;
 
 	/// Return collateral balance of `pool_id`.
 	fn liquidity(pool_id: LiquidityPoolId) -> Balance;

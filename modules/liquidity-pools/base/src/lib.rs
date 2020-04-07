@@ -1,4 +1,6 @@
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
+use frame_support::{
+	decl_error, decl_event, decl_module, decl_storage, ensure, storage::IterableStorageMap, traits::Get,
+};
 use frame_system::{self as system, ensure_signed};
 use orml_traits::BasicCurrency;
 use primitives::{Balance, LiquidityPoolId};
@@ -90,6 +92,15 @@ decl_module! {
 
 		pub fn withdraw_liquidity(origin, pool_id: LiquidityPoolId, #[compact] amount: Balance) {
 			let who = ensure_signed(origin)?;
+			ensure!(Self::is_owner(pool_id, &who), Error::<T, I>::NoPermission);
+
+			let new_balance = Self::balances(&pool_id).checked_sub(amount).ok_or(Error::<T, I>::CannotWithdrawAmount)?;
+
+			// check minimum balance
+			if new_balance < T::ExistentialDeposit::get() {
+				return Err(Error::<T, I>::CannotWithdrawExistentialDeposit.into());
+			}
+
 			Self::_withdraw_liquidity(&who, pool_id, amount)?;
 			Self::deposit_event(RawEvent::WithdrawLiquidity(who, pool_id, amount));
 		}
@@ -107,6 +118,10 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 }
 
 impl<T: Trait<I>, I: Instance> LiquidityPools<T::AccountId> for Module<T, I> {
+	fn all() -> Vec<LiquidityPoolId> {
+		<Owners<T, I>>::iter().map(|(_, (_, pool_id))| pool_id).collect()
+	}
+
 	fn is_owner(pool_id: LiquidityPoolId, who: &T::AccountId) -> bool {
 		Self::is_owner(pool_id, who)
 	}
@@ -180,21 +195,12 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 	}
 
 	fn _withdraw_liquidity(who: &T::AccountId, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
-		ensure!(Self::is_owner(pool_id, &who), Error::<T, I>::NoPermission);
 		ensure!(<Owners<T, I>>::contains_key(&pool_id), Error::<T, I>::PoolNotFound);
 
 		let new_balance = Self::balances(&pool_id)
 			.checked_sub(amount)
 			.ok_or(Error::<T, I>::CannotWithdrawAmount)?;
-		if new_balance < T::ExistentialDeposit::get() {
-			return Err(Error::<T, I>::CannotWithdrawExistentialDeposit.into());
-		}
-
 		T::PoolManager::ensure_can_withdraw(pool_id, amount)?;
-
-		let new_balance = Self::balances(&pool_id)
-			.checked_sub(amount)
-			.ok_or(Error::<T, I>::CannotWithdrawAmount)?;
 
 		// transfer amount to account
 		T::LiquidityCurrency::transfer(&Self::account_id(), who, amount)?;

@@ -2647,6 +2647,7 @@ version = "0.0.1"
 dependencies = [
  "frame-support 2.0.0-alpha.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-system 2.0.0-alpha.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "module-base-liquidity-pools 0.0.1",
  "module-primitives 0.0.1",
  "module-traits 0.0.1",
  "orml-currencies 0.0.1",
