@@ -73,7 +73,7 @@ decl_module! {
 			origin,
 			pool_id: LiquidityPoolId,
 			currency_id: CurrencyId,
-			collateral_amount: Balance,
+			#[compact] collateral_amount: Balance,
 			max_slippage: Permill
 		) {
 			let who = ensure_signed(origin)?;
@@ -86,7 +86,7 @@ decl_module! {
 			origin,
 			pool_id: LiquidityPoolId,
 			currency_id: CurrencyId,
-			synthetic_amount: Balance,
+			#[compact] synthetic_amount: Balance,
 			max_slippage: Permill,
 		) {
 			let who = ensure_signed(origin)?;
@@ -99,7 +99,7 @@ decl_module! {
 			origin,
 			pool_id: LiquidityPoolId,
 			currency_id: CurrencyId,
-			synthetic_amount: Balance,
+			#[compact] synthetic_amount: Balance,
 		) {
 			let who = ensure_signed(origin)?;
 			let collateral_amount = Self::_liquidate(&who, pool_id, currency_id, synthetic_amount)?;
@@ -111,7 +111,7 @@ decl_module! {
 			origin,
 			pool_id: LiquidityPoolId,
 			currency_id: CurrencyId,
-			collateral_amount: Balance,
+			#[compact] collateral_amount: Balance,
 		) {
 			let who = ensure_signed(origin)?;
 			Self::_add_collateral(&who, pool_id, currency_id, collateral_amount)?;

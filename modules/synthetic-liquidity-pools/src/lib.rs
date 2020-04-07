@@ -98,13 +98,13 @@ decl_module! {
 			Self::deposit_event(RawEvent::LiquidityPoolRemoved(who, pool_id));
 		}
 
-		pub fn deposit_liquidity(origin, pool_id: LiquidityPoolId, amount: Balance) {
+		pub fn deposit_liquidity(origin, pool_id: LiquidityPoolId, #[compact] amount: Balance) {
 			let who = ensure_signed(origin)?;
 			Self::_deposit_liquidity(&who, pool_id, amount)?;
 			Self::deposit_event(RawEvent::DepositLiquidity(who, pool_id, amount));
 		}
 
-		pub fn withdraw_liquidity(origin, pool_id: LiquidityPoolId, amount: Balance) {
+		pub fn withdraw_liquidity(origin, pool_id: LiquidityPoolId, #[compact] amount: Balance) {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
 
