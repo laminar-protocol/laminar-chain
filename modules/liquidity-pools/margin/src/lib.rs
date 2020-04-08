@@ -15,7 +15,7 @@ use sp_runtime::{
 	traits::{EnsureOrigin, Saturating},
 	DispatchResult, ModuleId, PerThing, Permill, RuntimeDebug,
 };
-use sp_std::cmp::max;
+use sp_std::{cmp::max, prelude::*};
 use traits::{LiquidityPools, MarginProtocolLiquidityPools, OnDisableLiquidityPool, OnRemoveLiquidityPool};
 
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]

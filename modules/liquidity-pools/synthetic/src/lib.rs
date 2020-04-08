@@ -9,6 +9,7 @@ use frame_system::{self as system, ensure_root, ensure_signed};
 use orml_traits::MultiCurrency;
 use primitives::{Balance, CurrencyId, LiquidityPoolId};
 use sp_runtime::{traits::EnsureOrigin, DispatchResult, ModuleId, PerThing, Permill, RuntimeDebug};
+use sp_std::prelude::*;
 use traits::{LiquidityPools, OnDisableLiquidityPool, OnRemoveLiquidityPool, SyntheticProtocolLiquidityPools};
 
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]

@@ -6,8 +6,8 @@ use sp_runtime::{DispatchError, DispatchResult, Permill};
 use sp_std::{prelude::*, result};
 
 pub trait LiquidityPools<AccountId> {
-	fn is_owner(pool_id: LiquidityPoolId, who: &AccountId) -> bool;
 	fn all() -> Vec<LiquidityPoolId>;
+	fn is_owner(pool_id: LiquidityPoolId, who: &AccountId) -> bool;
 
 	/// Return collateral balance of `pool_id`.
 	fn liquidity(pool_id: LiquidityPoolId) -> Balance;
