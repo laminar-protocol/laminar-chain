@@ -895,6 +895,7 @@ fn open_long_position_works() {
 
 			let event = TestEvent::margin_protocol(RawEvent::PositionOpened(
 				ALICE,
+				0,
 				MOCK_POOL,
 				EUR_JPY_PAIR,
 				Leverage::LongTwenty,
