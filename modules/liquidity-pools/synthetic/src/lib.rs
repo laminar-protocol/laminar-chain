@@ -4,16 +4,13 @@ mod mock;
 mod tests;
 
 use codec::{Decode, Encode};
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure};
 use frame_system::{self as system, ensure_root, ensure_signed};
-use orml_traits::{BasicCurrency, MultiCurrency};
+use orml_traits::MultiCurrency;
 use primitives::{Balance, CurrencyId, LiquidityPoolId};
-use sp_runtime::{
-	traits::{AccountIdConversion, EnsureOrigin, One},
-	DispatchResult, ModuleId, PerThing, Permill, RuntimeDebug,
-};
-use sp_std::{prelude::*, result};
-use traits::{LiquidityPoolManager, LiquidityPools, SyntheticProtocolLiquidityPools};
+use sp_runtime::{traits::EnsureOrigin, DispatchResult, ModuleId, PerThing, Permill, RuntimeDebug};
+use sp_std::prelude::*;
+use traits::{LiquidityPools, OnDisableLiquidityPool, OnRemoveLiquidityPool, SyntheticProtocolLiquidityPools};
 
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct SyntheticLiquidityPoolOption {
@@ -23,23 +20,18 @@ pub struct SyntheticLiquidityPoolOption {
 	pub synthetic_enabled: bool,
 }
 
-const MODULE_ID: ModuleId = ModuleId(*b"lami/slp");
+pub const MODULE_ID: ModuleId = ModuleId(*b"lami/slp");
 
-pub trait Trait: system::Trait {
+pub trait Trait: frame_system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+	type BaseLiquidityPools: LiquidityPools<Self::AccountId>;
 	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
-	type LiquidityCurrency: BasicCurrency<Self::AccountId, Balance = Balance>;
-	type PoolManager: LiquidityPoolManager<LiquidityPoolId, Balance>;
-	type ExistentialDeposit: Get<Balance>;
 	type UpdateOrigin: EnsureOrigin<Self::Origin>;
 }
 
 decl_storage! {
 	trait Store for Module<T: Trait> as SyntheticLiquidityPools {
-		pub NextPoolId get(fn next_pool_id): LiquidityPoolId;
-		pub Owners get(fn owners): map hasher(twox_64_concat) LiquidityPoolId => Option<(T::AccountId, LiquidityPoolId)>;
-		pub LiquidityPoolOptions get(fn liquidity_pool_options): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(blake2_128_concat) CurrencyId => Option<SyntheticLiquidityPoolOption>;
-		pub Balances get(fn balances): map hasher(twox_64_concat) LiquidityPoolId => Balance;
+		pub LiquidityPoolOptions get(fn liquidity_pool_options): double_map hasher(blake2_128_concat) LiquidityPoolId, hasher(blake2_128_concat) CurrencyId => Option<SyntheticLiquidityPoolOption>;
 		pub MinAdditionalCollateralRatio get(fn min_additional_collateral_ratio) config(): Permill;
 		pub MaxSpread get(fn max_spread): map hasher(blake2_128_concat) CurrencyId => Permill;
 	}
@@ -49,16 +41,6 @@ decl_event!(
 	pub enum Event<T> where
 		<T as system::Trait>::AccountId,
 	{
-		/// Liquidity pool created (who, pool_id)
-		LiquidityPoolCreated(AccountId, LiquidityPoolId),
-		/// Liquidity pool disabled (who, pool_id)
-		LiquidityPoolDisabled(AccountId, LiquidityPoolId),
-		/// Liquidity pool removed (who, pool_id)
-		LiquidityPoolRemoved(AccountId, LiquidityPoolId),
-		/// Deposit liquidity (who, pool_id, amount)
-		DepositLiquidity(AccountId, LiquidityPoolId, Balance),
-		/// Withdraw liquidity (who, pool_id, amount)
-		WithdrawLiquidity(AccountId, LiquidityPoolId, Balance),
 		/// Set spread (who, pool_id, currency_id, bid, ask)
 		SetSpread(AccountId, LiquidityPoolId, CurrencyId, Permill, Permill),
 		/// Set additional collateral ratio (who, pool_id, currency_id, ratio)
@@ -77,47 +59,6 @@ decl_module! {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
-
-		const ExistentialDeposit: Balance = T::ExistentialDeposit::get();
-
-		pub fn create_pool(origin) {
-			let who = ensure_signed(origin)?;
-			let pool_id = Self::_create_pool(&who)?;
-			Self::deposit_event(RawEvent::LiquidityPoolCreated(who, pool_id));
-		}
-
-		pub fn disable_pool(origin, pool_id: LiquidityPoolId) {
-			let who = ensure_signed(origin)?;
-			Self::_disable_pool(&who, pool_id)?;
-			Self::deposit_event(RawEvent::LiquidityPoolDisabled(who, pool_id));
-		}
-
-		pub fn remove_pool(origin, pool_id: LiquidityPoolId) {
-			let who = ensure_signed(origin)?;
-			Self::_remove_pool(&who, pool_id)?;
-			Self::deposit_event(RawEvent::LiquidityPoolRemoved(who, pool_id));
-		}
-
-		pub fn deposit_liquidity(origin, pool_id: LiquidityPoolId, amount: Balance) {
-			let who = ensure_signed(origin)?;
-			Self::_deposit_liquidity(&who, pool_id, amount)?;
-			Self::deposit_event(RawEvent::DepositLiquidity(who, pool_id, amount));
-		}
-
-		pub fn withdraw_liquidity(origin, pool_id: LiquidityPoolId, amount: Balance) {
-			let who = ensure_signed(origin)?;
-			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
-
-			let new_balance = Self::balances(&pool_id).checked_sub(amount).ok_or(Error::<T>::CannotWithdrawAmount)?;
-
-			// check minimum balance
-			if new_balance < T::ExistentialDeposit::get() {
-				return Err(Error::<T>::CannotWithdrawExistentialDeposit.into());
-			}
-
-			Self::_withdraw_liquidity(&who, pool_id, amount)?;
-			Self::deposit_event(RawEvent::WithdrawLiquidity(who, pool_id, amount));
-		}
 
 		pub fn set_spread(origin, pool_id: LiquidityPoolId, currency_id: CurrencyId, bid: Permill, ask: Permill) {
 			let who = ensure_signed(origin)?;
@@ -159,49 +100,32 @@ decl_error! {
 	// SyntheticLiquidityPools module errors
 	pub enum Error for Module<T: Trait> {
 		NoPermission,
-		CannotCreateMorePool,
-		CannotRemovePool,
-		CannotDepositAmount,
-		CannotWithdrawAmount,
-		CannotWithdrawExistentialDeposit,
 		SpreadTooHigh,
-		PoolNotFound,
-	}
-}
-
-impl<T: Trait> Module<T> {
-	pub fn account_id() -> T::AccountId {
-		MODULE_ID.into_account()
-	}
-
-	pub fn is_owner(pool_id: LiquidityPoolId, who: &T::AccountId) -> bool {
-		Self::owners(pool_id).map_or(false, |(id, _)| &id == who)
 	}
 }
 
 impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
-	fn ensure_liquidity(pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
-		ensure!(Self::balances(&pool_id) >= amount, Error::<T>::CannotWithdrawAmount);
-		Ok(())
+	fn all() -> Vec<LiquidityPoolId> {
+		T::BaseLiquidityPools::all()
 	}
 
 	fn is_owner(pool_id: LiquidityPoolId, who: &T::AccountId) -> bool {
-		Self::is_owner(pool_id, who)
+		T::BaseLiquidityPools::is_owner(pool_id, who)
 	}
 
 	/// Check collateral balance of `pool_id`.
 	fn liquidity(pool_id: LiquidityPoolId) -> Balance {
-		Self::balances(&pool_id)
+		T::BaseLiquidityPools::liquidity(pool_id)
 	}
 
 	/// Deposit some amount of collateral to `pool_id`, from `source`.
 	fn deposit_liquidity(source: &T::AccountId, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
-		Self::_deposit_liquidity(source, pool_id, amount)
+		T::BaseLiquidityPools::deposit_liquidity(source, pool_id, amount)
 	}
 
 	/// Withdraw some amount of collateral to `dest`, from `pool_id`.
 	fn withdraw_liquidity(dest: &T::AccountId, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
-		Self::_withdraw_liquidity(dest, pool_id, amount)
+		T::BaseLiquidityPools::withdraw_liquidity(dest, pool_id, amount)
 	}
 }
 
@@ -229,66 +153,6 @@ impl<T: Trait> SyntheticProtocolLiquidityPools<T::AccountId> for Module<T> {
 
 // Private methods
 impl<T: Trait> Module<T> {
-	fn _create_pool(who: &T::AccountId) -> result::Result<LiquidityPoolId, Error<T>> {
-		let pool_id = Self::next_pool_id();
-		// increment next pool id
-		let next_pool_id = pool_id
-			.checked_add(One::one())
-			.ok_or(Error::<T>::CannotCreateMorePool)?;
-		NextPoolId::put(next_pool_id);
-		// owner reference
-		<Owners<T>>::insert(&pool_id, (who, pool_id));
-		Ok(pool_id)
-	}
-
-	fn _disable_pool(who: &T::AccountId, pool_id: LiquidityPoolId) -> DispatchResult {
-		ensure!(Self::is_owner(pool_id, who), Error::<T>::NoPermission);
-		LiquidityPoolOptions::remove_prefix(&pool_id);
-		Ok(())
-	}
-
-	fn _remove_pool(who: &T::AccountId, pool_id: LiquidityPoolId) -> DispatchResult {
-		ensure!(Self::is_owner(pool_id, who), Error::<T>::NoPermission);
-		ensure!(T::PoolManager::can_remove(pool_id), Error::<T>::CannotRemovePool);
-
-		let balance = Self::balances(&pool_id);
-		// transfer balance to pool owner
-		T::LiquidityCurrency::transfer(&Self::account_id(), who, balance)?;
-
-		Balances::remove(&pool_id);
-		<Owners<T>>::remove(&pool_id);
-		LiquidityPoolOptions::remove_prefix(&pool_id);
-
-		Ok(())
-	}
-
-	fn _deposit_liquidity(who: &T::AccountId, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
-		ensure!(<Owners<T>>::contains_key(&pool_id), Error::<T>::PoolNotFound);
-		let balance = Self::balances(&pool_id);
-		let new_balance = balance.checked_add(amount).ok_or(Error::<T>::CannotDepositAmount)?;
-		// transfer amount to this pool
-		T::LiquidityCurrency::transfer(who, &Self::account_id(), amount)?;
-		// update balance
-		Balances::insert(&pool_id, new_balance);
-		Ok(())
-	}
-
-	fn _withdraw_liquidity(who: &T::AccountId, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
-		ensure!(<Owners<T>>::contains_key(&pool_id), Error::<T>::PoolNotFound);
-
-		Self::ensure_liquidity(pool_id, amount)?;
-		let new_balance = Self::balances(&pool_id)
-			.checked_sub(amount)
-			.ok_or(Error::<T>::CannotWithdrawAmount)?;
-
-		// transfer amount to account
-		T::LiquidityCurrency::transfer(&Self::account_id(), who, amount)?;
-
-		// update balance
-		Balances::insert(&pool_id, new_balance);
-		Ok(())
-	}
-
 	fn _set_spread(
 		who: &T::AccountId,
 		pool_id: LiquidityPoolId,
@@ -332,5 +196,17 @@ impl<T: Trait> Module<T> {
 		pool.synthetic_enabled = enabled;
 		LiquidityPoolOptions::insert(&pool_id, &currency_id, pool);
 		Ok(())
+	}
+}
+
+impl<T: Trait> OnDisableLiquidityPool for Module<T> {
+	fn on_disable(pool_id: LiquidityPoolId) {
+		LiquidityPoolOptions::remove_prefix(&pool_id);
+	}
+}
+
+impl<T: Trait> OnRemoveLiquidityPool for Module<T> {
+	fn on_remove(pool_id: LiquidityPoolId) {
+		LiquidityPoolOptions::remove_prefix(&pool_id);
 	}
 }

@@ -5,7 +5,7 @@
 use frame_support::{impl_outer_event, impl_outer_origin, ord_parameter_types, parameter_types};
 use frame_system as system;
 use sp_core::H256;
-use sp_runtime::{testing::Header, traits::IdentityLookup, DispatchResult, Perbill};
+use sp_runtime::{testing::Header, traits::IdentityLookup, DispatchResult, PerThing, Perbill};
 use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
 use system::EnsureSignedBy;
 
@@ -183,7 +183,7 @@ impl MockLiquidityPools {
 }
 
 impl LiquidityPools<AccountId> for MockLiquidityPools {
-	fn ensure_liquidity(_pool_id: LiquidityPoolId, _amount: Balance) -> DispatchResult {
+	fn all() -> Vec<LiquidityPoolId> {
 		unimplemented!()
 	}
 

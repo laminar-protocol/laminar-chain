@@ -1,6 +1,8 @@
 #![cfg(feature = "std")]
 // #[cfg(test)] doesn't work for some reason
 
+use super::*;
+
 use crate::{
 	AccountId, BlockNumber,
 	CurrencyId::{self, AUSD, FEUR},
@@ -154,16 +156,16 @@ pub fn multi_currency_balance(who: &AccountId, currency_id: CurrencyId) -> Balan
 }
 
 pub fn synthetic_create_pool() -> DispatchResult {
-	SyntheticLiquidityPools::create_pool(origin_of(&POOL::get()))?;
-	SyntheticLiquidityPools::create_pool(origin_of(&POOL::get()))
+	BaseLiquidityPoolsForSynthetic::create_pool(origin_of(&POOL::get()))?;
+	BaseLiquidityPoolsForSynthetic::create_pool(origin_of(&POOL::get()))
 }
 
 pub fn synthetic_disable_pool(who: &AccountId) -> DispatchResult {
-	SyntheticLiquidityPools::disable_pool(origin_of(who), LIQUIDITY_POOL_ID_0)
+	BaseLiquidityPoolsForSynthetic::disable_pool(origin_of(who), LIQUIDITY_POOL_ID_0)
 }
 
 pub fn synthetic_remove_pool(who: &AccountId) -> DispatchResult {
-	SyntheticLiquidityPools::remove_pool(origin_of(who), LIQUIDITY_POOL_ID_0)
+	BaseLiquidityPoolsForSynthetic::remove_pool(origin_of(who), LIQUIDITY_POOL_ID_0)
 }
 
 pub fn synthetic_set_enabled_trades() -> DispatchResult {
@@ -177,11 +179,11 @@ pub fn synthetic_set_enabled_trades() -> DispatchResult {
 }
 
 pub fn synthetic_deposit_liquidity(who: &AccountId, amount: Balance) -> DispatchResult {
-	SyntheticLiquidityPools::deposit_liquidity(origin_of(who), LIQUIDITY_POOL_ID_0, amount)
+	BaseLiquidityPoolsForSynthetic::deposit_liquidity(origin_of(who), LIQUIDITY_POOL_ID_0, amount)
 }
 
 pub fn synthetic_withdraw_liquidity(who: &AccountId, amount: Balance) -> DispatchResult {
-	SyntheticLiquidityPools::withdraw_liquidity(origin_of(who), LIQUIDITY_POOL_ID_0, amount)
+	BaseLiquidityPoolsForSynthetic::withdraw_liquidity(origin_of(who), LIQUIDITY_POOL_ID_0, amount)
 }
 
 pub fn synthetic_buy(who: &AccountId, currency_id: CurrencyId, amount: Balance) -> DispatchResult {
@@ -190,7 +192,7 @@ pub fn synthetic_buy(who: &AccountId, currency_id: CurrencyId, amount: Balance) 
 		LIQUIDITY_POOL_ID_0,
 		currency_id,
 		amount,
-		Permill::from_percent(10),
+		Price::from_rational(10, 1),
 	)
 }
 
@@ -200,7 +202,7 @@ pub fn synthetic_sell(who: &AccountId, currency_id: CurrencyId, amount: Balance)
 		LIQUIDITY_POOL_ID_0,
 		currency_id,
 		amount,
-		Permill::from_percent(10),
+		Price::from_rational(1, 10),
 	)
 }
 
@@ -237,7 +239,7 @@ pub fn synthetic_set_spread(currency_id: CurrencyId, spread: Permill) -> Dispatc
 }
 
 pub fn synthetic_liquidity() -> Balance {
-	SyntheticLiquidityPools::balances(LIQUIDITY_POOL_ID_0)
+	BaseLiquidityPoolsForSynthetic::balances(LIQUIDITY_POOL_ID_0)
 }
 
 pub fn synthetic_add_collateral(who: &AccountId, currency_id: CurrencyId, amount: Balance) -> DispatchResult {
@@ -249,19 +251,19 @@ pub fn synthetic_liquidate(who: &AccountId, currency_id: CurrencyId, amount: Bal
 }
 
 pub fn margin_create_pool() -> DispatchResult {
-	MarginLiquidityPools::create_pool(origin_of(&POOL::get()))
+	BaseLiquidityPoolsForMargin::create_pool(origin_of(&POOL::get()))
 }
 
 pub fn margin_disable_pool(who: &AccountId) -> DispatchResult {
-	MarginLiquidityPools::disable_pool(origin_of(who), LIQUIDITY_POOL_ID_0)
+	BaseLiquidityPoolsForMargin::disable_pool(origin_of(who), LIQUIDITY_POOL_ID_0)
 }
 
 pub fn margin_remove_pool(who: &AccountId) -> DispatchResult {
-	MarginLiquidityPools::remove_pool(origin_of(who), LIQUIDITY_POOL_ID_0)
+	BaseLiquidityPoolsForMargin::remove_pool(origin_of(who), LIQUIDITY_POOL_ID_0)
 }
 
 pub fn margin_deposit_liquidity(who: &AccountId, amount: Balance) -> DispatchResult {
-	MarginLiquidityPools::deposit_liquidity(origin_of(who), LIQUIDITY_POOL_ID_0, amount)
+	BaseLiquidityPoolsForMargin::deposit_liquidity(origin_of(who), LIQUIDITY_POOL_ID_0, amount)
 }
 
 pub fn margin_set_enabled_trades() -> DispatchResult {
@@ -270,7 +272,7 @@ pub fn margin_set_enabled_trades() -> DispatchResult {
 }
 
 pub fn margin_withdraw_liquidity(who: &AccountId, amount: Balance) -> DispatchResult {
-	MarginLiquidityPools::withdraw_liquidity(origin_of(who), LIQUIDITY_POOL_ID_0, amount)
+	BaseLiquidityPoolsForMargin::withdraw_liquidity(origin_of(who), LIQUIDITY_POOL_ID_0, amount)
 }
 
 pub fn margin_set_spread(pair: TradingPair, spread: Permill) -> DispatchResult {
@@ -335,7 +337,7 @@ pub fn margin_balance(who: &AccountId) -> Fixed128 {
 }
 
 pub fn margin_liquidity() -> Balance {
-	MarginLiquidityPools::balances(LIQUIDITY_POOL_ID_0)
+	BaseLiquidityPoolsForMargin::balances(LIQUIDITY_POOL_ID_0)
 }
 
 pub fn margin_open_position(
@@ -372,8 +374,8 @@ pub fn margin_trader_become_safe(who: &AccountId) -> DispatchResult {
 	ModuleMarginProtocol::trader_become_safe(<Runtime as system::Trait>::Origin::NONE, Address::from(who.clone()))
 }
 
-pub fn margin_trader_liquidate(who: &AccountId) -> DispatchResult {
-	ModuleMarginProtocol::trader_liquidate(<Runtime as system::Trait>::Origin::NONE, Address::from(who.clone()))
+pub fn margin_trader_stop_out(who: &AccountId) -> DispatchResult {
+	ModuleMarginProtocol::trader_stop_out(<Runtime as system::Trait>::Origin::NONE, Address::from(who.clone()))
 }
 
 pub fn margin_liquidity_pool_margin_call() -> DispatchResult {
@@ -384,6 +386,6 @@ pub fn margin_liquidity_pool_become_safe() -> DispatchResult {
 	ModuleMarginProtocol::liquidity_pool_become_safe(<Runtime as system::Trait>::Origin::NONE, LIQUIDITY_POOL_ID_0)
 }
 
-pub fn margin_liquidity_pool_liquidate() -> DispatchResult {
-	ModuleMarginProtocol::liquidity_pool_liquidate(<Runtime as system::Trait>::Origin::NONE, LIQUIDITY_POOL_ID_0)
+pub fn margin_liquidity_pool_force_close() -> DispatchResult {
+	ModuleMarginProtocol::liquidity_pool_force_close(<Runtime as system::Trait>::Origin::NONE, LIQUIDITY_POOL_ID_0)
 }

@@ -1,7 +1,7 @@
 [package]
 name = "module-synthetic-liquidity-pools"
 version = "0.0.1"
-authors = ["Ermal Kaleci <ermal@laminar.one>"]
+authors = ["Laminar Developers <hello@laminar.one>"]
 edition = "2018"
 
 [dependencies]
@@ -14,17 +14,18 @@ sp-std = { version = "2.0.0-alpha.5", default-features = false }
 frame-support = { version = "2.0.0-alpha.5", default-features = false }
 frame-system = { version = "2.0.0-alpha.5", default-features = false }
 
-traits = { package = "module-traits", path = "../traits", default-features = false }
-primitives = { package = "module-primitives", path = "../primitives", default-features = false }
-margin-protocol = { package = "module-margin-protocol", path = "../margin-protocol", default-features = false }
+traits = { package = "module-traits", path = "../../traits", default-features = false }
+primitives = { package = "module-primitives", path = "../../primitives", default-features = false }
+margin-protocol = { package = "module-margin-protocol", path = "../../margin-protocol", default-features = false }
 
-orml-currencies = { path = "../../orml/currencies", default-features = false }
-orml-traits = { path = "../../orml/traits", default-features = false }
-orml-tokens = { path = "../../orml/tokens", default-features = false }
-orml-utilities = { path = "../../orml/utilities", default-features = false }
+orml-currencies = { path = "../../../orml/currencies", default-features = false }
+orml-traits = { path = "../../../orml/traits", default-features = false }
+orml-tokens = { path = "../../../orml/tokens", default-features = false }
+orml-utilities = { path = "../../../orml/utilities", default-features = false }
 
 [dev-dependencies]
 sp-core = { version = "2.0.0-alpha.5", default-features = false }
+module-base-liquidity-pools = { path = "../base", default-features = false }
 
 [features]
 default = ["std"]

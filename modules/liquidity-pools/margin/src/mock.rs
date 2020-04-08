@@ -3,16 +3,19 @@
 use super::*;
 
 use frame_support::{impl_outer_origin, ord_parameter_types, parameter_types, weights::Weight};
+use frame_system::EnsureSignedBy;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 	DispatchError, Perbill,
 };
+use sp_std::result;
 
 use orml_currencies::Currency;
+
 use primitives::{Balance, CurrencyId, LiquidityPoolId};
-use system::EnsureSignedBy;
+use traits::LiquidityPoolManager;
 
 pub type BlockNumber = u64;
 pub type AccountId = u32;
@@ -63,6 +66,7 @@ parameter_types! {
 	pub const ExistentialDeposit: u128 = 50;
 	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::LAMI;
 	pub const GetLiquidityCurrencyId: CurrencyId = CurrencyId::AUSD;
+	pub const MaxSwap: Fixed128 = Fixed128::from_natural(2);
 }
 
 type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
@@ -86,7 +90,6 @@ impl orml_tokens::Trait for Runtime {
 }
 
 pub struct PoolManager;
-
 impl LiquidityPoolManager<LiquidityPoolId, Balance> for PoolManager {
 	fn can_remove(_pool_id: LiquidityPoolId) -> bool {
 		true
@@ -96,17 +99,33 @@ impl LiquidityPoolManager<LiquidityPoolId, Balance> for PoolManager {
 		unimplemented!()
 	}
 	fn ensure_can_withdraw(_pool: LiquidityPoolId, _amount: Balance) -> DispatchResult {
-		unimplemented!()
+		Ok(())
 	}
 }
 
-impl Trait for Runtime {
+parameter_types! {
+	pub const MarginLiquidityPoolsModuleId: ModuleId = MODULE_ID;
+}
+
+pub type MarginInstance = module_base_liquidity_pools::Instance1;
+
+impl module_base_liquidity_pools::Trait<MarginInstance> for Runtime {
 	type Event = ();
-	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = PoolManager;
 	type ExistentialDeposit = ExistentialDeposit;
+	type ModuleId = MarginLiquidityPoolsModuleId;
+	type OnDisableLiquidityPool = ModuleLiquidityPools;
+	type OnRemoveLiquidityPool = ModuleLiquidityPools;
+}
+pub type BaseLiquidityPools = module_base_liquidity_pools::Module<Runtime, MarginInstance>;
+
+impl Trait for Runtime {
+	type Event = ();
+	type BaseLiquidityPools = module_base_liquidity_pools::Module<Runtime, MarginInstance>;
+	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
+	type MaxSwap = MaxSwap;
 }
 pub type ModuleLiquidityPools = Module<Runtime>;
 

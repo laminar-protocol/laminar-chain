@@ -11,11 +11,11 @@ use sp_runtime::{
 };
 
 use orml_currencies::Currency;
+
 use primitives::{Balance, CurrencyId, LiquidityPoolId};
-use system::EnsureSignedBy;
 
 pub type BlockNumber = u64;
-pub type AccountId = u32;
+pub type AccountId = u128;
 
 ord_parameter_types! {
 	pub const One: AccountId = 0;
@@ -63,7 +63,6 @@ parameter_types! {
 	pub const ExistentialDeposit: u128 = 50;
 	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::LAMI;
 	pub const GetLiquidityCurrencyId: CurrencyId = CurrencyId::AUSD;
-	pub const MaxSwap: Fixed128 = Fixed128::from_natural(2);
 }
 
 type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
@@ -100,16 +99,45 @@ impl LiquidityPoolManager<LiquidityPoolId, Balance> for PoolManager {
 	}
 }
 
-impl Trait for Runtime {
+pub struct DummyOnDisable;
+impl OnDisableLiquidityPool for DummyOnDisable {
+	fn on_disable(_: LiquidityPoolId) {}
+}
+
+pub struct DummyOnRemove;
+impl OnRemoveLiquidityPool for DummyOnRemove {
+	fn on_remove(_: LiquidityPoolId) {}
+}
+
+parameter_types! {
+	pub const Instance1ModuleId: ModuleId = ModuleId(*b"test/lp1");
+}
+
+impl Trait<Instance1> for Runtime {
 	type Event = ();
-	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = PoolManager;
 	type ExistentialDeposit = ExistentialDeposit;
-	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
-	type MaxSwap = MaxSwap;
+	type ModuleId = Instance1ModuleId;
+	type OnDisableLiquidityPool = DummyOnDisable;
+	type OnRemoveLiquidityPool = DummyOnRemove;
 }
-pub type ModuleLiquidityPools = Module<Runtime>;
+pub type Instance1Module = Module<Runtime, Instance1>;
+
+parameter_types! {
+	pub const Instance2ModuleId: ModuleId = ModuleId(*b"test/lp2");
+}
+
+impl Trait<Instance2> for Runtime {
+	type Event = ();
+	type LiquidityCurrency = LiquidityCurrency;
+	type PoolManager = PoolManager;
+	type ExistentialDeposit = ExistentialDeposit;
+	type ModuleId = Instance2ModuleId;
+	type OnDisableLiquidityPool = DummyOnDisable;
+	type OnRemoveLiquidityPool = DummyOnRemove;
+}
+pub type Instance2Module = Module<Runtime, Instance2>;
 
 // This function basically just builds a genesis storage key/value store according to
 // our desired mockup.

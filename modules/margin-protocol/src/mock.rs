@@ -150,7 +150,7 @@ impl MockLiquidityPools {
 	}
 }
 impl LiquidityPools<AccountId> for MockLiquidityPools {
-	fn ensure_liquidity(_pool_id: LiquidityPoolId, _amount: Balance) -> DispatchResult {
+	fn all() -> Vec<LiquidityPoolId> {
 		unimplemented!()
 	}
 

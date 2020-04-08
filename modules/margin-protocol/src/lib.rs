@@ -94,8 +94,8 @@ decl_event! {
 		TradingPair = TradingPair,
 		Amount = Balance
 	{
-		/// Position opened: (who, pool_id, trading_pair, leverage, leveraged_amount, market_price)
-		PositionOpened(AccountId, LiquidityPoolId, TradingPair, Leverage, Amount, Price),
+		/// Position opened: (who, position_id, pool_id, trading_pair, leverage, leveraged_amount, market_price)
+		PositionOpened(AccountId, PositionId, LiquidityPoolId, TradingPair, Leverage, Amount, Price),
 		/// Position closed: (who, position_id, market_price)
 		PositionClosed(AccountId, PositionId, Price),
 		/// Deposited: (who, amount)
@@ -106,14 +106,14 @@ decl_event! {
 		TraderMarginCalled(AccountId),
 		/// TraderBecameSafe: (who)
 		TraderBecameSafe(AccountId),
-		/// TraderLiquidated: (who)
-		TraderLiquidated(AccountId),
+		/// TraderStoppedOut: (who)
+		TraderStoppedOut(AccountId),
 		/// LiquidityPoolMarginCalled: (pool_id)
 		LiquidityPoolMarginCalled(LiquidityPoolId),
 		/// LiquidityPoolBecameSafe: (pool_id)
 		LiquidityPoolBecameSafe(LiquidityPoolId),
-		/// LiquidityPoolLiquidated: (pool_id)
-		LiquidityPoolLiquidated(LiquidityPoolId),
+		/// LiquidityPoolForceClosed: (pool_id)
+		LiquidityPoolForceClosed(LiquidityPoolId),
 	}
 }
 
@@ -197,12 +197,12 @@ decl_module! {
 			Self::deposit_event(RawEvent::TraderBecameSafe(who));
 		}
 
-		pub fn trader_liquidate(origin, who: <T::Lookup as StaticLookup>::Source) {
+		pub fn trader_stop_out(origin, who: <T::Lookup as StaticLookup>::Source) {
 			ensure_none(origin)?;
 			let who = T::Lookup::lookup(who)?;
 
-			Self::_trader_liquidate(&who)?;
-			Self::deposit_event(RawEvent::TraderLiquidated(who));
+			Self::_trader_stop_out(&who)?;
+			Self::deposit_event(RawEvent::TraderStoppedOut(who));
 		}
 
 		pub fn liquidity_pool_margin_call(origin, pool: LiquidityPoolId) {
@@ -217,10 +217,10 @@ decl_module! {
 			Self::deposit_event(RawEvent::LiquidityPoolBecameSafe(pool));
 		}
 
-		pub fn liquidity_pool_liquidate(origin, pool: LiquidityPoolId) {
+		pub fn liquidity_pool_force_close(origin, pool: LiquidityPoolId) {
 			ensure_none(origin)?;
-			Self::_liquidity_pool_liquidate(pool)?;
-			Self::deposit_event(RawEvent::LiquidityPoolLiquidated(pool));
+			Self::_liquidity_pool_force_close(pool)?;
+			Self::deposit_event(RawEvent::LiquidityPoolForceClosed(pool));
 		}
 
 		fn offchain_worker(block_number: T::BlockNumber) {
@@ -310,10 +310,11 @@ impl<T: Trait> Module<T> {
 		ensure!(free_margin >= margin_held, Error::<T>::InsufficientFreeMargin);
 		Self::_ensure_pool_safe(pool, Action::OpenPosition(position.clone()))?;
 
-		Self::_insert_position(who, pool, pair, position)?;
+		let id = Self::_insert_position(who, pool, pair, position)?;
 
 		Self::deposit_event(RawEvent::PositionOpened(
 			who.clone(),
+			id,
 			pool,
 			pair,
 			leverage,
@@ -422,14 +423,33 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	fn _trader_liquidate(who: &T::AccountId) -> DispatchResult {
+	fn _trader_stop_out(who: &T::AccountId) -> DispatchResult {
 		let risk = Self::_check_trader(who)?;
 		match risk {
 			Risk::StopOut => {
-				// Close position as much as possible
-				<PositionsByTrader<T>>::iter(who).for_each(|((_, position_id), _)| {
-					let _ = Self::_close_position(who, position_id, None);
-				});
+				// To stop out a trader:
+				//   1. Close the position with the biggest loss.
+				//   2. Repeat step 1 until no stop out risk, or all positions of this trader has been closed.
+
+				let mut positions: Vec<(PositionId, Fixed128)> = <PositionsByTrader<T>>::iter(who)
+					.filter_map(|((_, position_id), _)| {
+						let position = Self::positions(position_id)?;
+						let unrealized_pl = Self::_unrealized_pl_of_position(&position).ok()?;
+						let accumulated_swap_rate = Self::_accumulated_swap_rate_of_position(&position).ok()?;
+						let unrealized = unrealized_pl.checked_add(&accumulated_swap_rate)?;
+						Some((position_id, unrealized))
+					})
+					.collect();
+				positions.sort_unstable_by(|x, y| x.1.cmp(&y.1));
+
+				for (id, _) in positions {
+					let _ = Self::_close_position(who, id, None);
+					let new_risk = Self::_check_trader(who)?;
+					match new_risk {
+						Risk::StopOut => {}
+						_ => break,
+					}
+				}
 
 				if Self::_ensure_trader_safe(who).is_ok() && Self::_is_trader_margin_called(who) {
 					<MarginCalledTraders<T>>::remove(who);
@@ -462,7 +482,7 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	fn _liquidity_pool_liquidate(pool: LiquidityPoolId) -> DispatchResult {
+	fn _liquidity_pool_force_close(pool: LiquidityPoolId) -> DispatchResult {
 		match Self::_check_pool(pool, Action::None) {
 			Ok(Risk::StopOut) => {
 				PositionsByPool::iter(pool).for_each(|((_, position_id), _)| {
@@ -490,7 +510,7 @@ impl<T: Trait> Module<T> {
 		pool: LiquidityPoolId,
 		pair: TradingPair,
 		position: Position<T>,
-	) -> DispatchResult {
+	) -> result::Result<PositionId, DispatchError> {
 		let id = Self::next_position_id();
 		ensure!(id != PositionId::max_value(), Error::<T>::NoAvailablePositionId);
 		NextPositionId::mutate(|id| *id += 1);
@@ -499,7 +519,7 @@ impl<T: Trait> Module<T> {
 		<PositionsByTrader<T>>::insert(who, (pool, id), ());
 		PositionsByPool::insert(pool, (pair, id), ());
 
-		Ok(())
+		Ok(id)
 	}
 
 	/// Update `who` balance by `amount`.
@@ -1008,7 +1028,7 @@ impl<T: Trait> Module<T> {
 			match Self::_check_trader(&trader).map_err(|_| OffchainErr::CheckFail)? {
 				Risk::StopOut => {
 					let who = T::Lookup::unlookup(trader.clone());
-					let call = Call::<T>::trader_liquidate(who);
+					let call = Call::<T>::trader_stop_out(who);
 					T::SubmitTransaction::submit_unsigned(call).map_err(|_| OffchainErr::SubmitTransaction)?;
 					debug::native::trace!(
 						target: TAG,
@@ -1051,7 +1071,7 @@ impl<T: Trait> Module<T> {
 		for pool_id in Self::_get_pools() {
 			match Self::_check_pool(pool_id, Action::None).map_err(|_| OffchainErr::CheckFail)? {
 				Risk::StopOut => {
-					let call = Call::<T>::liquidity_pool_liquidate(pool_id);
+					let call = Call::<T>::liquidity_pool_force_close(pool_id);
 					T::SubmitTransaction::submit_unsigned(call).map_err(|_| OffchainErr::SubmitTransaction)?;
 					debug::native::trace!(
 						target: TAG,
@@ -1198,11 +1218,11 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 					..defaults
 				})
 			}
-			Call::trader_liquidate(who) => {
+			Call::trader_stop_out(who) => {
 				let trader = T::Lookup::lookup(who.clone()).expect(InvalidTransaction::Stale.into());
 				if Self::_should_liquidate_trader(&trader).ok() == Some(true) {
 					return Ok(ValidTransaction {
-						provides: vec![("margin_protocol/trader_liquidate", who).encode()],
+						provides: vec![("margin_protocol/trader_stop_out", who).encode()],
 						..defaults
 					});
 				}
@@ -1228,10 +1248,10 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 					..defaults
 				})
 			}
-			Call::liquidity_pool_liquidate(pool_id) => {
+			Call::liquidity_pool_force_close(pool_id) => {
 				if Self::_should_liquidate_pool(*pool_id).ok() == Some(true) {
 					return Ok(ValidTransaction {
-						provides: vec![("margin_protocol/liquidity_pool_liquidate", pool_id).encode()],
+						provides: vec![("margin_protocol/liquidity_pool_force_close", pool_id).encode()],
 						..defaults
 					});
 				}

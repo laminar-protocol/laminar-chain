@@ -6,6 +6,7 @@ mod tests {
 	use frame_support::{assert_noop, assert_ok};
 	use laminar_runtime::{
 		tests::*,
+		BaseLiquidityPoolsSyntheticInstance,
 		CurrencyId::{AUSD, FEUR, FJPY},
 		Runtime,
 	};
@@ -533,7 +534,7 @@ mod tests {
 				assert_eq!(multi_currency_balance(&ALICE::get(), FEUR), 1650165016501650165016);
 				assert_noop!(
 					synthetic_remove_pool(&POOL::get()),
-					synthetic_liquidity_pools::Error::<Runtime>::CannotRemovePool
+					base_liquidity_pools::Error::<Runtime, BaseLiquidityPoolsSyntheticInstance>::CannotRemovePool
 				);
 
 				assert_ok!(synthetic_sell(

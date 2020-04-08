@@ -321,7 +321,7 @@ mod steps {
 						.iter()
 						.map(|x| (parse_name(x.get(0)), parse_result(x.get(1))));
 					for (name, result) in iter {
-						result.assert(margin_trader_liquidate(&name));
+						result.assert(margin_trader_stop_out(&name));
 					}
 				})
 			})
@@ -337,7 +337,7 @@ mod steps {
 				world.execute_with(|| {
 					let iter = get_rows(step).iter().map(|x| parse_result(x.get(0)));
 					for result in iter {
-						result.assert(margin_liquidity_pool_liquidate());
+						result.assert(margin_liquidity_pool_force_close());
 					}
 				})
 			})
