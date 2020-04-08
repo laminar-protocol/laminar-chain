@@ -96,8 +96,8 @@ decl_event! {
 		TradingPair = TradingPair,
 		Amount = Balance
 	{
-		/// Position opened: (who, pool_id, trading_pair, leverage, leveraged_amount, market_price)
-		PositionOpened(AccountId, LiquidityPoolId, TradingPair, Leverage, Amount, Price),
+		/// Position opened: (who, position_id, pool_id, trading_pair, leverage, leveraged_amount, market_price)
+		PositionOpened(AccountId, PositionId, LiquidityPoolId, TradingPair, Leverage, Amount, Price),
 		/// Position closed: (who, position_id, market_price)
 		PositionClosed(AccountId, PositionId, Price),
 		/// Deposited: (who, amount)
@@ -312,10 +312,11 @@ impl<T: Trait> Module<T> {
 		ensure!(free_margin >= margin_held, Error::<T>::InsufficientFreeMargin);
 		Self::_ensure_pool_safe(pool, Action::OpenPosition(position.clone()))?;
 
-		Self::_insert_position(who, pool, pair, position)?;
+		let id = Self::_insert_position(who, pool, pair, position)?;
 
 		Self::deposit_event(RawEvent::PositionOpened(
 			who.clone(),
+			id,
 			pool,
 			pair,
 			leverage,
@@ -511,7 +512,7 @@ impl<T: Trait> Module<T> {
 		pool: LiquidityPoolId,
 		pair: TradingPair,
 		position: Position<T>,
-	) -> DispatchResult {
+	) -> result::Result<PositionId, DispatchError> {
 		let id = Self::next_position_id();
 		ensure!(id != PositionId::max_value(), Error::<T>::NoAvailablePositionId);
 		NextPositionId::mutate(|id| *id += 1);
@@ -520,7 +521,7 @@ impl<T: Trait> Module<T> {
 		<PositionsByTrader<T>>::insert(who, (pool, id), ());
 		PositionsByPool::insert(pool, (pair, id), ());
 
-		Ok(())
+		Ok(id)
 	}
 
 	/// Update `who` balance by `amount`.
