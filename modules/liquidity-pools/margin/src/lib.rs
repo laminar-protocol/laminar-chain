@@ -13,7 +13,7 @@ use orml_utilities::Fixed128;
 use primitives::{AccumulateConfig, Balance, CurrencyId, Leverage, Leverages, LiquidityPoolId, TradingPair};
 use sp_runtime::{
 	traits::{EnsureOrigin, Saturating},
-	DispatchResult, ModuleId, PerThing, Permill, RuntimeDebug,
+	DispatchResult, ModuleId, Permill, RuntimeDebug,
 };
 use sp_std::{cmp::max, prelude::*};
 use traits::{LiquidityPools, MarginProtocolLiquidityPools, OnDisableLiquidityPool, OnRemoveLiquidityPool};
@@ -43,11 +43,11 @@ pub trait Trait: frame_system::Trait {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as MarginLiquidityPools {
-		pub LiquidityPoolOptions get(fn liquidity_pool_options): double_map hasher(blake2_128_concat) LiquidityPoolId, hasher(blake2_128_concat) TradingPair => Option<MarginLiquidityPoolOption>;
+		pub LiquidityPoolOptions: double_map hasher(blake2_128_concat) LiquidityPoolId, hasher(blake2_128_concat) TradingPair => Option<MarginLiquidityPoolOption>;
 		pub SwapRates get(fn swap_rate): map hasher(blake2_128_concat) TradingPair => Option<SwapRate>;
 		pub AccumulatedSwapRates get(fn accumulated_swap_rate): double_map hasher(blake2_128_concat) LiquidityPoolId, hasher(blake2_128_concat) TradingPair => SwapRate;
 		pub AdditionalSwapRate get(fn additional_swap_rate): map hasher(blake2_128_concat) LiquidityPoolId => Option<Fixed128>;
-		pub MaxSpread get(fn max_spread): map hasher(blake2_128_concat) TradingPair => Permill;
+		pub MaxSpread get(fn max_spread): map hasher(blake2_128_concat) TradingPair => Option<Permill>;
 		pub Accumulates get(fn accumulate): map hasher(blake2_128_concat) TradingPair => Option<(AccumulateConfig<T::BlockNumber>, TradingPair)>;
 		pub EnabledTradingPairs get(fn enabled_trading_pair): map hasher(blake2_128_concat) TradingPair => Option<TradingPair>;
 		pub LiquidityPoolEnabledTradingPairs get(fn liquidity_pool_enabled_trading_pair): double_map hasher(blake2_128_concat) LiquidityPoolId, hasher(blake2_128_concat) TradingPair => Option<TradingPair>;
@@ -215,8 +215,18 @@ decl_error! {
 }
 
 impl<T: Trait> Module<T> {
+	pub fn liquidity_pool_options(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<MarginLiquidityPoolOption> {
+		LiquidityPoolOptions::get(pool_id, pair).map(|mut pool| {
+			if let Some(max_spread) = Self::max_spread(pair) {
+				pool.bid_spread = pool.bid_spread.min(max_spread);
+				pool.ask_spread = pool.ask_spread.min(max_spread);
+			}
+			pool
+		})
+	}
+
 	pub fn is_enabled(pool_id: LiquidityPoolId, pair: TradingPair, leverage: Leverage) -> bool {
-		Self::liquidity_pool_options(&pool_id, &pair).map_or(false, |pool| pool.enabled_trades.contains(leverage))
+		Self::liquidity_pool_options(pool_id, pair).map_or(false, |pool| pool.enabled_trades.contains(leverage))
 	}
 
 	pub fn get_min_leveraged_amount(pool_id: LiquidityPoolId) -> Balance {
@@ -256,11 +266,11 @@ impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
 	}
 
 	fn get_bid_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Permill> {
-		Self::liquidity_pool_options(&pool_id, &pair).map(|pool| pool.bid_spread)
+		Self::liquidity_pool_options(pool_id, pair).map(|pool| pool.bid_spread)
 	}
 
 	fn get_ask_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Permill> {
-		Self::liquidity_pool_options(&pool_id, &pair).map(|pool| pool.ask_spread)
+		Self::liquidity_pool_options(pool_id, pair).map(|pool| pool.ask_spread)
 	}
 
 	fn get_swap_rate(pool_id: LiquidityPoolId, pair: TradingPair, is_long: bool) -> Fixed128 {
@@ -315,11 +325,8 @@ impl<T: Trait> Module<T> {
 		ask: Permill,
 	) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, who), Error::<T>::NoPermission);
-		let max_spread = Self::max_spread(pair);
-		if !max_spread.is_zero() {
-			ensure!(ask <= max_spread && bid <= max_spread, Error::<T>::SpreadTooHigh);
-		}
-		let mut pool = Self::liquidity_pool_options(&pool_id, &pair).unwrap_or_default();
+		// not using Self::liquidity_pool_options to preserve original value
+		let mut pool = LiquidityPoolOptions::get(pool_id, pair).unwrap_or_default();
 		pool.bid_spread = bid;
 		pool.ask_spread = ask;
 		LiquidityPoolOptions::insert(&pool_id, &pair, pool);
@@ -333,7 +340,8 @@ impl<T: Trait> Module<T> {
 		enabled: Leverages,
 	) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, who), Error::<T>::NoPermission);
-		let mut pool = Self::liquidity_pool_options(&pool_id, &pair).unwrap_or_default();
+		// not using Self::liquidity_pool_options to preserve original value
+		let mut pool = LiquidityPoolOptions::get(pool_id, pair).unwrap_or_default();
 		pool.enabled_trades = enabled;
 		LiquidityPoolOptions::insert(&pool_id, &pair, pool);
 		Ok(())

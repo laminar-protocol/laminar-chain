@@ -46,10 +46,7 @@ mod tests {
 
 				assert_ok!(margin_set_spread(EUR_USD, Permill::from_percent(1)));
 				assert_ok!(margin_set_max_spread(EUR_USD, Permill::from_percent(2)));
-				assert_noop!(
-					margin_set_spread(EUR_USD, Permill::from_percent(3)),
-					margin_liquidity_pools::Error::<Runtime>::SpreadTooHigh
-				);
+				assert_ok!(margin_set_spread(EUR_USD, Permill::from_percent(3)));
 				assert_ok!(margin_set_spread(EUR_USD, Permill::from_percent(1)));
 
 				assert_ok!(margin_set_enabled_trades());
