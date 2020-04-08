@@ -29,8 +29,8 @@ pub trait Trait<I: Instance = DefaultInstance>: system::Trait {
 decl_storage! {
 	trait Store for Module<T: Trait<I>, I: Instance=DefaultInstance> as BaseLiquidityPools {
 		pub NextPoolId get(fn next_pool_id): LiquidityPoolId;
-		pub Owners get(fn owners): map hasher(blake2_128_concat) LiquidityPoolId => Option<(T::AccountId, LiquidityPoolId)>;
-		pub Balances get(fn balances): map hasher(blake2_128_concat) LiquidityPoolId => Balance;
+		pub Owners get(fn owners): map hasher(twox_64_concat) LiquidityPoolId => Option<(T::AccountId, LiquidityPoolId)>;
+		pub Balances get(fn balances): map hasher(twox_64_concat) LiquidityPoolId => Balance;
 	}
 }
 
