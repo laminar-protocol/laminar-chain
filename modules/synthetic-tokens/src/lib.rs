@@ -44,7 +44,7 @@ decl_storage! {
 		ExtremeRatio get(extreme_ratio): map hasher(twox_64_concat) CurrencyId => Option<Permill>;
 		LiquidationRatio get(liquidation_ratio): map hasher(twox_64_concat) CurrencyId => Option<Permill>;
 		CollateralRatio get(collateral_ratio): map hasher(twox_64_concat) CurrencyId => Option<Permill>;
-		Positions get(positions): double_map hasher(blake2_128_concat) LiquidityPoolId, hasher(twox_64_concat) CurrencyId => Position;
+		Positions get(positions): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) CurrencyId => Position;
 	}
 }
 
