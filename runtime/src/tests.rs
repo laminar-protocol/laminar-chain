@@ -190,7 +190,7 @@ pub fn synthetic_buy(who: &AccountId, currency_id: CurrencyId, amount: Balance) 
 		LIQUIDITY_POOL_ID_0,
 		currency_id,
 		amount,
-		Permill::from_percent(10),
+		Price::from_rational(10, 1),
 	)
 }
 
@@ -200,7 +200,7 @@ pub fn synthetic_sell(who: &AccountId, currency_id: CurrencyId, amount: Balance)
 		LIQUIDITY_POOL_ID_0,
 		currency_id,
 		amount,
-		Permill::from_percent(10),
+		Price::from_rational(1, 10),
 	)
 }
 

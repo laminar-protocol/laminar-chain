@@ -13,7 +13,7 @@ fn mint_feur(who: AccountId, amount: Balance) -> DispatchResult {
 		MOCK_POOL,
 		CurrencyId::FEUR,
 		amount,
-		Permill::from_percent(10),
+		Price::from_rational(4, 1),
 	)
 }
 
@@ -23,7 +23,7 @@ fn redeem_ausd(who: AccountId, amount: Balance) -> DispatchResult {
 		MOCK_POOL,
 		CurrencyId::FEUR,
 		amount,
-		Permill::from_percent(10),
+		Price::from_rational(2, 1),
 	)
 }
 
@@ -102,9 +102,9 @@ fn mint_fails_if_slippage_too_greedy() {
 					MOCK_POOL,
 					CurrencyId::FEUR,
 					1,
-					Permill::from_rational_approximation(9u32, 1_000u32)
+					Price::from_rational(3, 1),
 				),
-				Error::<Runtime>::SlippageTooHigh
+				Error::<Runtime>::AskPriceTooHigh
 			);
 		});
 }
@@ -156,7 +156,7 @@ fn mint_fails_if_currency_is_not_supported() {
 					MOCK_POOL,
 					CurrencyId::LAMI,
 					ONE_MILL,
-					Permill::from_percent(10),
+					Price::from_rational(3, 1),
 				),
 				Error::<Runtime>::NotValidSyntheticCurrencyId
 			);
@@ -268,9 +268,9 @@ fn redeem_fails_if_slippage_too_greedy() {
 					MOCK_POOL,
 					CurrencyId::FEUR,
 					1,
-					Permill::from_rational_approximation(9u32, 1_000u32)
+					Price::from_rational(3, 1),
 				),
-				Error::<Runtime>::SlippageTooHigh
+				Error::<Runtime>::BidPriceTooLow
 			);
 		});
 }
@@ -296,7 +296,7 @@ fn redeem_fails_if_synthetic_position_too_low() {
 				ANOTHER_MOCK_POOL,
 				CurrencyId::FEUR,
 				ONE_MILL / 10,
-				Permill::from_percent(10),
+				Price::from_rational(4, 1),
 			));
 
 			// redeem all in one pool, synthetic position would be too low
@@ -367,7 +367,7 @@ fn redeem_fails_if_currency_is_not_supported() {
 					MOCK_POOL,
 					CurrencyId::LAMI,
 					ONE_MILL,
-					Permill::from_percent(10),
+					Price::from_rational(3, 1),
 				),
 				Error::<Runtime>::NotValidSyntheticCurrencyId,
 			);
@@ -585,7 +585,7 @@ fn liquidate_fails_if_synthetic_position_too_low() {
 				ANOTHER_MOCK_POOL,
 				CurrencyId::FEUR,
 				ONE_MILL / 2,
-				Permill::from_percent(10),
+				Price::from_rational(4, 1),
 			));
 
 			set_mock_feur_price(32, 10);
