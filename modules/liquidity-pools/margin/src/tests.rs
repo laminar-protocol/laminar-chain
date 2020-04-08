@@ -1,15 +1,13 @@
 #![cfg(test)]
 
-use crate::{
-	mock::{new_test_ext, AccountId, MaxSwap, ModuleLiquidityPools, Origin, Runtime, ALICE, BOB},
-	Error, Fixed128, MarginLiquidityPoolOption, SwapRate, TradingPair,
-};
-use sp_std::num::NonZeroI128;
+use super::*;
+use mock::*;
 
 use frame_support::{assert_noop, assert_ok};
-use primitives::{CurrencyId, Leverage, Leverages};
 use sp_runtime::traits::OnInitialize;
-use sp_runtime::{PerThing, Permill};
+use sp_std::num::NonZeroI128;
+
+use primitives::{CurrencyId, Leverage, Leverages};
 use traits::{LiquidityPools, MarginProtocolLiquidityPools};
 
 fn swap_rate(pair: TradingPair, is_long: bool) -> Fixed128 {
@@ -21,26 +19,13 @@ fn accumulated_rate(pair: TradingPair, is_long: bool) -> Fixed128 {
 }
 
 #[test]
-fn is_owner_should_work() {
-	new_test_ext().execute_with(|| {
-		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(ModuleLiquidityPools::is_owner(0, &ALICE), true);
-		assert_eq!(ModuleLiquidityPools::is_owner(1, &ALICE), false);
-		assert_eq!(
-			<ModuleLiquidityPools as LiquidityPools<AccountId>>::is_owner(1, &ALICE),
-			false
-		);
-	});
-}
-
-#[test]
 fn is_enabled_should_work() {
 	new_test_ext().execute_with(|| {
 		let pair = TradingPair {
 			base: CurrencyId::AUSD,
 			quote: CurrencyId::FEUR,
 		};
-		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
+		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_ok!(ModuleLiquidityPools::set_enabled_trades(
 			Origin::signed(ALICE),
 			0,
@@ -63,22 +48,13 @@ fn is_enabled_should_work() {
 }
 
 #[test]
-fn should_create_pool() {
-	new_test_ext().execute_with(|| {
-		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(ModuleLiquidityPools::owners(0), Some((ALICE, 0)));
-		assert_eq!(ModuleLiquidityPools::next_pool_id(), 1);
-	});
-}
-
-#[test]
 fn should_disable_pool() {
 	new_test_ext().execute_with(|| {
 		let pair = TradingPair {
 			base: CurrencyId::AUSD,
 			quote: CurrencyId::FEUR,
 		};
-		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
+		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, pair), None);
 		assert_ok!(ModuleLiquidityPools::set_enabled_trades(
 			Origin::signed(ALICE),
@@ -94,7 +70,7 @@ fn should_disable_pool() {
 				enabled_trades: Leverage::ShortTen | Leverage::LongFive,
 			})
 		);
-		assert_ok!(ModuleLiquidityPools::disable_pool(Origin::signed(ALICE), 0));
+		assert_ok!(BaseLiquidityPools::disable_pool(Origin::signed(ALICE), 0));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, pair), None);
 	})
 }
@@ -106,66 +82,14 @@ fn should_remove_pool() {
 			base: CurrencyId::AUSD,
 			quote: CurrencyId::FEUR,
 		};
-		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_ok!(ModuleLiquidityPools::deposit_liquidity(Origin::signed(ALICE), 0, 1000));
-		assert_eq!(ModuleLiquidityPools::balances(&0), 1000);
-		assert_ok!(ModuleLiquidityPools::remove_pool(Origin::signed(ALICE), 0));
+		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
+		assert_ok!(ModuleLiquidityPools::deposit_liquidity(&ALICE, 0, 1000));
+		assert_eq!(BaseLiquidityPools::balances(&0), 1000);
+		assert_ok!(BaseLiquidityPools::remove_pool(Origin::signed(ALICE), 0));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, pair), None);
-		assert_eq!(ModuleLiquidityPools::owners(0), None);
-		assert_eq!(ModuleLiquidityPools::balances(&0), 0);
+		assert_eq!(BaseLiquidityPools::owners(0), None);
+		assert_eq!(BaseLiquidityPools::balances(&0), 0);
 		assert_eq!(<ModuleLiquidityPools as LiquidityPools<AccountId>>::liquidity(0), 0);
-	})
-}
-
-#[test]
-fn should_deposit_liquidity() {
-	new_test_ext().execute_with(|| {
-		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(ModuleLiquidityPools::balances(&0), 0);
-		assert_ok!(ModuleLiquidityPools::deposit_liquidity(Origin::signed(ALICE), 0, 1000));
-		assert_eq!(ModuleLiquidityPools::balances(&0), 1000);
-		assert_eq!(<ModuleLiquidityPools as LiquidityPools<AccountId>>::liquidity(0), 1000);
-		assert_noop!(
-			ModuleLiquidityPools::deposit_liquidity(Origin::signed(ALICE), 1, 1000),
-			Error::<Runtime>::PoolNotFound
-		);
-	})
-}
-
-#[test]
-fn should_withdraw_liquidity() {
-	new_test_ext().execute_with(|| {
-		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(ModuleLiquidityPools::owners(0), Some((ALICE, 0)));
-		assert_eq!(ModuleLiquidityPools::balances(&0), 0);
-		assert_ok!(ModuleLiquidityPools::deposit_liquidity(Origin::signed(ALICE), 0, 1000));
-		assert_eq!(ModuleLiquidityPools::balances(&0), 1000);
-		assert_ok!(ModuleLiquidityPools::withdraw_liquidity(Origin::signed(ALICE), 0, 500));
-		assert_eq!(ModuleLiquidityPools::balances(&0), 500);
-		assert_ok!(<ModuleLiquidityPools as LiquidityPools<AccountId>>::withdraw_liquidity(
-			&BOB, 0, 100
-		));
-		assert_eq!(ModuleLiquidityPools::balances(&0), 400);
-	})
-}
-
-#[test]
-fn should_fail_withdraw_liquidity() {
-	new_test_ext().execute_with(|| {
-		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_ok!(ModuleLiquidityPools::deposit_liquidity(Origin::signed(ALICE), 0, 1000));
-		assert_eq!(ModuleLiquidityPools::balances(&0), 1000);
-		assert_eq!(
-			ModuleLiquidityPools::withdraw_liquidity(Origin::signed(ALICE), 0, 5000),
-			Err(Error::<Runtime>::CannotWithdrawAmount.into()),
-		);
-
-		assert_eq!(
-			ModuleLiquidityPools::withdraw_liquidity(Origin::signed(ALICE), 0, 1000),
-			Err(Error::<Runtime>::CannotWithdrawExistentialDeposit.into()),
-		);
-
-		assert_eq!(ModuleLiquidityPools::balances(&0), 1000);
 	})
 }
 
@@ -176,8 +100,8 @@ fn should_set_spread() {
 			base: CurrencyId::AUSD,
 			quote: CurrencyId::FEUR,
 		};
-		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(ModuleLiquidityPools::owners(0), Some((ALICE, 0)));
+		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
+		assert_eq!(BaseLiquidityPools::owners(0), Some((ALICE, 0)));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, pair), None);
 		assert_ok!(ModuleLiquidityPools::set_spread(
 			Origin::signed(ALICE),
@@ -213,8 +137,8 @@ fn should_set_max_spread() {
 			base: CurrencyId::AUSD,
 			quote: CurrencyId::FEUR,
 		};
-		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(ModuleLiquidityPools::owners(0), Some((ALICE, 0)));
+		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
+		assert_eq!(BaseLiquidityPools::owners(0), Some((ALICE, 0)));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, pair), None);
 		// no max spread
 		assert_ok!(ModuleLiquidityPools::set_spread(
@@ -269,8 +193,8 @@ fn should_set_enabled_trades() {
 			base: CurrencyId::AUSD,
 			quote: CurrencyId::FEUR,
 		};
-		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(ModuleLiquidityPools::owners(0), Some((ALICE, 0)));
+		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
+		assert_eq!(BaseLiquidityPools::owners(0), Some((ALICE, 0)));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, pair), None);
 		assert_ok!(ModuleLiquidityPools::set_enabled_trades(
 			Origin::signed(ALICE),
@@ -312,7 +236,7 @@ fn should_set_swap_rate() {
 			long: Fixed128::from_natural(-1),
 			short: Fixed128::from_natural(3),
 		};
-		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
+		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_ok!(ModuleLiquidityPools::set_swap_rate(Origin::ROOT, pair, rate));
 		assert_noop!(
 			ModuleLiquidityPools::set_swap_rate(Origin::ROOT, pair, bad_rate),
@@ -340,7 +264,7 @@ fn should_get_swap() {
 			long: Fixed128::from_natural(-1),
 			short: Fixed128::from_natural(1),
 		};
-		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
+		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_ok!(ModuleLiquidityPools::set_swap_rate(Origin::ROOT, pair, rate.clone()));
 		assert_eq!(
 			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_swap_rate(0, pair, true),
@@ -403,7 +327,7 @@ fn should_get_accumulated_swap() {
 		};
 
 		assert_ok!(ModuleLiquidityPools::set_accumulate(Origin::ROOT, pair, 1, 0));
-		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
+		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_ok!(ModuleLiquidityPools::set_swap_rate(Origin::ROOT, pair, rate.clone()));
 		assert_eq!(
 			accumulated_rate(pair, true),
@@ -444,7 +368,7 @@ fn can_open_position() {
 			base: CurrencyId::AUSD,
 			quote: CurrencyId::FEUR,
 		};
-		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
+		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_ok!(ModuleLiquidityPools::enable_trading_pair(Origin::ROOT, pair));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_enabled_trading_pair(0, pair), None);
 		assert_ok!(ModuleLiquidityPools::liquidity_pool_enable_trading_pair(
@@ -500,7 +424,7 @@ fn should_update_accumulated_rate() {
 		};
 
 		assert_ok!(ModuleLiquidityPools::set_accumulate(Origin::ROOT, pair, 1, 0));
-		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
+		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_ok!(ModuleLiquidityPools::set_swap_rate(Origin::ROOT, pair, rate.clone()));
 		assert_eq!(swap_rate(pair, true), rate.long);
 		assert_eq!(swap_rate(pair, false), rate.short);
@@ -557,7 +481,7 @@ fn liquidity_provider_should_enable_disable_trading_pairs() {
 			base: CurrencyId::AUSD,
 			quote: CurrencyId::FEUR,
 		};
-		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
+		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_ok!(ModuleLiquidityPools::enable_trading_pair(Origin::ROOT, pair));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_enabled_trading_pair(0, pair), None);
 		assert_ok!(ModuleLiquidityPools::liquidity_pool_enable_trading_pair(
@@ -612,7 +536,7 @@ fn should_set_min_leveraged_amount() {
 		);
 
 		// create pool and set min leveraged amount
-		assert_ok!(ModuleLiquidityPools::create_pool(Origin::signed(ALICE)));
+		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_ok!(ModuleLiquidityPools::set_min_leveraged_amount(
 			Origin::signed(ALICE),
 			pool_id,

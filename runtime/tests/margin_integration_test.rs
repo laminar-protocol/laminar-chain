@@ -6,6 +6,7 @@ mod tests {
 	use frame_support::{assert_noop, assert_ok};
 	use laminar_runtime::{
 		tests::*,
+		BaseLiquidityPoolsMarginInstance,
 		CurrencyId::{AUSD, FEUR, FJPY},
 		MaxSwap, MockLaminarTreasury, Runtime,
 	};
@@ -38,7 +39,7 @@ mod tests {
 
 				assert_noop!(
 					margin_withdraw_liquidity(&ALICE::get(), dollar(5000)),
-					margin_liquidity_pools::Error::<Runtime>::NoPermission
+					base_liquidity_pools::Error::<Runtime, BaseLiquidityPoolsMarginInstance>::NoPermission
 				);
 
 				assert_eq!(margin_get_required_deposit(), 0);

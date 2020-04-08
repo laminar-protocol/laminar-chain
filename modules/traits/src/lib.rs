@@ -3,11 +3,10 @@
 use orml_utilities::Fixed128;
 use primitives::{Balance, CurrencyId, Leverage, LiquidityPoolId, TradingPair};
 use sp_runtime::{DispatchError, DispatchResult, Permill};
-use sp_std::result;
+use sp_std::{prelude::*, result};
 
 pub trait LiquidityPools<AccountId> {
-	fn ensure_liquidity(pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult;
-
+	fn all() -> Vec<LiquidityPoolId>;
 	fn is_owner(pool_id: LiquidityPoolId, who: &AccountId) -> bool;
 
 	/// Return collateral balance of `pool_id`.
@@ -44,6 +43,14 @@ pub trait MarginProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
 		leverage: Leverage,
 		leveraged_amount: Balance,
 	) -> bool;
+}
+
+pub trait OnDisableLiquidityPool {
+	fn on_disable(pool_id: LiquidityPoolId);
+}
+
+pub trait OnRemoveLiquidityPool {
+	fn on_remove(pool_id: LiquidityPoolId);
 }
 
 pub trait Treasury<AccountId> {
