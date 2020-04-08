@@ -15,7 +15,7 @@ use orml_currencies::Currency;
 use primitives::{Balance, CurrencyId, LiquidityPoolId};
 
 pub type BlockNumber = u64;
-pub type AccountId = u32;
+pub type AccountId = u128;
 
 ord_parameter_types! {
 	pub const One: AccountId = 0;
@@ -110,7 +110,7 @@ impl OnRemoveLiquidityPool for DummyOnRemove {
 }
 
 parameter_types! {
-	pub const Instance1ModuleId: ModuleId = ModuleId(*b"test/pl1");
+	pub const Instance1ModuleId: ModuleId = ModuleId(*b"test/lp1");
 }
 
 impl Trait<Instance1> for Runtime {
@@ -123,6 +123,21 @@ impl Trait<Instance1> for Runtime {
 	type OnRemoveLiquidityPool = DummyOnRemove;
 }
 pub type Instance1Module = Module<Runtime, Instance1>;
+
+parameter_types! {
+	pub const Instance2ModuleId: ModuleId = ModuleId(*b"test/lp2");
+}
+
+impl Trait<Instance2> for Runtime {
+	type Event = ();
+	type LiquidityCurrency = LiquidityCurrency;
+	type PoolManager = PoolManager;
+	type ExistentialDeposit = ExistentialDeposit;
+	type ModuleId = Instance2ModuleId;
+	type OnDisableLiquidityPool = DummyOnDisable;
+	type OnRemoveLiquidityPool = DummyOnRemove;
+}
+pub type Instance2Module = Module<Runtime, Instance2>;
 
 // This function basically just builds a genesis storage key/value store according to
 // our desired mockup.
