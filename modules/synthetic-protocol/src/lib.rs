@@ -3,7 +3,7 @@
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
 use sp_runtime::{
 	traits::{Convert, Saturating, Zero},
-	DispatchError, DispatchResult, PerThing, Permill,
+	DispatchError, DispatchResult, Permill,
 };
 use sp_std::{convert::TryInto, result};
 // FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
@@ -74,10 +74,10 @@ decl_module! {
 			pool_id: LiquidityPoolId,
 			currency_id: CurrencyId,
 			#[compact] collateral_amount: Balance,
-			max_slippage: Permill
+			max_price: Price,
 		) {
 			let who = ensure_signed(origin)?;
-			let synthetic_amount = Self::_mint(&who, pool_id, currency_id, collateral_amount, max_slippage)?;
+			let synthetic_amount = Self::_mint(&who, pool_id, currency_id, collateral_amount, max_price)?;
 
 			Self::deposit_event(RawEvent::Minted(who, currency_id, pool_id, collateral_amount, synthetic_amount));
 		}
@@ -87,10 +87,10 @@ decl_module! {
 			pool_id: LiquidityPoolId,
 			currency_id: CurrencyId,
 			#[compact] synthetic_amount: Balance,
-			max_slippage: Permill,
+			min_price: Price,
 		) {
 			let who = ensure_signed(origin)?;
-			let collateral_amount = Self::_redeem(&who, pool_id, currency_id, synthetic_amount, max_slippage)?;
+			let collateral_amount = Self::_redeem(&who, pool_id, currency_id, synthetic_amount, min_price)?;
 
 			Self::deposit_event(RawEvent::Redeemed(who, currency_id, pool_id, collateral_amount, synthetic_amount));
 		}
@@ -137,7 +137,8 @@ decl_error! {
 		BalanceTooLow,
 		LiquidityProviderBalanceTooLow,
 		NotSupportedByLiquidityPool,
-		SlippageTooHigh,
+		AskPriceTooHigh,
+		BidPriceTooLow,
 		NumOverflow,
 		NoPrice,
 		NegativeAdditionalCollateralAmount,
@@ -164,7 +165,7 @@ impl<T: Trait> Module<T> {
 		pool_id: LiquidityPoolId,
 		currency_id: CurrencyId,
 		collateral: Balance,
-		max_slippage: Permill,
+		max_price: Price,
 	) -> BalanceResult {
 		ensure!(
 			T::SyntheticCurrencyIds::get().contains(&currency_id),
@@ -180,7 +181,7 @@ impl<T: Trait> Module<T> {
 
 		let price =
 			T::PriceProvider::get_price(T::GetCollateralCurrencyId::get(), currency_id).ok_or(Error::<T>::NoPrice)?;
-		let ask_price = Self::_get_ask_price(pool_id, currency_id, price, max_slippage)?;
+		let ask_price = Self::_get_ask_price(pool_id, currency_id, price, max_price)?;
 
 		// synthetic = collateral / ask_price
 		let synthetic_by_price = T::BalanceToPrice::convert(collateral)
@@ -224,7 +225,7 @@ impl<T: Trait> Module<T> {
 		pool_id: LiquidityPoolId,
 		currency_id: CurrencyId,
 		synthetic: Balance,
-		max_slippage: Permill,
+		min_price: Price,
 	) -> BalanceResult {
 		ensure!(
 			T::SyntheticCurrencyIds::get().contains(&currency_id),
@@ -236,7 +237,7 @@ impl<T: Trait> Module<T> {
 		let price =
 			T::PriceProvider::get_price(T::GetCollateralCurrencyId::get(), currency_id).ok_or(Error::<T>::NoPrice)?;
 		// bid_price = price * (1 - bid_spread)
-		let bid_price = Self::_get_bid_price(pool_id, currency_id, price, Some(max_slippage))?;
+		let bid_price = Self::_get_bid_price(pool_id, currency_id, price, Some(min_price))?;
 
 		// collateral = synthetic * bid_price
 		let redeemed_collateral = {
@@ -378,17 +379,16 @@ impl<T: Trait> Module<T> {
 		pool_id: LiquidityPoolId,
 		currency_id: CurrencyId,
 		price: Price,
-		max_slippage: Permill,
+		max_price: Price,
 	) -> result::Result<Price, DispatchError> {
 		let ask_spread =
 			T::SyntheticProtocolLiquidityPools::get_ask_spread(pool_id, currency_id).ok_or(Error::<T>::NoAskSpread)?;
 
-		if ask_spread.deconstruct() > max_slippage.deconstruct() {
-			return Err(Error::<T>::SlippageTooHigh.into());
-		}
-
 		let spread_amount = price.checked_mul(&ask_spread.into()).expect("ask_spread < 1; qed");
-		price.checked_add(&spread_amount).ok_or(Error::<T>::NumOverflow.into())
+		let ask_price = price.checked_add(&spread_amount).ok_or(Error::<T>::NumOverflow)?;
+
+		ensure!(ask_price <= max_price, Error::<T>::AskPriceTooHigh);
+		Ok(ask_price)
 	}
 
 	/// Get bid price from liquidity pool for a given currency. Would fail if price could not meet max slippage.
@@ -398,19 +398,18 @@ impl<T: Trait> Module<T> {
 		pool_id: LiquidityPoolId,
 		currency_id: CurrencyId,
 		price: Price,
-		max_slippage: Option<Permill>,
+		min_price: Option<Price>,
 	) -> result::Result<Price, DispatchError> {
 		let bid_spread =
 			T::SyntheticProtocolLiquidityPools::get_bid_spread(pool_id, currency_id).ok_or(Error::<T>::NoBidSpread)?;
 
-		if let Some(m) = max_slippage {
-			if bid_spread.deconstruct() > m.deconstruct() {
-				return Err(Error::<T>::SlippageTooHigh.into());
-			}
-		}
-
 		let spread_amount = price.checked_mul(&bid_spread.into()).expect("bid_spread < 1; qed");
-		Ok(price.checked_sub(&spread_amount).expect("price > spread_amount; qed"))
+		let bid_price = price.checked_sub(&spread_amount).expect("price > spread_amount; qed");
+
+		if let Some(min) = min_price {
+			ensure!(bid_price >= min, Error::<T>::BidPriceTooLow);
+		}
+		Ok(bid_price)
 	}
 
 	/// Calculate liquidity provider's collateral parts:
