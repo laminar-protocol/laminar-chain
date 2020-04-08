@@ -31,9 +31,9 @@ pub trait Trait: frame_system::Trait {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as SyntheticLiquidityPools {
-		pub LiquidityPoolOptions get(fn liquidity_pool_options): double_map hasher(blake2_128_concat) LiquidityPoolId, hasher(blake2_128_concat) CurrencyId => Option<SyntheticLiquidityPoolOption>;
+		pub LiquidityPoolOptions get(fn liquidity_pool_options): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) CurrencyId => Option<SyntheticLiquidityPoolOption>;
 		pub MinAdditionalCollateralRatio get(fn min_additional_collateral_ratio) config(): Permill;
-		pub MaxSpread get(fn max_spread): map hasher(blake2_128_concat) CurrencyId => Permill;
+		pub MaxSpread get(fn max_spread): map hasher(twox_64_concat) CurrencyId => Permill;
 	}
 }
 
