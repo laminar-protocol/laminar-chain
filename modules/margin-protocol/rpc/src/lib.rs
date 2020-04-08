@@ -1,14 +1,14 @@
 use codec::Codec;
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
-pub use margin_protocol_rpc_runtime_api::MarginProtocolApi as MarginProtocolRuntimeApi;
+pub use margin_protocol_rpc_runtime_api::{MarginProtocolApi as MarginProtocolRuntimeApi, PoolInfo, TraderInfo};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 use std::sync::Arc;
 
 #[rpc]
-pub trait MarginProtocolApi<BlockHash, AccountId, Fixed128> {
+pub trait MarginProtocolApi<BlockHash, AccountId, Fixed128, LiquidityPoolId> {
 	#[rpc(name = "marginProtocol_equity_of_trader")]
 	fn equity_of_trader(&self, who: AccountId, at: Option<BlockHash>) -> Result<Option<Fixed128>>;
 
@@ -23,6 +23,12 @@ pub trait MarginProtocolApi<BlockHash, AccountId, Fixed128> {
 
 	#[rpc(name = "marginProtocol_unrealized_pl_of_trader")]
 	fn unrealized_pl_of_trader(&self, who: AccountId, at: Option<BlockHash>) -> Result<Option<Fixed128>>;
+
+	#[rpc(name = "margin_traderInfo")]
+	fn trader_info(&self, who: AccountId, at: Option<BlockHash>) -> Result<TraderInfo<Fixed128>>;
+
+	#[rpc(name = "margin_poolInfo")]
+	fn pool_info(&self, pool_id: LiquidityPoolId, at: Option<BlockHash>) -> Result<PoolInfo<Fixed128>>;
 }
 
 /// A struct that implements the [`MarginProtocolApi`].
@@ -53,14 +59,15 @@ impl From<Error> for i64 {
 	}
 }
 
-impl<C, Block, AccountId, Fixed128> MarginProtocolApi<<Block as BlockT>::Hash, AccountId, Fixed128>
-	for MarginProtocol<C, Block>
+impl<C, Block, AccountId, Fixed128, LiquidityPoolId>
+	MarginProtocolApi<<Block as BlockT>::Hash, AccountId, Fixed128, LiquidityPoolId> for MarginProtocol<C, Block>
 where
 	Block: BlockT,
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-	C::Api: MarginProtocolRuntimeApi<Block, AccountId, Fixed128>,
+	C::Api: MarginProtocolRuntimeApi<Block, AccountId, Fixed128, LiquidityPoolId>,
 	AccountId: Codec,
 	Fixed128: Codec,
+	LiquidityPoolId: Codec,
 {
 	fn equity_of_trader(&self, who: AccountId, at: Option<<Block as BlockT>::Hash>) -> Result<Option<Fixed128>> {
 		let api = self.client.runtime_api();
@@ -127,6 +134,34 @@ where
 			.map_err(|e| RpcError {
 				code: ErrorCode::ServerError(Error::RuntimeError.into()),
 				message: "Unable to get unrealized P/L of opening positions.".into(),
+				data: Some(format!("{:?}", e).into()),
+			})
+			.into()
+	}
+
+	fn trader_info(&self, who: AccountId, at: Option<<Block as BlockT>::Hash>) -> Result<TraderInfo<Fixed128>> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(||
+			// If the block hash is not supplied assume the best block.
+			self.client.info().best_hash));
+		api.trader_info(&at, who)
+			.map_err(|e| RpcError {
+				code: ErrorCode::ServerError(Error::RuntimeError.into()),
+				message: "Unable to get trader info.".into(),
+				data: Some(format!("{:?}", e).into()),
+			})
+			.into()
+	}
+
+	fn pool_info(&self, pool_id: LiquidityPoolId, at: Option<<Block as BlockT>::Hash>) -> Result<PoolInfo<Fixed128>> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(||
+			// If the block hash is not supplied assume the best block.
+			self.client.info().best_hash));
+		api.pool_info(&at, pool_id)
+			.map_err(|e| RpcError {
+				code: ErrorCode::ServerError(Error::RuntimeError.into()),
+				message: "Unable to get pool info.".into(),
 				data: Some(format!("{:?}", e).into()),
 			})
 			.into()

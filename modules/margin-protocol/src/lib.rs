@@ -751,6 +751,10 @@ impl<T: Trait> Module<T> {
 
 		Ok(risk)
 	}
+
+	pub fn enp_and_ell(pool: LiquidityPoolId) -> result::Result<(Fixed128, Fixed128), DispatchError> {
+		Self::_enp_and_ell(pool, Action::None)
+	}
 }
 
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq)]
@@ -828,10 +832,7 @@ impl<T: Trait> Module<T> {
 		(net, longest_leg)
 	}
 
-	/// ENP and ELL. If `new_position` is `None`, return the ENP & ELL based on current positions,
-	/// else based on current positions plus this new one. If `equity_delta` is `None`, return
-	/// the ENP & ELL based on current equity of pool, else based on current equity of pool plus
-	/// the `equity_delta`.
+	/// ENP and ELL after performing action.
 	///
 	/// ENP - Equity to Net Position ratio of a liquidity pool.
 	/// ELL - Equity to Longest Leg ratio of a liquidity pool.
