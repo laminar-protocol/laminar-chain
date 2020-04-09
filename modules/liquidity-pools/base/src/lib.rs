@@ -77,25 +77,25 @@ decl_module! {
 			Self::deposit_event(RawEvent::LiquidityPoolCreated(who, pool_id));
 		}
 
-		pub fn disable_pool(origin, pool_id: LiquidityPoolId) {
+		pub fn disable_pool(origin, #[compact] pool_id: LiquidityPoolId) {
 			let who = ensure_signed(origin)?;
 			Self::_disable_pool(&who, pool_id)?;
 			Self::deposit_event(RawEvent::LiquidityPoolDisabled(who, pool_id));
 		}
 
-		pub fn remove_pool(origin, pool_id: LiquidityPoolId) {
+		pub fn remove_pool(origin, #[compact] pool_id: LiquidityPoolId) {
 			let who = ensure_signed(origin)?;
 			Self::_remove_pool(&who, pool_id)?;
 			Self::deposit_event(RawEvent::LiquidityPoolRemoved(who, pool_id));
 		}
 
-		pub fn deposit_liquidity(origin, pool_id: LiquidityPoolId, #[compact] amount: Balance) {
+		pub fn deposit_liquidity(origin, #[compact] pool_id: LiquidityPoolId, #[compact] amount: Balance) {
 			let who = ensure_signed(origin)?;
 			Self::_deposit_liquidity(&who, pool_id, amount)?;
 			Self::deposit_event(RawEvent::DepositLiquidity(who, pool_id, amount));
 		}
 
-		pub fn withdraw_liquidity(origin, pool_id: LiquidityPoolId, #[compact] amount: Balance) {
+		pub fn withdraw_liquidity(origin, #[compact] pool_id: LiquidityPoolId, #[compact] amount: Balance) {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T, I>::NoPermission);
 
