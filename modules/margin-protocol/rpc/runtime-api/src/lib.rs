@@ -12,7 +12,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Encode, Decode, Eq, PartialEq, Default)]
 pub struct TraderInfo<Fixed128> {
 	pub equity: Fixed128,
-	pub margin_balances: Vec<Fixed128>,
 	pub margin_held: Fixed128,
 	pub margin_level: Fixed128,
 	pub free_margin: Fixed128,

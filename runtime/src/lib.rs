@@ -802,7 +802,6 @@ impl_runtime_apis! {
 
 		fn trader_info(who: AccountId) -> TraderInfo<Fixed128> {
 			let equity = MarginProtocol::equity_of_trader(&who).unwrap_or_default();
-			let margin_balances = vec![];
 			let margin_held = MarginProtocol::margin_held(&who);
 			let margin_level = MarginProtocol::margin_level(&who).unwrap_or_default();
 			let free_margin = MarginProtocol::free_margin(&who).unwrap_or_default();
@@ -810,7 +809,6 @@ impl_runtime_apis! {
 
 			TraderInfo::<Fixed128>{
 				equity,
-				margin_balances,
 				margin_held,
 				margin_level,
 				free_margin,
