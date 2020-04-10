@@ -76,7 +76,7 @@ decl_module! {
 		const DefaultCollateralRatio: Permill = T::DefaultCollateralRatio::get();
 		const SyntheticCurrencyIds: Vec<CurrencyId> = T::SyntheticCurrencyIds::get();
 
-		pub fn set_extreme_ratio(origin, currency_id: CurrencyId, ratio: Permill) {
+		pub fn set_extreme_ratio(origin, currency_id: CurrencyId, #[compact] ratio: Permill) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
@@ -85,7 +85,7 @@ decl_module! {
 			Self::deposit_event(Event::ExtremeRatioUpdated(currency_id, ratio));
 		}
 
-		pub fn set_liquidation_ratio(origin, currency_id: CurrencyId, ratio: Permill) {
+		pub fn set_liquidation_ratio(origin, currency_id: CurrencyId, #[compact] ratio: Permill) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
@@ -94,7 +94,7 @@ decl_module! {
 			Self::deposit_event(Event::LiquidationRatioUpdated(currency_id, ratio));
 		}
 
-		pub fn set_collateral_ratio(origin, currency_id: CurrencyId, ratio: Permill) {
+		pub fn set_collateral_ratio(origin, currency_id: CurrencyId, #[compact] ratio: Permill) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;

@@ -108,7 +108,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::SetEnabledTrades(who, pool_id, pair, enabled));
 		}
 
-		pub fn set_swap_rate(origin, pair: TradingPair, #[compact] rate: SwapRate) {
+		pub fn set_swap_rate(origin, pair: TradingPair, rate: SwapRate) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
@@ -119,7 +119,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::SwapRateUpdated(pair, rate));
 		}
 
-		pub fn set_additional_swap(origin, #[compact] pool_id: LiquidityPoolId, #[compact] rate: Fixed128) {
+		pub fn set_additional_swap(origin, #[compact] pool_id: LiquidityPoolId,  rate: Fixed128) {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
 
@@ -137,7 +137,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::MaxSpreadUpdated(pair, max_spread));
 		}
 
-		pub fn set_accumulate(origin, pair: TradingPair, frequency: T::BlockNumber, offset: T::BlockNumber) {
+		pub fn set_accumulate(origin, pair: TradingPair, #[compact] frequency: T::BlockNumber, #[compact] offset: T::BlockNumber) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
@@ -170,7 +170,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::LiquidityPoolTradingPairEnabled(pair))
 		}
 
-		pub fn liquidity_pool_disable_trading_pair(origin, pool_id: LiquidityPoolId, pair: TradingPair) {
+		pub fn liquidity_pool_disable_trading_pair(origin, #[compact] pool_id: LiquidityPoolId, pair: TradingPair) {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
 			LiquidityPoolEnabledTradingPairs::remove(&pool_id, &pair);
@@ -185,7 +185,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::SetDefaultMinLeveragedAmount(amount))
 		}
 
-		pub fn set_min_leveraged_amount(origin, pool_id: LiquidityPoolId, #[compact] amount: Balance) {
+		pub fn set_min_leveraged_amount(origin, #[compact] pool_id: LiquidityPoolId, #[compact] amount: Balance) {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
 			MinLeveragedAmount::insert(pool_id, amount);
