@@ -33,6 +33,7 @@ use orml_oracle::OperatorProvider;
 use orml_traits::DataProvider;
 pub use orml_utilities::Fixed128;
 
+use margin_protocol_rpc_runtime_api::{PoolInfo, TraderInfo};
 use module_primitives::{BalancePriceConverter, Price};
 
 // A few exports that help ease life for downstream crates.
@@ -778,7 +779,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl margin_protocol_rpc_runtime_api::MarginProtocolApi<Block, AccountId, Fixed128> for Runtime {
+	impl margin_protocol_rpc_runtime_api::MarginProtocolApi<Block, AccountId, Fixed128, LiquidityPoolId> for Runtime {
 		fn equity_of_trader(who: AccountId) -> Option<Fixed128> {
 			MarginProtocol::equity_of_trader(&who).ok()
 		}
@@ -797,6 +798,28 @@ impl_runtime_apis! {
 
 		fn unrealized_pl_of_trader(who: AccountId) -> Option<Fixed128> {
 			MarginProtocol::unrealized_pl_of_trader(&who).ok()
+		}
+
+		fn trader_info(who: AccountId) -> TraderInfo<Fixed128> {
+			let equity = MarginProtocol::equity_of_trader(&who).unwrap_or_default();
+			let margin_held = MarginProtocol::margin_held(&who);
+			let margin_level = MarginProtocol::margin_level(&who).unwrap_or_default();
+			let free_margin = MarginProtocol::free_margin(&who).unwrap_or_default();
+			let unrealized_pl = MarginProtocol::unrealized_pl_of_trader(&who).unwrap_or_default();
+
+			TraderInfo::<Fixed128>{
+				equity,
+				margin_held,
+				margin_level,
+				free_margin,
+				unrealized_pl,
+			}
+		}
+
+		fn pool_info(pool_id: LiquidityPoolId) -> PoolInfo<Fixed128> {
+			let (enp, ell) = MarginProtocol::enp_and_ell(pool_id).unwrap_or_default();
+
+			PoolInfo::<Fixed128>{ enp, ell }
 		}
 	}
 }

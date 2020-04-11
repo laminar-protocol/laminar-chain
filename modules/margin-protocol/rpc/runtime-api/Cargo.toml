@@ -5,12 +5,16 @@ authors = ["Laminar Developers <hello@laminar.one>"]
 edition = "2018"
 
 [dependencies]
+serde = { version = "1.0.101", optional = true, features = ["derive"] }
 codec = { package = "parity-scale-codec", version = "1.2.0", default-features = false, features = ["derive"] }
-sp-api = { default-features = false, version = "2.0.0-alpha.5" }
+sp-api = { version = "2.0.0-alpha.5", default-features = false }
+sp-std = { version = "2.0.0-alpha.5", default-features = false }
 
 [features]
 default = ["std"]
 std = [
-	"sp-api/std",
+	"serde",
 	"codec/std",
+	"sp-api/std",
+	"sp-std/std",
 ]
