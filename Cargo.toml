@@ -55,17 +55,19 @@ sp-inherents = { version = "2.0.0-alpha.5" }
 sp-io = { version = "2.0.0-alpha.5" }
 sp-runtime = { version = "2.0.0-alpha.5" }
 sp-transaction-pool = { version = "2.0.0-alpha.5" }
+sp-std = { version = "2.0.0-alpha.5" }
 substrate-frame-rpc-system = { version = "2.0.0-alpha.5" }
 
 margin-protocol = { package = "module-margin-protocol", path = "modules/margin-protocol"}
 margin-protocol-rpc = { path = "modules/margin-protocol/rpc" }
+margin-liquidity-pools = { package = "module-margin-liquidity-pools", path = "modules/liquidity-pools/margin" }
 orml-oracle-rpc = { path = "orml/oracle/rpc" }
 orml-utilities = { path = "orml/utilities" }
+module-primitives = { path = "./modules/primitives" }
 runtime = { package = "laminar-runtime", path = "runtime" }
 
 [dev-dependencies]
 cucumber = { package = "cucumber_rust", version = "^0.6.0" }
-module-primitives = { path = "./modules/primitives" }
 frame-support = { version = "2.0.0-alpha.5" }
 
 [build-dependencies]

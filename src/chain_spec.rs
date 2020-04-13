@@ -1,10 +1,13 @@
 use hex_literal::hex;
+use margin_liquidity_pools::SwapRate;
 use margin_protocol::RiskThreshold;
+use module_primitives::{AccumulateConfig, TradingPair};
+use orml_utilities::Fixed128;
 use runtime::{
 	opaque::Block, opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, CurrencyId,
 	FinancialCouncilMembershipConfig, GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, IndicesConfig,
-	MarginProtocolConfig, OperatorMembershipConfig, SessionConfig, Signature, StakerStatus, StakingConfig, SudoConfig,
-	SyntheticLiquidityPoolsConfig, SystemConfig, TokensConfig, WASM_BINARY,
+	MarginLiquidityPoolsConfig, MarginProtocolConfig, OperatorMembershipConfig, SessionConfig, Signature, StakerStatus,
+	StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SystemConfig, TokensConfig, WASM_BINARY,
 };
 use sc_chain_spec::ChainSpecExtension;
 use sc_service;
@@ -15,7 +18,8 @@ use sp_consensus_babe::AuthorityId as BabeId;
 use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{IdentifyAccount, Verify};
-pub use sp_runtime::{Perbill, Permill};
+use sp_runtime::{Perbill, Permill};
+use sp_std::num::NonZeroI128;
 
 // Note this is the URL for the telemetry server
 //const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -283,7 +287,88 @@ fn dev_genesis(
 		synthetic_liquidity_pools: Some(SyntheticLiquidityPoolsConfig {
 			min_additional_collateral_ratio: Permill::from_percent(10), // default min additional collateral ratio
 		}),
-		// TODO: update thresholds
+		// TODO: update chain spec
+		margin_liquidity_pools: Some(MarginLiquidityPoolsConfig {
+			default_min_leveraged_amount: 1000,
+			margin_liquidity_config: vec![
+				(
+					// TradingPair
+					TradingPair {
+						base: CurrencyId::AUSD,
+						quote: CurrencyId::FEUR,
+					},
+					// MaxSpread
+					Permill::from_percent(1),
+					// Accumulates
+					AccumulateConfig {
+						frequency: 10,
+						offset: 1,
+					},
+					// SwapRates
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
+					},
+				),
+				(
+					// TradingPair
+					TradingPair {
+						base: CurrencyId::AUSD,
+						quote: CurrencyId::FJPY,
+					},
+					// MaxSpread
+					Permill::from_percent(1),
+					// Accumulates
+					AccumulateConfig {
+						frequency: 10,
+						offset: 1,
+					},
+					// SwapRates
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
+					},
+				),
+				(
+					// TradingPair
+					TradingPair {
+						base: CurrencyId::AUSD,
+						quote: CurrencyId::FBTC,
+					},
+					// MaxSpread
+					Permill::from_percent(1),
+					// Accumulates
+					AccumulateConfig {
+						frequency: 10,
+						offset: 1,
+					},
+					// SwapRates
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
+					},
+				),
+				(
+					// TradingPair
+					TradingPair {
+						base: CurrencyId::AUSD,
+						quote: CurrencyId::FETH,
+					},
+					// MaxSpread
+					Permill::from_percent(1),
+					// Accumulates
+					AccumulateConfig {
+						frequency: 10,
+						offset: 1,
+					},
+					// SwapRates
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
+					},
+				),
+			],
+		}),
 		margin_protocol: Some(MarginProtocolConfig {
 			trader_risk_threshold: RiskThreshold {
 				margin_call: Permill::from_percent(3),
@@ -371,7 +456,88 @@ fn testnet_genesis(
 		synthetic_liquidity_pools: Some(SyntheticLiquidityPoolsConfig {
 			min_additional_collateral_ratio: Permill::from_percent(10), // default min additional collateral ratio
 		}),
-		// TODO: update thresholds
+		// TODO: update chain spec
+		margin_liquidity_pools: Some(MarginLiquidityPoolsConfig {
+			default_min_leveraged_amount: 1000,
+			margin_liquidity_config: vec![
+				(
+					// TradingPair
+					TradingPair {
+						base: CurrencyId::AUSD,
+						quote: CurrencyId::FEUR,
+					},
+					// MaxSpread
+					Permill::from_percent(1),
+					// Accumulates
+					AccumulateConfig {
+						frequency: 10,
+						offset: 1,
+					},
+					// SwapRates
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
+					},
+				),
+				(
+					// TradingPair
+					TradingPair {
+						base: CurrencyId::AUSD,
+						quote: CurrencyId::FJPY,
+					},
+					// MaxSpread
+					Permill::from_percent(1),
+					// Accumulates
+					AccumulateConfig {
+						frequency: 10,
+						offset: 1,
+					},
+					// SwapRates
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
+					},
+				),
+				(
+					// TradingPair
+					TradingPair {
+						base: CurrencyId::AUSD,
+						quote: CurrencyId::FBTC,
+					},
+					// MaxSpread
+					Permill::from_percent(1),
+					// Accumulates
+					AccumulateConfig {
+						frequency: 10,
+						offset: 1,
+					},
+					// SwapRates
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
+					},
+				),
+				(
+					// TradingPair
+					TradingPair {
+						base: CurrencyId::AUSD,
+						quote: CurrencyId::FETH,
+					},
+					// MaxSpread
+					Permill::from_percent(1),
+					// Accumulates
+					AccumulateConfig {
+						frequency: 10,
+						offset: 1,
+					},
+					// SwapRates
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
+					},
+				),
+			],
+		}),
 		margin_protocol: Some(MarginProtocolConfig {
 			trader_risk_threshold: RiskThreshold {
 				margin_call: Permill::from_percent(3),
