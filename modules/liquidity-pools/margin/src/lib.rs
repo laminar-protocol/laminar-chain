@@ -18,6 +18,9 @@ use sp_runtime::{
 use sp_std::{cmp::max, prelude::*};
 use traits::{LiquidityPools, MarginProtocolLiquidityPools, OnDisableLiquidityPool, OnRemoveLiquidityPool};
 
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
+
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct MarginLiquidityPoolOption {
 	pub bid_spread: Permill,
@@ -26,6 +29,7 @@ pub struct MarginLiquidityPoolOption {
 }
 
 #[derive(Clone, Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct SwapRate {
 	pub long: Fixed128,
 	pub short: Fixed128,
@@ -49,10 +53,23 @@ decl_storage! {
 		pub AdditionalSwapRate get(fn additional_swap_rate): map hasher(twox_64_concat) LiquidityPoolId => Option<Fixed128>;
 		pub MaxSpread get(fn max_spread): map hasher(twox_64_concat) TradingPair => Option<Permill>;
 		pub Accumulates get(fn accumulate): map hasher(twox_64_concat) TradingPair => Option<(AccumulateConfig<T::BlockNumber>, TradingPair)>;
-		pub EnabledTradingPairs get(fn enabled_trading_pair): map hasher(twox_64_concat) TradingPair => Option<TradingPair>;
-		pub LiquidityPoolEnabledTradingPairs get(fn liquidity_pool_enabled_trading_pair): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => Option<TradingPair>;
+		pub EnabledTradingPairs get(fn enabled_trading_pair): map hasher(twox_64_concat) TradingPair => Option<()>;
+		pub LiquidityPoolEnabledTradingPairs get(fn liquidity_pool_enabled_trading_pair): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => Option<()>;
 		pub DefaultMinLeveragedAmount get(fn default_min_leveraged_amount) config(): Balance;
 		pub MinLeveragedAmount get(fn min_leveraged_amount): map hasher(twox_64_concat) LiquidityPoolId => Option<Balance>;
+	}
+
+	add_extra_genesis {
+		config(margin_liquidity_config): Vec<(TradingPair, Permill, AccumulateConfig<T::BlockNumber>, SwapRate)>;
+
+		build(|config: &GenesisConfig<T>| {
+			config.margin_liquidity_config.iter().for_each(|(pair, spread, accumulate, swap_rate)| {
+				EnabledTradingPairs::insert(pair, ());
+				SwapRates::insert(pair, swap_rate);
+				MaxSpread::insert(pair, spread);
+				<Accumulates<T>>::insert(pair, (accumulate, pair));
+			})
+		})
 	}
 }
 
@@ -150,7 +167,7 @@ decl_module! {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
-			EnabledTradingPairs::insert(&pair, &pair);
+			EnabledTradingPairs::insert(&pair, ());
 			Self::deposit_event(RawEvent::TradingPairEnabled(pair))
 		}
 
@@ -166,7 +183,7 @@ decl_module! {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
 			ensure!(Self::enabled_trading_pair(&pair).is_some(), Error::<T>::TradingPairNotEnabled);
-			LiquidityPoolEnabledTradingPairs::insert(&pool_id, &pair, &pair);
+			LiquidityPoolEnabledTradingPairs::insert(&pool_id, &pair, ());
 			Self::deposit_event(RawEvent::LiquidityPoolTradingPairEnabled(pair))
 		}
 
