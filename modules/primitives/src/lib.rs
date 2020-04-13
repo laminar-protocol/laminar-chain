@@ -181,7 +181,7 @@ pub struct TradingPair {
 mod tests {
 	use super::*;
 
-	const SHORTS: [Leverage; 7] = [
+	const SHORTS: [Leverage; 8] = [
 		Leverage::ShortTwo,
 		Leverage::ShortThree,
 		Leverage::ShortFive,
@@ -189,9 +189,10 @@ mod tests {
 		Leverage::ShortTwenty,
 		Leverage::ShortThirty,
 		Leverage::ShortFifty,
+		Leverage::ShortReserved,
 	];
 
-	const LONGS: [Leverage; 7] = [
+	const LONGS: [Leverage; 8] = [
 		Leverage::LongTwo,
 		Leverage::LongThree,
 		Leverage::LongFive,
@@ -199,19 +200,14 @@ mod tests {
 		Leverage::LongTwenty,
 		Leverage::LongThirty,
 		Leverage::LongFifty,
+		Leverage::LongReserved,
 	];
 
 	#[test]
 	fn check_leverages_all_value() {
-		assert_eq!(*Leverages::all(), 0b0111111101111111);
-		assert_eq!(
-			*LONGS.iter().fold(Leverages::none(), |acc, i| (acc | *i)),
-			0b0000000001111111
-		);
-		assert_eq!(
-			*SHORTS.iter().fold(Leverages::none(), |acc, i| (acc | *i)),
-			0b0111111100000000
-		);
+		assert_eq!(*Leverages::all(), 0xffff);
+		assert_eq!(*LONGS.iter().fold(Leverages::none(), |acc, i| (acc | *i)), 0x00ff);
+		assert_eq!(*SHORTS.iter().fold(Leverages::none(), |acc, i| (acc | *i)), 0xff00);
 
 		let mut all = LONGS.clone().to_vec();
 		all.extend_from_slice(&SHORTS);
