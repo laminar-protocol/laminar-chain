@@ -71,10 +71,10 @@ decl_module! {
 
 		pub fn mint(
 			origin,
-			pool_id: LiquidityPoolId,
+			#[compact] pool_id: LiquidityPoolId,
 			currency_id: CurrencyId,
 			#[compact] collateral_amount: Balance,
-			max_price: Price,
+			#[compact] max_price: Price,
 		) {
 			let who = ensure_signed(origin)?;
 			let synthetic_amount = Self::_mint(&who, pool_id, currency_id, collateral_amount, max_price)?;
@@ -84,10 +84,10 @@ decl_module! {
 
 		pub fn redeem(
 			origin,
-			pool_id: LiquidityPoolId,
+			#[compact] pool_id: LiquidityPoolId,
 			currency_id: CurrencyId,
 			#[compact] synthetic_amount: Balance,
-			min_price: Price,
+			#[compact] min_price: Price,
 		) {
 			let who = ensure_signed(origin)?;
 			let collateral_amount = Self::_redeem(&who, pool_id, currency_id, synthetic_amount, min_price)?;
@@ -97,7 +97,7 @@ decl_module! {
 
 		pub fn liquidate(
 			origin,
-			pool_id: LiquidityPoolId,
+			#[compact] pool_id: LiquidityPoolId,
 			currency_id: CurrencyId,
 			#[compact] synthetic_amount: Balance,
 		) {
@@ -109,7 +109,7 @@ decl_module! {
 
 		pub fn add_collateral(
 			origin,
-			pool_id: LiquidityPoolId,
+			#[compact] pool_id: LiquidityPoolId,
 			currency_id: CurrencyId,
 			#[compact] collateral_amount: Balance,
 		) {
@@ -121,7 +121,7 @@ decl_module! {
 
 		pub fn withdraw_collateral(
 			origin,
-			pool_id: LiquidityPoolId,
+			#[compact] pool_id: LiquidityPoolId,
 			currency_id: CurrencyId,
 		) {
 			let who = ensure_signed(origin)?;
