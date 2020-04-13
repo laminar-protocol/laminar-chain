@@ -27,7 +27,6 @@ pub enum CurrencyId {
 	FETH,
 }
 
-// TODO: set the actual accuracy
 const BALANCE_ACCURACY: u128 = 1_000_000_000_000_000_000;
 
 pub type Balance = u128;
@@ -66,20 +65,22 @@ impl Convert<Price, Balance> for BalancePriceConverter {
 bitmask! {
 	#[derive(Encode, Decode, Default)]
 	pub mask Leverages: u16 where flags Leverage {
-		LongTwo 	= 0b0000000000000001,
-		LongThree 	= 0b0000000000000010,
-		LongFive 	= 0b0000000000000100,
-		LongTen 	= 0b0000000000001000,
-		LongTwenty 	= 0b0000000000010000,
-		LongThirty	= 0b0000000000100000,
-		LongFifty	= 0b0000000001000000,
-		ShortTwo 	= 0b0000000100000000,
-		ShortThree 	= 0b0000001000000000,
-		ShortFive 	= 0b0000010000000000,
-		ShortTen 	= 0b0000100000000000,
-		ShortTwenty	= 0b0001000000000000,
-		ShortThirty	= 0b0010000000000000,
-		ShortFifty	= 0b0100000000000000,
+		LongTwo 		= 0b0000000000000001,
+		LongThree 		= 0b0000000000000010,
+		LongFive 		= 0b0000000000000100,
+		LongTen 		= 0b0000000000001000,
+		LongTwenty 		= 0b0000000000010000,
+		LongThirty		= 0b0000000000100000,
+		LongFifty		= 0b0000000001000000,
+		LongReserved	= 0b0000000010000000,
+		ShortTwo 		= 0b0000000100000000,
+		ShortThree 		= 0b0000001000000000,
+		ShortFive 		= 0b0000010000000000,
+		ShortTen 		= 0b0000100000000000,
+		ShortTwenty		= 0b0001000000000000,
+		ShortThirty		= 0b0010000000000000,
+		ShortFifty		= 0b0100000000000000,
+		ShortReserved	= 0b1000000000000000,
 	}
 }
 
@@ -107,6 +108,7 @@ impl Decode for Leverage {
 			4 => Ok(Leverage::LongTwenty),
 			5 => Ok(Leverage::LongThirty),
 			6 => Ok(Leverage::LongFifty),
+			7 => Ok(Leverage::LongReserved),
 			8 => Ok(Leverage::ShortTwo),
 			9 => Ok(Leverage::ShortThree),
 			10 => Ok(Leverage::ShortFive),
@@ -114,6 +116,7 @@ impl Decode for Leverage {
 			12 => Ok(Leverage::ShortTwenty),
 			13 => Ok(Leverage::ShortThirty),
 			14 => Ok(Leverage::ShortFifty),
+			15 => Ok(Leverage::ShortReserved),
 			_ => Err(Error::from("unknown value")),
 		}
 	}
@@ -137,6 +140,7 @@ impl Leverage {
 			Leverage::LongTwenty | Leverage::ShortTwenty => 20,
 			Leverage::LongThirty | Leverage::ShortThirty => 30,
 			Leverage::LongFifty | Leverage::ShortFifty => 50,
+			Leverage::LongReserved | Leverage::ShortReserved => 100,
 		}
 	}
 }
