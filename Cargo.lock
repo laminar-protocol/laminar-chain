@@ -2499,6 +2499,7 @@ dependencies = [
  "jsonrpc-core-client 14.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-derive 14.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "margin-protocol-rpc-runtime-api 0.1.0",
+ "module-primitives 0.0.1",
  "parity-scale-codec 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-api 2.0.0-alpha.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-blockchain 2.0.0-alpha.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2509,6 +2510,8 @@ dependencies = [
 name = "margin-protocol-rpc-runtime-api"
 version = "0.1.0"
 dependencies = [
+ "module-primitives 0.0.1",
+ "orml-utilities 0.0.1",
  "parity-scale-codec 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.105 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-api 2.0.0-alpha.5 (registry+https://github.com/rust-lang/crates.io-index)",

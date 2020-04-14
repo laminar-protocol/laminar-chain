@@ -2,10 +2,7 @@
 
 use std::{fmt, sync::Arc};
 
-use runtime::{
-	opaque::Block, AccountId, Balance, CurrencyId, Fixed128, Index, LiquidityPoolId, TimeStampedPrice,
-	UncheckedExtrinsic,
-};
+use runtime::{opaque::Block, AccountId, Balance, CurrencyId, Index, TimeStampedPrice, UncheckedExtrinsic};
 use sc_client::blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sc_consensus_babe::{Config, Epoch};
 use sc_consensus_babe_rpc::BabeRPCHandler;
@@ -61,7 +58,7 @@ where
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance, UncheckedExtrinsic>,
 	C::Api: BabeApi<Block>,
 	C::Api: orml_oracle_rpc::OracleRuntimeApi<Block, CurrencyId, TimeStampedPrice>,
-	C::Api: margin_protocol_rpc::MarginProtocolRuntimeApi<Block, AccountId, Fixed128, LiquidityPoolId>,
+	C::Api: margin_protocol_rpc::MarginProtocolRuntimeApi<Block, AccountId>,
 	<C::Api as sp_api::ApiErrorExt>::Error: fmt::Debug,
 	P: TransactionPool + 'static,
 	M: jsonrpc_core::Metadata + Default,
