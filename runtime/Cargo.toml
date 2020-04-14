@@ -26,6 +26,7 @@ pallet-timestamp = { version = "2.0.0-alpha.5", default-features = false }
 pallet-transaction-payment = { version = "2.0.0-alpha.5", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { version = "2.0.0-alpha.5", default-features = false }
 pallet-treasury = { version = "2.0.0-alpha.5", default-features = false }
+pallet-utility = { version = "2.0.0-alpha.5", default-features = false }
 sp-api = { version = "2.0.0-alpha.5", default-features = false }
 sp-block-builder = { version = "2.0.0-alpha.5", default-features = false }
 sp-consensus-babe = { version = "0.8.0-alpha.5", default-features = false }
@@ -91,6 +92,7 @@ std = [
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
 	"pallet-treasury/std",
+	"pallet-utility/std",
 	"sp-api/std",
 	"sp-block-builder/std",
 	"sp-consensus-babe/std",
