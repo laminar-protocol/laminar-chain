@@ -4,7 +4,7 @@ mod mock;
 mod tests;
 
 use codec::{Decode, Encode};
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, weights::SimpleDispatchInfo};
 use frame_system::{self as system, ensure_root, ensure_signed};
 use orml_traits::MultiCurrency;
 use primitives::{Balance, CurrencyId, LiquidityPoolId};
@@ -60,18 +60,21 @@ decl_module! {
 
 		fn deposit_event() = default;
 
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
 		pub fn set_spread(origin, #[compact] pool_id: LiquidityPoolId, currency_id: CurrencyId, #[compact] bid: Permill, #[compact] ask: Permill) {
 			let who = ensure_signed(origin)?;
 			Self::_set_spread(&who, pool_id, currency_id, bid, ask)?;
 			Self::deposit_event(RawEvent::SetSpread(who, pool_id, currency_id, bid, ask));
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
 		pub fn set_additional_collateral_ratio(origin, #[compact] pool_id: LiquidityPoolId, currency_id: CurrencyId, ratio: Option<Permill>) {
 			let who = ensure_signed(origin)?;
 			Self::_set_additional_collateral_ratio(&who, pool_id, currency_id, ratio)?;
 			Self::deposit_event(RawEvent::SetAdditionalCollateralRatio(who, pool_id, currency_id, ratio));
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
 		pub fn set_min_additional_collateral_ratio(origin, #[compact] ratio: Permill) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
@@ -80,12 +83,14 @@ decl_module! {
 			Self::deposit_event(RawEvent::SetMinAdditionalCollateralRatio(ratio));
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
 		pub fn set_synthetic_enabled(origin, #[compact] pool_id: LiquidityPoolId, currency_id: CurrencyId, enabled: bool) {
 			let who = ensure_signed(origin)?;
 			Self::_set_synthetic_enabled(&who, pool_id, currency_id, enabled)?;
 			Self::deposit_event(RawEvent::SetSyntheticEnabled(who, pool_id, currency_id, enabled));
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
 		pub fn set_max_spread(origin, currency_id: CurrencyId, #[compact] max_spread: Permill) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())

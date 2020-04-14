@@ -6,6 +6,7 @@ mod tests;
 use codec::{Decode, Encode};
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage, ensure, storage::IterableStorageMap, traits::Get,
+	weights::SimpleDispatchInfo,
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
 use orml_traits::MultiCurrency;
@@ -113,18 +114,21 @@ decl_module! {
 
 		fn deposit_event() = default;
 
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
 		pub fn set_spread(origin, #[compact] pool_id: LiquidityPoolId, pair: TradingPair, #[compact] bid: Permill, #[compact] ask: Permill) {
 			let who = ensure_signed(origin)?;
 			Self::_set_spread(&who, pool_id, pair, bid, ask)?;
 			Self::deposit_event(RawEvent::SetSpread(who, pool_id, pair, bid, ask));
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
 		pub fn set_enabled_trades(origin, #[compact] pool_id: LiquidityPoolId, pair: TradingPair, enabled: Leverages) {
 			let who = ensure_signed(origin)?;
 			Self::_set_enabled_trades(&who, pool_id, pair, enabled)?;
 			Self::deposit_event(RawEvent::SetEnabledTrades(who, pool_id, pair, enabled));
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
 		pub fn set_swap_rate(origin, pair: TradingPair, rate: SwapRate) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
@@ -136,6 +140,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::SwapRateUpdated(pair, rate));
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
 		pub fn set_additional_swap(origin, #[compact] pool_id: LiquidityPoolId,  rate: Fixed128) {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
@@ -146,6 +151,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::AdditionalSwapRateUpdated(who, pool_id, rate));
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
 		pub fn set_max_spread(origin, pair: TradingPair, #[compact] max_spread: Permill) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
@@ -154,7 +160,8 @@ decl_module! {
 			Self::deposit_event(RawEvent::MaxSpreadUpdated(pair, max_spread));
 		}
 
-		pub fn set_accumulate(origin, pair: TradingPair, #[compact] frequency: T::BlockNumber, #[compact] offset: T::BlockNumber) {
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
+		pub fn set_accumulate(origin, pair: TradingPair, frequency: T::BlockNumber, offset: T::BlockNumber) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
@@ -163,6 +170,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::SetAccumulate(pair, frequency, offset));
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
 		pub fn enable_trading_pair(origin, pair: TradingPair) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
@@ -171,6 +179,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::TradingPairEnabled(pair))
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
 		pub fn disable_trading_pair(origin, pair: TradingPair) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
@@ -179,6 +188,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::TradingPairDisabled(pair))
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
 		pub fn liquidity_pool_enable_trading_pair(origin, #[compact] pool_id: LiquidityPoolId, pair: TradingPair) {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
@@ -187,6 +197,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::LiquidityPoolTradingPairEnabled(pair))
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
 		pub fn liquidity_pool_disable_trading_pair(origin, #[compact] pool_id: LiquidityPoolId, pair: TradingPair) {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
@@ -194,6 +205,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::LiquidityPoolTradingPairDisabled(pair))
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
 		pub fn set_default_min_leveraged_amount(origin, #[compact] amount: Balance) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
@@ -202,6 +214,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::SetDefaultMinLeveragedAmount(amount))
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
 		pub fn set_min_leveraged_amount(origin, #[compact] pool_id: LiquidityPoolId, #[compact] amount: Balance) {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
