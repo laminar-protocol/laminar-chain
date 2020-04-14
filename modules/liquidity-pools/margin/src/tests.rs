@@ -498,7 +498,7 @@ fn should_enable_disable_trading_pairs() {
 		};
 		assert_eq!(ModuleLiquidityPools::enabled_trading_pair(pair), None);
 		assert_ok!(ModuleLiquidityPools::enable_trading_pair(Origin::ROOT, pair));
-		assert_eq!(ModuleLiquidityPools::enabled_trading_pair(pair), Some(()));
+		assert_eq!(ModuleLiquidityPools::enabled_trading_pair(pair), Some(true));
 		assert_ok!(ModuleLiquidityPools::disable_trading_pair(Origin::ROOT, pair));
 		assert_eq!(ModuleLiquidityPools::enabled_trading_pair(pair), None);
 	})
@@ -521,7 +521,7 @@ fn liquidity_provider_should_enable_disable_trading_pairs() {
 		));
 		assert_eq!(
 			ModuleLiquidityPools::liquidity_pool_enabled_trading_pair(0, pair),
-			Some(())
+			Some(true)
 		);
 		assert_ok!(ModuleLiquidityPools::liquidity_pool_disable_trading_pair(
 			Origin::signed(ALICE),

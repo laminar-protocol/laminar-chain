@@ -590,6 +590,21 @@ impl margin_protocol::Trait for Runtime {
 	type GetPoolMaxOpenPositions = GetPoolMaxOpenPositions;
 }
 
+parameter_types! {
+	pub const MultisigDepositBase: Balance = 500;
+	pub const MultisigDepositFactor: Balance = 100;
+	pub const MaxSignatories: u16 = 100;
+}
+
+impl pallet_utility::Trait for Runtime {
+	type Event = Event;
+	type Call = Call;
+	type Currency = Balances;
+	type MultisigDepositBase = MultisigDepositBase;
+	type MultisigDepositFactor = MultisigDepositFactor;
+	type MaxSignatories = MaxSignatories;
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -612,6 +627,7 @@ construct_runtime!(
 		OperatorCollective: pallet_collective::<Instance3>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		OperatorMembership: pallet_membership::<Instance3>::{Module, Call, Storage, Event<T>, Config<T>},
 		Oracle: orml_oracle::{Module, Storage, Call, Event<T>},
+		Utility: pallet_utility::{Module, Call, Storage, Event<T>},
 		PalletTreasury: pallet_treasury::{Module, Call, Storage, Config, Event<T>},
 		Staking: pallet_staking::{Module, Call, Config<T>, Storage, Event<T>},
 		Session: pallet_session::{Module, Call, Storage, Event, Config<T>},

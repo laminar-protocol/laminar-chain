@@ -213,7 +213,7 @@ fn session_keys(grandpa: GrandpaId, babe: BabeId) -> SessionKeys {
 	SessionKeys { grandpa, babe }
 }
 
-const INITIAL_BALANCE: u128 = 1_000_000_000_000_000_000_000_u128; // $1M
+const INITIAL_BALANCE: u128 = 1_000_000_000_000_000_000_000_000_u128; // $1M
 const INITIAL_STAKING: u128 = 1_000_000_000_000_000_000_u128;
 
 fn dev_genesis(
@@ -276,12 +276,7 @@ fn dev_genesis(
 		orml_tokens: Some(TokensConfig {
 			endowed_accounts: endowed_accounts
 				.iter()
-				.flat_map(|x| {
-					vec![
-						(x.clone(), CurrencyId::LAMI, INITIAL_BALANCE),
-						(x.clone(), CurrencyId::AUSD, INITIAL_BALANCE),
-					]
-				})
+				.flat_map(|x| vec![(x.clone(), CurrencyId::AUSD, INITIAL_BALANCE)])
 				.collect(),
 		}),
 		synthetic_liquidity_pools: Some(SyntheticLiquidityPoolsConfig {
@@ -294,8 +289,8 @@ fn dev_genesis(
 				(
 					// TradingPair
 					TradingPair {
-						base: CurrencyId::AUSD,
-						quote: CurrencyId::FEUR,
+						base: CurrencyId::FEUR,
+						quote: CurrencyId::AUSD,
 					},
 					// MaxSpread
 					Permill::from_percent(1),
@@ -313,8 +308,8 @@ fn dev_genesis(
 				(
 					// TradingPair
 					TradingPair {
-						base: CurrencyId::AUSD,
-						quote: CurrencyId::FJPY,
+						base: CurrencyId::FJPY,
+						quote: CurrencyId::AUSD,
 					},
 					// MaxSpread
 					Permill::from_percent(1),
@@ -332,8 +327,8 @@ fn dev_genesis(
 				(
 					// TradingPair
 					TradingPair {
-						base: CurrencyId::AUSD,
-						quote: CurrencyId::FBTC,
+						base: CurrencyId::FBTC,
+						quote: CurrencyId::AUSD,
 					},
 					// MaxSpread
 					Permill::from_percent(1),
@@ -351,8 +346,8 @@ fn dev_genesis(
 				(
 					// TradingPair
 					TradingPair {
-						base: CurrencyId::AUSD,
-						quote: CurrencyId::FETH,
+						base: CurrencyId::FETH,
+						quote: CurrencyId::AUSD,
 					},
 					// MaxSpread
 					Permill::from_percent(1),
@@ -445,12 +440,7 @@ fn testnet_genesis(
 		orml_tokens: Some(TokensConfig {
 			endowed_accounts: endowed_accounts
 				.iter()
-				.flat_map(|x| {
-					vec![
-						(x.clone(), CurrencyId::LAMI, INITIAL_BALANCE),
-						(x.clone(), CurrencyId::AUSD, INITIAL_BALANCE),
-					]
-				})
+				.flat_map(|x| vec![(x.clone(), CurrencyId::AUSD, INITIAL_BALANCE)])
 				.collect(),
 		}),
 		synthetic_liquidity_pools: Some(SyntheticLiquidityPoolsConfig {
@@ -463,8 +453,8 @@ fn testnet_genesis(
 				(
 					// TradingPair
 					TradingPair {
-						base: CurrencyId::AUSD,
-						quote: CurrencyId::FEUR,
+						base: CurrencyId::FEUR,
+						quote: CurrencyId::AUSD,
 					},
 					// MaxSpread
 					Permill::from_percent(1),
@@ -482,8 +472,8 @@ fn testnet_genesis(
 				(
 					// TradingPair
 					TradingPair {
-						base: CurrencyId::AUSD,
-						quote: CurrencyId::FJPY,
+						base: CurrencyId::FJPY,
+						quote: CurrencyId::AUSD,
 					},
 					// MaxSpread
 					Permill::from_percent(1),
@@ -501,8 +491,8 @@ fn testnet_genesis(
 				(
 					// TradingPair
 					TradingPair {
-						base: CurrencyId::AUSD,
-						quote: CurrencyId::FBTC,
+						base: CurrencyId::FBTC,
+						quote: CurrencyId::AUSD,
 					},
 					// MaxSpread
 					Permill::from_percent(1),
@@ -520,8 +510,8 @@ fn testnet_genesis(
 				(
 					// TradingPair
 					TradingPair {
-						base: CurrencyId::AUSD,
-						quote: CurrencyId::FETH,
+						base: CurrencyId::FETH,
+						quote: CurrencyId::AUSD,
 					},
 					// MaxSpread
 					Permill::from_percent(1),

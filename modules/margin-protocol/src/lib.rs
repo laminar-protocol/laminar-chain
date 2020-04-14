@@ -76,11 +76,11 @@ decl_storage! {
 	trait Store for Module<T: Trait> as MarginProtocol {
 		NextPositionId get(next_position_id): PositionId;
 		Positions get(positions): map hasher(twox_64_concat) PositionId => Option<Position<T>>;
-		PositionsByTrader get(positions_by_trader): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) (LiquidityPoolId, PositionId) => Option<()>;
-		PositionsByPool get(positions_by_pool): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) (TradingPair, PositionId) => Option<()>;
+		PositionsByTrader get(positions_by_trader): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) (LiquidityPoolId, PositionId) => Option<bool>;
+		PositionsByPool get(positions_by_pool): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) (TradingPair, PositionId) => Option<bool>;
 		Balances get(balances): map hasher(twox_64_concat) T::AccountId => Fixed128;
-		MarginCalledTraders get(margin_called_traders): map hasher(twox_64_concat) T::AccountId => Option<()>;
-		MarginCalledPools get(margin_called_pools): map hasher(twox_64_concat) LiquidityPoolId => Option<()>;
+		MarginCalledTraders get(margin_called_traders): map hasher(twox_64_concat) T::AccountId => Option<bool>;
+		MarginCalledPools get(margin_called_pools): map hasher(twox_64_concat) LiquidityPoolId => Option<bool>;
 		TraderRiskThreshold get(trader_risk_threshold) config(): RiskThreshold;
 		LiquidityPoolENPThreshold get(liquidity_pool_enp_threshold) config(): RiskThreshold;
 		LiquidityPoolELLThreshold get(liquidity_pool_ell_threshold) config(): RiskThreshold;
@@ -414,7 +414,7 @@ impl<T: Trait> Module<T> {
 	fn _trader_margin_call(who: &T::AccountId) -> DispatchResult {
 		if !Self::_is_trader_margin_called(who) {
 			if Self::_ensure_trader_safe(who).is_err() {
-				<MarginCalledTraders<T>>::insert(who, ());
+				<MarginCalledTraders<T>>::insert(who, true);
 			} else {
 				return Err(Error::<T>::SafeTrader.into());
 			}
@@ -473,7 +473,7 @@ impl<T: Trait> Module<T> {
 	fn _liquidity_pool_margin_call(pool: LiquidityPoolId) -> DispatchResult {
 		if !Self::_is_pool_margin_called(&pool) {
 			if Self::_ensure_pool_safe(pool, Action::None).is_err() {
-				MarginCalledPools::insert(pool, ());
+				MarginCalledPools::insert(pool, true);
 			} else {
 				return Err(Error::<T>::SafePool.into());
 			}
@@ -526,8 +526,8 @@ impl<T: Trait> Module<T> {
 		NextPositionId::mutate(|id| *id += 1);
 
 		<Positions<T>>::insert(id, position);
-		<PositionsByTrader<T>>::insert(who, (pool, id), ());
-		PositionsByPool::insert(pool, (pair, id), ());
+		<PositionsByTrader<T>>::insert(who, (pool, id), true);
+		PositionsByPool::insert(pool, (pair, id), true);
 
 		Ok(id)
 	}
