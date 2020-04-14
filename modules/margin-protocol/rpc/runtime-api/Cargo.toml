@@ -10,6 +10,9 @@ codec = { package = "parity-scale-codec", version = "1.2.0", default-features = 
 sp-api = { version = "2.0.0-alpha.5", default-features = false }
 sp-std = { version = "2.0.0-alpha.5", default-features = false }
 
+orml-utilities = { path = "../../../../orml/utilities", default-features = false }
+module-primitives = { path = "../../../primitives", default-features = false }
+
 [features]
 default = ["std"]
 std = [
@@ -17,4 +20,6 @@ std = [
 	"codec/std",
 	"sp-api/std",
 	"sp-std/std",
+	"orml-utilities/std",
+	"module-primitives/std",
 ]

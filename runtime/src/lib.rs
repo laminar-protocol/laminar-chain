@@ -779,35 +779,15 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl margin_protocol_rpc_runtime_api::MarginProtocolApi<Block, AccountId, Fixed128, LiquidityPoolId> for Runtime {
-		fn equity_of_trader(who: AccountId) -> Option<Fixed128> {
-			MarginProtocol::equity_of_trader(&who).ok()
-		}
-
-		fn margin_level(who: AccountId) -> Option<Fixed128> {
-			MarginProtocol::margin_level(&who).ok()
-		}
-
-		fn free_margin(who: AccountId) -> Option<Fixed128> {
-			MarginProtocol::free_margin(&who).ok()
-		}
-
-		fn margin_held(who: AccountId) -> Fixed128 {
-			MarginProtocol::margin_held(&who)
-		}
-
-		fn unrealized_pl_of_trader(who: AccountId) -> Option<Fixed128> {
-			MarginProtocol::unrealized_pl_of_trader(&who).ok()
-		}
-
-		fn trader_info(who: AccountId) -> TraderInfo<Fixed128> {
+	impl margin_protocol_rpc_runtime_api::MarginProtocolApi<Block, AccountId> for Runtime {
+		fn trader_info(who: AccountId) -> TraderInfo {
 			let equity = MarginProtocol::equity_of_trader(&who).unwrap_or_default();
 			let margin_held = MarginProtocol::margin_held(&who);
 			let margin_level = MarginProtocol::margin_level(&who).unwrap_or_default();
 			let free_margin = MarginProtocol::free_margin(&who).unwrap_or_default();
 			let unrealized_pl = MarginProtocol::unrealized_pl_of_trader(&who).unwrap_or_default();
 
-			TraderInfo::<Fixed128>{
+			TraderInfo {
 				equity,
 				margin_held,
 				margin_level,
@@ -816,10 +796,10 @@ impl_runtime_apis! {
 			}
 		}
 
-		fn pool_info(pool_id: LiquidityPoolId) -> PoolInfo<Fixed128> {
-			let (enp, ell) = MarginProtocol::enp_and_ell(pool_id).unwrap_or_default();
+		fn pool_info(pool_id: LiquidityPoolId) -> Option<PoolInfo> {
+			let (enp, ell) = MarginProtocol::enp_and_ell(pool_id).ok()?;
 
-			PoolInfo::<Fixed128>{ enp, ell }
+			Some(PoolInfo { enp, ell })
 		}
 	}
 }
