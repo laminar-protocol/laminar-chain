@@ -75,7 +75,7 @@ decl_module! {
 		const SyntheticCurrencyIds: Vec<CurrencyId> = T::SyntheticCurrencyIds::get();
 
 		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
-		pub fn set_extreme_ratio(origin, currency_id: CurrencyId, ratio: Permill) {
+		pub fn set_extreme_ratio(origin, currency_id: CurrencyId, #[compact] ratio: Permill) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
@@ -85,7 +85,7 @@ decl_module! {
 		}
 
 		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
-		pub fn set_liquidation_ratio(origin, currency_id: CurrencyId, ratio: Permill) {
+		pub fn set_liquidation_ratio(origin, currency_id: CurrencyId, #[compact] ratio: Permill) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
@@ -95,7 +95,7 @@ decl_module! {
 		}
 
 		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
-		pub fn set_collateral_ratio(origin, currency_id: CurrencyId, ratio: Permill) {
+		pub fn set_collateral_ratio(origin, currency_id: CurrencyId, #[compact] ratio: Permill) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;

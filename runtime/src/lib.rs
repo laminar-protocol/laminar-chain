@@ -81,7 +81,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("laminar-chain"),
 	impl_name: create_runtime_str!("laminar-chain"),
 	authoring_version: 1,
-	spec_version: 4,
+	spec_version: 5,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 };
@@ -622,7 +622,7 @@ construct_runtime!(
 		SyntheticProtocol: synthetic_protocol::{Module, Call, Event<T>},
 		MarginProtocol: margin_protocol::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned },
 		BaseLiquidityPoolsForMargin: base_liquidity_pools::<Instance1>::{Module, Storage, Call, Event<T>},
-		MarginLiquidityPools: margin_liquidity_pools::{Module, Storage, Call, Event<T>},
+		MarginLiquidityPools: margin_liquidity_pools::{Module, Storage, Call, Event<T>, Config<T>},
 		BaseLiquidityPoolsForSynthetic: base_liquidity_pools::<Instance2>::{Module, Storage, Call, Event<T>},
 		SyntheticLiquidityPools: synthetic_liquidity_pools::{Module, Storage, Call, Event<T>, Config},
 	}

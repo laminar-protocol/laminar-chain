@@ -153,23 +153,23 @@ decl_module! {
 		#[weight = SimpleDispatchInfo::FixedNormal(20_000)]
 		pub fn open_position(
 			origin,
-			pool: LiquidityPoolId,
+			#[compact] pool: LiquidityPoolId,
 			pair: TradingPair,
 			leverage: Leverage,
 			#[compact] leveraged_amount: Balance,
-			price: Price,
+			#[compact] price: Price,
 		) {
 			let who = ensure_signed(origin)?;
 			Self::_open_position(&who, pool, pair, leverage, leveraged_amount, price)?;
 		}
 
 		#[weight = SimpleDispatchInfo::FixedNormal(20_000)]
-		pub fn close_position(origin, position_id: PositionId, price: Price) {
+		pub fn close_position(origin, #[compact] position_id: PositionId, #[compact] price: Price) {
 			let who = ensure_signed(origin)?;
 			Self::_close_position(&who, position_id, Some(price))?;
 		}
 
-		#[weight = SimpleDispatchInfo::FixedOperational(20_000)]
+		#[weight = SimpleDispatchInfo::FixedOperational(10_000)]
 		pub fn deposit(origin, #[compact] amount: Balance) {
 			let who = ensure_signed(origin)?;
 			Self::_deposit(&who, amount)?;
@@ -194,7 +194,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::TraderMarginCalled(who));
 		}
 
-		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
+		#[weight = SimpleDispatchInfo::FixedNormal(20_000)]
 		pub fn trader_become_safe(origin, who: <T::Lookup as StaticLookup>::Source) {
 			ensure_none(origin)?;
 			let who = T::Lookup::lookup(who)?;
@@ -213,21 +213,21 @@ decl_module! {
 		}
 
 		#[weight = SimpleDispatchInfo::FixedOperational(20_000)]
-		pub fn liquidity_pool_margin_call(origin, pool: LiquidityPoolId) {
+		pub fn liquidity_pool_margin_call(origin, #[compact] pool: LiquidityPoolId) {
 			ensure_none(origin)?;
 			Self::_liquidity_pool_margin_call(pool)?;
 			Self::deposit_event(RawEvent::LiquidityPoolMarginCalled(pool));
 		}
 
-		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
-		pub fn liquidity_pool_become_safe(origin, pool: LiquidityPoolId) {
+		#[weight = SimpleDispatchInfo::FixedNormal(20_000)]
+		pub fn liquidity_pool_become_safe(origin, #[compact] pool: LiquidityPoolId) {
 			ensure_none(origin)?;
 			Self::_liquidity_pool_become_safe(pool)?;
 			Self::deposit_event(RawEvent::LiquidityPoolBecameSafe(pool));
 		}
 
 		#[weight = SimpleDispatchInfo::FixedOperational(30_000)]
-		pub fn liquidity_pool_force_close(origin, pool: LiquidityPoolId) {
+		pub fn liquidity_pool_force_close(origin, #[compact] pool: LiquidityPoolId) {
 			ensure_none(origin)?;
 			Self::_liquidity_pool_force_close(pool)?;
 			Self::deposit_event(RawEvent::LiquidityPoolForceClosed(pool));
