@@ -1,6 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get};
+use frame_support::{
+	decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get, weights::SimpleDispatchInfo,
+};
 use sp_runtime::{
 	traits::{Convert, Saturating, Zero},
 	DispatchError, DispatchResult, Permill,
@@ -69,6 +71,7 @@ decl_module! {
 
 		const GetCollateralCurrencyId: CurrencyId = T::GetCollateralCurrencyId::get();
 
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
 		pub fn mint(
 			origin,
 			pool_id: LiquidityPoolId,
@@ -82,6 +85,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::Minted(who, currency_id, pool_id, collateral_amount, synthetic_amount));
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
 		pub fn redeem(
 			origin,
 			pool_id: LiquidityPoolId,
@@ -95,6 +99,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::Redeemed(who, currency_id, pool_id, collateral_amount, synthetic_amount));
 		}
 
+		#[weight = SimpleDispatchInfo::FixedOperational(20_000)]
 		pub fn liquidate(
 			origin,
 			pool_id: LiquidityPoolId,
@@ -107,6 +112,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::Liquidated(who, currency_id, pool_id, collateral_amount, synthetic_amount));
 		}
 
+		#[weight = SimpleDispatchInfo::FixedOperational(10_000)]
 		pub fn add_collateral(
 			origin,
 			pool_id: LiquidityPoolId,
@@ -119,6 +125,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::CollateralAdded(who, currency_id, pool_id, collateral_amount));
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
 		pub fn withdraw_collateral(
 			origin,
 			pool_id: LiquidityPoolId,

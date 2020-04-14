@@ -2,8 +2,8 @@
 
 use codec::{Decode, Encode};
 use frame_support::{
-	debug, decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get, IsSubType, IterableStorageDoubleMap,
-	IterableStorageMap,
+	debug, decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get, weights::SimpleDispatchInfo,
+	IsSubType, IterableStorageDoubleMap, IterableStorageMap,
 };
 use sp_arithmetic::{
 	traits::{Bounded, Saturating},
@@ -150,6 +150,7 @@ decl_module! {
 
 		fn deposit_event() = default;
 
+		#[weight = SimpleDispatchInfo::FixedNormal(20_000)]
 		pub fn open_position(
 			origin,
 			pool: LiquidityPoolId,
@@ -162,11 +163,13 @@ decl_module! {
 			Self::_open_position(&who, pool, pair, leverage, leveraged_amount, price)?;
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(20_000)]
 		pub fn close_position(origin, position_id: PositionId, price: Price) {
 			let who = ensure_signed(origin)?;
 			Self::_close_position(&who, position_id, Some(price))?;
 		}
 
+		#[weight = SimpleDispatchInfo::FixedOperational(20_000)]
 		pub fn deposit(origin, #[compact] amount: Balance) {
 			let who = ensure_signed(origin)?;
 			Self::_deposit(&who, amount)?;
@@ -174,6 +177,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::Deposited(who, amount));
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
 		pub fn withdraw(origin, #[compact] amount: Balance) {
 			let who = ensure_signed(origin)?;
 			Self::_withdraw(&who, amount)?;
@@ -181,6 +185,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::Withdrew(who, amount));
 		}
 
+		#[weight = SimpleDispatchInfo::FixedOperational(20_000)]
 		pub fn trader_margin_call(origin, who: <T::Lookup as StaticLookup>::Source) {
 			ensure_none(origin)?;
 			let who = T::Lookup::lookup(who)?;
@@ -189,6 +194,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::TraderMarginCalled(who));
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
 		pub fn trader_become_safe(origin, who: <T::Lookup as StaticLookup>::Source) {
 			ensure_none(origin)?;
 			let who = T::Lookup::lookup(who)?;
@@ -197,6 +203,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::TraderBecameSafe(who));
 		}
 
+		#[weight = SimpleDispatchInfo::FixedOperational(30_000)]
 		pub fn trader_stop_out(origin, who: <T::Lookup as StaticLookup>::Source) {
 			ensure_none(origin)?;
 			let who = T::Lookup::lookup(who)?;
@@ -205,18 +212,21 @@ decl_module! {
 			Self::deposit_event(RawEvent::TraderStoppedOut(who));
 		}
 
+		#[weight = SimpleDispatchInfo::FixedOperational(20_000)]
 		pub fn liquidity_pool_margin_call(origin, pool: LiquidityPoolId) {
 			ensure_none(origin)?;
 			Self::_liquidity_pool_margin_call(pool)?;
 			Self::deposit_event(RawEvent::LiquidityPoolMarginCalled(pool));
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
 		pub fn liquidity_pool_become_safe(origin, pool: LiquidityPoolId) {
 			ensure_none(origin)?;
 			Self::_liquidity_pool_become_safe(pool)?;
 			Self::deposit_event(RawEvent::LiquidityPoolBecameSafe(pool));
 		}
 
+		#[weight = SimpleDispatchInfo::FixedOperational(30_000)]
 		pub fn liquidity_pool_force_close(origin, pool: LiquidityPoolId) {
 			ensure_none(origin)?;
 			Self::_liquidity_pool_force_close(pool)?;

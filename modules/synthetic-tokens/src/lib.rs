@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, traits::Get};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, traits::Get, weights::SimpleDispatchInfo};
 use frame_system::{self as system, ensure_root};
 use module_primitives::{Balance, CurrencyId, LiquidityPoolId};
 use module_traits::LiquidityPoolManager;
@@ -74,6 +74,7 @@ decl_module! {
 		const DefaultCollateralRatio: Permill = T::DefaultCollateralRatio::get();
 		const SyntheticCurrencyIds: Vec<CurrencyId> = T::SyntheticCurrencyIds::get();
 
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
 		pub fn set_extreme_ratio(origin, currency_id: CurrencyId, ratio: Permill) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
@@ -83,6 +84,7 @@ decl_module! {
 			Self::deposit_event(Event::ExtremeRatioUpdated(currency_id, ratio));
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
 		pub fn set_liquidation_ratio(origin, currency_id: CurrencyId, ratio: Permill) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
@@ -92,6 +94,7 @@ decl_module! {
 			Self::deposit_event(Event::LiquidationRatioUpdated(currency_id, ratio));
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
 		pub fn set_collateral_ratio(origin, currency_id: CurrencyId, ratio: Permill) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
