@@ -46,6 +46,9 @@ Feature: Margin Protocol
     Then margin balances are
       | Name  | Free  | Margin |
       | Alice | $5000 | $5000  |
+    Then trader margin positions are
+      | Name  | Equity  | Free Margin | Margin Held |
+      | Alice | $4700   | $3185       | $1515       |
     When close positions
       | Name  | ID | Price |
       | Alice | 0  | $2    |

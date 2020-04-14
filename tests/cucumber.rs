@@ -386,6 +386,23 @@ mod steps {
 					let amount = parse_dollar(matches.get(1));
 					assert_eq!(margin_liquidity(), amount);
 				})
+			})
+			.then("trader margin positions are", |world, step| {
+				world.execute_with(|| {
+					let iter = get_rows(step).iter().map(|x| {
+						(
+							parse_name(x.get(0)),
+							parse_fixed_128_dollar(x.get(1)),
+							parse_fixed_128_dollar(x.get(2)),
+							parse_fixed_128_dollar(x.get(3)),
+						)
+					});
+					for (name, equity, free, held) in iter {
+						assert_eq!(margin_equity(&name), equity);
+						assert_eq!(free_margin(&name), free);
+						assert_eq!(margin_held(&name), held);
+					}
+				})
 			});
 
 		builder.build()
