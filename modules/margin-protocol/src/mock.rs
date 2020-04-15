@@ -158,6 +158,10 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 		unimplemented!()
 	}
 
+	fn pool_exists(pool_id: LiquidityPoolId) -> bool {
+		pool_id == MOCK_POOL
+	}
+
 	fn liquidity(pool_id: LiquidityPoolId) -> Balance {
 		Self::liquidity(pool_id)
 	}
