@@ -118,6 +118,11 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 		T::BaseLiquidityPools::is_owner(pool_id, who)
 	}
 
+	/// Check if pool exists
+	fn pool_exists(pool_id: LiquidityPoolId) -> bool {
+		T::BaseLiquidityPools::pool_exists(pool_id)
+	}
+
 	/// Check collateral balance of `pool_id`.
 	fn liquidity(pool_id: LiquidityPoolId) -> Balance {
 		T::BaseLiquidityPools::liquidity(pool_id)
