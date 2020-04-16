@@ -1,3 +1,6 @@
 [submodule "orml"]
 	path = orml
 	url = https://github.com/laminar-protocol/open-runtime-module-library.git
+[submodule "features"]
+	path = features
+	url = https://github.com/laminar-protocol/cucumber-features.git
