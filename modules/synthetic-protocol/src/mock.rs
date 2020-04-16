@@ -192,6 +192,10 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 		who == &ALICE
 	}
 
+	fn pool_exists(pool_id: LiquidityPoolId) -> bool {
+		pool_id == MOCK_POOL
+	}
+
 	fn liquidity(pool_id: LiquidityPoolId) -> Balance {
 		CollateralCurrency::free_balance(&pool_id)
 	}

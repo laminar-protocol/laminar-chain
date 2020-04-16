@@ -813,7 +813,7 @@ impl_runtime_apis! {
 		}
 
 		fn pool_info(pool_id: LiquidityPoolId) -> Option<PoolInfo> {
-			let (enp, ell) = MarginProtocol::enp_and_ell(pool_id).ok()?;
+			let (enp, ell) = MarginProtocol::enp_and_ell(pool_id)?;
 
 			Some(PoolInfo { enp, ell })
 		}

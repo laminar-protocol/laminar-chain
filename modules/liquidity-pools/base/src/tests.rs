@@ -17,6 +17,17 @@ fn is_owner_should_work() {
 }
 
 #[test]
+fn pool_exits_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_eq!(Instance1Module::pool_exists(0), false);
+		assert_eq!(Instance1Module::pool_exists(1), false);
+		assert_ok!(Instance1Module::create_pool(Origin::signed(ALICE)));
+		assert_eq!(Instance1Module::pool_exists(0), true);
+		assert_eq!(Instance1Module::pool_exists(1), false);
+	});
+}
+
+#[test]
 fn should_create_pool() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Instance1Module::create_pool(Origin::signed(ALICE)));

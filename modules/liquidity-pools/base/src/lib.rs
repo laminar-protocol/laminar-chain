@@ -139,6 +139,11 @@ impl<T: Trait<I>, I: Instance> LiquidityPools<T::AccountId> for Module<T, I> {
 		Self::is_owner(pool_id, who)
 	}
 
+	/// Check if pool exists
+	fn pool_exists(pool_id: LiquidityPoolId) -> bool {
+		<Owners<T, I>>::contains_key(&pool_id)
+	}
+
 	/// Check collateral balance of `pool_id`.
 	fn liquidity(pool_id: LiquidityPoolId) -> Balance {
 		Self::balances(&pool_id)
@@ -194,7 +199,7 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 	}
 
 	fn _deposit_liquidity(who: &T::AccountId, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
-		ensure!(<Owners<T, I>>::contains_key(&pool_id), Error::<T, I>::PoolNotFound);
+		ensure!(Self::pool_exists(pool_id), Error::<T, I>::PoolNotFound);
 
 		let balance = Self::balances(&pool_id);
 		let new_balance = balance.checked_add(amount).ok_or(Error::<T, I>::CannotDepositAmount)?;
@@ -208,7 +213,7 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 	}
 
 	fn _withdraw_liquidity(who: &T::AccountId, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
-		ensure!(<Owners<T, I>>::contains_key(&pool_id), Error::<T, I>::PoolNotFound);
+		ensure!(Self::pool_exists(pool_id), Error::<T, I>::PoolNotFound);
 
 		let new_balance = Self::balances(&pool_id)
 			.checked_sub(amount)

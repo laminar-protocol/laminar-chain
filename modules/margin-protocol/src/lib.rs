@@ -760,8 +760,12 @@ impl<T: Trait> Module<T> {
 		Ok(risk)
 	}
 
-	pub fn enp_and_ell(pool: LiquidityPoolId) -> result::Result<(Fixed128, Fixed128), DispatchError> {
-		Self::_enp_and_ell(pool, Action::None)
+	pub fn enp_and_ell(pool: LiquidityPoolId) -> Option<(Fixed128, Fixed128)> {
+		if <T::LiquidityPools as LiquidityPools<T::AccountId>>::pool_exists(pool) {
+			let result = Self::_enp_and_ell(pool, Action::None).ok()?;
+			return Some(result);
+		}
+		None
 	}
 }
 
