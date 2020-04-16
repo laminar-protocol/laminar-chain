@@ -185,23 +185,23 @@ Feature: Margin Protocol
       | Currency  | Price  |
       | FEUR      | $2.2   |
     And margin trader margin call
-      | Name  | Result     |
-      | Alice | SafeTrader |
+      | Name  | Pair   | Result     |
+      | Alice | EURUSD | SafeTrader |
     And oracle price
       | Currency  | Price  |
       | FEUR      | $2.1   |
     And margin trader margin call
-      | Name  | Result |
-      | Alice | Ok     |
+      | Name  | Pair   | Result |
+      | Alice | EURUSD | Ok     |
     And margin trader liquidate
-      | Name  | Result                  |
-      | Alice | NotReachedRiskThreshold |
+      | Name  | Pair   | Result                  |
+      | Alice | EURUSD | NotReachedRiskThreshold |
     And oracle price
       | Currency  | Price  |
       | FEUR      | $1.9   |
     And margin trader liquidate
-      | Name  | Result |
-      | Alice | Ok     |
+      | Name  | Pair   | Result |
+      | Alice | EURUSD | Ok     |
     Then margin balances are
       | Name  | Free  | Margin |
       | Alice | $5000 | $-745  |
@@ -244,23 +244,23 @@ Feature: Margin Protocol
       | Currency  | Price  |
       | FEUR      | $4.1   |
     And margin liquidity pool margin call
-      | Result   |
-      | SafePool |
+      | Pair   | Result   |
+      | EURUSD | SafePool |
     And oracle price
       | Currency  | Price  |
       | FEUR      | $4.2   |
     And margin liquidity pool margin call
-      | Result |
-      | Ok     |
+      | Pair   | Result |
+      | EURUSD | Ok     |
     And margin liquidity pool liquidate
-      | Result                  |
-      | NotReachedRiskThreshold |
+      | Pair   | Result                  |
+      | EURUSD | NotReachedRiskThreshold |
     And oracle price
       | Currency  | Price  |
       | FEUR      | $5.0   |
     And margin liquidity pool liquidate
-      | Result |
-      | Ok     |
+      | Pair   | Result |
+      | EURUSD | Ok     |
     Then margin balances are
       | Name  | Free  | Margin |
       | Alice | $5000 | $14600 |

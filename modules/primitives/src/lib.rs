@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode, Error, Input};
-use sp_runtime::{traits::Convert, RuntimeDebug};
+use sp_runtime::{traits::Convert, Permill, RuntimeDebug};
 use sp_std::{prelude::*, vec};
 
 #[macro_use]
@@ -25,6 +25,13 @@ pub enum CurrencyId {
 	FJPY,
 	FBTC,
 	FETH,
+}
+
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, Copy, Clone, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct RiskThreshold {
+	pub margin_call: Permill,
+	pub stop_out: Permill,
 }
 
 const BALANCE_ACCURACY: u128 = 1_000_000_000_000_000_000;

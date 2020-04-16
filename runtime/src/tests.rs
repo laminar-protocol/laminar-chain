@@ -11,14 +11,14 @@ use crate::{
 use frame_support::{assert_ok, parameter_types};
 
 use margin_liquidity_pools::SwapRate;
-use margin_protocol::RiskThreshold;
-use module_primitives::{Balance, Leverage, Leverages, TradingPair};
+use module_primitives::{AccumulateConfig, Balance, Leverage, Leverages, RiskThreshold, TradingPair};
 use module_traits::LiquidityPoolManager;
 use orml_prices::Price;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
 use orml_utilities::Fixed128;
 use pallet_indices::address::Address;
 use sp_runtime::{traits::OnFinalize, DispatchResult, Permill};
+use sp_std::num::NonZeroI128;
 
 pub type PositionId = u64;
 pub type ModuleSyntheticProtocol = synthetic_protocol::Module<Runtime>;
@@ -38,6 +38,11 @@ pub const EUR_USD: TradingPair = TradingPair {
 
 pub const JPY_EUR: TradingPair = TradingPair {
 	base: CurrencyId::FEUR,
+	quote: CurrencyId::FJPY,
+};
+
+pub const JPY_USD: TradingPair = TradingPair {
+	base: CurrencyId::AUSD,
 	quote: CurrencyId::FJPY,
 };
 
@@ -98,19 +103,78 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		margin_protocol::GenesisConfig {
-			trader_risk_threshold: RiskThreshold {
-				margin_call: Permill::from_percent(3),
-				stop_out: Permill::from_percent(1),
-			},
-			liquidity_pool_enp_threshold: RiskThreshold {
-				margin_call: Permill::from_percent(30),
-				stop_out: Permill::from_percent(10),
-			},
-			liquidity_pool_ell_threshold: RiskThreshold {
-				margin_call: Permill::from_percent(30),
-				stop_out: Permill::from_percent(10),
-			},
+		margin_liquidity_pools::GenesisConfig::<Runtime> {
+			default_min_leveraged_amount: 1000,
+			margin_liquidity_config: vec![
+				(
+					// TradingPair
+					TradingPair {
+						base: CurrencyId::AUSD,
+						quote: CurrencyId::FEUR,
+					},
+					// MaxSpread
+					Permill::from_percent(1),
+					// Accumulates
+					AccumulateConfig {
+						frequency: 10,
+						offset: 1,
+					},
+					// SwapRates
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
+					},
+					// trader_risk_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(3),
+						stop_out: Permill::from_percent(1),
+					},
+					// liquidity_pool_enp_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+					// liquidity_pool_ell_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+				),
+				(
+					// TradingPair
+					TradingPair {
+						base: CurrencyId::AUSD,
+						quote: CurrencyId::FEUR,
+					},
+					// MaxSpread
+					Permill::from_percent(1),
+					// Accumulates
+					AccumulateConfig {
+						frequency: 10,
+						offset: 1,
+					},
+					// SwapRates
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
+					},
+					// trader_risk_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(3),
+						stop_out: Permill::from_percent(1),
+					},
+					// liquidity_pool_enp_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+					// liquidity_pool_ell_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+				),
+			],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
@@ -366,26 +430,50 @@ pub fn margin_get_required_deposit() -> Balance {
 	ModuleMarginProtocol::get_required_deposit(LIQUIDITY_POOL_ID_0).unwrap()
 }
 
-pub fn margin_trader_margin_call(who: &AccountId) -> DispatchResult {
-	ModuleMarginProtocol::trader_margin_call(<Runtime as system::Trait>::Origin::NONE, Address::from(who.clone()))
+pub fn margin_trader_margin_call(who: &AccountId, pair: TradingPair) -> DispatchResult {
+	ModuleMarginProtocol::trader_margin_call(
+		<Runtime as system::Trait>::Origin::NONE,
+		Address::from(who.clone()),
+		pair,
+	)
 }
 
-pub fn margin_trader_become_safe(who: &AccountId) -> DispatchResult {
-	ModuleMarginProtocol::trader_become_safe(<Runtime as system::Trait>::Origin::NONE, Address::from(who.clone()))
+pub fn margin_trader_become_safe(who: &AccountId, pair: TradingPair) -> DispatchResult {
+	ModuleMarginProtocol::trader_become_safe(
+		<Runtime as system::Trait>::Origin::NONE,
+		Address::from(who.clone()),
+		pair,
+	)
 }
 
-pub fn margin_trader_stop_out(who: &AccountId) -> DispatchResult {
-	ModuleMarginProtocol::trader_stop_out(<Runtime as system::Trait>::Origin::NONE, Address::from(who.clone()))
+pub fn margin_trader_stop_out(who: &AccountId, pair: TradingPair) -> DispatchResult {
+	ModuleMarginProtocol::trader_stop_out(
+		<Runtime as system::Trait>::Origin::NONE,
+		Address::from(who.clone()),
+		pair,
+	)
 }
 
-pub fn margin_liquidity_pool_margin_call() -> DispatchResult {
-	ModuleMarginProtocol::liquidity_pool_margin_call(<Runtime as system::Trait>::Origin::NONE, LIQUIDITY_POOL_ID_0)
+pub fn margin_liquidity_pool_margin_call(pair: TradingPair) -> DispatchResult {
+	ModuleMarginProtocol::liquidity_pool_margin_call(
+		<Runtime as system::Trait>::Origin::NONE,
+		LIQUIDITY_POOL_ID_0,
+		pair,
+	)
 }
 
-pub fn margin_liquidity_pool_become_safe() -> DispatchResult {
-	ModuleMarginProtocol::liquidity_pool_become_safe(<Runtime as system::Trait>::Origin::NONE, LIQUIDITY_POOL_ID_0)
+pub fn margin_liquidity_pool_become_safe(pair: TradingPair) -> DispatchResult {
+	ModuleMarginProtocol::liquidity_pool_become_safe(
+		<Runtime as system::Trait>::Origin::NONE,
+		LIQUIDITY_POOL_ID_0,
+		pair,
+	)
 }
 
-pub fn margin_liquidity_pool_force_close() -> DispatchResult {
-	ModuleMarginProtocol::liquidity_pool_force_close(<Runtime as system::Trait>::Origin::NONE, LIQUIDITY_POOL_ID_0)
+pub fn margin_liquidity_pool_force_close(pair: TradingPair) -> DispatchResult {
+	ModuleMarginProtocol::liquidity_pool_force_close(
+		<Runtime as system::Trait>::Origin::NONE,
+		LIQUIDITY_POOL_ID_0,
+		pair,
+	)
 }

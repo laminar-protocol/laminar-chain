@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use orml_utilities::Fixed128;
-use primitives::{Balance, CurrencyId, Leverage, LiquidityPoolId, TradingPair};
+use primitives::{Balance, CurrencyId, Leverage, LiquidityPoolId, RiskThreshold, TradingPair};
 use sp_runtime::{DispatchError, DispatchResult, Permill};
 use sp_std::{prelude::*, result};
 
@@ -43,6 +43,9 @@ pub trait MarginProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
 		leverage: Leverage,
 		leveraged_amount: Balance,
 	) -> bool;
+	fn get_trader_risk_threshold(pair: TradingPair) -> RiskThreshold;
+	fn get_liquidity_pool_enp_threshold(pair: TradingPair) -> RiskThreshold;
+	fn get_liquidity_pool_ell_threshold(pair: TradingPair) -> RiskThreshold;
 }
 
 pub trait OnDisableLiquidityPool {

@@ -12,7 +12,6 @@ use sp_core::offchain::{
 	testing::{TestOffchainExt, TestTransactionPoolExt},
 	OffchainExt, TransactionPoolExt,
 };
-use sp_runtime::PerThing;
 
 const EUR_JPY_PAIR: TradingPair = TradingPair {
 	base: CurrencyId::FJPY,
@@ -303,9 +302,9 @@ fn ensure_trader_safe_works() {
 		.spread(Permill::zero())
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.price(CurrencyId::FEUR, (1, 1))
-		.trader_risk_threshold(risk_threshold(100, 0))
 		.build()
 		.execute_with(|| {
+			MockLiquidityPools::set_mock_trader_risk_threshold(EUR_USD_PAIR, risk_threshold(100, 0));
 			<Balances<Runtime>>::insert(ALICE, fixed128_from_natural_currency_cent(100));
 			let position: Position<Runtime> = Position {
 				owner: ALICE,
@@ -324,13 +323,13 @@ fn ensure_trader_safe_works() {
 
 			// 100% == 100%, unsafe
 			assert_noop!(
-				MarginProtocol::_ensure_trader_safe(&ALICE),
+				MarginProtocol::_ensure_trader_safe(&ALICE, EUR_USD_PAIR),
 				Error::<Runtime>::UnsafeTrader
 			);
 
 			// 100% > 99%, safe
-			TraderRiskThreshold::put(risk_threshold(99, 0));
-			assert_ok!(MarginProtocol::_ensure_trader_safe(&ALICE));
+			MockLiquidityPools::set_mock_trader_risk_threshold(EUR_USD_PAIR, risk_threshold(99, 0));
+			assert_ok!(MarginProtocol::_ensure_trader_safe(&ALICE, EUR_USD_PAIR));
 		});
 }
 
@@ -435,10 +434,10 @@ fn ensure_liquidity_works() {
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100))
-		.liquidity_pool_ell_threshold(risk_threshold(99, 0))
-		.liquidity_pool_enp_threshold(risk_threshold(99, 0))
 		.build()
 		.execute_with(|| {
+			MockLiquidityPools::set_mock_liquidity_pool_enp_threshold(EUR_USD_PAIR, risk_threshold(99, 0));
+			MockLiquidityPools::set_mock_liquidity_pool_ell_threshold(EUR_USD_PAIR, risk_threshold(99, 0));
 			let position: Position<Runtime> = Position {
 				owner: ALICE,
 				pool: MOCK_POOL,
@@ -456,7 +455,7 @@ fn ensure_liquidity_works() {
 
 			assert_ok!(MarginProtocol::ensure_can_withdraw(MOCK_POOL, 10));
 
-			LiquidityPoolELLThreshold::put(risk_threshold(100, 0));
+			MockLiquidityPools::set_mock_liquidity_pool_enp_threshold(EUR_USD_PAIR, risk_threshold(100, 0));
 
 			assert_noop!(
 				MarginProtocol::ensure_can_withdraw(MOCK_POOL, 1),
@@ -472,10 +471,10 @@ fn ensure_pool_safe_works() {
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100))
-		.liquidity_pool_ell_threshold(risk_threshold(99, 0))
-		.liquidity_pool_enp_threshold(risk_threshold(99, 0))
 		.build()
 		.execute_with(|| {
+			MockLiquidityPools::set_mock_liquidity_pool_enp_threshold(EUR_USD_PAIR, risk_threshold(99, 0));
+			MockLiquidityPools::set_mock_liquidity_pool_ell_threshold(EUR_USD_PAIR, risk_threshold(99, 0));
 			let position: Position<Runtime> = Position {
 				owner: ALICE,
 				pool: MOCK_POOL,
@@ -497,48 +496,48 @@ fn ensure_pool_safe_works() {
 			// ENP 100% > 99%, ELL 100% > 99%, safe
 			assert_ok!(MarginProtocol::_ensure_pool_safe(
 				MOCK_POOL,
+				EUR_USD_PAIR,
 				Action::OpenPosition(position.clone()),
 			));
 
 			// ENP 100% == 100%, unsafe
-			LiquidityPoolENPThreshold::put(risk_threshold(100, 0));
+			MockLiquidityPools::set_mock_liquidity_pool_enp_threshold(EUR_USD_PAIR, risk_threshold(100, 0));
 			assert_noop!(
-				MarginProtocol::_ensure_pool_safe(MOCK_POOL, Action::OpenPosition(position.clone())),
+				MarginProtocol::_ensure_pool_safe(MOCK_POOL, EUR_USD_PAIR, Action::OpenPosition(position.clone())),
 				Error::<Runtime>::PoolWouldBeUnsafe
 			);
 
 			// ELL 100% == 100%, unsafe
-			LiquidityPoolENPThreshold::put(risk_threshold(99, 0));
-			LiquidityPoolELLThreshold::put(risk_threshold(100, 0));
+			MockLiquidityPools::set_mock_liquidity_pool_enp_threshold(EUR_USD_PAIR, risk_threshold(99, 0));
+			MockLiquidityPools::set_mock_liquidity_pool_ell_threshold(EUR_USD_PAIR, risk_threshold(100, 0));
 			assert_noop!(
-				MarginProtocol::_ensure_pool_safe(MOCK_POOL, Action::OpenPosition(position.clone())),
+				MarginProtocol::_ensure_pool_safe(MOCK_POOL, EUR_USD_PAIR, Action::OpenPosition(position.clone())),
 				Error::<Runtime>::PoolWouldBeUnsafe
 			);
 
 			// without new position
 			<Positions<Runtime>>::insert(0, position);
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), ());
-			LiquidityPoolELLThreshold::put(risk_threshold(99, 0));
+			MockLiquidityPools::set_mock_liquidity_pool_ell_threshold(EUR_USD_PAIR, risk_threshold(99, 0));
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::None),
 				Ok((Fixed128::from_natural(1), Fixed128::from_natural(1)))
 			);
 
 			// ENP 100% > 99%, ELL 100% > 99%, safe
-			assert_ok!(MarginProtocol::_ensure_pool_safe(MOCK_POOL, Action::None));
+			assert_ok!(MarginProtocol::_ensure_pool_safe(MOCK_POOL, EUR_USD_PAIR, Action::None));
 
 			// ENP 100% == 100%, unsafe
-			LiquidityPoolENPThreshold::put(risk_threshold(100, 0));
+			MockLiquidityPools::set_mock_liquidity_pool_enp_threshold(EUR_USD_PAIR, risk_threshold(100, 0));
 			assert_noop!(
-				MarginProtocol::_ensure_pool_safe(MOCK_POOL, Action::None),
+				MarginProtocol::_ensure_pool_safe(MOCK_POOL, EUR_USD_PAIR, Action::None),
 				Error::<Runtime>::UnsafePool
 			);
-
 			// ELL 100% == 100%, unsafe
-			LiquidityPoolENPThreshold::put(risk_threshold(99, 0));
-			LiquidityPoolELLThreshold::put(risk_threshold(100, 0));
+			MockLiquidityPools::set_mock_liquidity_pool_enp_threshold(EUR_USD_PAIR, risk_threshold(99, 0));
+			MockLiquidityPools::set_mock_liquidity_pool_ell_threshold(EUR_USD_PAIR, risk_threshold(100, 0));
 			assert_noop!(
-				MarginProtocol::_ensure_pool_safe(MOCK_POOL, Action::None),
+				MarginProtocol::_ensure_pool_safe(MOCK_POOL, EUR_USD_PAIR, Action::None),
 				Error::<Runtime>::UnsafePool
 			);
 		});
@@ -550,10 +549,10 @@ fn trader_margin_call_should_work() {
 		.spread(Permill::zero())
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.price(CurrencyId::FEUR, (1, 1))
-		.trader_risk_threshold(risk_threshold(5, 3))
 		.build()
 		.execute_with(|| {
 			<Balances<Runtime>>::insert(ALICE, fixed128_from_natural_currency_cent(100));
+			MockLiquidityPools::set_mock_trader_risk_threshold(EUR_USD_PAIR, risk_threshold(5, 3));
 			let position: Position<Runtime> = Position {
 				owner: ALICE,
 				pool: MOCK_POOL,
@@ -570,7 +569,7 @@ fn trader_margin_call_should_work() {
 
 			// without position
 			assert_noop!(
-				MarginProtocol::trader_margin_call(Origin::NONE, ALICE),
+				MarginProtocol::trader_margin_call(Origin::NONE, ALICE, EUR_USD_PAIR),
 				Error::<Runtime>::SafeTrader
 			);
 
@@ -584,7 +583,7 @@ fn trader_margin_call_should_work() {
 				Ok(Fixed128::from_rational(5, NonZeroI128::new(100).unwrap()))
 			);
 
-			assert_ok!(MarginProtocol::trader_margin_call(Origin::NONE, ALICE));
+			assert_ok!(MarginProtocol::trader_margin_call(Origin::NONE, ALICE, EUR_USD_PAIR));
 		});
 }
 
@@ -594,10 +593,10 @@ fn trader_become_safe_should_work() {
 		.spread(Permill::zero())
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.price(CurrencyId::FEUR, (1, 1))
-		.trader_risk_threshold(risk_threshold(5, 3))
 		.build()
 		.execute_with(|| {
 			<Balances<Runtime>>::insert(ALICE, fixed128_from_natural_currency_cent(100));
+			MockLiquidityPools::set_mock_trader_risk_threshold(EUR_USD_PAIR, risk_threshold(5, 3));
 			let position: Position<Runtime> = Position {
 				owner: ALICE,
 				pool: MOCK_POOL,
@@ -611,7 +610,7 @@ fn trader_become_safe_should_work() {
 			};
 
 			// without position
-			assert_ok!(MarginProtocol::trader_become_safe(Origin::NONE, ALICE));
+			assert_ok!(MarginProtocol::trader_become_safe(Origin::NONE, ALICE, EUR_USD_PAIR));
 
 			<Positions<Runtime>>::insert(0, position);
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
@@ -622,9 +621,9 @@ fn trader_become_safe_should_work() {
 				MarginProtocol::margin_level(&ALICE),
 				Ok(Fixed128::from_rational(4, NonZeroI128::new(100).unwrap()))
 			);
-			assert_ok!(MarginProtocol::trader_margin_call(Origin::NONE, ALICE));
+			assert_ok!(MarginProtocol::trader_margin_call(Origin::NONE, ALICE, EUR_USD_PAIR));
 			assert_noop!(
-				MarginProtocol::trader_become_safe(Origin::NONE, ALICE),
+				MarginProtocol::trader_become_safe(Origin::NONE, ALICE, EUR_USD_PAIR),
 				Error::<Runtime>::UnsafeTrader
 			);
 
@@ -634,7 +633,7 @@ fn trader_become_safe_should_work() {
 				Ok(Fixed128::from_rational(5, NonZeroI128::new(100).unwrap()))
 			);
 			assert_noop!(
-				MarginProtocol::trader_become_safe(Origin::NONE, ALICE),
+				MarginProtocol::trader_become_safe(Origin::NONE, ALICE, EUR_USD_PAIR),
 				Error::<Runtime>::UnsafeTrader
 			);
 
@@ -643,7 +642,7 @@ fn trader_become_safe_should_work() {
 				MarginProtocol::margin_level(&ALICE),
 				Ok(Fixed128::from_rational(6, NonZeroI128::new(100).unwrap()))
 			);
-			assert_ok!(MarginProtocol::trader_become_safe(Origin::NONE, ALICE));
+			assert_ok!(MarginProtocol::trader_become_safe(Origin::NONE, ALICE, EUR_USD_PAIR));
 		});
 }
 #[test]
@@ -653,10 +652,10 @@ fn trader_stop_out_should_work() {
 		.spread(Permill::zero())
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.price(CurrencyId::FEUR, (1, 1))
-		.trader_risk_threshold(risk_threshold(5, 3))
 		.build()
 		.execute_with(|| {
 			<Balances<Runtime>>::insert(ALICE, fixed128_from_natural_currency_cent(100));
+			MockLiquidityPools::set_mock_trader_risk_threshold(EUR_USD_PAIR, risk_threshold(5, 3));
 			let position: Position<Runtime> = Position {
 				owner: ALICE,
 				pool: MOCK_POOL,
@@ -671,7 +670,7 @@ fn trader_stop_out_should_work() {
 
 			// without position
 			assert_noop!(
-				MarginProtocol::trader_stop_out(Origin::NONE, ALICE),
+				MarginProtocol::trader_stop_out(Origin::NONE, ALICE, EUR_USD_PAIR),
 				Error::<Runtime>::NotReachedRiskThreshold
 			);
 
@@ -686,9 +685,9 @@ fn trader_stop_out_should_work() {
 				Ok(Fixed128::from_rational(3, NonZeroI128::new(100).unwrap()))
 			);
 
-			assert_ok!(MarginProtocol::trader_stop_out(Origin::NONE, ALICE));
+			assert_ok!(MarginProtocol::trader_stop_out(Origin::NONE, ALICE, EUR_USD_PAIR));
 
-			let event = TestEvent::margin_protocol(RawEvent::TraderStoppedOut(ALICE));
+			let event = TestEvent::margin_protocol(RawEvent::TraderStoppedOut(ALICE, EUR_USD_PAIR));
 			assert!(System::events().iter().any(|record| record.event == event));
 		});
 }
@@ -700,10 +699,10 @@ fn trader_stop_out_close_bigger_loss_position() {
 		.spread(Permill::zero())
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.price(CurrencyId::FEUR, (1, 1))
-		.trader_risk_threshold(risk_threshold(70, 60))
 		.build()
 		.execute_with(|| {
 			<Balances<Runtime>>::insert(ALICE, fixed128_from_natural_currency_cent(100));
+			MockLiquidityPools::set_mock_trader_risk_threshold(EUR_USD_PAIR, risk_threshold(70, 60));
 			let loss_position: Position<Runtime> = Position {
 				owner: ALICE,
 				pool: MOCK_POOL,
@@ -733,7 +732,7 @@ fn trader_stop_out_close_bigger_loss_position() {
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 1), ());
 
-			assert_ok!(MarginProtocol::trader_stop_out(Origin::NONE, ALICE));
+			assert_ok!(MarginProtocol::trader_stop_out(Origin::NONE, ALICE, EUR_USD_PAIR));
 
 			// position with bigger loss is closed
 			assert!(<PositionsByTrader<Runtime>>::contains_key(ALICE, (MOCK_POOL, 0)));
@@ -748,10 +747,10 @@ fn liquidity_pool_margin_call_and_become_safe_work() {
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100))
-		.liquidity_pool_ell_threshold(risk_threshold(99, 0))
-		.liquidity_pool_enp_threshold(risk_threshold(99, 0))
 		.build()
 		.execute_with(|| {
+			MockLiquidityPools::set_mock_liquidity_pool_enp_threshold(EUR_USD_PAIR, risk_threshold(99, 0));
+			MockLiquidityPools::set_mock_liquidity_pool_ell_threshold(EUR_USD_PAIR, risk_threshold(99, 0));
 			let position: Position<Runtime> = Position {
 				owner: ALICE,
 				pool: MOCK_POOL,
@@ -773,27 +772,43 @@ fn liquidity_pool_margin_call_and_become_safe_work() {
 
 			// ENP 100% > 99%, ELL 100% > 99%, safe
 			assert_noop!(
-				MarginProtocol::liquidity_pool_margin_call(Origin::NONE, MOCK_POOL),
+				MarginProtocol::liquidity_pool_margin_call(Origin::NONE, MOCK_POOL, EUR_USD_PAIR),
 				Error::<Runtime>::SafePool
 			);
-			assert_ok!(MarginProtocol::liquidity_pool_become_safe(Origin::NONE, MOCK_POOL));
+			assert_ok!(MarginProtocol::liquidity_pool_become_safe(
+				Origin::NONE,
+				MOCK_POOL,
+				EUR_USD_PAIR
+			));
 
 			// ENP 100% == 100%, unsafe
-			LiquidityPoolENPThreshold::put(risk_threshold(100, 0));
-			assert_ok!(MarginProtocol::liquidity_pool_margin_call(Origin::NONE, MOCK_POOL));
-			let event = TestEvent::margin_protocol(RawEvent::LiquidityPoolMarginCalled(MOCK_POOL));
+			MockLiquidityPools::set_mock_liquidity_pool_enp_threshold(EUR_USD_PAIR, risk_threshold(100, 0));
+			assert_ok!(MarginProtocol::liquidity_pool_margin_call(
+				Origin::NONE,
+				MOCK_POOL,
+				EUR_USD_PAIR
+			));
+			let event = TestEvent::margin_protocol(RawEvent::LiquidityPoolMarginCalled(MOCK_POOL, EUR_USD_PAIR));
 			assert!(System::events().iter().any(|record| record.event == event));
 
 			assert_noop!(
-				MarginProtocol::liquidity_pool_become_safe(Origin::NONE, MOCK_POOL),
+				MarginProtocol::liquidity_pool_become_safe(Origin::NONE, MOCK_POOL, EUR_USD_PAIR),
 				Error::<Runtime>::UnsafePool
 			);
 
 			// ENP 100% > 99%, ELL 100% > 99%, safe
-			LiquidityPoolENPThreshold::put(risk_threshold(99, 0));
-			assert_ok!(MarginProtocol::liquidity_pool_margin_call(Origin::NONE, MOCK_POOL));
-			assert_ok!(MarginProtocol::liquidity_pool_become_safe(Origin::NONE, MOCK_POOL));
-			let event = TestEvent::margin_protocol(RawEvent::LiquidityPoolBecameSafe(MOCK_POOL));
+			MockLiquidityPools::set_mock_liquidity_pool_enp_threshold(EUR_USD_PAIR, risk_threshold(99, 0));
+			assert_ok!(MarginProtocol::liquidity_pool_margin_call(
+				Origin::NONE,
+				MOCK_POOL,
+				EUR_USD_PAIR
+			));
+			assert_ok!(MarginProtocol::liquidity_pool_become_safe(
+				Origin::NONE,
+				MOCK_POOL,
+				EUR_USD_PAIR
+			));
+			let event = TestEvent::margin_protocol(RawEvent::LiquidityPoolBecameSafe(MOCK_POOL, EUR_USD_PAIR));
 			assert!(System::events().iter().any(|record| record.event == event));
 		});
 }
@@ -805,11 +820,11 @@ fn liquidity_pool_force_close_works() {
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(10_000_00))
-		.liquidity_pool_ell_threshold(risk_threshold(0, 99))
-		.liquidity_pool_enp_threshold(risk_threshold(0, 99))
 		.build()
 		.execute_with(|| {
 			<Balances<Runtime>>::insert(ALICE, fixed128_from_natural_currency_cent(10_000_00));
+			MockLiquidityPools::set_mock_liquidity_pool_enp_threshold(EUR_USD_PAIR, risk_threshold(0, 99));
+			MockLiquidityPools::set_mock_liquidity_pool_ell_threshold(EUR_USD_PAIR, risk_threshold(0, 99));
 			assert_ok!(MarginProtocol::open_position(
 				Origin::signed(ALICE),
 				MOCK_POOL,
@@ -826,7 +841,7 @@ fn liquidity_pool_force_close_works() {
 
 			// ENP 100% > 99%, ELL 100% > 99%, safe
 			assert_noop!(
-				MarginProtocol::liquidity_pool_force_close(Origin::NONE, MOCK_POOL),
+				MarginProtocol::liquidity_pool_force_close(Origin::NONE, MOCK_POOL, EUR_USD_PAIR),
 				Error::<Runtime>::NotReachedRiskThreshold
 			);
 
@@ -835,9 +850,13 @@ fn liquidity_pool_force_close_works() {
 			// So liquidity remain 300. Total penalty is 200*2 = 400.
 			MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(2, 1)));
 			// ENP 50% < 99%, unsafe
-			assert_ok!(MarginProtocol::liquidity_pool_force_close(Origin::NONE, MOCK_POOL));
+			assert_ok!(MarginProtocol::liquidity_pool_force_close(
+				Origin::NONE,
+				MOCK_POOL,
+				EUR_USD_PAIR
+			));
 
-			let event = TestEvent::margin_protocol(RawEvent::LiquidityPoolForceClosed(MOCK_POOL));
+			let event = TestEvent::margin_protocol(RawEvent::LiquidityPoolForceClosed(MOCK_POOL, EUR_USD_PAIR));
 			assert!(System::events().iter().any(|record| record.event == event));
 
 			assert_eq!(
@@ -952,7 +971,7 @@ fn open_position_fails_if_trader_margin_called() {
 		.build()
 		.execute_with(|| {
 			<Balances<Runtime>>::insert(ALICE, fixed128_from_natural_currency_cent(10_000_00));
-			<MarginCalledTraders<Runtime>>::insert(ALICE, ());
+			<MarginCalledTraders<Runtime>>::insert(ALICE, EUR_JPY_PAIR, ());
 			assert_noop!(
 				MarginProtocol::open_position(
 					Origin::signed(ALICE),
@@ -979,7 +998,7 @@ fn open_position_fails_if_pool_margin_called() {
 		.build()
 		.execute_with(|| {
 			<Balances<Runtime>>::insert(ALICE, fixed128_from_natural_currency_cent(10_000_00));
-			MarginCalledPools::insert(MOCK_POOL, ());
+			MarginCalledPools::insert(MOCK_POOL, EUR_JPY_PAIR, ());
 			assert_noop!(
 				MarginProtocol::open_position(
 					Origin::signed(ALICE),
@@ -1148,10 +1167,10 @@ fn open_position_fails_if_would_reach_enp_threshold() {
 		.price(CurrencyId::FEUR, (1409, 1070))
 		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(659_00))
-		.liquidity_pool_enp_threshold(risk_threshold(10, 5))
 		.build()
 		.execute_with(|| {
 			<Balances<Runtime>>::insert(ALICE, fixed128_from_natural_currency_cent(10_000_00));
+			MockLiquidityPools::set_mock_liquidity_pool_enp_threshold(EUR_JPY_PAIR, risk_threshold(10, 5));
 			assert_noop!(
 				MarginProtocol::open_position(
 					Origin::signed(ALICE),
@@ -1175,10 +1194,10 @@ fn open_position_fails_if_would_reach_ell_threshold() {
 		.price(CurrencyId::FEUR, (1409, 1070))
 		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(659_00))
-		.liquidity_pool_ell_threshold(risk_threshold(10, 5))
 		.build()
 		.execute_with(|| {
 			<Balances<Runtime>>::insert(ALICE, fixed128_from_natural_currency_cent(10_000_00));
+			MockLiquidityPools::set_mock_liquidity_pool_ell_threshold(EUR_JPY_PAIR, risk_threshold(10, 5));
 			assert_noop!(
 				MarginProtocol::open_position(
 					Origin::signed(ALICE),
@@ -1278,10 +1297,10 @@ fn close_loss_position_realizing_part_on_not_enough_equity() {
 		.spread(Permill::zero())
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.price(CurrencyId::FEUR, (10, 1))
-		.trader_risk_threshold(risk_threshold(100, 0))
 		.build()
 		.execute_with(|| {
 			<Balances<Runtime>>::insert(ALICE, fixed128_from_natural_currency_cent(1_00));
+			MockLiquidityPools::set_mock_trader_risk_threshold(EUR_USD_PAIR, risk_threshold(100, 0));
 			let position: Position<Runtime> = Position {
 				owner: ALICE,
 				pool: MOCK_POOL,
@@ -1319,10 +1338,10 @@ fn close_loss_position_realizing_nothing_on_negative_equity() {
 		.spread(Permill::zero())
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.price(CurrencyId::FEUR, (10, 1))
-		.trader_risk_threshold(risk_threshold(100, 0))
 		.build()
 		.execute_with(|| {
 			<Balances<Runtime>>::insert(ALICE, fixed128_from_natural_currency_cent(2_00));
+			MockLiquidityPools::set_mock_trader_risk_threshold(EUR_USD_PAIR, risk_threshold(100, 0));
 			let position: Position<Runtime> = Position {
 				owner: ALICE,
 				pool: MOCK_POOL,
@@ -1622,10 +1641,10 @@ fn trader_can_withdraw_unrealized_profit() {
 		.spread(Permill::zero())
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.price(CurrencyId::FEUR, (1, 1))
-		.trader_risk_threshold(risk_threshold(100, 0))
 		.build()
 		.execute_with(|| {
 			<Balances<Runtime>>::insert(ALICE, fixed128_from_natural_currency_cent(100));
+			MockLiquidityPools::set_mock_trader_risk_threshold(EUR_USD_PAIR, risk_threshold(100, 0));
 			let position: Position<Runtime> = Position {
 				owner: ALICE,
 				pool: MOCK_POOL,
@@ -1657,10 +1676,10 @@ fn withdraw_fails_if_insufficient_free_margin() {
 		.spread(Permill::zero())
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.price(CurrencyId::FEUR, (1, 1))
-		.trader_risk_threshold(risk_threshold(100, 0))
 		.build()
 		.execute_with(|| {
 			<Balances<Runtime>>::insert(ALICE, fixed128_from_natural_currency_cent(100));
+			MockLiquidityPools::set_mock_trader_risk_threshold(EUR_USD_PAIR, risk_threshold(100, 0));
 			let position: Position<Runtime> = Position {
 				owner: ALICE,
 				pool: MOCK_POOL,
@@ -1693,9 +1712,6 @@ fn offchain_worker_should_work() {
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(200_00))
-		.trader_risk_threshold(risk_threshold(3, 1))
-		.liquidity_pool_ell_threshold(risk_threshold(50, 20))
-		.liquidity_pool_enp_threshold(risk_threshold(10, 2))
 		.build();
 
 	let (offchain, _state) = TestOffchainExt::new();
@@ -1704,6 +1720,9 @@ fn offchain_worker_should_work() {
 	ext.register_extension(TransactionPoolExt::new(pool));
 
 	ext.execute_with(|| {
+		MockLiquidityPools::set_mock_trader_risk_threshold(EUR_USD_PAIR, risk_threshold(3, 1));
+		MockLiquidityPools::set_mock_liquidity_pool_enp_threshold(EUR_USD_PAIR, risk_threshold(10, 2));
+		MockLiquidityPools::set_mock_liquidity_pool_ell_threshold(EUR_USD_PAIR, risk_threshold(50, 20));
 		<Balances<Runtime>>::insert(&ALICE, fixed128_from_natural_currency_cent(10_00));
 		assert_eq!(
 			MarginProtocol::margin_level(&ALICE).ok().unwrap(),
@@ -1743,7 +1762,7 @@ fn offchain_worker_should_work() {
 		assert_eq!(tx.signature, None);
 		assert_eq!(
 			tx.call,
-			mock::Call::MarginProtocol(super::Call::trader_margin_call(ALICE))
+			mock::Call::MarginProtocol(super::Call::trader_margin_call(ALICE, EUR_USD_PAIR))
 		);
 
 		// price goes down to EUR/USD 0.96/1
@@ -1763,12 +1782,15 @@ fn offchain_worker_should_work() {
 		let tx = Extrinsic::decode(&mut &*trader_stop_out_call).unwrap();
 
 		assert_eq!(tx.signature, None);
-		assert_eq!(tx.call, mock::Call::MarginProtocol(super::Call::trader_stop_out(ALICE)));
+		assert_eq!(
+			tx.call,
+			mock::Call::MarginProtocol(super::Call::trader_stop_out(ALICE, EUR_USD_PAIR))
+		);
 
 		// price goes up to EUR/USD 1.1/1
 		MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(110, 100)));
 
-		<MarginCalledTraders<Runtime>>::insert(ALICE, ());
+		<MarginCalledTraders<Runtime>>::insert(ALICE, EUR_USD_PAIR, ());
 
 		assert_ok!(MarginProtocol::_offchain_worker(1));
 
@@ -1781,10 +1803,10 @@ fn offchain_worker_should_work() {
 		assert_eq!(tx.signature, None);
 		assert_eq!(
 			tx.call,
-			mock::Call::MarginProtocol(super::Call::trader_become_safe(ALICE))
+			mock::Call::MarginProtocol(super::Call::trader_become_safe(ALICE, EUR_USD_PAIR))
 		);
 
-		<MarginCalledTraders<Runtime>>::remove(ALICE);
+		<MarginCalledTraders<Runtime>>::remove(ALICE, EUR_USD_PAIR);
 
 		// price goes up to EUR/USD 1.5/1
 		MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(150, 100)));
@@ -1800,7 +1822,7 @@ fn offchain_worker_should_work() {
 		assert_eq!(tx.signature, None);
 		assert_eq!(
 			tx.call,
-			mock::Call::MarginProtocol(super::Call::liquidity_pool_margin_call(MOCK_POOL))
+			mock::Call::MarginProtocol(super::Call::liquidity_pool_margin_call(MOCK_POOL, EUR_USD_PAIR))
 		);
 
 		// price goes up to EUR/USD 1.8/1
@@ -1817,13 +1839,13 @@ fn offchain_worker_should_work() {
 		assert_eq!(tx.signature, None);
 		assert_eq!(
 			tx.call,
-			mock::Call::MarginProtocol(super::Call::liquidity_pool_force_close(MOCK_POOL))
+			mock::Call::MarginProtocol(super::Call::liquidity_pool_force_close(MOCK_POOL, EUR_USD_PAIR))
 		);
 
 		// price goes down to EUR/USD 1.1/1
 		MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(110, 100)));
 
-		MarginCalledPools::insert(MOCK_POOL, ());
+		MarginCalledPools::insert(MOCK_POOL, EUR_USD_PAIR, ());
 
 		assert_ok!(MarginProtocol::_offchain_worker(1));
 
@@ -1836,10 +1858,10 @@ fn offchain_worker_should_work() {
 		assert_eq!(tx.signature, None);
 		assert_eq!(
 			tx.call,
-			mock::Call::MarginProtocol(super::Call::liquidity_pool_become_safe(MOCK_POOL))
+			mock::Call::MarginProtocol(super::Call::liquidity_pool_become_safe(MOCK_POOL, EUR_USD_PAIR))
 		);
 
-		MarginCalledPools::remove(MOCK_POOL);
+		MarginCalledPools::remove(MOCK_POOL, EUR_USD_PAIR);
 	});
 }
 
@@ -1861,10 +1883,10 @@ fn liquidity_pool_manager_get_required_deposit_works() {
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(0))
-		.liquidity_pool_ell_threshold(risk_threshold(90, 0))
-		.liquidity_pool_enp_threshold(risk_threshold(100, 0))
 		.build()
 		.execute_with(|| {
+			MockLiquidityPools::set_mock_liquidity_pool_enp_threshold(EUR_USD_PAIR, risk_threshold(100, 0));
+			MockLiquidityPools::set_mock_liquidity_pool_ell_threshold(EUR_USD_PAIR, risk_threshold(90, 0));
 			let position: Position<Runtime> = Position {
 				owner: ALICE,
 				pool: MOCK_POOL,
@@ -1887,7 +1909,7 @@ fn liquidity_pool_manager_get_required_deposit_works() {
 			);
 
 			// need deposit because of ELL
-			LiquidityPoolENPThreshold::put(risk_threshold(80, 0));
+			MockLiquidityPools::set_mock_liquidity_pool_enp_threshold(EUR_USD_PAIR, risk_threshold(80, 0));
 			assert_eq!(
 				MarginProtocol::get_required_deposit(MOCK_POOL),
 				Ok(balance_from_natural_currency_cent(90)),
@@ -1909,10 +1931,10 @@ fn trader_open_positions_limit() {
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(1000_00))
-		.liquidity_pool_ell_threshold(risk_threshold(90, 0))
-		.liquidity_pool_enp_threshold(risk_threshold(100, 0))
 		.build()
 		.execute_with(|| {
+			MockLiquidityPools::set_mock_liquidity_pool_enp_threshold(EUR_USD_PAIR, risk_threshold(100, 0));
+			MockLiquidityPools::set_mock_liquidity_pool_ell_threshold(EUR_USD_PAIR, risk_threshold(90, 0));
 			// give alice $100
 			<Balances<Runtime>>::insert(&ALICE, fixed128_from_natural_currency_cent(100_00));
 
@@ -1959,10 +1981,10 @@ fn pool_open_positions_limit() {
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(1000_00))
-		.liquidity_pool_ell_threshold(risk_threshold(90, 0))
-		.liquidity_pool_enp_threshold(risk_threshold(100, 0))
 		.build()
 		.execute_with(|| {
+			MockLiquidityPools::set_mock_liquidity_pool_enp_threshold(EUR_USD_PAIR, risk_threshold(100, 0));
+			MockLiquidityPools::set_mock_liquidity_pool_ell_threshold(EUR_USD_PAIR, risk_threshold(90, 0));
 			// give alice $100
 			<Balances<Runtime>>::insert(&ALICE, fixed128_from_natural_currency_cent(100_00));
 

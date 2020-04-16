@@ -620,7 +620,7 @@ construct_runtime!(
 		Prices: orml_prices::{Module, Storage},
 		SyntheticTokens: synthetic_tokens::{Module, Storage, Call, Event},
 		SyntheticProtocol: synthetic_protocol::{Module, Call, Event<T>},
-		MarginProtocol: margin_protocol::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned },
+		MarginProtocol: margin_protocol::{Module, Storage, Call, Event<T>, ValidateUnsigned },
 		BaseLiquidityPoolsForMargin: base_liquidity_pools::<Instance1>::{Module, Storage, Call, Event<T>},
 		MarginLiquidityPools: margin_liquidity_pools::{Module, Storage, Call, Event<T>, Config<T>},
 		BaseLiquidityPoolsForSynthetic: base_liquidity_pools::<Instance2>::{Module, Storage, Call, Event<T>},

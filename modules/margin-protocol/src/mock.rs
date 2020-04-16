@@ -4,12 +4,12 @@
 
 use frame_support::{impl_outer_dispatch, impl_outer_event, impl_outer_origin, parameter_types};
 use frame_system as system;
-use primitives::{Balance, CurrencyId, LiquidityPoolId, TradingPair};
+pub use primitives::{Balance, CurrencyId, LiquidityPoolId, RiskThreshold, TradingPair};
 use sp_core::H256;
-use sp_runtime::{
+pub use sp_runtime::{
 	testing::{Header, TestXt},
 	traits::IdentityLookup,
-	PerThing, Perbill,
+	PerThing, Perbill, Permill,
 };
 use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
 use traits::LiquidityPools;
@@ -119,6 +119,9 @@ thread_local! {
 	static SPREAD: RefCell<Permill> = RefCell::new(Permill::zero());
 	static ACC_SWAP_RATES: RefCell<BTreeMap<TradingPair, Fixed128>> = RefCell::new(BTreeMap::new());
 	static LIQUIDITIES: RefCell<BTreeMap<LiquidityPoolId, Balance>> = RefCell::new(BTreeMap::new());
+	static TRADER_RISK_THRESHOLD: RefCell<BTreeMap<TradingPair, RiskThreshold>> = RefCell::new(BTreeMap::new());
+	static LIQUIDITY_POOL_ENP_THRESHOLD: RefCell<BTreeMap<TradingPair, RiskThreshold>> = RefCell::new(BTreeMap::new());
+	static LIQUIDITY_POOL_ELL_THRESHOLD: RefCell<BTreeMap<TradingPair, RiskThreshold>> = RefCell::new(BTreeMap::new());
 }
 
 pub const MOCK_LIQUIDITY_LOCK_ACCOUNT: u64 = 1000;
@@ -147,6 +150,36 @@ impl MockLiquidityPools {
 
 	pub fn set_mock_liquidity(pool: LiquidityPoolId, liquidity: Balance) {
 		LIQUIDITIES.with(|v| v.borrow_mut().insert(pool, liquidity));
+	}
+
+	pub fn trader_risk_threshold(pair: TradingPair) -> RiskThreshold {
+		TRADER_RISK_THRESHOLD
+			.with(|v| v.borrow_mut().get(&pair).map(|v| *v))
+			.unwrap_or_default()
+	}
+
+	pub fn set_mock_trader_risk_threshold(pair: TradingPair, threshold: RiskThreshold) {
+		TRADER_RISK_THRESHOLD.with(|v| v.borrow_mut().insert(pair, threshold));
+	}
+
+	pub fn liquidity_pool_enp_threshold(pair: TradingPair) -> RiskThreshold {
+		LIQUIDITY_POOL_ENP_THRESHOLD
+			.with(|v| v.borrow_mut().get(&pair).map(|v| *v))
+			.unwrap_or_default()
+	}
+
+	pub fn set_mock_liquidity_pool_enp_threshold(pair: TradingPair, threshold: RiskThreshold) {
+		LIQUIDITY_POOL_ENP_THRESHOLD.with(|v| v.borrow_mut().insert(pair, threshold));
+	}
+
+	pub fn liquidity_pool_ell_threshold(pair: TradingPair) -> RiskThreshold {
+		LIQUIDITY_POOL_ELL_THRESHOLD
+			.with(|v| v.borrow_mut().get(&pair).map(|v| *v))
+			.unwrap_or_default()
+	}
+
+	pub fn set_mock_liquidity_pool_ell_threshold(pair: TradingPair, threshold: RiskThreshold) {
+		LIQUIDITY_POOL_ELL_THRESHOLD.with(|v| v.borrow_mut().insert(pair, threshold));
 	}
 }
 impl LiquidityPools<AccountId> for MockLiquidityPools {
@@ -213,6 +246,18 @@ impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
 		_leveraged_amount: Balance,
 	) -> bool {
 		true
+	}
+
+	fn get_trader_risk_threshold(pair: TradingPair) -> RiskThreshold {
+		Self::trader_risk_threshold(pair)
+	}
+
+	fn get_liquidity_pool_enp_threshold(pair: TradingPair) -> RiskThreshold {
+		Self::liquidity_pool_enp_threshold(pair)
+	}
+
+	fn get_liquidity_pool_ell_threshold(pair: TradingPair) -> RiskThreshold {
+		Self::liquidity_pool_ell_threshold(pair)
 	}
 }
 
@@ -282,10 +327,7 @@ pub struct ExtBuilder {
 	spread: Permill,
 	prices: Vec<(CurrencyId, Price)>,
 	swap_rates: Vec<(TradingPair, Fixed128)>,
-	trader_risk_threshold: RiskThreshold,
 	pool_liquidities: Vec<(LiquidityPoolId, Balance)>,
-	liquidity_pool_enp_threshold: RiskThreshold,
-	liquidity_pool_ell_threshold: RiskThreshold,
 }
 
 impl Default for ExtBuilder {
@@ -296,9 +338,6 @@ impl Default for ExtBuilder {
 			spread: Permill::from_rational_approximation(1, 1000u32),
 			prices: vec![(CurrencyId::AUSD, FixedU128::from_rational(1, 1))],
 			swap_rates: vec![],
-			trader_risk_threshold: RiskThreshold::default(),
-			liquidity_pool_enp_threshold: RiskThreshold::default(),
-			liquidity_pool_ell_threshold: RiskThreshold::default(),
 			pool_liquidities: vec![],
 		}
 	}
@@ -336,25 +375,10 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn trader_risk_threshold(mut self, threshold: RiskThreshold) -> Self {
-		self.trader_risk_threshold = threshold;
-		self
-	}
-
 	pub fn pool_liquidity(mut self, pool: LiquidityPoolId, liquidity: Balance) -> Self {
 		self.pool_liquidities.push((pool, liquidity));
 		self.endowed_accounts
 			.push((MOCK_LIQUIDITY_LOCK_ACCOUNT, CurrencyId::AUSD, liquidity));
-		self
-	}
-
-	pub fn liquidity_pool_enp_threshold(mut self, threshold: RiskThreshold) -> Self {
-		self.liquidity_pool_enp_threshold = threshold;
-		self
-	}
-
-	pub fn liquidity_pool_ell_threshold(mut self, threshold: RiskThreshold) -> Self {
-		self.liquidity_pool_ell_threshold = threshold;
 		self
 	}
 
@@ -380,14 +404,6 @@ impl ExtBuilder {
 
 		orml_tokens::GenesisConfig::<Runtime> {
 			endowed_accounts: self.endowed_accounts,
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
-
-		GenesisConfig {
-			trader_risk_threshold: self.trader_risk_threshold,
-			liquidity_pool_enp_threshold: self.liquidity_pool_enp_threshold,
-			liquidity_pool_ell_threshold: self.liquidity_pool_ell_threshold,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

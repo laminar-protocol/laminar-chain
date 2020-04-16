@@ -309,9 +309,9 @@ mod steps {
 				world.execute_with(|| {
 					let iter = get_rows(step)
 						.iter()
-						.map(|x| (parse_name(x.get(0)), parse_result(x.get(1))));
-					for (name, result) in iter {
-						result.assert(margin_trader_margin_call(&name));
+						.map(|x| (parse_name(x.get(0)), parse_pair(x.get(1)), parse_result(x.get(2))));
+					for (name, pair, result) in iter {
+						result.assert(margin_trader_margin_call(&name, pair));
 					}
 				})
 			})
@@ -319,25 +319,29 @@ mod steps {
 				world.execute_with(|| {
 					let iter = get_rows(step)
 						.iter()
-						.map(|x| (parse_name(x.get(0)), parse_result(x.get(1))));
-					for (name, result) in iter {
-						result.assert(margin_trader_stop_out(&name));
+						.map(|x| (parse_name(x.get(0)), parse_pair(x.get(1)), parse_result(x.get(2))));
+					for (name, pair, result) in iter {
+						result.assert(margin_trader_stop_out(&name, pair));
 					}
 				})
 			})
 			.then("margin liquidity pool margin call", |world, step| {
 				world.execute_with(|| {
-					let iter = get_rows(step).iter().map(|x| parse_result(x.get(0)));
-					for result in iter {
-						result.assert(margin_liquidity_pool_margin_call());
+					let iter = get_rows(step)
+						.iter()
+						.map(|x| (parse_pair(x.get(0)), parse_result(x.get(1))));
+					for (pair, result) in iter {
+						result.assert(margin_liquidity_pool_margin_call(pair));
 					}
 				})
 			})
 			.then("margin liquidity pool liquidate", |world, step| {
 				world.execute_with(|| {
-					let iter = get_rows(step).iter().map(|x| parse_result(x.get(0)));
-					for result in iter {
-						result.assert(margin_liquidity_pool_force_close());
+					let iter = get_rows(step)
+						.iter()
+						.map(|x| (parse_pair(x.get(0)), parse_result(x.get(1))));
+					for (pair, result) in iter {
+						result.assert(margin_liquidity_pool_force_close(pair));
 					}
 				})
 			})

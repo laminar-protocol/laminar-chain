@@ -1,13 +1,12 @@
 use hex_literal::hex;
 use margin_liquidity_pools::SwapRate;
-use margin_protocol::RiskThreshold;
-use module_primitives::{AccumulateConfig, TradingPair};
+use module_primitives::{AccumulateConfig, RiskThreshold, TradingPair};
 use orml_utilities::Fixed128;
 use runtime::{
 	opaque::Block, opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, CurrencyId,
 	FinancialCouncilMembershipConfig, GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, IndicesConfig,
-	MarginLiquidityPoolsConfig, MarginProtocolConfig, OperatorMembershipConfig, SessionConfig, Signature, StakerStatus,
-	StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SystemConfig, TokensConfig, WASM_BINARY,
+	MarginLiquidityPoolsConfig, OperatorMembershipConfig, SessionConfig, Signature, StakerStatus, StakingConfig,
+	SudoConfig, SyntheticLiquidityPoolsConfig, SystemConfig, TokensConfig, WASM_BINARY,
 };
 use sc_chain_spec::ChainSpecExtension;
 use sc_service;
@@ -309,6 +308,21 @@ fn dev_genesis(
 						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
 						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
 					},
+					// trader_risk_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(3),
+						stop_out: Permill::from_percent(1),
+					},
+					// liquidity_pool_enp_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+					// liquidity_pool_ell_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
 				),
 				(
 					// TradingPair
@@ -327,6 +341,21 @@ fn dev_genesis(
 					SwapRate {
 						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
 						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
+					},
+					// trader_risk_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(3),
+						stop_out: Permill::from_percent(1),
+					},
+					// liquidity_pool_enp_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+					// liquidity_pool_ell_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
 					},
 				),
 				(
@@ -347,6 +376,21 @@ fn dev_genesis(
 						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
 						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
 					},
+					// trader_risk_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(3),
+						stop_out: Permill::from_percent(1),
+					},
+					// liquidity_pool_enp_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+					// liquidity_pool_ell_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
 				),
 				(
 					// TradingPair
@@ -366,22 +410,23 @@ fn dev_genesis(
 						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
 						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
 					},
+					// trader_risk_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(3),
+						stop_out: Permill::from_percent(1),
+					},
+					// liquidity_pool_enp_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+					// liquidity_pool_ell_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
 				),
 			],
-		}),
-		margin_protocol: Some(MarginProtocolConfig {
-			trader_risk_threshold: RiskThreshold {
-				margin_call: Permill::from_percent(3),
-				stop_out: Permill::from_percent(1),
-			},
-			liquidity_pool_enp_threshold: RiskThreshold {
-				margin_call: Permill::from_percent(30),
-				stop_out: Permill::from_percent(10),
-			},
-			liquidity_pool_ell_threshold: RiskThreshold {
-				margin_call: Permill::from_percent(30),
-				stop_out: Permill::from_percent(10),
-			},
 		}),
 	}
 }
@@ -478,6 +523,21 @@ fn testnet_genesis(
 						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
 						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
 					},
+					// trader_risk_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(3),
+						stop_out: Permill::from_percent(1),
+					},
+					// liquidity_pool_enp_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+					// liquidity_pool_ell_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
 				),
 				(
 					// TradingPair
@@ -497,24 +557,20 @@ fn testnet_genesis(
 						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
 						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
 					},
-				),
-				(
-					// TradingPair
-					TradingPair {
-						base: CurrencyId::AUSD,
-						quote: CurrencyId::FBTC,
+					// trader_risk_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(3),
+						stop_out: Permill::from_percent(1),
 					},
-					// MaxSpread
-					Permill::from_percent(1),
-					// Accumulates
-					AccumulateConfig {
-						frequency: 10,
-						offset: 1,
+					// liquidity_pool_enp_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
 					},
-					// SwapRates
-					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
+					// liquidity_pool_ell_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
 					},
 				),
 				(
@@ -535,22 +591,23 @@ fn testnet_genesis(
 						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
 						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
 					},
+					// trader_risk_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(3),
+						stop_out: Permill::from_percent(1),
+					},
+					// liquidity_pool_enp_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+					// liquidity_pool_ell_threshold
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
 				),
 			],
-		}),
-		margin_protocol: Some(MarginProtocolConfig {
-			trader_risk_threshold: RiskThreshold {
-				margin_call: Permill::from_percent(3),
-				stop_out: Permill::from_percent(1),
-			},
-			liquidity_pool_enp_threshold: RiskThreshold {
-				margin_call: Permill::from_percent(30),
-				stop_out: Permill::from_percent(10),
-			},
-			liquidity_pool_ell_threshold: RiskThreshold {
-				margin_call: Permill::from_percent(30),
-				stop_out: Permill::from_percent(10),
-			},
 		}),
 	}
 }

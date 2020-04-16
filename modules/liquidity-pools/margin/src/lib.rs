@@ -11,7 +11,9 @@ use frame_support::{
 use frame_system::{self as system, ensure_root, ensure_signed};
 use orml_traits::MultiCurrency;
 use orml_utilities::Fixed128;
-use primitives::{AccumulateConfig, Balance, CurrencyId, Leverage, Leverages, LiquidityPoolId, TradingPair};
+use primitives::{
+	AccumulateConfig, Balance, CurrencyId, Leverage, Leverages, LiquidityPoolId, RiskThreshold, TradingPair,
+};
 use sp_runtime::{
 	traits::{EnsureOrigin, Saturating},
 	DispatchResult, ModuleId, Permill, RuntimeDebug,
@@ -58,17 +60,24 @@ decl_storage! {
 		pub LiquidityPoolEnabledTradingPairs get(fn liquidity_pool_enabled_trading_pair): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => Option<()>;
 		pub DefaultMinLeveragedAmount get(fn default_min_leveraged_amount) config(): Balance;
 		pub MinLeveragedAmount get(fn min_leveraged_amount): map hasher(twox_64_concat) LiquidityPoolId => Option<Balance>;
+		pub TraderRiskThreshold get(fn trader_risk_threshold): map hasher(twox_64_concat) TradingPair => Option<RiskThreshold>;
+		pub LiquidityPoolENPThreshold get(fn liquidity_pool_enp_threshold): map hasher(twox_64_concat) TradingPair => Option<RiskThreshold>;
+		pub LiquidityPoolELLThreshold get(fn liquidity_pool_ell_threshold): map hasher(twox_64_concat) TradingPair => Option<RiskThreshold>;
 	}
 
 	add_extra_genesis {
-		config(margin_liquidity_config): Vec<(TradingPair, Permill, AccumulateConfig<T::BlockNumber>, SwapRate)>;
+		// TradingPair, MaxSpread, Accumulates, SwapRates, TraderRiskThreshold, LiquidityPoolENPThreshold, LiquidityPoolELLThreshold
+		config(margin_liquidity_config): Vec<(TradingPair, Permill, AccumulateConfig<T::BlockNumber>, SwapRate, RiskThreshold, RiskThreshold, RiskThreshold)>;
 
 		build(|config: &GenesisConfig<T>| {
-			config.margin_liquidity_config.iter().for_each(|(pair, spread, accumulate, swap_rate)| {
+			config.margin_liquidity_config.iter().for_each(|(pair, spread, accumulate, swap_rate, trader_risk_threshold, enp_threshold, ell_threshold)| {
 				EnabledTradingPairs::insert(pair, ());
 				SwapRates::insert(pair, swap_rate);
 				MaxSpread::insert(pair, spread);
 				<Accumulates<T>>::insert(pair, (accumulate, pair));
+				TraderRiskThreshold::insert(pair, trader_risk_threshold);
+				LiquidityPoolENPThreshold::insert(pair, enp_threshold);
+				LiquidityPoolELLThreshold::insert(pair, ell_threshold);
 			})
 		})
 	}
@@ -342,6 +351,18 @@ impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
 			&& Self::enabled_trading_pair(&pair).is_some()
 			&& Self::liquidity_pool_enabled_trading_pair(&pool_id, &pair).is_some()
 			&& leveraged_amount >= Self::get_min_leveraged_amount(pool_id)
+	}
+
+	fn get_trader_risk_threshold(pair: TradingPair) -> RiskThreshold {
+		Self::trader_risk_threshold(pair).unwrap_or_default()
+	}
+
+	fn get_liquidity_pool_enp_threshold(pair: TradingPair) -> RiskThreshold {
+		Self::liquidity_pool_enp_threshold(pair).unwrap_or_default()
+	}
+
+	fn get_liquidity_pool_ell_threshold(pair: TradingPair) -> RiskThreshold {
+		Self::liquidity_pool_ell_threshold(pair).unwrap_or_default()
 	}
 }
 

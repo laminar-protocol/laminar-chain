@@ -65,7 +65,7 @@ mod tests {
 				);
 
 				assert_noop!(
-					margin_liquidity_pool_enable_trading_pair(EUR_USD),
+					margin_liquidity_pool_enable_trading_pair(JPY_USD),
 					margin_liquidity_pools::Error::<Runtime>::TradingPairNotEnabled
 				);
 
@@ -282,32 +282,32 @@ mod tests {
 				// 2.12409 = 3 * (1 - 1505 * 97% / 5000)
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(22, 10))]));
 				assert_noop!(
-					margin_trader_margin_call(&ALICE::get()),
+					margin_trader_margin_call(&ALICE::get(), EUR_USD),
 					margin_protocol::Error::<Runtime>::SafeTrader
 				);
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(21, 10))]));
-				assert_ok!(margin_trader_margin_call(&ALICE::get()));
+				assert_ok!(margin_trader_margin_call(&ALICE::get(), EUR_USD));
 				assert_noop!(
-					margin_trader_stop_out(&ALICE::get()),
+					margin_trader_stop_out(&ALICE::get(), EUR_USD),
 					margin_protocol::Error::<Runtime>::NotReachedRiskThreshold
 				);
 
 				assert_noop!(
-					margin_trader_become_safe(&ALICE::get()),
+					margin_trader_become_safe(&ALICE::get(), EUR_USD),
 					margin_protocol::Error::<Runtime>::UnsafeTrader
 				);
 				// Price up become safe
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(22, 10))]));
-				assert_ok!(margin_trader_become_safe(&ALICE::get()));
+				assert_ok!(margin_trader_become_safe(&ALICE::get(), EUR_USD));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(21, 10))]));
-				assert_ok!(margin_trader_margin_call(&ALICE::get()));
+				assert_ok!(margin_trader_margin_call(&ALICE::get(), EUR_USD));
 
 				// Deposit become safe
 				assert_ok!(margin_deposit(&ALICE::get(), dollar(500)));
-				assert_ok!(margin_trader_become_safe(&ALICE::get()));
+				assert_ok!(margin_trader_become_safe(&ALICE::get(), EUR_USD));
 
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(19, 10))]));
-				assert_ok!(margin_trader_stop_out(&ALICE::get()));
+				assert_ok!(margin_trader_stop_out(&ALICE::get(), EUR_USD));
 
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(4500));
 				assert_eq!(margin_balance(&ALICE::get()), Fixed128::from_natural(-245));
@@ -357,34 +357,34 @@ mod tests {
 				// 4.4 = 3 * (1 + 10000 * 70% / 3.01 / 5000)
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(41, 10))]));
 				assert_noop!(
-					margin_liquidity_pool_margin_call(),
+					margin_liquidity_pool_margin_call(EUR_USD),
 					margin_protocol::Error::<Runtime>::SafePool
 				);
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(42, 10))]));
-				assert_ok!(margin_liquidity_pool_margin_call());
+				assert_ok!(margin_liquidity_pool_margin_call(EUR_USD));
 				assert_noop!(
-					margin_liquidity_pool_force_close(),
+					margin_liquidity_pool_force_close(EUR_USD),
 					margin_protocol::Error::<Runtime>::NotReachedRiskThreshold
 				);
 
 				assert_noop!(
-					margin_liquidity_pool_become_safe(),
+					margin_liquidity_pool_become_safe(EUR_USD),
 					margin_protocol::Error::<Runtime>::UnsafePool
 				);
 				// Price up become safe
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(41, 10))]));
-				assert_ok!(margin_liquidity_pool_become_safe());
+				assert_ok!(margin_liquidity_pool_become_safe(EUR_USD));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(42, 10))]));
-				assert_ok!(margin_liquidity_pool_margin_call());
+				assert_ok!(margin_liquidity_pool_margin_call(EUR_USD));
 
 				// Deposit become safe
 				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(500)));
-				assert_ok!(margin_liquidity_pool_become_safe());
+				assert_ok!(margin_liquidity_pool_become_safe(EUR_USD));
 
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(50, 10))]));
 				assert_eq!(collateral_balance(&MockLaminarTreasury::account_id()), 0);
 				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
-				assert_ok!(margin_liquidity_pool_force_close());
+				assert_ok!(margin_liquidity_pool_force_close(EUR_USD));
 
 				// open_price = 3 * (1 + 0.01) = 3.03
 				// close_price = 5 * (1 - 0.01) = 4.95
