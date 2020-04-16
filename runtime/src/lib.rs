@@ -482,12 +482,6 @@ impl DataProvider<CurrencyId, Price> for LaminarDataProvider {
 		}
 	}
 }
-
-impl orml_prices::Trait for Runtime {
-	type CurrencyId = CurrencyId;
-	type Source = LaminarDataProvider;
-}
-
 impl synthetic_tokens::Trait for Runtime {
 	type Event = Event;
 	type DefaultExtremeRatio = DefaultExtremeRatio;
@@ -556,7 +550,7 @@ impl synthetic_protocol::Trait for Runtime {
 	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type CollateralCurrency = CollateralCurrency;
 	type GetCollateralCurrencyId = GetCollateralCurrencyId;
-	type PriceProvider = orml_prices::Module<Runtime>;
+	type PriceProvider = orml_prices::DefaultPriceProvider<CurrencyId, LaminarDataProvider>;
 	type LiquidityPools = synthetic_liquidity_pools::Module<Runtime>;
 	type SyntheticProtocolLiquidityPools = synthetic_liquidity_pools::Module<Runtime>;
 	type BalanceToPrice = BalancePriceConverter;
@@ -582,7 +576,7 @@ impl margin_protocol::Trait for Runtime {
 	type Event = Event;
 	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type LiquidityPools = margin_liquidity_pools::Module<Runtime>;
-	type PriceProvider = orml_prices::Module<Runtime>;
+	type PriceProvider = orml_prices::DefaultPriceProvider<CurrencyId, LaminarDataProvider>;
 	type Treasury = MockLaminarTreasury;
 	type SubmitTransaction = TransactionSubmitter;
 	type Call = Call;
@@ -633,7 +627,6 @@ construct_runtime!(
 		Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
-		Prices: orml_prices::{Module, Storage},
 		SyntheticTokens: synthetic_tokens::{Module, Storage, Call, Event},
 		SyntheticProtocol: synthetic_protocol::{Module, Call, Event<T>},
 		MarginProtocol: margin_protocol::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned },

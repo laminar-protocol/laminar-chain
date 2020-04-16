@@ -25,7 +25,7 @@ pub type ModuleSyntheticProtocol = synthetic_protocol::Module<Runtime>;
 pub type ModuleMarginProtocol = margin_protocol::Module<Runtime>;
 pub type ModuleTokens = synthetic_tokens::Module<Runtime>;
 pub type ModuleOracle = orml_oracle::Module<Runtime>;
-pub type ModulePrices = orml_prices::Module<Runtime>;
+pub type ModulePrices = orml_prices::DefaultPriceProvider<CurrencyId, ModuleOracle>;
 pub type MarginLiquidityPools = margin_liquidity_pools::Module<Runtime>;
 pub type SyntheticLiquidityPools = synthetic_liquidity_pools::Module<Runtime>;
 

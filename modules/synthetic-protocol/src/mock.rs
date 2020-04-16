@@ -10,6 +10,8 @@ use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
 use system::EnsureSignedBy;
 
 use orml_currencies::Currency;
+use orml_prices::DefaultPriceProvider;
+use orml_traits::DataProvider;
 
 use module_primitives::{BalancePriceConverter, LiquidityPoolId};
 use module_traits::{LiquidityPools, SyntheticProtocolLiquidityPools};
@@ -140,12 +142,10 @@ impl MockPrices {
 		PRICES.with(|v| v.borrow_mut().get(&currency_id).map(|p| *p))
 	}
 }
-impl PriceProvider<CurrencyId, Price> for MockPrices {
-	fn get_price(base: CurrencyId, quote: CurrencyId) -> Option<Price> {
-		let base_price = Self::prices(base)?;
-		let quote_price = Self::prices(quote)?;
 
-		quote_price.checked_div(&base_price)
+impl DataProvider<CurrencyId, Price> for MockPrices {
+	fn get(key: &CurrencyId) -> Option<Price> {
+		Self::prices(*key)
 	}
 }
 
@@ -232,7 +232,7 @@ impl Trait for Runtime {
 	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type CollateralCurrency = CollateralCurrency;
 	type GetCollateralCurrencyId = GetCollateralCurrencyId;
-	type PriceProvider = MockPrices;
+	type PriceProvider = DefaultPriceProvider<CurrencyId, MockPrices>;
 	type LiquidityPools = MockLiquidityPools;
 	type SyntheticProtocolLiquidityPools = MockLiquidityPools;
 	type BalanceToPrice = BalancePriceConverter;

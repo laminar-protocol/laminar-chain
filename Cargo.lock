@@ -2682,6 +2682,7 @@ dependencies = [
  "frame-system 2.0.0-alpha.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "module-primitives 0.0.1",
  "module-traits 0.0.1",
+ "orml-prices 0.1.0",
  "orml-tokens 0.0.1",
  "orml-traits 0.0.1",
  "orml-utilities 0.0.1",
@@ -3046,6 +3047,7 @@ dependencies = [
  "sp-core 2.0.0-alpha.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-io 2.0.0-alpha.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-runtime 2.0.0-alpha.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-std 2.0.0-alpha.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
