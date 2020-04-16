@@ -389,3 +389,15 @@ pub fn margin_liquidity_pool_become_safe() -> DispatchResult {
 pub fn margin_liquidity_pool_force_close() -> DispatchResult {
 	ModuleMarginProtocol::liquidity_pool_force_close(<Runtime as system::Trait>::Origin::NONE, LIQUIDITY_POOL_ID_0)
 }
+
+pub fn margin_held(who: &AccountId) -> Fixed128 {
+	ModuleMarginProtocol::margin_held(who)
+}
+
+pub fn free_margin(who: &AccountId) -> Fixed128 {
+	ModuleMarginProtocol::free_margin(who).unwrap()
+}
+
+pub fn margin_equity(who: &AccountId) -> Fixed128 {
+	ModuleMarginProtocol::equity_of_trader(who).unwrap()
+}
