@@ -32,6 +32,18 @@ fn parse_name(name: Option<&String>) -> AccountId {
 	}
 }
 
+fn get_name(address: &AccountId) -> String {
+	if address == &POOL::get() {
+		"Pool".into()
+	} else if address == &ALICE::get() {
+		"Alice".into()
+	} else if address == &BOB::get() {
+		"Bob".into()
+	} else {
+		format!("{}", address)
+	}
+}
+
 fn parse_dollar(value: Option<&String>) -> Balance {
 	let value = value.expect("Missing balance");
 	let value = value.replace(" ", "").replace("_", "");
@@ -104,6 +116,7 @@ fn parse_pair(name: Option<&String>) -> TradingPair {
 	{
 		"eurusd" => EUR_USD,
 		"jpyeur" => JPY_EUR,
+		"jpyusd" => JPY_USD,
 		_ => panic!("Invalid pair"),
 	}
 }
@@ -398,9 +411,9 @@ mod steps {
 						)
 					});
 					for (name, equity, free, held) in iter {
-						assert_eq!(margin_equity(&name), equity);
-						assert_eq!(free_margin(&name), free);
-						assert_eq!(margin_held(&name), held);
+						assert_eq!(margin_equity(&name), equity, "Equity for {}", get_name(&name));
+						assert_eq!(free_margin(&name), free, "Free margin for {}", get_name(&name));
+						assert_eq!(margin_held(&name), held, "Margin held for {}", get_name(&name));
 					}
 				})
 			});

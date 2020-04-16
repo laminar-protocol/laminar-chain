@@ -18,6 +18,7 @@ Feature: Margin Protocol
       | Name  | Amount  |
       | Pool  | $10 000 |
       | Alice | $10 000 |
+      | Bob   | $10 000 |
     And margin create liquidity pool
     And margin deposit liquidity
       | Name  | Amount  |
@@ -25,43 +26,48 @@ Feature: Margin Protocol
     And margin deposit
       | Name  | Amount  |
       | Alice | $5 000  |
+      | Bob   | $5 000  |
     And oracle price
       | Currency  | Price  |
-      | FEUR      | $3     |
+      | FEUR      | $2     |
+      | FJPY      | $1     |
     And margin spread
       | Pair    | Value |
       | EURUSD  | 1%    |
-    And margin set accumulate
-      | Pair   | Frequency | Offset |
-      | EURUSD | 10        | 1      |
+      | JPYUSD  | 1%    |
     And margin set min leveraged amount to $100
     And margin set default min leveraged amount to $100
-    And margin set swap rate
-      | Pair    | Long | Short |
-      | EURUSD  | -1%  | 1%    |
     And margin enable trading pair EURUSD
+    And margin enable trading pair JPYUSD
     When open positions
       | Name  | Pair   | Leverage | Amount | Price |
       | Alice | EURUSD | Long 10  | $5000  | $4    |
+      | Bob   | JPYUSD | Long 50  | $5000  | $4    |
     Then margin balances are
       | Name  | Free  | Margin |
       | Alice | $5000 | $5000  |
+      | Bob   | $5000 | $5000  |
     Then trader margin positions are
       | Name  | Equity  | Free Margin | Margin Held |
-      | Alice | $4700   | $3185       | $1515       |
+      | Alice | $4900   | $4395       | $505        |
+      | Bob   | $4900   | $4799       | $101        |
     When close positions
       | Name  | ID | Price |
-      | Alice | 0  | $2    |
+      | Alice | 0  | $0    |
+      | Bob   | 1  | $0    |
     Then margin balances are
       | Name  | Free  | Margin |
-      | Alice | $5000 | $4700  |
-    And margin liquidity is $10 300
+      | Alice | $5000 | $4900  |
+      | Bob   | $5000 | $4900  |
+    And margin liquidity is $10 200
     When margin withdraw
       | Name  | Amount |
-      | Alice | $4700  |
+      | Alice | $4900  |
+      | Bob   | $4900  |
     Then margin balances are
       | Name  | Free  | Margin |
-      | Alice | $9700 | $0     |
+      | Alice | $9900 | $0     |
+      | Bob   | $9900 | $0     |
 
   Scenario: margin trader take profit
     Given accounts

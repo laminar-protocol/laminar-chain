@@ -14,7 +14,7 @@ use sp_core::offchain::{
 };
 use sp_runtime::PerThing;
 
-const EUR_JPY_PAIR: TradingPair = TradingPair {
+const JPY_EUR_PAIR: TradingPair = TradingPair {
 	base: CurrencyId::FJPY,
 	quote: CurrencyId::FEUR,
 };
@@ -40,7 +40,7 @@ fn eur_jpy_long() -> Position<Runtime> {
 	Position {
 		owner: ALICE,
 		pool: MOCK_POOL,
-		pair: EUR_JPY_PAIR,
+		pair: JPY_EUR_PAIR,
 		leverage: Leverage::LongTwenty,
 		leveraged_held: Fixed128::from_natural(100_000),
 		leveraged_debits: Fixed128::from_natural(-14_104_090),
@@ -54,7 +54,7 @@ fn eur_jpy_short() -> Position<Runtime> {
 	Position {
 		owner: ALICE,
 		pool: MOCK_POOL,
-		pair: EUR_JPY_PAIR,
+		pair: JPY_EUR_PAIR,
 		leverage: Leverage::ShortTwenty,
 		leveraged_held: Fixed128::from_natural(-100_000),
 		leveraged_debits: Fixed128::from_natural(14_175_810),
@@ -131,8 +131,8 @@ fn margin_held_sums_all_margin_held() {
 }
 
 const EUR_USD_PAIR: TradingPair = TradingPair {
-	base: CurrencyId::AUSD,
-	quote: CurrencyId::FEUR,
+	base: CurrencyId::FEUR,
+	quote: CurrencyId::AUSD,
 };
 
 fn eur_usd_long_1() -> Position<Runtime> {
@@ -862,7 +862,7 @@ fn open_long_position_works() {
 		.price(CurrencyId::FJPY, (1, 107))
 		// EUR/JPY = 140.9 => EUR/USD = 140.9/107
 		.price(CurrencyId::FEUR, (1409, 1070))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(JPY_EUR_PAIR, Fixed128::from_natural(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -870,7 +870,7 @@ fn open_long_position_works() {
 			assert_ok!(MarginProtocol::open_position(
 				Origin::signed(ALICE),
 				MOCK_POOL,
-				EUR_JPY_PAIR,
+				JPY_EUR_PAIR,
 				Leverage::LongTwenty,
 				balance_from_natural_currency_cent(100_000_00),
 				Price::from_natural(142)
@@ -888,7 +888,7 @@ fn open_long_position_works() {
 			assert_eq!(MarginProtocol::positions(id), Some(position));
 			assert_eq!(MarginProtocol::positions_by_trader(ALICE, (MOCK_POOL, id)), Some(true));
 			assert_eq!(
-				MarginProtocol::positions_by_pool(MOCK_POOL, (EUR_JPY_PAIR, id)),
+				MarginProtocol::positions_by_pool(MOCK_POOL, (JPY_EUR_PAIR, id)),
 				Some(true)
 			);
 			assert_eq!(MarginProtocol::next_position_id(), 1);
@@ -897,7 +897,7 @@ fn open_long_position_works() {
 				ALICE,
 				0,
 				MOCK_POOL,
-				EUR_JPY_PAIR,
+				JPY_EUR_PAIR,
 				Leverage::LongTwenty,
 				balance_from_natural_currency_cent(100_000_00),
 				// price: 141.0409
@@ -914,7 +914,7 @@ fn open_short_position_works() {
 		.price(CurrencyId::FJPY, (1, 106))
 		// EUR/JPY = 141.9 => EUR/USD = 141.9/106
 		.price(CurrencyId::FEUR, (1419, 1060))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(JPY_EUR_PAIR, Fixed128::from_natural(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -922,7 +922,7 @@ fn open_short_position_works() {
 			assert_ok!(MarginProtocol::open_position(
 				Origin::signed(ALICE),
 				MOCK_POOL,
-				EUR_JPY_PAIR,
+				JPY_EUR_PAIR,
 				Leverage::ShortTwenty,
 				balance_from_natural_currency_cent(100_000_00),
 				Price::from_natural(141)
@@ -947,7 +947,7 @@ fn open_position_fails_if_trader_margin_called() {
 		.price(CurrencyId::FJPY, (1, 107))
 		// EUR/JPY = 140.9 => EUR/USD = 140.9/107
 		.price(CurrencyId::FEUR, (1409, 1070))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(JPY_EUR_PAIR, Fixed128::from_natural(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -957,7 +957,7 @@ fn open_position_fails_if_trader_margin_called() {
 				MarginProtocol::open_position(
 					Origin::signed(ALICE),
 					MOCK_POOL,
-					EUR_JPY_PAIR,
+					JPY_EUR_PAIR,
 					Leverage::LongTwenty,
 					balance_from_natural_currency_cent(100_000_00),
 					Price::from_natural(142)
@@ -974,7 +974,7 @@ fn open_position_fails_if_pool_margin_called() {
 		.price(CurrencyId::FJPY, (1, 107))
 		// EUR/JPY = 140.9 => EUR/USD = 140.9/107
 		.price(CurrencyId::FEUR, (1409, 1070))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(JPY_EUR_PAIR, Fixed128::from_natural(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -984,7 +984,7 @@ fn open_position_fails_if_pool_margin_called() {
 				MarginProtocol::open_position(
 					Origin::signed(ALICE),
 					MOCK_POOL,
-					EUR_JPY_PAIR,
+					JPY_EUR_PAIR,
 					Leverage::LongTwenty,
 					balance_from_natural_currency_cent(100_000_00),
 					Price::from_natural(142)
@@ -998,7 +998,7 @@ fn open_position_fails_if_pool_margin_called() {
 fn open_position_fails_if_no_base_price() {
 	ExtBuilder::default()
 		.price(CurrencyId::FEUR, (1409, 1070))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(JPY_EUR_PAIR, Fixed128::from_natural(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -1007,7 +1007,7 @@ fn open_position_fails_if_no_base_price() {
 				MarginProtocol::open_position(
 					Origin::signed(ALICE),
 					MOCK_POOL,
-					EUR_JPY_PAIR,
+					JPY_EUR_PAIR,
 					Leverage::LongTwenty,
 					balance_from_natural_currency_cent(100_000_00),
 					Price::from_natural(142)
@@ -1021,7 +1021,7 @@ fn open_position_fails_if_no_base_price() {
 fn open_position_fails_if_no_quote_price() {
 	ExtBuilder::default()
 		.price(CurrencyId::FJPY, (1, 107))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(JPY_EUR_PAIR, Fixed128::from_natural(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -1030,7 +1030,7 @@ fn open_position_fails_if_no_quote_price() {
 				MarginProtocol::open_position(
 					Origin::signed(ALICE),
 					MOCK_POOL,
-					EUR_JPY_PAIR,
+					JPY_EUR_PAIR,
 					Leverage::LongTwenty,
 					balance_from_natural_currency_cent(100_000_00),
 					Price::from_natural(142)
@@ -1047,7 +1047,7 @@ fn open_long_position_fails_if_market_price_too_high() {
 		.price(CurrencyId::FJPY, (1, 107))
 		// EUR/JPY = 140.9 => EUR/USD = 140.9/107
 		.price(CurrencyId::FEUR, (1409, 1070))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(JPY_EUR_PAIR, Fixed128::from_natural(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -1056,7 +1056,7 @@ fn open_long_position_fails_if_market_price_too_high() {
 				MarginProtocol::open_position(
 					Origin::signed(ALICE),
 					MOCK_POOL,
-					EUR_JPY_PAIR,
+					JPY_EUR_PAIR,
 					Leverage::LongTwenty,
 					balance_from_natural_currency_cent(100_000_00),
 					Price::from_natural(141)
@@ -1073,7 +1073,7 @@ fn open_short_position_fails_if_market_price_too_low() {
 		.price(CurrencyId::FJPY, (1, 106))
 		// EUR/JPY = 141.9 => EUR/USD = 141.9/106
 		.price(CurrencyId::FEUR, (1419, 1060))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(JPY_EUR_PAIR, Fixed128::from_natural(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -1082,7 +1082,7 @@ fn open_short_position_fails_if_market_price_too_low() {
 				MarginProtocol::open_position(
 					Origin::signed(ALICE),
 					MOCK_POOL,
-					EUR_JPY_PAIR,
+					JPY_EUR_PAIR,
 					Leverage::ShortTwenty,
 					balance_from_natural_currency_cent(100_000_00),
 					Price::from_natural(142)
@@ -1097,7 +1097,7 @@ fn open_position_fails_if_leveraged_debits_out_of_bound() {
 	ExtBuilder::default()
 		.price(CurrencyId::FJPY, (1, 1))
 		.price(CurrencyId::FEUR, (2, 1))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(JPY_EUR_PAIR, Fixed128::from_natural(1))
 		.pool_liquidity(MOCK_POOL, Balance::max_value())
 		.build()
 		.execute_with(|| {
@@ -1106,7 +1106,7 @@ fn open_position_fails_if_leveraged_debits_out_of_bound() {
 				MarginProtocol::open_position(
 					Origin::signed(ALICE),
 					MOCK_POOL,
-					EUR_JPY_PAIR,
+					JPY_EUR_PAIR,
 					Leverage::LongTwenty,
 					u128::max_value() / 2 + 1,
 					Price::from_natural(142)
@@ -1121,7 +1121,7 @@ fn open_position_fails_if_insufficient_free_margin() {
 	ExtBuilder::default()
 		.price(CurrencyId::FJPY, (1, 1))
 		.price(CurrencyId::FEUR, (2, 1))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(JPY_EUR_PAIR, Fixed128::from_natural(1))
 		.pool_liquidity(MOCK_POOL, Balance::max_value())
 		.build()
 		.execute_with(|| {
@@ -1129,7 +1129,7 @@ fn open_position_fails_if_insufficient_free_margin() {
 				MarginProtocol::open_position(
 					Origin::signed(ALICE),
 					MOCK_POOL,
-					EUR_JPY_PAIR,
+					JPY_EUR_PAIR,
 					Leverage::LongTwo,
 					1,
 					Price::from_natural(142)
@@ -1146,7 +1146,7 @@ fn open_position_fails_if_would_reach_enp_threshold() {
 		.price(CurrencyId::FJPY, (1, 107))
 		// EUR/JPY = 140.9 => EUR/USD = 140.9/107
 		.price(CurrencyId::FEUR, (1409, 1070))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(JPY_EUR_PAIR, Fixed128::from_natural(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(659_00))
 		.liquidity_pool_enp_threshold(risk_threshold(10, 5))
 		.build()
@@ -1156,7 +1156,7 @@ fn open_position_fails_if_would_reach_enp_threshold() {
 				MarginProtocol::open_position(
 					Origin::signed(ALICE),
 					MOCK_POOL,
-					EUR_JPY_PAIR,
+					JPY_EUR_PAIR,
 					Leverage::LongTwenty,
 					balance_from_natural_currency_cent(100_000_00),
 					Price::from_natural(142)
@@ -1173,7 +1173,7 @@ fn open_position_fails_if_would_reach_ell_threshold() {
 		.price(CurrencyId::FJPY, (1, 107))
 		// EUR/JPY = 140.9 => EUR/USD = 140.9/107
 		.price(CurrencyId::FEUR, (1409, 1070))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(JPY_EUR_PAIR, Fixed128::from_natural(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(659_00))
 		.liquidity_pool_ell_threshold(risk_threshold(10, 5))
 		.build()
@@ -1183,7 +1183,7 @@ fn open_position_fails_if_would_reach_ell_threshold() {
 				MarginProtocol::open_position(
 					Origin::signed(ALICE),
 					MOCK_POOL,
-					EUR_JPY_PAIR,
+					JPY_EUR_PAIR,
 					Leverage::LongTwenty,
 					balance_from_natural_currency_cent(100_000_00),
 					Price::from_natural(142)
@@ -1200,7 +1200,7 @@ fn open_position_fails_if_run_out_of_position_id() {
 		.price(CurrencyId::FJPY, (1, 107))
 		// EUR/JPY = 140.9 => EUR/USD = 140.9/107
 		.price(CurrencyId::FEUR, (1409, 1070))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(JPY_EUR_PAIR, Fixed128::from_natural(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -1210,7 +1210,7 @@ fn open_position_fails_if_run_out_of_position_id() {
 				MarginProtocol::open_position(
 					Origin::signed(ALICE),
 					MOCK_POOL,
-					EUR_JPY_PAIR,
+					JPY_EUR_PAIR,
 					Leverage::LongTwenty,
 					balance_from_natural_currency_cent(100_000_00),
 					Price::from_natural(142)
@@ -1849,7 +1849,7 @@ fn liquidity_pool_manager_can_remove_works() {
 		assert!(<MarginProtocol as LiquidityPoolManager<LiquidityPoolId, Balance>>::can_remove(MOCK_POOL));
 
 		<Positions<Runtime>>::insert(0, eur_jpy_long());
-		PositionsByPool::insert(MOCK_POOL, (EUR_JPY_PAIR, 0), true);
+		PositionsByPool::insert(MOCK_POOL, (JPY_EUR_PAIR, 0), true);
 		assert!(!<MarginProtocol as LiquidityPoolManager<LiquidityPoolId, Balance>>::can_remove(MOCK_POOL));
 	});
 }
