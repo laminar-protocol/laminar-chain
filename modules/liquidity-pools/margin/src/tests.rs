@@ -4,7 +4,7 @@ use super::*;
 use mock::*;
 
 use frame_support::{assert_noop, assert_ok};
-use sp_runtime::{traits::OnInitialize, PerThing};
+use sp_runtime::traits::OnInitialize;
 use sp_std::num::NonZeroI128;
 
 use primitives::{CurrencyId, Leverage, Leverages};
@@ -65,8 +65,8 @@ fn should_disable_pool() {
 		assert_eq!(
 			ModuleLiquidityPools::liquidity_pool_options(0, pair),
 			Some(MarginLiquidityPoolOption {
-				bid_spread: Permill::zero(),
-				ask_spread: Permill::zero(),
+				bid_spread: 0,
+				ask_spread: 0,
 				enabled_trades: Leverage::ShortTen | Leverage::LongFive,
 			})
 		);
@@ -107,13 +107,13 @@ fn should_set_spread() {
 			Origin::signed(ALICE),
 			0,
 			pair,
-			Permill::from_percent(80),
-			Permill::from_percent(60)
+			80,
+			60
 		));
 
 		let pool_option = MarginLiquidityPoolOption {
-			bid_spread: Permill::from_percent(80),
-			ask_spread: Permill::from_percent(60),
+			bid_spread: 80,
+			ask_spread: 60,
 			enabled_trades: Leverages::none(),
 		};
 
@@ -121,11 +121,11 @@ fn should_set_spread() {
 
 		assert_eq!(
 			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_bid_spread(0, pair),
-			Some(Permill::from_percent(80))
+			Some(80)
 		);
 		assert_eq!(
 			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_ask_spread(0, pair),
-			Some(Permill::from_percent(60))
+			Some(60)
 		);
 	})
 }
@@ -145,22 +145,22 @@ fn should_set_max_spread() {
 			Origin::signed(ALICE),
 			0,
 			pair,
-			Permill::one(),
-			Permill::one()
+			100,
+			100,
 		));
 
 		// set max spread to 30%
 		assert_ok!(ModuleLiquidityPools::set_max_spread(
 			Origin::ROOT,
 			pair,
-			Permill::from_percent(30)
+			30,
 		));
 
 		assert_eq!(
 			ModuleLiquidityPools::liquidity_pool_options(0, pair),
 			Some(MarginLiquidityPoolOption {
-				bid_spread: Permill::from_percent(30),
-				ask_spread: Permill::from_percent(30),
+				bid_spread: 30,
+				ask_spread: 30,
 				enabled_trades: Leverages::none(),
 			})
 		);
@@ -169,15 +169,15 @@ fn should_set_max_spread() {
 			Origin::signed(ALICE),
 			0,
 			pair,
-			Permill::from_percent(31),
-			Permill::from_percent(28)
+			31,
+			28
 		));
 
 		assert_eq!(
 			ModuleLiquidityPools::liquidity_pool_options(0, pair),
 			Some(MarginLiquidityPoolOption {
-				bid_spread: Permill::from_percent(30),
-				ask_spread: Permill::from_percent(28),
+				bid_spread: 30,
+				ask_spread: 28,
 				enabled_trades: Leverages::none(),
 			})
 		);
@@ -186,15 +186,15 @@ fn should_set_max_spread() {
 			Origin::signed(ALICE),
 			0,
 			pair,
-			Permill::from_percent(28),
-			Permill::from_percent(29)
+			28,
+			29
 		));
 
 		assert_eq!(
 			ModuleLiquidityPools::liquidity_pool_options(0, pair),
 			Some(MarginLiquidityPoolOption {
-				bid_spread: Permill::from_percent(28),
-				ask_spread: Permill::from_percent(29),
+				bid_spread: 28,
+				ask_spread: 29,
 				enabled_trades: Leverages::none(),
 			})
 		);
@@ -202,14 +202,14 @@ fn should_set_max_spread() {
 		assert_ok!(ModuleLiquidityPools::set_max_spread(
 			Origin::ROOT,
 			pair,
-			Permill::from_percent(20)
+			20
 		));
 
 		assert_eq!(
 			ModuleLiquidityPools::liquidity_pool_options(0, pair),
 			Some(MarginLiquidityPoolOption {
-				bid_spread: Permill::from_percent(20),
-				ask_spread: Permill::from_percent(20),
+				bid_spread: 20,
+				ask_spread: 20,
 				enabled_trades: Leverages::none(),
 			})
 		);
@@ -234,8 +234,8 @@ fn should_set_enabled_trades() {
 		));
 
 		let pool_option = MarginLiquidityPoolOption {
-			bid_spread: Permill::zero(),
-			ask_spread: Permill::zero(),
+			bid_spread: 0,
+			ask_spread: 0,
 			enabled_trades: Leverage::ShortTen | Leverage::LongFive,
 		};
 

@@ -33,8 +33,8 @@ pub trait SyntheticProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> 
 
 pub trait MarginProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
 	fn is_allowed_position(pool_id: LiquidityPoolId, pair: TradingPair, leverage: Leverage) -> bool;
-	fn get_bid_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Permill>;
-	fn get_ask_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Permill>;
+	fn get_bid_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance>;
+	fn get_ask_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance>;
 	fn get_swap_rate(pool_id: LiquidityPoolId, pair: TradingPair, is_long: bool) -> Fixed128;
 	/// Accumulated swap rate, with USD account currency.
 	fn get_accumulated_swap_rate(pool_id: LiquidityPoolId, pair: TradingPair, is_long: bool) -> Fixed128;
