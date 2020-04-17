@@ -3,8 +3,7 @@
 use super::*;
 use mock::*;
 
-use frame_support::{assert_noop, assert_ok};
-use sp_runtime::{traits::OnInitialize, PerThing};
+use frame_support::{assert_noop, assert_ok, traits::OnInitialize};
 use sp_std::num::NonZeroI128;
 
 use primitives::{CurrencyId, Leverage, Leverages};

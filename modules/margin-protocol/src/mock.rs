@@ -11,7 +11,7 @@ use sp_core::H256;
 use sp_runtime::{
 	testing::{Header, TestXt},
 	traits::IdentityLookup,
-	PerThing, Perbill,
+	Perbill,
 };
 use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
 use traits::LiquidityPools;

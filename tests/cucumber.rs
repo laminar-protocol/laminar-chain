@@ -7,7 +7,7 @@ use module_primitives::{Balance, Leverage, TradingPair};
 use orml_utilities::{Fixed128, FixedU128};
 use runtime::tests::*;
 use runtime::{AccountId, BlockNumber, CurrencyId};
-use sp_runtime::{DispatchResult, PerThing, Permill};
+use sp_runtime::{DispatchResult, Permill};
 
 #[derive(Default)]
 pub struct World {
@@ -168,7 +168,9 @@ fn parse_result(value: Option<&String>) -> AssertResult {
 impl AssertResult {
 	fn assert(&self, actual: DispatchResult) {
 		match self {
-			AssertResult::Ok => assert_ok!(actual),
+			AssertResult::Ok => {
+				assert_ok!(actual);
+			}
 			AssertResult::Error(x) => {
 				assert_noop!(actual.map_err(|x| -> &str { x.into() }), x.as_str());
 			}

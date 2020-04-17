@@ -4,7 +4,7 @@ use super::*;
 use mock::*;
 
 use frame_support::{assert_noop, assert_ok};
-use sp_runtime::{PerThing, Permill};
+use sp_runtime::Permill;
 
 use primitives::CurrencyId;
 use traits::{LiquidityPools, SyntheticProtocolLiquidityPools};

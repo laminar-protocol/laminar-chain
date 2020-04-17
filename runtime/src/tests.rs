@@ -8,7 +8,7 @@ use crate::{
 	CurrencyId::{self, AUSD, FEUR},
 	LiquidityPoolId, MinimumCount, Runtime,
 };
-use frame_support::{assert_ok, parameter_types};
+use frame_support::{assert_ok, parameter_types, traits::OnFinalize};
 
 use margin_liquidity_pools::SwapRate;
 use margin_protocol::RiskThreshold;
@@ -18,7 +18,7 @@ use orml_prices::Price;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
 use orml_utilities::Fixed128;
 use pallet_indices::address::Address;
-use sp_runtime::{traits::OnFinalize, DispatchResult, Permill};
+use sp_runtime::{DispatchResult, Permill};
 
 pub type PositionId = u64;
 pub type ModuleSyntheticProtocol = synthetic_protocol::Module<Runtime>;
@@ -137,7 +137,7 @@ pub fn set_oracle_price(prices: Vec<(CurrencyId, Price)>) -> DispatchResult {
 }
 
 pub fn get_price() {
-	ModulePrices::get_price(AUSD, FEUR);
+	ModulePrices::get_price(FEUR, AUSD);
 }
 
 pub fn dollar(amount: u128) -> u128 {

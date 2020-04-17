@@ -37,6 +37,10 @@ Feature: Margin Protocol
       | JPYUSD  | 1%    |
     And margin set min leveraged amount to $100
     And margin set default min leveraged amount to $100
+    And margin set swap rate
+    | Pair   | Long | Short |
+    | EURUSD | -1%  | 1%    |
+    | JPYUSD | -1%  | 1%    |
     And margin enable trading pair EURUSD
     And margin enable trading pair JPYUSD
     When open positions
@@ -49,7 +53,7 @@ Feature: Margin Protocol
       | Bob   | $5000 | $5000  |
     Then trader margin positions are
       | Name  | Equity  | Free Margin | Margin Held |
-      | Alice | $4900   | $4395       | $505        |
+      | Alice | $4800   | $3790       | $1010       |
       | Bob   | $4900   | $4799       | $101        |
     When close positions
       | Name  | ID | Price |
@@ -57,16 +61,16 @@ Feature: Margin Protocol
       | Bob   | 1  | $0    |
     Then margin balances are
       | Name  | Free  | Margin |
-      | Alice | $5000 | $4900  |
+      | Alice | $5000 | $4800  |
       | Bob   | $5000 | $4900  |
-    And margin liquidity is $10 200
+    And margin liquidity is $10 300
     When margin withdraw
       | Name  | Amount |
-      | Alice | $4900  |
+      | Alice | $4800  |
       | Bob   | $4900  |
     Then margin balances are
       | Name  | Free  | Margin |
-      | Alice | $9900 | $0     |
+      | Alice | $9800 | $0     |
       | Bob   | $9900 | $0     |
 
   Scenario: margin trader take profit

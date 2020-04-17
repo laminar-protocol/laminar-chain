@@ -12,11 +12,10 @@ use sp_core::offchain::{
 	testing::{TestOffchainExt, TestTransactionPoolExt},
 	OffchainExt, TransactionPoolExt,
 };
-use sp_runtime::PerThing;
 
 const JPY_EUR_PAIR: TradingPair = TradingPair {
-	base: CurrencyId::FJPY,
-	quote: CurrencyId::FEUR,
+	base: CurrencyId::FEUR,
+	quote: CurrencyId::FJPY,
 };
 
 // `n` is a natural currency amount by cent, with 2 fractional digits precision
@@ -1264,6 +1263,7 @@ fn close_loss_position_works() {
 			assert_eq!(MarginProtocol::positions_by_trader(ALICE, (MOCK_POOL, id)), None);
 			assert_eq!(MarginProtocol::positions_by_pool(MOCK_POOL, (EUR_USD_PAIR, id)), None);
 
+			println!("{:?}", System::events());
 			let event =
 				TestEvent::margin_protocol(RawEvent::PositionClosed(ALICE, id, Price::from_rational(11988, 10000)));
 			assert!(System::events().iter().any(|record| record.event == event));
