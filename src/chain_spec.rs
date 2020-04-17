@@ -190,7 +190,7 @@ pub fn laminar_testnet_latest_config() -> ChainSpec {
 	)
 }
 
-pub fn dev_genesis(
+fn dev_genesis(
 	initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId)>,
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
@@ -356,7 +356,7 @@ pub fn dev_genesis(
 	}
 }
 
-pub fn testnet_genesis(
+fn testnet_genesis(
 	initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId)>,
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
