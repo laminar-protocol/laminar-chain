@@ -21,6 +21,7 @@ macro_rules! assert_noop_root {
 #[test]
 fn root_set_extreme_ratio() {
 	ExtBuilder::default().build().execute_with(|| {
+		System::set_block_number(1);
 		assert_eq!(SyntheticTokens::extreme_ratio(CurrencyId::FEUR), None);
 
 		let ratio = Permill::from_percent(1);
@@ -53,6 +54,7 @@ fn non_root_set_extreme_ratio_fails() {
 #[test]
 fn root_set_liquidation_ratio() {
 	ExtBuilder::default().build().execute_with(|| {
+		System::set_block_number(1);
 		assert_eq!(SyntheticTokens::liquidation_ratio(CurrencyId::FEUR), None);
 
 		let ratio = Permill::from_percent(1);
@@ -84,6 +86,7 @@ fn non_root_set_liquidation_ratio_fails() {
 #[test]
 fn root_set_collateral_ratio() {
 	ExtBuilder::default().build().execute_with(|| {
+		System::set_block_number(1);
 		assert_eq!(SyntheticTokens::collateral_ratio(CurrencyId::FEUR), None);
 
 		let ratio = Permill::from_percent(1);

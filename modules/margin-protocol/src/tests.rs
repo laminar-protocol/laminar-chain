@@ -655,6 +655,7 @@ fn trader_stop_out_should_work() {
 		.trader_risk_threshold(risk_threshold(5, 3))
 		.build()
 		.execute_with(|| {
+			System::set_block_number(1);
 			<Balances<Runtime>>::insert(ALICE, fixed128_from_natural_currency_cent(100));
 			let position: Position<Runtime> = Position {
 				owner: ALICE,
@@ -751,6 +752,7 @@ fn liquidity_pool_margin_call_and_become_safe_work() {
 		.liquidity_pool_enp_threshold(risk_threshold(99, 0))
 		.build()
 		.execute_with(|| {
+			System::set_block_number(1);
 			let position: Position<Runtime> = Position {
 				owner: ALICE,
 				pool: MOCK_POOL,
@@ -808,6 +810,7 @@ fn liquidity_pool_force_close_works() {
 		.liquidity_pool_enp_threshold(risk_threshold(0, 99))
 		.build()
 		.execute_with(|| {
+			System::set_block_number(1);
 			<Balances<Runtime>>::insert(ALICE, fixed128_from_natural_currency_cent(10_000_00));
 			assert_ok!(MarginProtocol::open_position(
 				Origin::signed(ALICE),
@@ -865,6 +868,7 @@ fn open_long_position_works() {
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
+			System::set_block_number(1);
 			<Balances<Runtime>>::insert(ALICE, fixed128_from_natural_currency_cent(10_000_00));
 			assert_ok!(MarginProtocol::open_position(
 				Origin::signed(ALICE),
@@ -1230,6 +1234,7 @@ fn close_loss_position_works() {
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
+			System::set_block_number(1);
 			<Balances<Runtime>>::insert(ALICE, alice_initial);
 
 			let position = eur_usd_long_1();
@@ -1263,7 +1268,6 @@ fn close_loss_position_works() {
 			assert_eq!(MarginProtocol::positions_by_trader(ALICE, (MOCK_POOL, id)), None);
 			assert_eq!(MarginProtocol::positions_by_pool(MOCK_POOL, (EUR_USD_PAIR, id)), None);
 
-			println!("{:?}", System::events());
 			let event =
 				TestEvent::margin_protocol(RawEvent::PositionClosed(ALICE, id, Price::from_rational(11988, 10000)));
 			assert!(System::events().iter().any(|record| record.event == event));
@@ -1571,6 +1575,7 @@ fn close_short_position_fails_if_market_price_too_high() {
 #[test]
 fn deposit_works() {
 	ExtBuilder::default().alice_balance(1000).build().execute_with(|| {
+		System::set_block_number(1);
 		assert_eq!(OrmlTokens::free_balance(CurrencyId::AUSD, &ALICE), 1000);
 		assert_eq!(
 			OrmlTokens::free_balance(CurrencyId::AUSD, &MarginProtocol::account_id()),
@@ -1607,6 +1612,7 @@ fn withdraw_works() {
 		.module_balance(Fixed128::from_parts(1000))
 		.build()
 		.execute_with(|| {
+			System::set_block_number(1);
 			<Balances<Runtime>>::insert(ALICE, Fixed128::from_parts(1000));
 			assert_ok!(MarginProtocol::withdraw(Origin::signed(ALICE), 500));
 
