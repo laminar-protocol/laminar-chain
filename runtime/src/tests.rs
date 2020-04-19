@@ -8,7 +8,7 @@ use crate::{
 	CurrencyId::{self, AUSD, FEUR},
 	LiquidityPoolId, MinimumCount, Runtime,
 };
-use frame_support::{assert_ok, parameter_types};
+use frame_support::{assert_ok, parameter_types, traits::OnFinalize};
 
 use margin_liquidity_pools::SwapRate;
 use margin_protocol::RiskThreshold;
@@ -18,27 +18,32 @@ use orml_prices::Price;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
 use orml_utilities::Fixed128;
 use pallet_indices::address::Address;
-use sp_runtime::{traits::OnFinalize, DispatchResult, Permill};
+use sp_runtime::{DispatchResult, Permill};
 
 pub type PositionId = u64;
 pub type ModuleSyntheticProtocol = synthetic_protocol::Module<Runtime>;
 pub type ModuleMarginProtocol = margin_protocol::Module<Runtime>;
 pub type ModuleTokens = synthetic_tokens::Module<Runtime>;
 pub type ModuleOracle = orml_oracle::Module<Runtime>;
-pub type ModulePrices = orml_prices::Module<Runtime>;
+pub type ModulePrices = orml_prices::DefaultPriceProvider<CurrencyId, ModuleOracle>;
 pub type MarginLiquidityPools = margin_liquidity_pools::Module<Runtime>;
 pub type SyntheticLiquidityPools = synthetic_liquidity_pools::Module<Runtime>;
 
 pub const LIQUIDITY_POOL_ID_0: LiquidityPoolId = 0;
 
 pub const EUR_USD: TradingPair = TradingPair {
-	base: CurrencyId::AUSD,
-	quote: CurrencyId::FEUR,
+	base: CurrencyId::FEUR,
+	quote: CurrencyId::AUSD,
+};
+
+pub const JPY_USD: TradingPair = TradingPair {
+	base: CurrencyId::FJPY,
+	quote: CurrencyId::AUSD,
 };
 
 pub const JPY_EUR: TradingPair = TradingPair {
-	base: CurrencyId::FEUR,
-	quote: CurrencyId::FJPY,
+	base: CurrencyId::FJPY,
+	quote: CurrencyId::FEUR,
 };
 
 parameter_types! {
@@ -132,7 +137,7 @@ pub fn set_oracle_price(prices: Vec<(CurrencyId, Price)>) -> DispatchResult {
 }
 
 pub fn get_price() {
-	ModulePrices::get_price(AUSD, FEUR);
+	ModulePrices::get_price(FEUR, AUSD);
 }
 
 pub fn dollar(amount: u128) -> u128 {
@@ -268,7 +273,8 @@ pub fn margin_deposit_liquidity(who: &AccountId, amount: Balance) -> DispatchRes
 
 pub fn margin_set_enabled_trades() -> DispatchResult {
 	MarginLiquidityPools::set_enabled_trades(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, EUR_USD, Leverages::all())?;
-	MarginLiquidityPools::set_enabled_trades(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, JPY_EUR, Leverages::all())
+	MarginLiquidityPools::set_enabled_trades(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, JPY_EUR, Leverages::all())?;
+	MarginLiquidityPools::set_enabled_trades(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, JPY_USD, Leverages::all())
 }
 
 pub fn margin_withdraw_liquidity(who: &AccountId, amount: Balance) -> DispatchResult {

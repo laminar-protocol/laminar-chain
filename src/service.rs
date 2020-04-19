@@ -1,16 +1,16 @@
 //! Service implementation. Specialized wrapper over substrate service.
 
-use std::sync::Arc;
-
+use crate::executor::Executor;
 use runtime::{opaque::Block, RuntimeApi};
-use sc_client::{self, LongestChain};
+use sc_client::LongestChain;
 use sc_client_api::ExecutorProvider;
 use sc_consensus_babe;
 use sc_finality_grandpa::{self, FinalityProofProvider as GrandpaFinalityProofProvider, StorageAndProofProvider};
 use sc_service::{config::Configuration, error::Error as ServiceError, AbstractService, ServiceBuilder};
 use sp_inherents::InherentDataProviders;
+use std::sync::Arc;
+use std::time::Duration;
 
-use crate::executor::Executor;
 use crate::rpc;
 
 /// Starts a `ServiceBuilder` for a full service.
@@ -34,8 +34,10 @@ macro_rules! new_full_start {
 		.with_select_chain(|_config, backend| Ok(sc_client::LongestChain::new(backend.clone())))?
 		.with_transaction_pool(|config, client, _fetcher| {
 			let pool_api = sc_transaction_pool::FullChainApi::new(client.clone());
-			let pool = sc_transaction_pool::BasicPool::new(config, Arc::new(pool_api));
-			Ok(pool)
+			Ok(sc_transaction_pool::BasicPool::new(
+				config,
+				std::sync::Arc::new(pool_api),
+			))
 		})?
 		.with_import_queue(|_config, client, mut select_chain, _transaction_pool| {
 			let select_chain = select_chain
@@ -92,15 +94,10 @@ macro_rules! new_full_start {
 
 /// Builds a new service for a full client.
 pub fn new_full(config: Configuration) -> Result<impl AbstractService, ServiceError> {
-	let is_authority = config.roles.is_authority();
+	let role = config.role.clone();
 	let force_authoring = config.force_authoring;
-	let name = config.name.clone();
+	let name = config.network.node_name.clone();
 	let disable_grandpa = config.disable_grandpa;
-
-	// sentry nodes announce themselves as authorities to the network
-	// and should run the same protocols authorities do, but it should
-	// never actively participate in any consensus process.
-	let participates_in_consensus = is_authority && !config.sentry_mode;
 
 	let (builder, mut import_setup, inherent_data_providers) = new_full_start!(config);
 
@@ -116,7 +113,7 @@ pub fn new_full(config: Configuration) -> Result<impl AbstractService, ServiceEr
 		})?
 		.build()?;
 
-	if participates_in_consensus {
+	if role.is_authority() {
 		let proposer = sc_basic_authorship::ProposerFactory::new(service.client(), service.transaction_pool());
 
 		let client = service.client();
@@ -143,7 +140,7 @@ pub fn new_full(config: Configuration) -> Result<impl AbstractService, ServiceEr
 
 	// if the node isn't actively participating in consensus then it doesn't
 	// need a keystore, regardless of which protocol we use below.
-	let keystore = if participates_in_consensus {
+	let keystore = if role.is_authority() {
 		Some(service.keystore())
 	} else {
 		None
@@ -151,12 +148,12 @@ pub fn new_full(config: Configuration) -> Result<impl AbstractService, ServiceEr
 
 	let grandpa_config = sc_finality_grandpa::Config {
 		// FIXME #1578 make this available through chainspec
-		gossip_duration: std::time::Duration::from_millis(333),
+		gossip_duration: Duration::from_millis(333),
 		justification_period: 512,
 		name: Some(name),
 		observer_enabled: false,
 		keystore,
-		is_authority,
+		is_authority: role.is_network_authority(),
 	};
 
 	let enable_grandpa = !disable_grandpa;

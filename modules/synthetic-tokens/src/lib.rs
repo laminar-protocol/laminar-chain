@@ -1,13 +1,17 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, traits::Get, weights::SimpleDispatchInfo};
+use frame_support::{
+	decl_error, decl_event, decl_module, decl_storage,
+	traits::{EnsureOrigin, Get},
+	weights::SimpleDispatchInfo,
+};
 use frame_system::{self as system, ensure_root};
 use module_primitives::{Balance, CurrencyId, LiquidityPoolId};
 use module_traits::LiquidityPoolManager;
 use orml_utilities::FixedU128;
 use sp_runtime::{
-	traits::{AccountIdConversion, EnsureOrigin, Zero},
+	traits::{AccountIdConversion, Zero},
 	DispatchError, DispatchResult, ModuleId, Permill, RuntimeDebug,
 };
 use sp_std::{prelude::Vec, result};
