@@ -15,7 +15,7 @@ use orml_traits::MultiCurrency;
 use orml_utilities::Fixed128;
 use primitives::{AccumulateConfig, Balance, CurrencyId, Leverage, Leverages, LiquidityPoolId, TradingPair};
 use sp_runtime::{
-	traits::{EnsureOrigin, Saturating},
+	traits:: Saturating,
 	DispatchResult, ModuleId, RuntimeDebug,
 };
 use sp_std::{cmp::max, prelude::*};

@@ -3028,6 +3028,7 @@ dependencies = [
  "sp-core 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-io 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-runtime 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-std 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
