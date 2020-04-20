@@ -570,10 +570,10 @@ impl<T: Trait> Module<T> {
 	/// ask_price = price * (1 + ask_spread)
 	fn _ask_price(pool: LiquidityPoolId, pair: TradingPair, max: Option<Price>) -> Fixed128Result {
 		let price = Self::_price(pair.base, pair.quote)?;
-		let spread: Price = T::LiquidityPools::get_ask_spread(pool, pair)
-			.ok_or(Error::<T>::NoAskSpread)?
-			.into();
-		let ask_price: Price = Price::from_natural(1).saturating_add(spread).saturating_mul(price);
+		let spread = T::LiquidityPools::get_ask_spread(pool, pair)
+			.ok_or(Error::<T>::NoAskSpread)
+			.map(Price::from_parts)?;
+		let ask_price: Price = price.saturating_add(spread);
 
 		if let Some(m) = max {
 			if ask_price > m {
@@ -587,10 +587,11 @@ impl<T: Trait> Module<T> {
 	/// bid_price = price * (1 - bid_spread)
 	fn _bid_price(pool: LiquidityPoolId, pair: TradingPair, min: Option<Price>) -> Fixed128Result {
 		let price = Self::_price(pair.base, pair.quote)?;
-		let spread: Price = T::LiquidityPools::get_bid_spread(pool, pair)
-			.ok_or(Error::<T>::NoBidSpread)?
-			.into();
-		let bid_price = Price::from_natural(1).saturating_sub(spread).saturating_mul(price);
+		let spread = T::LiquidityPools::get_bid_spread(pool, pair)
+			.ok_or(Error::<T>::NoBidSpread)
+			.map(Price::from_parts)?;
+		let bid_price = price.saturating_sub(spread);
+
 		if let Some(m) = min {
 			if bid_price < m {
 				return Err(Error::<T>::MarketPriceTooLow.into());
@@ -909,23 +910,22 @@ impl<T: Trait> Module<T> {
 	fn _liquidity_pool_close_position(pool: LiquidityPoolId, position_id: PositionId) -> DispatchResult {
 		let position = Self::positions(position_id).ok_or(Error::<T>::PositionNotFound)?;
 
-		let price = Self::_price(position.pair.base, position.pair.quote)?;
 		let spread = {
 			if position.leverage.is_long() {
 				T::LiquidityPools::get_bid_spread(pool, position.pair)
-					.ok_or(Error::<T>::NoBidSpread)?
-					.into()
+					.ok_or(Error::<T>::NoBidSpread)
+					.map(fixed_128_from_u128)?
 			} else {
 				T::LiquidityPools::get_ask_spread(pool, position.pair)
-					.ok_or(Error::<T>::NoAskSpread)?
-					.into()
+					.ok_or(Error::<T>::NoAskSpread)
+					.map(fixed_128_from_u128)?
 			}
 		};
 
 		let spread_profit = position
 			.leveraged_held
 			.saturating_abs()
-			.checked_mul(&fixed_128_from_fixed_u128(price).saturating_mul(spread))
+			.checked_mul(&spread)
 			.ok_or(Error::<T>::NumOutOfBound)?;
 
 		let spread_profit_in_usd = Self::_usd_value(position.pair.base, spread_profit)?;
