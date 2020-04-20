@@ -14,10 +14,7 @@ use frame_system::{self as system, ensure_root, ensure_signed};
 use orml_traits::MultiCurrency;
 use orml_utilities::Fixed128;
 use primitives::{AccumulateConfig, Balance, CurrencyId, Leverage, Leverages, LiquidityPoolId, TradingPair};
-use sp_runtime::{
-	traits:: Saturating,
-	DispatchResult, ModuleId, RuntimeDebug,
-};
+use sp_runtime::{traits::Saturating, DispatchResult, ModuleId, RuntimeDebug};
 use sp_std::{cmp::max, prelude::*};
 use traits::{LiquidityPools, MarginProtocolLiquidityPools, OnDisableLiquidityPool, OnRemoveLiquidityPool};
 

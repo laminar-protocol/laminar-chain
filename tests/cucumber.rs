@@ -240,7 +240,7 @@ mod steps {
 				world.execute_with(|| {
 					let iter = get_rows(step)
 						.iter()
-						.map(|x| (parse_pair(x.get(0)), parse_permill(x.get(1))));
+						.map(|x| (parse_pair(x.get(0)), parse_dollar(x.get(1))));
 					for (pair, value) in iter {
 						assert_ok!(margin_set_spread(pair, value));
 					}

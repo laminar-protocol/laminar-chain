@@ -102,13 +102,7 @@ fn should_set_spread() {
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_eq!(BaseLiquidityPools::owners(0), Some((ALICE, 0)));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, pair), None);
-		assert_ok!(ModuleLiquidityPools::set_spread(
-			Origin::signed(ALICE),
-			0,
-			pair,
-			80,
-			60
-		));
+		assert_ok!(ModuleLiquidityPools::set_spread(Origin::signed(ALICE), 0, pair, 80, 60));
 
 		let pool_option = MarginLiquidityPoolOption {
 			bid_spread: 80,
@@ -149,11 +143,7 @@ fn should_set_max_spread() {
 		));
 
 		// set max spread to 30%
-		assert_ok!(ModuleLiquidityPools::set_max_spread(
-			Origin::ROOT,
-			pair,
-			30,
-		));
+		assert_ok!(ModuleLiquidityPools::set_max_spread(Origin::ROOT, pair, 30,));
 
 		assert_eq!(
 			ModuleLiquidityPools::liquidity_pool_options(0, pair),
@@ -164,13 +154,7 @@ fn should_set_max_spread() {
 			})
 		);
 
-		assert_ok!(ModuleLiquidityPools::set_spread(
-			Origin::signed(ALICE),
-			0,
-			pair,
-			31,
-			28
-		));
+		assert_ok!(ModuleLiquidityPools::set_spread(Origin::signed(ALICE), 0, pair, 31, 28));
 
 		assert_eq!(
 			ModuleLiquidityPools::liquidity_pool_options(0, pair),
@@ -181,13 +165,7 @@ fn should_set_max_spread() {
 			})
 		);
 
-		assert_ok!(ModuleLiquidityPools::set_spread(
-			Origin::signed(ALICE),
-			0,
-			pair,
-			28,
-			29
-		));
+		assert_ok!(ModuleLiquidityPools::set_spread(Origin::signed(ALICE), 0, pair, 28, 29));
 
 		assert_eq!(
 			ModuleLiquidityPools::liquidity_pool_options(0, pair),
@@ -198,11 +176,7 @@ fn should_set_max_spread() {
 			})
 		);
 
-		assert_ok!(ModuleLiquidityPools::set_max_spread(
-			Origin::ROOT,
-			pair,
-			20
-		));
+		assert_ok!(ModuleLiquidityPools::set_max_spread(Origin::ROOT, pair, 20));
 
 		assert_eq!(
 			ModuleLiquidityPools::liquidity_pool_options(0, pair),
