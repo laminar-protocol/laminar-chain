@@ -237,7 +237,7 @@ pub fn synthetic_set_additional_collateral_ratio(currency_id: CurrencyId, permil
 	)
 }
 
-pub fn synthetic_set_spread(currency_id: CurrencyId, spread: Permill) -> DispatchResult {
+pub fn synthetic_set_spread(currency_id: CurrencyId, spread: Balance) -> DispatchResult {
 	SyntheticLiquidityPools::set_spread(
 		origin_of(&POOL::get()),
 		LIQUIDITY_POOL_ID_0,

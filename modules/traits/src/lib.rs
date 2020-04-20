@@ -25,8 +25,8 @@ pub trait LiquidityPoolManager<LiquidityPoolId, Balance> {
 }
 
 pub trait SyntheticProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
-	fn get_bid_spread(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Permill>;
-	fn get_ask_spread(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Permill>;
+	fn get_bid_spread(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Balance>;
+	fn get_ask_spread(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Balance>;
 	fn get_additional_collateral_ratio(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Permill;
 	fn can_mint(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> bool;
 }

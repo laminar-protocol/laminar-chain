@@ -23,8 +23,8 @@ fn should_disable_pool() {
 		assert_eq!(
 			ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD),
 			Some(SyntheticLiquidityPoolOption {
-				bid_spread: Permill::zero(),
-				ask_spread: Permill::zero(),
+				bid_spread: 0,
+				ask_spread: 0,
 				additional_collateral_ratio: None,
 				synthetic_enabled: true,
 			})
@@ -58,13 +58,13 @@ fn should_set_spread() {
 			Origin::signed(ALICE),
 			0,
 			CurrencyId::AUSD,
-			Permill::from_percent(80),
-			Permill::from_percent(60)
+			80,
+			60
 		));
 
 		let pool_option = SyntheticLiquidityPoolOption {
-			bid_spread: Permill::from_percent(80),
-			ask_spread: Permill::from_percent(60),
+			bid_spread: 80,
+			ask_spread: 60,
 			additional_collateral_ratio: None,
 			synthetic_enabled: false,
 		};
@@ -76,11 +76,11 @@ fn should_set_spread() {
 
 		assert_eq!(
 			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::get_bid_spread(0, CurrencyId::AUSD),
-			Some(Permill::from_percent(80))
+			Some(80)
 		);
 		assert_eq!(
 			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::get_ask_spread(0, CurrencyId::AUSD),
-			Some(Permill::from_percent(60))
+			Some(60)
 		);
 	})
 }
@@ -96,25 +96,15 @@ fn should_set_max_spread() {
 			Origin::signed(ALICE),
 			0,
 			CurrencyId::AUSD,
-			Permill::one(),
-			Permill::one()
+			100,
+			100
 		));
 
 		// set max spread to 30%
-		assert_ok!(ModuleLiquidityPools::set_max_spread(
-			Origin::ROOT,
-			CurrencyId::AUSD,
-			Permill::from_percent(30)
-		));
+		assert_ok!(ModuleLiquidityPools::set_max_spread(Origin::ROOT, CurrencyId::AUSD, 30));
 
 		assert_noop!(
-			ModuleLiquidityPools::set_spread(
-				Origin::signed(ALICE),
-				0,
-				CurrencyId::AUSD,
-				Permill::from_percent(31),
-				Permill::from_percent(28)
-			),
+			ModuleLiquidityPools::set_spread(Origin::signed(ALICE), 0, CurrencyId::AUSD, 32, 28),
 			Error::<Runtime>::SpreadTooHigh
 		);
 
@@ -122,15 +112,15 @@ fn should_set_max_spread() {
 			Origin::signed(ALICE),
 			0,
 			CurrencyId::AUSD,
-			Permill::from_percent(28),
-			Permill::from_percent(29)
+			28,
+			29
 		));
 
 		assert_eq!(
 			ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD),
 			Some(SyntheticLiquidityPoolOption {
-				bid_spread: Permill::from_percent(28),
-				ask_spread: Permill::from_percent(29),
+				bid_spread: 28,
+				ask_spread: 29,
 				additional_collateral_ratio: None,
 				synthetic_enabled: false,
 			})
@@ -156,8 +146,8 @@ fn should_set_additional_collateral_ratio() {
 		));
 
 		let pool_option = SyntheticLiquidityPoolOption {
-			bid_spread: Permill::zero(),
-			ask_spread: Permill::zero(),
+			bid_spread: 0,
+			ask_spread: 0,
 			additional_collateral_ratio: Some(Permill::from_percent(120)),
 			synthetic_enabled: false,
 		};
@@ -282,8 +272,8 @@ fn should_set_synthetic_enabled() {
 		));
 
 		let pool_option = SyntheticLiquidityPoolOption {
-			bid_spread: Permill::zero(),
-			ask_spread: Permill::zero(),
+			bid_spread: 0,
+			ask_spread: 0,
 			additional_collateral_ratio: None,
 			synthetic_enabled: true,
 		};

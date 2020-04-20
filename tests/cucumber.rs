@@ -478,7 +478,7 @@ mod steps {
 				world.execute_with(|| {
 					let iter = get_rows(step)
 						.iter()
-						.map(|x| (parse_currency(x.get(0)), parse_permill(x.get(1))));
+						.map(|x| (parse_currency(x.get(0)), parse_dollar(x.get(1))));
 					for (currency, spread) in iter {
 						assert_ok!(synthetic_set_spread(currency, spread));
 					}
