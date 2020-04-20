@@ -144,7 +144,9 @@ pub fn dollar(amount: u128) -> u128 {
 	amount.saturating_mul(Price::accuracy())
 }
 
-pub fn cent(amount: u128) -> u128 { amount.saturating_mul(Price::accuracy()) / 100 }
+pub fn cent(amount: u128) -> u128 {
+	amount.saturating_mul(Price::accuracy()) / 100
+}
 
 pub fn fixed_128_dollar(amount: i128) -> Fixed128 {
 	Fixed128::from_natural(amount)
