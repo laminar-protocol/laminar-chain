@@ -30,7 +30,7 @@ mod tests {
 					FEUR,
 					Permill::from_percent(10)
 				));
-				assert_ok!(synthetic_set_spread(FEUR, Permill::from_percent(1)));
+				assert_ok!(synthetic_set_spread(FEUR, cent(3)));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
 
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
@@ -83,7 +83,7 @@ mod tests {
 					FEUR,
 					Permill::from_percent(100)
 				));
-				assert_ok!(synthetic_set_spread(FEUR, Permill::from_percent(1)));
+				assert_ok!(synthetic_set_spread(FEUR, cent(1)));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(1, 1))]));
 
 				assert_eq!(collateral_balance(&ALICE::get()), 1000);
@@ -140,7 +140,7 @@ mod tests {
 					FEUR,
 					Permill::from_percent(10)
 				));
-				assert_ok!(synthetic_set_spread(FEUR, Permill::from_percent(1)));
+				assert_ok!(synthetic_set_spread(FEUR, cent(3)));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
 
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
@@ -164,9 +164,9 @@ mod tests {
 					multi_currency_balance(&ALICE::get(), FEUR)
 				));
 				assert_eq!(multi_currency_balance(&ALICE::get(), FEUR), 0);
-				assert_eq!(collateral_balance(&ALICE::get()), 10064356435643564356434);
+				assert_eq!(collateral_balance(&ALICE::get()), 10066006600660066006599);
 				assert_eq!(synthetic_balance(), 0);
-				assert_eq!(synthetic_liquidity(), 9935643564356435643566);
+				assert_eq!(synthetic_liquidity(), 9933993399339933993401);
 			});
 	}
 
@@ -187,7 +187,7 @@ mod tests {
 					FEUR,
 					Permill::from_percent(10)
 				));
-				assert_ok!(synthetic_set_spread(FEUR, Permill::from_percent(1)));
+				assert_ok!(synthetic_set_spread(FEUR, cent(3)));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
 
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
@@ -211,9 +211,9 @@ mod tests {
 					multi_currency_balance(&ALICE::get(), FEUR)
 				));
 				assert_eq!(multi_currency_balance(&ALICE::get(), FEUR), 0);
-				assert_eq!(collateral_balance(&ALICE::get()), 8267326732673267326731);
+				assert_eq!(collateral_balance(&ALICE::get()), 8250825082508250825081);
 				assert_eq!(synthetic_balance(), 0);
-				assert_eq!(synthetic_liquidity(), 11732673267326732673269);
+				assert_eq!(synthetic_liquidity(), 11749174917491749174919);
 			});
 	}
 
@@ -235,7 +235,7 @@ mod tests {
 					FEUR,
 					Permill::from_percent(10)
 				));
-				assert_ok!(synthetic_set_spread(FEUR, Permill::from_percent(1)));
+				assert_ok!(synthetic_set_spread(FEUR, cent(3)));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
 
 				assert_eq!(collateral_balance(&POOL::get()), 0);
@@ -263,26 +263,26 @@ mod tests {
 				// ALICE buy synthetic and BOB sell synthetic
 				assert_ok!(synthetic_buy(&ALICE::get(), FEUR, dollar(2000)));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(3000));
-				assert_eq!(multi_currency_balance(&ALICE::get(), FEUR), 2640264026402640264025);
-				assert_eq!(synthetic_balance(), 13069306930693069306926);
-				assert_eq!(synthetic_liquidity(), 18930693069306930693074);
+				assert_eq!(multi_currency_balance(&ALICE::get(), FEUR), 2635386691378497455656);
+				assert_eq!(synthetic_balance(), 13058576793639955128514);
+				assert_eq!(synthetic_liquidity(), 18941423206360044871486);
 				assert_ok!(synthetic_sell(&BOB::get(), FEUR, dollar(1000)));
-				assert_eq!(collateral_balance(&BOB::get()), 6980000000000000000000);
+				assert_eq!(collateral_balance(&BOB::get()), 6970000000000000000000);
 				assert_eq!(multi_currency_balance(&BOB::get(), FEUR), 650165016501650165016);
-				assert_eq!(synthetic_balance(), 7238943894389438943890);
-				assert_eq!(synthetic_liquidity(), 22781056105610561056110);
+				assert_eq!(synthetic_balance(), 7228213757336324765478);
+				assert_eq!(synthetic_liquidity(), 22801786242663675234522);
 
 				// ALICE sell synthetic and BOB buy synthetic
 				assert_ok!(synthetic_sell(&ALICE::get(), FEUR, dollar(1000)));
-				assert_eq!(collateral_balance(&ALICE::get()), 4980000000000000000000);
-				assert_eq!(multi_currency_balance(&ALICE::get(), FEUR), 1640264026402640264025);
-				assert_eq!(synthetic_balance(), 5038943894389438943890);
-				assert_eq!(synthetic_liquidity(), 23001056105610561056110);
+				assert_eq!(collateral_balance(&ALICE::get()), 4970000000000000000000);
+				assert_eq!(multi_currency_balance(&ALICE::get(), FEUR), 1635386691378497455656);
+				assert_eq!(synthetic_balance(), 5028213757336324765478);
+				assert_eq!(synthetic_liquidity(), 23031786242663675234522);
 				assert_ok!(synthetic_buy(&BOB::get(), FEUR, dollar(2000)));
-				assert_eq!(collateral_balance(&BOB::get()), 4980000000000000000000);
-				assert_eq!(multi_currency_balance(&BOB::get(), FEUR), 1640264026402640264025);
-				assert_eq!(synthetic_balance(), 7217161716171617161710);
-				assert_eq!(synthetic_liquidity(), 22822838283828382838290);
+				assert_eq!(collateral_balance(&BOB::get()), 4970000000000000000000);
+				assert_eq!(multi_currency_balance(&BOB::get(), FEUR), 1635386691378497455656);
+				assert_eq!(synthetic_balance(), 7195701442065388804886);
+				assert_eq!(synthetic_liquidity(), 22864298557934611195114);
 
 				assert_ok!(synthetic_sell(
 					&ALICE::get(),
@@ -295,11 +295,11 @@ mod tests {
 					multi_currency_balance(&BOB::get(), FEUR)
 				));
 				assert_eq!(multi_currency_balance(&ALICE::get(), FEUR), 0);
-				assert_eq!(collateral_balance(&ALICE::get()), 8227722772277227722769);
+				assert_eq!(collateral_balance(&ALICE::get()), 8191711782015639987642);
 				assert_eq!(multi_currency_balance(&BOB::get(), FEUR), 0);
-				assert_eq!(collateral_balance(&BOB::get()), 8227722772277227722769);
+				assert_eq!(collateral_balance(&BOB::get()), 8191711782015639987642);
 				assert_eq!(synthetic_balance(), 0);
-				assert_eq!(synthetic_liquidity(), 23544554455445544554462);
+				assert_eq!(synthetic_liquidity(), 23616576435968720024716);
 			});
 	}
 
@@ -325,8 +325,8 @@ mod tests {
 					FJPY,
 					Permill::from_percent(10)
 				));
-				assert_ok!(synthetic_set_spread(FEUR, Permill::from_percent(1)));
-				assert_ok!(synthetic_set_spread(FJPY, Permill::from_percent(1)));
+				assert_ok!(synthetic_set_spread(FEUR, cent(3)));
+				assert_ok!(synthetic_set_spread(FJPY, cent(4)));
 				assert_ok!(set_oracle_price(vec![
 					(FEUR, Price::from_rational(3, 1)),
 					(FJPY, Price::from_rational(4, 1))
@@ -358,41 +358,41 @@ mod tests {
 				// ALICE buy synthetic FJPY and BOB sell FEUR
 				assert_ok!(synthetic_buy(&ALICE::get(), FJPY, dollar(2000)));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(3000));
-				assert_eq!(multi_currency_balance(&ALICE::get(), FJPY), 396039603960396039603);
-				assert_eq!(synthetic_balance(), 13069306930693069306922);
-				assert_eq!(synthetic_liquidity(), 38930693069306930693078);
+				assert_eq!(multi_currency_balance(&ALICE::get(), FJPY), 396825396825396825396);
+				assert_eq!(synthetic_balance(), 13073628791450573628784);
+				assert_eq!(synthetic_liquidity(), 38926371208549426371216);
 
 				assert_ok!(synthetic_buy(&BOB::get(), FEUR, dollar(2000)));
 				assert_eq!(collateral_balance(&BOB::get()), dollar(3000));
-				assert_eq!(multi_currency_balance(&BOB::get(), FEUR), 990099009900990099009);
-				assert_eq!(synthetic_balance(), 15247524752475247524742);
-				assert_eq!(synthetic_liquidity(), 38752475247524752475258);
+				assert_eq!(multi_currency_balance(&BOB::get(), FEUR), 985221674876847290640);
+				assert_eq!(synthetic_balance(), 15241116476179637668192);
+				assert_eq!(synthetic_liquidity(), 38758883523820362331808);
 
 				// ALICE sell synthetic FEUR and BOB sell synthetic FJPY
 				assert_ok!(synthetic_sell(&ALICE::get(), FEUR, dollar(100)));
-				assert_eq!(collateral_balance(&ALICE::get()), 3198000000000000000000);
+				assert_eq!(collateral_balance(&ALICE::get()), 3197000000000000000000);
 				assert_eq!(multi_currency_balance(&ALICE::get(), FEUR), 1550165016501650165016);
-				assert_eq!(synthetic_balance(), 13212343234323432343224);
-				assert_eq!(synthetic_liquidity(), 40589656765676567656776);
+				assert_eq!(synthetic_balance(), 13205934958027822486674);
+				assert_eq!(synthetic_liquidity(), 40597065041972177513326);
 
 				assert_ok!(synthetic_sell(&BOB::get(), FJPY, dollar(100)));
-				assert_eq!(collateral_balance(&BOB::get()), 3495000000000000000000);
+				assert_eq!(collateral_balance(&BOB::get()), 3496000000000000000000);
 				assert_eq!(multi_currency_balance(&BOB::get(), FJPY), 1137623762376237623762);
-				assert_eq!(synthetic_balance(), 12717343234323432343224);
-				assert_eq!(synthetic_liquidity(), 40589656765676567656776);
+				assert_eq!(synthetic_balance(), 12709934958027822486674);
+				assert_eq!(synthetic_liquidity(), 40597065041972177513326);
 
 				// ALICE sell synthetic FJPY and BOB sell synthetic FEUR
 				assert_ok!(synthetic_sell(&ALICE::get(), FJPY, dollar(100)));
 				assert_eq!(collateral_balance(&ALICE::get()), 3693000000000000000000);
-				assert_eq!(multi_currency_balance(&ALICE::get(), FJPY), 296039603960396039603);
-				assert_eq!(synthetic_balance(), 12222343234323432343224);
-				assert_eq!(synthetic_liquidity(), 40589656765676567656776);
+				assert_eq!(multi_currency_balance(&ALICE::get(), FJPY), 296825396825396825396);
+				assert_eq!(synthetic_balance(), 12213934958027822486674);
+				assert_eq!(synthetic_liquidity(), 40597065041972177513326);
 
 				assert_ok!(synthetic_sell(&BOB::get(), FEUR, dollar(100)));
 				assert_eq!(collateral_balance(&BOB::get()), 3693000000000000000000);
-				assert_eq!(multi_currency_balance(&BOB::get(), FEUR), 890099009900990099009);
-				assert_eq!(synthetic_balance(), 12002343234323432343224);
-				assert_eq!(synthetic_liquidity(), 40611656765676567656776);
+				assert_eq!(multi_currency_balance(&BOB::get(), FEUR), 885221674876847290640);
+				assert_eq!(synthetic_balance(), 11993934958027822486674);
+				assert_eq!(synthetic_liquidity(), 40620065041972177513326);
 			});
 	}
 
@@ -413,23 +413,22 @@ mod tests {
 					FEUR,
 					Permill::from_percent(10)
 				));
-				assert_ok!(synthetic_set_spread(FEUR, Permill::from_percent(1)));
+				assert_ok!(synthetic_set_spread(FEUR, cent(3)));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
 
 				assert_ok!(synthetic_buy(&ALICE::get(), FEUR, dollar(5000)));
 
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(300, 90))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(300, 95))]));
 
 				assert_ok!(synthetic_liquidate(
 					&ALICE::get(),
 					FEUR,
 					multi_currency_balance(&ALICE::get(), FEUR)
 				));
-				assert_eq!(synthetic_liquidity(), 19554455445544554455447);
-				assert_eq!(collateral_balance(&ALICE::get()), 10445544554455445544552);
+				assert_eq!(synthetic_liquidity(), 19802957269411151641710);
+				assert_eq!(collateral_balance(&ALICE::get()), 10197042730588848358290);
 				assert_eq!(multi_currency_balance(&ALICE::get(), FEUR), 0);
 				assert_eq!(synthetic_balance(), 0);
-				assert_eq!(synthetic_liquidity(), 19554455445544554455447);
 			});
 	}
 
@@ -450,7 +449,7 @@ mod tests {
 					FEUR,
 					Permill::from_percent(1)
 				));
-				assert_ok!(synthetic_set_spread(FEUR, Permill::from_percent(1)));
+				assert_ok!(synthetic_set_spread(FEUR, cent(3)));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
 
 				assert_ok!(synthetic_buy(&ALICE::get(), FEUR, dollar(5000)));
@@ -483,30 +482,29 @@ mod tests {
 					FEUR,
 					Permill::from_percent(10)
 				));
-				assert_ok!(synthetic_set_spread(FEUR, Permill::from_percent(1)));
+				assert_ok!(synthetic_set_spread(FEUR, cent(3)));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
 
 				assert_ok!(synthetic_buy(&ALICE::get(), FEUR, dollar(5000)));
 
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(300, 90))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(300, 95))]));
 
 				assert_ok!(synthetic_liquidate(&ALICE::get(), FEUR, dollar(800)));
-				assert_eq!(collateral_balance(&ALICE::get()), 7640000000000000000000);
+				assert_eq!(collateral_balance(&ALICE::get()), 7519526315789473684117);
 				assert_eq!(multi_currency_balance(&ALICE::get(), FEUR), 850165016501650165016);
-				assert_eq!(synthetic_balance(), 2805544554455445544553);
-				assert_eq!(synthetic_liquidity(), 19554455445544554455447);
+				assert_eq!(synthetic_balance(), 2805544554455445544412);
+				assert_eq!(synthetic_liquidity(), 19674929129755080771471);
 
 				assert_ok!(synthetic_liquidate(
 					&ALICE::get(),
 					FEUR,
 					multi_currency_balance(&ALICE::get(), FEUR)
 				));
-				assert_eq!(collateral_balance(&ALICE::get()), 10445544554455445544552);
+				assert_eq!(collateral_balance(&ALICE::get()), 10197042730588848361947);
 				assert_eq!(multi_currency_balance(&ALICE::get(), FEUR), 0);
 				assert_eq!(synthetic_balance(), 0);
-				assert_eq!(synthetic_liquidity(), 19554455445544554455447);
+				assert_eq!(synthetic_liquidity(), 19802957269411151638053);
 				assert_ok!(synthetic_withdraw_liquidity(&POOL::get(), dollar(1000)));
-				assert_eq!(synthetic_liquidity(), 18554455445544554455447);
 			});
 	}
 
@@ -527,7 +525,7 @@ mod tests {
 					FEUR,
 					Permill::from_percent(10)
 				));
-				assert_ok!(synthetic_set_spread(FEUR, Permill::from_percent(1)));
+				assert_ok!(synthetic_set_spread(FEUR, cent(3)));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
 
 				assert_ok!(synthetic_buy(&ALICE::get(), FEUR, dollar(5000)));

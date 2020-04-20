@@ -90,7 +90,7 @@ fn unrealized_pl_of_short_position_works() {
 		.execute_with(|| {
 			assert_eq!(
 				MarginProtocol::_unrealized_pl_of_position(&eur_jpy_short()),
-				Ok(Fixed128::from_parts(1470999999999987141081)),
+				Ok(Fixed128::from_parts(1470999999999987140172)),
 			);
 		});
 }
@@ -110,7 +110,7 @@ fn unrealized_pl_of_trader_sums_all_positions() {
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 1), true);
 			assert_eq!(
 				MarginProtocol::unrealized_pl_of_trader(&ALICE),
-				Ok(Fixed128::from_parts(397454545454545390254))
+				Ok(Fixed128::from_parts(397454545454545389345))
 			);
 		});
 }
@@ -882,9 +882,9 @@ fn open_long_position_works() {
 			let position = {
 				let mut p = eur_jpy_long();
 				// with higher precision level
-				p.leveraged_debits = Fixed128::from_parts(-14104090000000000732500000);
-				p.leveraged_debits_in_usd = Fixed128::from_parts(-131813925233644859804554);
-				p.margin_held = Fixed128::from_parts(6590696261682242990227);
+				p.leveraged_debits = Fixed128::from_parts(-14104090000000000732600000);
+				p.leveraged_debits_in_usd = Fixed128::from_parts(-131813925233644859805488);
+				p.margin_held = Fixed128::from_parts(6590696261682242990274);
 				p
 			};
 			let id = 0;
@@ -904,7 +904,7 @@ fn open_long_position_works() {
 				Leverage::LongTwenty,
 				balance_from_natural_currency_cent(100_000_00),
 				// price: 141.0409
-				Price::from_parts(141040900000000007325),
+				Price::from_parts(141040900000000007326),
 			));
 			assert!(System::events().iter().any(|record| record.event == event));
 		});
