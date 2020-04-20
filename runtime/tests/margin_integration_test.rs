@@ -3,7 +3,7 @@
 #[cfg(test)]
 
 mod tests {
-	use frame_support::{assert_noop, assert_ok};
+	use frame_support::{assert_noop, assert_ok, traits::OnInitialize};
 	use laminar_runtime::{
 		tests::*,
 		BaseLiquidityPoolsMarginInstance,
@@ -15,7 +15,7 @@ mod tests {
 	use module_traits::{MarginProtocolLiquidityPools, Treasury};
 	use orml_prices::Price;
 	use orml_utilities::Fixed128;
-	use sp_runtime::{traits::OnInitialize, Permill};
+	use sp_runtime::Permill;
 
 	#[test]
 	fn test_margin_liquidity_pools() {

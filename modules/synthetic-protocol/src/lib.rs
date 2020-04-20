@@ -187,7 +187,7 @@ impl<T: Trait> Module<T> {
 		T::CollateralCurrency::ensure_can_withdraw(who, collateral)?;
 
 		let price =
-			T::PriceProvider::get_price(T::GetCollateralCurrencyId::get(), currency_id).ok_or(Error::<T>::NoPrice)?;
+			T::PriceProvider::get_price(currency_id, T::GetCollateralCurrencyId::get()).ok_or(Error::<T>::NoPrice)?;
 		let ask_price = Self::_get_ask_price(pool_id, currency_id, price, max_price)?;
 
 		// synthetic = collateral / ask_price
@@ -242,7 +242,7 @@ impl<T: Trait> Module<T> {
 		T::MultiCurrency::ensure_can_withdraw(currency_id, who, synthetic)?;
 
 		let price =
-			T::PriceProvider::get_price(T::GetCollateralCurrencyId::get(), currency_id).ok_or(Error::<T>::NoPrice)?;
+			T::PriceProvider::get_price(currency_id, T::GetCollateralCurrencyId::get()).ok_or(Error::<T>::NoPrice)?;
 		// bid_price = price * (1 - bid_spread)
 		let bid_price = Self::_get_bid_price(pool_id, currency_id, price, Some(min_price))?;
 
@@ -293,7 +293,7 @@ impl<T: Trait> Module<T> {
 		T::MultiCurrency::ensure_can_withdraw(currency_id, who, synthetic)?;
 
 		let price =
-			T::PriceProvider::get_price(T::GetCollateralCurrencyId::get(), currency_id).ok_or(Error::<T>::NoPrice)?;
+			T::PriceProvider::get_price(currency_id, T::GetCollateralCurrencyId::get()).ok_or(Error::<T>::NoPrice)?;
 		let bid_price = Self::_get_bid_price(pool_id, currency_id, price, None)?;
 		// collateral = synthetic * bid_price
 		let collateral = {
@@ -356,7 +356,7 @@ impl<T: Trait> Module<T> {
 		ensure!(T::LiquidityPools::is_owner(pool_id, who), Error::<T>::NotPoolOwner);
 
 		let price =
-			T::PriceProvider::get_price(T::GetCollateralCurrencyId::get(), currency_id).ok_or(Error::<T>::NoPrice)?;
+			T::PriceProvider::get_price(currency_id, T::GetCollateralCurrencyId::get()).ok_or(Error::<T>::NoPrice)?;
 		let (collateral_position_delta, pool_refund_collateral) =
 			Self::_calc_remove_position(pool_id, currency_id, price, Zero::zero(), Zero::zero())?;
 

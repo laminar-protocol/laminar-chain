@@ -4,7 +4,9 @@
 
 use frame_support::{impl_outer_dispatch, impl_outer_event, impl_outer_origin, parameter_types};
 use frame_system as system;
-pub use primitives::{Balance, CurrencyId, LiquidityPoolId, RiskThreshold, TradingPair};
+use orml_prices::DefaultPriceProvider;
+use orml_traits::DataProvider;
+use primitives::{Balance, CurrencyId, LiquidityPoolId, RiskThreshold, TradingPair};
 use sp_core::H256;
 pub use sp_runtime::{
 	testing::{Header, TestXt},
@@ -106,12 +108,10 @@ impl MockPrices {
 		PRICES.with(|v| v.borrow_mut().get(&currency_id).map(|p| *p))
 	}
 }
-impl PriceProvider<CurrencyId, Price> for MockPrices {
-	fn get_price(base: CurrencyId, quote: CurrencyId) -> Option<Price> {
-		let base_price = Self::prices(base)?;
-		let quote_price = Self::prices(quote)?;
 
-		quote_price.checked_div(&base_price)
+impl DataProvider<CurrencyId, Price> for MockPrices {
+	fn get(key: &CurrencyId) -> Option<Price> {
+		Self::prices(*key)
 	}
 }
 
@@ -189,6 +189,10 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 
 	fn is_owner(_pool_id: LiquidityPoolId, _who: &AccountId) -> bool {
 		unimplemented!()
+	}
+
+	fn pool_exists(pool_id: LiquidityPoolId) -> bool {
+		pool_id == MOCK_POOL
 	}
 
 	fn liquidity(pool_id: LiquidityPoolId) -> Balance {
@@ -280,7 +284,7 @@ impl Trait for Runtime {
 	type Event = TestEvent;
 	type MultiCurrency = OrmlTokens;
 	type LiquidityPools = MockLiquidityPools;
-	type PriceProvider = MockPrices;
+	type PriceProvider = DefaultPriceProvider<CurrencyId, MockPrices>;
 	type Treasury = MockTreasury;
 	type SubmitTransaction = SubmitTransaction;
 	type Call = Call;

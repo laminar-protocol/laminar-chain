@@ -8,6 +8,7 @@ use sp_std::{prelude::*, result};
 pub trait LiquidityPools<AccountId> {
 	fn all() -> Vec<LiquidityPoolId>;
 	fn is_owner(pool_id: LiquidityPoolId, who: &AccountId) -> bool;
+	fn pool_exists(pool_id: LiquidityPoolId) -> bool;
 
 	/// Return collateral balance of `pool_id`.
 	fn liquidity(pool_id: LiquidityPoolId) -> Balance;

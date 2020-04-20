@@ -9,7 +9,9 @@ use sp_arithmetic::traits::{Bounded, Saturating};
 use sp_runtime::{
 	offchain::{storage::StorageValueRef, Duration, Timestamp},
 	traits::{AccountIdConversion, StaticLookup, UniqueSaturatedInto},
-	transaction_validity::{InvalidTransaction, TransactionPriority, TransactionValidity, ValidTransaction},
+	transaction_validity::{
+		InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity, ValidTransaction,
+	},
 	DispatchError, DispatchResult, ModuleId, RuntimeDebug,
 };
 // FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
@@ -63,11 +65,11 @@ decl_storage! {
 	trait Store for Module<T: Trait> as MarginProtocol {
 		NextPositionId get(next_position_id): PositionId;
 		Positions get(positions): map hasher(twox_64_concat) PositionId => Option<Position<T>>;
-		PositionsByTrader get(positions_by_trader): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) (LiquidityPoolId, PositionId) => Option<()>;
-		PositionsByPool get(positions_by_pool): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) (TradingPair, PositionId) => Option<()>;
+		PositionsByTrader get(positions_by_trader): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) (LiquidityPoolId, PositionId) => Option<bool>;
+		PositionsByPool get(positions_by_pool): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) (TradingPair, PositionId) => Option<bool>;
 		Balances get(balances): map hasher(twox_64_concat) T::AccountId => Fixed128;
-		MarginCalledTraders get(margin_called_traders): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) TradingPair => Option<()>;
-		MarginCalledPools get(margin_called_pools): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => Option<()>;
+		MarginCalledTraders get(margin_called_traders): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) TradingPair => Option<bool>;
+		MarginCalledPools get(margin_called_pools): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => Option<bool>;
 	}
 }
 
@@ -278,7 +280,7 @@ impl<T: Trait> Module<T> {
 		let leveraged_debits = leveraged_held
 			.checked_mul(&debits_price)
 			.ok_or(Error::<T>::NumOutOfBound)?;
-		let leveraged_held_in_usd = Self::_usd_value(pair.base, leveraged_debits)?;
+		let leveraged_held_in_usd = Self::_usd_value(pair.quote, leveraged_debits)?;
 		ensure!(
 			T::LiquidityPools::can_open_position(pool, pair, leverage, u128_from_fixed_128(leveraged_held_in_usd)),
 			Error::<T>::CannotOpenPosition
@@ -401,7 +403,7 @@ impl<T: Trait> Module<T> {
 	fn _trader_margin_call(who: &T::AccountId, pair: TradingPair) -> DispatchResult {
 		if !Self::_is_trader_margin_called(who, pair) {
 			if Self::_ensure_trader_safe(who, pair).is_err() {
-				<MarginCalledTraders<T>>::insert(who, pair, ());
+				<MarginCalledTraders<T>>::insert(who, pair, true);
 			} else {
 				return Err(Error::<T>::SafeTrader.into());
 			}
@@ -460,7 +462,7 @@ impl<T: Trait> Module<T> {
 	fn _liquidity_pool_margin_call(pool: LiquidityPoolId, pair: TradingPair) -> DispatchResult {
 		if !Self::_is_pool_margin_called(pool, pair) {
 			if Self::_ensure_pool_safe(pool, pair, Action::None).is_err() {
-				MarginCalledPools::insert(pool, pair, ());
+				MarginCalledPools::insert(pool, pair, true);
 			} else {
 				return Err(Error::<T>::SafePool.into());
 			}
@@ -514,8 +516,8 @@ impl<T: Trait> Module<T> {
 		NextPositionId::mutate(|id| *id += 1);
 
 		<Positions<T>>::insert(id, position);
-		<PositionsByTrader<T>>::insert(who, (pool, id), ());
-		PositionsByPool::insert(pool, (pair, id), ());
+		<PositionsByTrader<T>>::insert(who, (pool, id), true);
+		PositionsByPool::insert(pool, (pair, id), true);
 
 		Ok(id)
 	}
@@ -591,7 +593,7 @@ impl<T: Trait> Module<T> {
 	/// usd_value = amount * price
 	fn _usd_value(currency_id: CurrencyId, amount: Fixed128) -> Fixed128Result {
 		let price = {
-			let p = Self::_price(CurrencyId::AUSD, currency_id)?;
+			let p = Self::_price(currency_id, CurrencyId::AUSD)?;
 			fixed_128_from_fixed_u128(p)
 		};
 		amount.checked_mul(&price).ok_or(Error::<T>::NumOutOfBound.into())
@@ -634,7 +636,7 @@ impl<T: Trait> Module<T> {
 			.leveraged_held
 			.checked_mul(&price_delta)
 			.ok_or(Error::<T>::NumOutOfBound)?;
-		let usd_value = Self::_usd_value(position.pair.base, unrealized)?;
+		let usd_value = Self::_usd_value(position.pair.quote, unrealized)?;
 
 		Ok((usd_value, curr_price))
 	}
@@ -748,8 +750,12 @@ impl<T: Trait> Module<T> {
 		Ok(risk)
 	}
 
-	pub fn enp_and_ell(pool: LiquidityPoolId) -> result::Result<(Fixed128, Fixed128), DispatchError> {
-		Self::_enp_and_ell(pool, Action::None)
+	pub fn enp_and_ell(pool: LiquidityPoolId) -> Option<(Fixed128, Fixed128)> {
+		if <T::LiquidityPools as LiquidityPools<T::AccountId>>::pool_exists(pool) {
+			let result = Self::_enp_and_ell(pool, Action::None).ok()?;
+			return Some(result);
+		}
+		None
 	}
 }
 
@@ -912,7 +918,7 @@ impl<T: Trait> Module<T> {
 			.checked_mul(&fixed_128_from_fixed_u128(price).saturating_mul(spread))
 			.ok_or(Error::<T>::NumOutOfBound)?;
 
-		let spread_profit_in_usd = Self::_usd_value(position.pair.base, spread_profit)?;
+		let spread_profit_in_usd = Self::_usd_value(position.pair.quote, spread_profit)?;
 		let penalty = spread_profit_in_usd;
 		let sub_amount = spread_profit_in_usd
 			.checked_add(&penalty)
@@ -1190,7 +1196,7 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 	type Call = Call<T>;
 
-	fn validate_unsigned(call: &Self::Call) -> TransactionValidity {
+	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
 		let base_priority = TransactionPriority::max_value() - 86400 * 365 * 100 / 2;
 		let block_number = <system::Module<T>>::block_number().unique_saturated_into() as u64;
 

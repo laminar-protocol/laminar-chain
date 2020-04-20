@@ -5,8 +5,10 @@ mod tests;
 
 use codec::{Decode, Encode};
 use frame_support::{
-	decl_error, decl_event, decl_module, decl_storage, ensure, storage::IterableStorageMap, traits::Get,
-	weights::SimpleDispatchInfo,
+	decl_error, decl_event, decl_module, decl_storage, ensure,
+	storage::IterableStorageMap,
+	traits::{EnsureOrigin, Get},
+	weights::{SimpleDispatchInfo, WeighData, Weight},
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
 use orml_traits::MultiCurrency;
@@ -14,10 +16,7 @@ use orml_utilities::Fixed128;
 use primitives::{
 	AccumulateConfig, Balance, CurrencyId, Leverage, Leverages, LiquidityPoolId, RiskThreshold, TradingPair,
 };
-use sp_runtime::{
-	traits::{EnsureOrigin, Saturating},
-	DispatchResult, ModuleId, Permill, RuntimeDebug,
-};
+use sp_runtime::{traits::Saturating, DispatchResult, ModuleId, Permill, RuntimeDebug};
 use sp_std::{cmp::max, prelude::*};
 use traits::{LiquidityPools, MarginProtocolLiquidityPools, OnDisableLiquidityPool, OnRemoveLiquidityPool};
 
@@ -56,8 +55,8 @@ decl_storage! {
 		pub AdditionalSwapRate get(fn additional_swap_rate): map hasher(twox_64_concat) LiquidityPoolId => Option<Fixed128>;
 		pub MaxSpread get(fn max_spread): map hasher(twox_64_concat) TradingPair => Option<Permill>;
 		pub Accumulates get(fn accumulate): map hasher(twox_64_concat) TradingPair => Option<(AccumulateConfig<T::BlockNumber>, TradingPair)>;
-		pub EnabledTradingPairs get(fn enabled_trading_pair): map hasher(twox_64_concat) TradingPair => Option<()>;
-		pub LiquidityPoolEnabledTradingPairs get(fn liquidity_pool_enabled_trading_pair): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => Option<()>;
+		pub EnabledTradingPairs get(fn enabled_trading_pair): map hasher(twox_64_concat) TradingPair => Option<bool>;
+		pub LiquidityPoolEnabledTradingPairs get(fn liquidity_pool_enabled_trading_pair): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => Option<bool>;
 		pub DefaultMinLeveragedAmount get(fn default_min_leveraged_amount) config(): Balance;
 		pub MinLeveragedAmount get(fn min_leveraged_amount): map hasher(twox_64_concat) LiquidityPoolId => Option<Balance>;
 		pub TraderRiskThreshold get(fn trader_risk_threshold): map hasher(twox_64_concat) TradingPair => Option<RiskThreshold>;
@@ -71,7 +70,7 @@ decl_storage! {
 
 		build(|config: &GenesisConfig<T>| {
 			config.margin_liquidity_config.iter().for_each(|(pair, spread, accumulate, swap_rate, trader_risk_threshold, enp_threshold, ell_threshold)| {
-				EnabledTradingPairs::insert(pair, ());
+				EnabledTradingPairs::insert(pair, true);
 				SwapRates::insert(pair, swap_rate);
 				MaxSpread::insert(pair, spread);
 				<Accumulates<T>>::insert(pair, (accumulate, pair));
@@ -184,7 +183,7 @@ decl_module! {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
-			EnabledTradingPairs::insert(&pair, ());
+			EnabledTradingPairs::insert(&pair, true);
 			Self::deposit_event(RawEvent::TradingPairEnabled(pair))
 		}
 
@@ -202,7 +201,7 @@ decl_module! {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
 			ensure!(Self::enabled_trading_pair(&pair).is_some(), Error::<T>::TradingPairNotEnabled);
-			LiquidityPoolEnabledTradingPairs::insert(&pool_id, &pair, ());
+			LiquidityPoolEnabledTradingPairs::insert(&pool_id, &pair, true);
 			Self::deposit_event(RawEvent::LiquidityPoolTradingPairEnabled(pair))
 		}
 
@@ -231,12 +230,13 @@ decl_module! {
 			Self::deposit_event(RawEvent::SetMinLeveragedAmount(pool_id, amount))
 		}
 
-		fn on_initialize(n: T::BlockNumber) {
+		fn on_initialize(n: T::BlockNumber) -> Weight {
 			for (_, (accumulate_config, pair)) in <Accumulates<T>>::iter() {
 				if n % accumulate_config.frequency == accumulate_config.offset {
 					Self::_accumulate_rates(pair);
 				}
-			}
+			};
+			SimpleDispatchInfo::default().weigh_data(())
 		}
 	}
 }
@@ -281,6 +281,11 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 
 	fn is_owner(pool_id: LiquidityPoolId, who: &T::AccountId) -> bool {
 		T::BaseLiquidityPools::is_owner(pool_id, who)
+	}
+
+	/// Check if pool exists
+	fn pool_exists(pool_id: LiquidityPoolId) -> bool {
+		T::BaseLiquidityPools::pool_exists(pool_id)
 	}
 
 	/// Check collateral balance of `pool_id`.

@@ -7,7 +7,7 @@ use module_primitives::{Balance, Leverage, TradingPair};
 use orml_utilities::{Fixed128, FixedU128};
 use runtime::tests::*;
 use runtime::{AccountId, BlockNumber, CurrencyId};
-use sp_runtime::{DispatchResult, PerThing, Permill};
+use sp_runtime::{DispatchResult, Permill};
 
 #[derive(Default)]
 pub struct World {
@@ -29,6 +29,18 @@ fn parse_name(name: Option<&String>) -> AccountId {
 		"alice" => ALICE::get(),
 		"bob" => BOB::get(),
 		_ => panic!("Invalid account name"),
+	}
+}
+
+fn get_name(address: &AccountId) -> String {
+	if address == &POOL::get() {
+		"Pool".into()
+	} else if address == &ALICE::get() {
+		"Alice".into()
+	} else if address == &BOB::get() {
+		"Bob".into()
+	} else {
+		format!("{}", address)
 	}
 }
 
@@ -104,6 +116,7 @@ fn parse_pair(name: Option<&String>) -> TradingPair {
 	{
 		"eurusd" => EUR_USD,
 		"jpyeur" => JPY_EUR,
+		"jpyusd" => JPY_USD,
 		_ => panic!("Invalid pair"),
 	}
 }
@@ -155,7 +168,9 @@ fn parse_result(value: Option<&String>) -> AssertResult {
 impl AssertResult {
 	fn assert(&self, actual: DispatchResult) {
 		match self {
-			AssertResult::Ok => assert_ok!(actual),
+			AssertResult::Ok => {
+				assert_ok!(actual);
+			}
 			AssertResult::Error(x) => {
 				assert_noop!(actual.map_err(|x| -> &str { x.into() }), x.as_str());
 			}
@@ -389,6 +404,23 @@ mod steps {
 				world.execute_with(|| {
 					let amount = parse_dollar(matches.get(1));
 					assert_eq!(margin_liquidity(), amount);
+				})
+			})
+			.then("trader margin positions are", |world, step| {
+				world.execute_with(|| {
+					let iter = get_rows(step).iter().map(|x| {
+						(
+							parse_name(x.get(0)),
+							parse_fixed_128_dollar(x.get(1)),
+							parse_fixed_128_dollar(x.get(2)),
+							parse_fixed_128_dollar(x.get(3)),
+						)
+					});
+					for (name, equity, free, held) in iter {
+						assert_eq!(margin_equity(&name), equity, "Equity for {}", get_name(&name));
+						assert_eq!(free_margin(&name), free, "Free margin for {}", get_name(&name));
+						assert_eq!(margin_held(&name), held, "Margin held for {}", get_name(&name));
+					}
 				})
 			});
 

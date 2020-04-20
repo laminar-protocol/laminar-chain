@@ -8,7 +8,7 @@ use crate::{
 	CurrencyId::{self, AUSD, FEUR},
 	LiquidityPoolId, MinimumCount, Runtime,
 };
-use frame_support::{assert_ok, parameter_types};
+use frame_support::{assert_ok, parameter_types, traits::OnFinalize};
 
 use margin_liquidity_pools::SwapRate;
 use module_primitives::{AccumulateConfig, Balance, Leverage, Leverages, RiskThreshold, TradingPair};
@@ -17,7 +17,7 @@ use orml_prices::Price;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
 use orml_utilities::Fixed128;
 use pallet_indices::address::Address;
-use sp_runtime::{traits::OnFinalize, DispatchResult, Permill};
+use sp_runtime::{DispatchResult, Permill};
 use sp_std::num::NonZeroI128;
 
 pub type PositionId = u64;
@@ -25,25 +25,25 @@ pub type ModuleSyntheticProtocol = synthetic_protocol::Module<Runtime>;
 pub type ModuleMarginProtocol = margin_protocol::Module<Runtime>;
 pub type ModuleTokens = synthetic_tokens::Module<Runtime>;
 pub type ModuleOracle = orml_oracle::Module<Runtime>;
-pub type ModulePrices = orml_prices::Module<Runtime>;
+pub type ModulePrices = orml_prices::DefaultPriceProvider<CurrencyId, ModuleOracle>;
 pub type MarginLiquidityPools = margin_liquidity_pools::Module<Runtime>;
 pub type SyntheticLiquidityPools = synthetic_liquidity_pools::Module<Runtime>;
 
 pub const LIQUIDITY_POOL_ID_0: LiquidityPoolId = 0;
 
 pub const EUR_USD: TradingPair = TradingPair {
-	base: CurrencyId::AUSD,
-	quote: CurrencyId::FEUR,
-};
-
-pub const JPY_EUR: TradingPair = TradingPair {
 	base: CurrencyId::FEUR,
-	quote: CurrencyId::FJPY,
+	quote: CurrencyId::AUSD,
 };
 
 pub const JPY_USD: TradingPair = TradingPair {
-	base: CurrencyId::AUSD,
-	quote: CurrencyId::FJPY,
+	base: CurrencyId::FJPY,
+	quote: CurrencyId::AUSD,
+};
+
+pub const JPY_EUR: TradingPair = TradingPair {
+	base: CurrencyId::FJPY,
+	quote: CurrencyId::FEUR,
 };
 
 parameter_types! {
@@ -105,76 +105,40 @@ impl ExtBuilder {
 
 		margin_liquidity_pools::GenesisConfig::<Runtime> {
 			default_min_leveraged_amount: 1000,
-			margin_liquidity_config: vec![
-				(
-					// TradingPair
-					TradingPair {
-						base: CurrencyId::AUSD,
-						quote: CurrencyId::FEUR,
-					},
-					// MaxSpread
-					Permill::from_percent(1),
-					// Accumulates
-					AccumulateConfig {
-						frequency: 10,
-						offset: 1,
-					},
-					// SwapRates
-					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
-					},
-					// trader_risk_threshold
-					RiskThreshold {
-						margin_call: Permill::from_percent(3),
-						stop_out: Permill::from_percent(1),
-					},
-					// liquidity_pool_enp_threshold
-					RiskThreshold {
-						margin_call: Permill::from_percent(30),
-						stop_out: Permill::from_percent(10),
-					},
-					// liquidity_pool_ell_threshold
-					RiskThreshold {
-						margin_call: Permill::from_percent(30),
-						stop_out: Permill::from_percent(10),
-					},
-				),
-				(
-					// TradingPair
-					TradingPair {
-						base: CurrencyId::AUSD,
-						quote: CurrencyId::FEUR,
-					},
-					// MaxSpread
-					Permill::from_percent(1),
-					// Accumulates
-					AccumulateConfig {
-						frequency: 10,
-						offset: 1,
-					},
-					// SwapRates
-					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
-					},
-					// trader_risk_threshold
-					RiskThreshold {
-						margin_call: Permill::from_percent(3),
-						stop_out: Permill::from_percent(1),
-					},
-					// liquidity_pool_enp_threshold
-					RiskThreshold {
-						margin_call: Permill::from_percent(30),
-						stop_out: Permill::from_percent(10),
-					},
-					// liquidity_pool_ell_threshold
-					RiskThreshold {
-						margin_call: Permill::from_percent(30),
-						stop_out: Permill::from_percent(10),
-					},
-				),
-			],
+			margin_liquidity_config: vec![(
+				// TradingPair
+				TradingPair {
+					base: CurrencyId::FEUR,
+					quote: CurrencyId::AUSD,
+				},
+				// MaxSpread
+				Permill::from_percent(1),
+				// Accumulates
+				AccumulateConfig {
+					frequency: 10,
+					offset: 1,
+				},
+				// SwapRates
+				SwapRate {
+					long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
+					short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
+				},
+				// trader_risk_threshold
+				RiskThreshold {
+					margin_call: Permill::from_percent(3),
+					stop_out: Permill::from_percent(1),
+				},
+				// liquidity_pool_enp_threshold
+				RiskThreshold {
+					margin_call: Permill::from_percent(30),
+					stop_out: Permill::from_percent(10),
+				},
+				// liquidity_pool_ell_threshold
+				RiskThreshold {
+					margin_call: Permill::from_percent(30),
+					stop_out: Permill::from_percent(10),
+				},
+			)],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
@@ -196,7 +160,7 @@ pub fn set_oracle_price(prices: Vec<(CurrencyId, Price)>) -> DispatchResult {
 }
 
 pub fn get_price() {
-	ModulePrices::get_price(AUSD, FEUR);
+	ModulePrices::get_price(FEUR, AUSD);
 }
 
 pub fn dollar(amount: u128) -> u128 {
@@ -332,7 +296,8 @@ pub fn margin_deposit_liquidity(who: &AccountId, amount: Balance) -> DispatchRes
 
 pub fn margin_set_enabled_trades() -> DispatchResult {
 	MarginLiquidityPools::set_enabled_trades(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, EUR_USD, Leverages::all())?;
-	MarginLiquidityPools::set_enabled_trades(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, JPY_EUR, Leverages::all())
+	MarginLiquidityPools::set_enabled_trades(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, JPY_EUR, Leverages::all())?;
+	MarginLiquidityPools::set_enabled_trades(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, JPY_USD, Leverages::all())
 }
 
 pub fn margin_withdraw_liquidity(who: &AccountId, amount: Balance) -> DispatchResult {
@@ -476,4 +441,16 @@ pub fn margin_liquidity_pool_force_close(pair: TradingPair) -> DispatchResult {
 		LIQUIDITY_POOL_ID_0,
 		pair,
 	)
+}
+
+pub fn margin_held(who: &AccountId) -> Fixed128 {
+	ModuleMarginProtocol::margin_held(who)
+}
+
+pub fn free_margin(who: &AccountId) -> Fixed128 {
+	ModuleMarginProtocol::free_margin(who).unwrap()
+}
+
+pub fn margin_equity(who: &AccountId) -> Fixed128 {
+	ModuleMarginProtocol::equity_of_trader(who).unwrap()
 }
