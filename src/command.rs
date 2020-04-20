@@ -1,24 +1,60 @@
 use crate::chain_spec;
 use crate::cli::Cli;
 use crate::service;
-use sc_cli::VersionInfo;
+use sc_cli::SubstrateCli;
+
+impl SubstrateCli for Cli {
+	fn impl_name() -> &'static str {
+		"LaminarChain"
+	}
+
+	fn impl_version() -> &'static str {
+		env!("SUBSTRATE_CLI_IMPL_VERSION")
+	}
+
+	fn description() -> &'static str {
+		"laminar-chain"
+	}
+
+	fn author() -> &'static str {
+		"Laminar Developers"
+	}
+
+	fn support_url() -> &'static str {
+		"https://github.com/laminar-protocol/laminar-chain/issues"
+	}
+
+	fn copyright_start_year() -> i32 {
+		2019
+	}
+
+	fn executable_name() -> &'static str {
+		env!("CARGO_PKG_NAME")
+	}
+
+	fn load_spec(&self, id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
+		Ok(match id {
+			"dev" => Box::new(chain_spec::development_config()),
+			"local" => Box::new(chain_spec::local_testnet_config()),
+			"" | "testnet" => Box::new(chain_spec::laminar_testnet_config()?),
+			"testnet-latest" => Box::new(chain_spec::laminar_testnet_latest_config()),
+			path => Box::new(chain_spec::ChainSpec::from_json_file(std::path::PathBuf::from(path))?),
+		})
+	}
+}
 
 /// Parse and run command line arguments
-pub fn run(version: VersionInfo) -> sc_cli::Result<()> {
-	let opt = sc_cli::from_args::<Cli>(&version);
+pub fn run() -> sc_cli::Result<()> {
+	let cli = Cli::from_args();
 
-	let mut config = sc_service::Configuration::from_version(&version);
-
-	match opt.subcommand {
+	match &cli.subcommand {
 		Some(subcommand) => {
-			subcommand.init(&version)?;
-			subcommand.update_config(&mut config, chain_spec::load_spec, &version)?;
-			subcommand.run(config, |config: _| Ok(new_full_start!(config).0))
+			let runner = cli.create_runner(subcommand)?;
+			runner.run_subcommand(subcommand, |config| Ok(new_full_start!(config).0))
 		}
 		None => {
-			opt.run.init(&version)?;
-			opt.run.update_config(&mut config, chain_spec::load_spec, &version)?;
-			opt.run.run(config, service::new_light, service::new_full, &version)
+			let runner = cli.create_runner(&cli.run)?;
+			runner.run_node(service::new_light, service::new_full, runtime::VERSION)
 		}
 	}
 }

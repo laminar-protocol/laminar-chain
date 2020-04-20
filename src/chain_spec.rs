@@ -4,15 +4,14 @@ use margin_protocol::RiskThreshold;
 use module_primitives::{AccumulateConfig, TradingPair};
 use orml_utilities::Fixed128;
 use runtime::{
-	opaque::Block, opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, CurrencyId,
-	FinancialCouncilMembershipConfig, GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, IndicesConfig,
+	opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, CurrencyId, FinancialCouncilMembershipConfig,
+	GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig,
 	MarginLiquidityPoolsConfig, MarginProtocolConfig, OperatorMembershipConfig, SessionConfig, Signature, StakerStatus,
 	StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SystemConfig, TokensConfig, WASM_BINARY,
 };
-use sc_chain_spec::ChainSpecExtension;
 use sc_service;
+use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
-use serde::{Deserialize, Serialize};
 use serde_json::map::Map;
 use sp_consensus_babe::AuthorityId as BabeId;
 use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
@@ -24,34 +23,8 @@ use sp_std::num::NonZeroI128;
 // Note this is the URL for the telemetry server
 //const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
-/// Node `ChainSpec` extensions.
-///
-/// Additional parameters for some Substrate core modules,
-/// customizable from the chain spec.
-#[derive(Default, Clone, Serialize, Deserialize, ChainSpecExtension)]
-#[serde(rename_all = "camelCase")]
-pub struct Extensions {
-	/// Block numbers with known hashes.
-	pub fork_blocks: sc_client::ForkBlocks<Block>,
-	/// Known bad block hashes.
-	pub bad_blocks: sc_client::BadBlocks<Block>,
-}
-
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig>;
-
-/// The chain specification option. This is expected to come in from the CLI and
-/// is little more than one of a number of alternatives which can easily be converted
-/// from a string (`--chain=...`) into a `ChainSpec`.
-#[derive(Clone, Debug)]
-pub enum Alternative {
-	/// Whatever the current runtime is, with just Alice as an auth.
-	Development,
-	/// Whatever the current runtime is, with simple Alice/Bob auths.
-	LocalTestnet,
-	LaminarTestnet,
-	LaminarTestnetLatest,
-}
 
 /// Helper function to generate a crypto pair from seed
 pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
@@ -80,141 +53,142 @@ pub fn get_authority_keys_from_seed(seed: &str) -> (AccountId, AccountId, Grandp
 	)
 }
 
-impl Alternative {
-	/// Get an actual chain config from one of the alternatives.
-	pub(crate) fn load(self) -> Result<ChainSpec, String> {
-		let mut properties = Map::new();
-		properties.insert("tokenSymbol".into(), "LAMI".into());
-		properties.insert("tokenDecimals".into(), 18.into());
-
-		Ok(match self {
-			Alternative::Development => ChainSpec::from_genesis(
-				"Development",
-				"dev",
-				|| {
-					dev_genesis(
-						vec![get_authority_keys_from_seed("Alice")],
-						get_account_id_from_seed::<sr25519::Public>("Alice"),
-						vec![
-							get_account_id_from_seed::<sr25519::Public>("Alice"),
-							get_account_id_from_seed::<sr25519::Public>("Bob"),
-							get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-							get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-						],
-						true,
-					)
-				},
-				vec![],
-				None,
-				None,
-				Some(properties),
-				Default::default(),
-			),
-			Alternative::LocalTestnet => ChainSpec::from_genesis(
-				"Local Testnet",
-				"local_testnet",
-				|| {
-					dev_genesis(
-						vec![
-							get_authority_keys_from_seed("Alice"),
-							get_authority_keys_from_seed("Bob"),
-						],
-						get_account_id_from_seed::<sr25519::Public>("Alice"),
-						vec![
-							get_account_id_from_seed::<sr25519::Public>("Alice"),
-							get_account_id_from_seed::<sr25519::Public>("Bob"),
-							get_account_id_from_seed::<sr25519::Public>("Charlie"),
-							get_account_id_from_seed::<sr25519::Public>("Dave"),
-							get_account_id_from_seed::<sr25519::Public>("Eve"),
-							get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-							get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-							get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-							get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-							get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-							get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-							get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-						],
-						true,
-					)
-				},
-				vec![],
-				None,
-				None,
-				Some(properties),
-				Default::default(),
-			),
-			Alternative::LaminarTestnet => {
-				ChainSpec::from_json_bytes(&include_bytes!("../resources/testnet-dist.json")[..])?
-			}
-			Alternative::LaminarTestnetLatest => {
-				ChainSpec::from_genesis(
-					"Laminar Testnet",
-					"laminar-testnet",
-					|| {
-						// TODO: regenerate alphanet according to babe-grandpa consensus
-						// SECRET="..."
-						// ./target/debug/subkey --sr25519 inspect "$SECRET//laminar//aura"
-						// ./target/debug/subkey --ed25519 inspect "$SECRET//laminar//grandpa"
-						// ./target/debug/subkey inspect "$SECRET//laminar//root"
-						// ./target/debug/subkey inspect "$SECRET//laminar//oracle"
-						testnet_genesis(
-							vec![(
-								// TODO: regenerate alphanet according to babe-grandpa consensus
-								// 5HGU1TsEkXDgpGdhwpYdzdgxfMAyRUYK3FuiaE5CYR9s78y5
-								hex!["e6257e9066e63b860259ee5c7cb752ac37a9ddf9f8bf889d6a3b95cf89ccab5a"]
-									.into(),
-								// 5HGU1TsEkXDgpGdhwpYdzdgxfMAyRUYK3FuiaE5CYR9s78y5
-								hex!["e6257e9066e63b860259ee5c7cb752ac37a9ddf9f8bf889d6a3b95cf89ccab5a"]
-									.into(),
-								// 5HGU1TsEkXDgpGdhwpYdzdgxfMAyRUYK3FuiaE5CYR9s78y5
-								hex!["e6257e9066e63b860259ee5c7cb752ac37a9ddf9f8bf889d6a3b95cf89ccab5a"]
-									.unchecked_into(),
-								// 5H5NcTUZRmV4nwZAjaJgiSyfYBafAcrkU2dBAJ9bSArqZi4E
-								hex!["ddafa0cdbaab3c9662b535c544a01b0ba5d09e850dd15c61525e626821695926"]
-									.unchecked_into(),
-							)],
-							// 5FeowPepSWZ1rP11pKRLmhBxtxLVnHvayxHxJBk6SD6THKZF
-							hex!["9eb78419050eff5d5d95d889b125ca69af78f399bf4641aac2cb39d7c18edb79"].into(),
-							vec![
-								// 5FeowPepSWZ1rP11pKRLmhBxtxLVnHvayxHxJBk6SD6THKZF
-								hex!["9eb78419050eff5d5d95d889b125ca69af78f399bf4641aac2cb39d7c18edb79"].into(),
-								// 5EZC7fb3W1F5548fakGVb19tDaM1zKHxBpg7UvzpkpmuyYki
-								hex!["6e32770eef925d3e31a575b1fdc1c67d387eaac589daecfc77a2661c97711036"].into(),
-							],
-						)
-					},
-					vec![
-						"/dns4/testnet-bootnode-1.laminar-chain.laminar.one/tcp/30333/p2p/QmQUpeDzQk4jszwMsb9zUKMfGMZT4fkC1iTiPyCnGVGY8H".into(),
-					],
-					Some(TelemetryEndpoints::new(vec![(
-						"wss://telemetry.polkadot.io/submit/".into(),
-						0,
-					)])),
-					Some("lami-test"),
-					Some(properties),
-					Default::default(),
-				)
-			}
-		})
-	}
-
-	pub(crate) fn from(s: &str) -> Option<Self> {
-		match s {
-			"dev" => Some(Alternative::Development),
-			"local" => Some(Alternative::LocalTestnet),
-			"" | "testnet" => Some(Alternative::LaminarTestnet),
-			"testnet-latest" => Some(Alternative::LaminarTestnetLatest),
-			_ => None,
-		}
-	}
-}
-
 fn session_keys(grandpa: GrandpaId, babe: BabeId) -> SessionKeys {
 	SessionKeys { grandpa, babe }
 }
 
 const INITIAL_BALANCE: u128 = 1_000_000_000_000_000_000_000_000_u128; // $1M
 const INITIAL_STAKING: u128 = 1_000_000_000_000_000_000_u128;
+
+pub fn development_config() -> ChainSpec {
+	let mut properties = Map::new();
+	properties.insert("tokenSymbol".into(), "LAMI".into());
+	properties.insert("tokenDecimals".into(), 18.into());
+
+	ChainSpec::from_genesis(
+		"Development",
+		"dev",
+		ChainType::Development,
+		|| {
+			dev_genesis(
+				vec![get_authority_keys_from_seed("Alice")],
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				vec![
+					get_account_id_from_seed::<sr25519::Public>("Alice"),
+					get_account_id_from_seed::<sr25519::Public>("Bob"),
+					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+				],
+				true,
+			)
+		},
+		vec![],
+		None,
+		None,
+		Some(properties),
+		Default::default(),
+	)
+}
+
+pub fn local_testnet_config() -> ChainSpec {
+	let mut properties = Map::new();
+	properties.insert("tokenSymbol".into(), "LAMI".into());
+	properties.insert("tokenDecimals".into(), 18.into());
+
+	ChainSpec::from_genesis(
+		"Local Testnet",
+		"local_testnet",
+		ChainType::Local,
+		|| {
+			dev_genesis(
+				vec![
+					get_authority_keys_from_seed("Alice"),
+					get_authority_keys_from_seed("Bob"),
+				],
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				vec![
+					get_account_id_from_seed::<sr25519::Public>("Alice"),
+					get_account_id_from_seed::<sr25519::Public>("Bob"),
+					get_account_id_from_seed::<sr25519::Public>("Charlie"),
+					get_account_id_from_seed::<sr25519::Public>("Dave"),
+					get_account_id_from_seed::<sr25519::Public>("Eve"),
+					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+				],
+				true,
+			)
+		},
+		vec![],
+		None,
+		None,
+		Some(properties),
+		Default::default(),
+	)
+}
+
+pub fn laminar_testnet_config() -> Result<ChainSpec, String> {
+	ChainSpec::from_json_bytes(&include_bytes!("../resources/testnet-dist.json")[..])
+}
+
+pub fn laminar_testnet_latest_config() -> ChainSpec {
+	let mut properties = Map::new();
+	properties.insert("tokenSymbol".into(), "LAMI".into());
+	properties.insert("tokenDecimals".into(), 18.into());
+
+	ChainSpec::from_genesis(
+		"Laminar Testnet",
+		"laminar-testnet",
+		ChainType::Live,
+		|| {
+			// TODO: regenerate alphanet according to babe-grandpa consensus
+			// SECRET="..."
+			// ./target/debug/subkey --sr25519 inspect "$SECRET//laminar//aura"
+			// ./target/debug/subkey --ed25519 inspect "$SECRET//laminar//grandpa"
+			// ./target/debug/subkey inspect "$SECRET//laminar//root"
+			// ./target/debug/subkey inspect "$SECRET//laminar//oracle"
+			testnet_genesis(
+				vec![(
+					// TODO: regenerate alphanet according to babe-grandpa consensus
+					// 5HGU1TsEkXDgpGdhwpYdzdgxfMAyRUYK3FuiaE5CYR9s78y5
+					hex!["e6257e9066e63b860259ee5c7cb752ac37a9ddf9f8bf889d6a3b95cf89ccab5a"]
+						.into(),
+					// 5HGU1TsEkXDgpGdhwpYdzdgxfMAyRUYK3FuiaE5CYR9s78y5
+					hex!["e6257e9066e63b860259ee5c7cb752ac37a9ddf9f8bf889d6a3b95cf89ccab5a"]
+						.into(),
+					// 5HGU1TsEkXDgpGdhwpYdzdgxfMAyRUYK3FuiaE5CYR9s78y5
+					hex!["e6257e9066e63b860259ee5c7cb752ac37a9ddf9f8bf889d6a3b95cf89ccab5a"]
+						.unchecked_into(),
+					// 5H5NcTUZRmV4nwZAjaJgiSyfYBafAcrkU2dBAJ9bSArqZi4E
+					hex!["ddafa0cdbaab3c9662b535c544a01b0ba5d09e850dd15c61525e626821695926"]
+						.unchecked_into(),
+				)],
+				// 5FeowPepSWZ1rP11pKRLmhBxtxLVnHvayxHxJBk6SD6THKZF
+				hex!["9eb78419050eff5d5d95d889b125ca69af78f399bf4641aac2cb39d7c18edb79"].into(),
+				vec![
+					// 5FeowPepSWZ1rP11pKRLmhBxtxLVnHvayxHxJBk6SD6THKZF
+					hex!["9eb78419050eff5d5d95d889b125ca69af78f399bf4641aac2cb39d7c18edb79"].into(),
+					// 5EZC7fb3W1F5548fakGVb19tDaM1zKHxBpg7UvzpkpmuyYki
+					hex!["6e32770eef925d3e31a575b1fdc1c67d387eaac589daecfc77a2661c97711036"].into(),
+				],
+			)
+		},
+		vec![
+			"/dns4/testnet-bootnode-1.laminar-chain.laminar.one/tcp/30333/p2p/QmQUpeDzQk4jszwMsb9zUKMfGMZT4fkC1iTiPyCnGVGY8H".parse().unwrap(),
+		],
+		TelemetryEndpoints::new(vec![(
+			"wss://telemetry.polkadot.io/submit/".parse().unwrap(),
+			0,
+		)]).ok(),
+		Some("lami-test"),
+		Some(properties),
+		Default::default(),
+	)
+}
 
 fn dev_genesis(
 	initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId)>,
@@ -256,6 +230,7 @@ fn dev_genesis(
 		}),
 		pallet_sudo: Some(SudoConfig { key: root_key.clone() }),
 		pallet_babe: Some(BabeConfig { authorities: vec![] }),
+		pallet_im_online: Some(ImOnlineConfig { keys: vec![] }),
 		pallet_grandpa: Some(GrandpaConfig { authorities: vec![] }),
 		pallet_collective_Instance1: Some(Default::default()),
 		pallet_membership_Instance1: Some(GeneralCouncilMembershipConfig {
@@ -420,6 +395,7 @@ fn testnet_genesis(
 		}),
 		pallet_sudo: Some(SudoConfig { key: root_key.clone() }),
 		pallet_babe: Some(BabeConfig { authorities: vec![] }),
+		pallet_im_online: Some(ImOnlineConfig { keys: vec![] }),
 		pallet_grandpa: Some(GrandpaConfig { authorities: vec![] }),
 		pallet_collective_Instance1: Some(Default::default()),
 		pallet_membership_Instance1: Some(GeneralCouncilMembershipConfig {
@@ -543,11 +519,4 @@ fn testnet_genesis(
 			},
 		}),
 	}
-}
-
-pub fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
-	Ok(match Alternative::from(id) {
-		Some(spec) => Box::new(spec.load()?),
-		None => Box::new(ChainSpec::from_json_file(std::path::PathBuf::from(id))?),
-	})
 }

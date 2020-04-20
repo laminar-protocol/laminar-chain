@@ -4,11 +4,13 @@ mod mock;
 mod tests;
 
 use codec::{Decode, Encode};
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, weights::SimpleDispatchInfo};
+use frame_support::{
+	decl_error, decl_event, decl_module, decl_storage, ensure, traits::EnsureOrigin, weights::SimpleDispatchInfo,
+};
 use frame_system::{self as system, ensure_root, ensure_signed};
 use orml_traits::MultiCurrency;
 use primitives::{Balance, CurrencyId, LiquidityPoolId};
-use sp_runtime::{traits::EnsureOrigin, DispatchResult, ModuleId, PerThing, Permill, RuntimeDebug};
+use sp_runtime::{DispatchResult, ModuleId, Permill, RuntimeDebug};
 use sp_std::prelude::*;
 use traits::{LiquidityPools, OnDisableLiquidityPool, OnRemoveLiquidityPool, SyntheticProtocolLiquidityPools};
 
