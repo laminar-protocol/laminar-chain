@@ -16,7 +16,7 @@ use orml_utilities::Fixed128;
 use primitives::{
 	AccumulateConfig, Balance, CurrencyId, Leverage, Leverages, LiquidityPoolId, RiskThreshold, TradingPair,
 };
-use sp_runtime::{traits::Saturating, DispatchResult, ModuleId, Permill, RuntimeDebug};
+use sp_runtime::{traits::Saturating, DispatchResult, ModuleId, RuntimeDebug};
 use sp_std::{cmp::max, prelude::*};
 use traits::{LiquidityPools, MarginProtocolLiquidityPools, OnDisableLiquidityPool, OnRemoveLiquidityPool};
 
@@ -25,8 +25,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct MarginLiquidityPoolOption {
-	pub bid_spread: Permill,
-	pub ask_spread: Permill,
+	pub bid_spread: Balance,
+	pub ask_spread: Balance,
 	pub enabled_trades: Leverages,
 }
 
@@ -53,7 +53,7 @@ decl_storage! {
 		pub SwapRates get(fn swap_rate): map hasher(twox_64_concat) TradingPair => Option<SwapRate>;
 		pub AccumulatedSwapRates get(fn accumulated_swap_rate): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => SwapRate;
 		pub AdditionalSwapRate get(fn additional_swap_rate): map hasher(twox_64_concat) LiquidityPoolId => Option<Fixed128>;
-		pub MaxSpread get(fn max_spread): map hasher(twox_64_concat) TradingPair => Option<Permill>;
+		pub MaxSpread get(fn max_spread): map hasher(twox_64_concat) TradingPair => Option<Balance>;
 		pub Accumulates get(fn accumulate): map hasher(twox_64_concat) TradingPair => Option<(AccumulateConfig<T::BlockNumber>, TradingPair)>;
 		pub EnabledTradingPairs get(fn enabled_trading_pair): map hasher(twox_64_concat) TradingPair => Option<bool>;
 		pub LiquidityPoolEnabledTradingPairs get(fn liquidity_pool_enabled_trading_pair): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => Option<bool>;
@@ -66,7 +66,7 @@ decl_storage! {
 
 	add_extra_genesis {
 		// TradingPair, MaxSpread, Accumulates, SwapRates, TraderRiskThreshold, LiquidityPoolENPThreshold, LiquidityPoolELLThreshold
-		config(margin_liquidity_config): Vec<(TradingPair, Permill, AccumulateConfig<T::BlockNumber>, SwapRate, RiskThreshold, RiskThreshold, RiskThreshold)>;
+		config(margin_liquidity_config): Vec<(TradingPair, Balance, AccumulateConfig<T::BlockNumber>, SwapRate, RiskThreshold, RiskThreshold, RiskThreshold)>;
 
 		build(|config: &GenesisConfig<T>| {
 			config.margin_liquidity_config.iter().for_each(|(pair, spread, accumulate, swap_rate, trader_risk_threshold, enp_threshold, ell_threshold)| {
@@ -88,7 +88,7 @@ decl_event!(
 		<T as system::Trait>::BlockNumber,
 	{
 		/// Set spread (who, pool_id, pair, bid, ask)
-		SetSpread(AccountId, LiquidityPoolId, TradingPair, Permill, Permill),
+		SetSpread(AccountId, LiquidityPoolId, TradingPair, Balance, Balance),
 		/// Set enabled trades (who, pool_id, pair, enabled)
 		SetEnabledTrades(AccountId, LiquidityPoolId, TradingPair, Leverages),
 		/// Swap rate updated (pair, swap_rate)
@@ -98,7 +98,7 @@ decl_event!(
 		/// Additional swap rate updated (who, pool_id, additional_swap_rate)
 		AdditionalSwapRateUpdated(AccountId, LiquidityPoolId, Fixed128),
 		/// Max spread updated (pair, spread)
-		MaxSpreadUpdated(TradingPair, Permill),
+		MaxSpreadUpdated(TradingPair, Balance),
 		/// Set accumulate (pair, frequency, offset)
 		SetAccumulate(TradingPair, BlockNumber, BlockNumber),
 		/// Trading pair enabled (pair)
@@ -125,7 +125,7 @@ decl_module! {
 		fn deposit_event() = default;
 
 		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
-		pub fn set_spread(origin, #[compact] pool_id: LiquidityPoolId, pair: TradingPair, #[compact] bid: Permill, #[compact] ask: Permill) {
+		pub fn set_spread(origin, #[compact] pool_id: LiquidityPoolId, pair: TradingPair, #[compact] bid: Balance, #[compact] ask: Balance) {
 			let who = ensure_signed(origin)?;
 			Self::_set_spread(&who, pool_id, pair, bid, ask)?;
 			Self::deposit_event(RawEvent::SetSpread(who, pool_id, pair, bid, ask));
@@ -162,7 +162,7 @@ decl_module! {
 		}
 
 		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
-		pub fn set_max_spread(origin, pair: TradingPair, #[compact] max_spread: Permill) {
+		pub fn set_max_spread(origin, pair: TradingPair, #[compact] max_spread: Balance) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
@@ -330,11 +330,11 @@ impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
 		Self::is_enabled(pool_id, pair, leverage)
 	}
 
-	fn get_bid_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Permill> {
+	fn get_bid_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance> {
 		Self::liquidity_pool_options(pool_id, pair).map(|pool| pool.bid_spread)
 	}
 
-	fn get_ask_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Permill> {
+	fn get_ask_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance> {
 		Self::liquidity_pool_options(pool_id, pair).map(|pool| pool.ask_spread)
 	}
 
@@ -399,8 +399,8 @@ impl<T: Trait> Module<T> {
 		who: &T::AccountId,
 		pool_id: LiquidityPoolId,
 		pair: TradingPair,
-		bid: Permill,
-		ask: Permill,
+		bid: Balance,
+		ask: Balance,
 	) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, who), Error::<T>::NoPermission);
 		// not using Self::liquidity_pool_options to preserve original value

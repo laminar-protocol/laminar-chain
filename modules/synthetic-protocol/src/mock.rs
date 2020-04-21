@@ -210,12 +210,14 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 }
 
 impl SyntheticProtocolLiquidityPools<AccountId> for MockLiquidityPools {
-	fn get_bid_spread(_pool_id: LiquidityPoolId, _currency_id: CurrencyId) -> Option<Permill> {
-		Some(Self::spread())
+	fn get_bid_spread(_pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Balance> {
+		let price = MockPrices::prices(currency_id)?;
+		Some(Self::spread().mul_ceil(price.deconstruct()))
 	}
 
-	fn get_ask_spread(_pool_id: LiquidityPoolId, _currency_id: CurrencyId) -> Option<Permill> {
-		Some(Self::spread())
+	fn get_ask_spread(_pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Balance> {
+		let price = MockPrices::prices(currency_id)?;
+		Some(Self::spread().mul_ceil(price.deconstruct()))
 	}
 
 	fn get_additional_collateral_ratio(_pool_id: LiquidityPoolId, _currency_id: CurrencyId) -> Permill {

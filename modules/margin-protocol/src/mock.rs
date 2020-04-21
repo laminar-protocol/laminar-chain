@@ -227,12 +227,18 @@ impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
 		true
 	}
 
-	fn get_bid_spread(_pool_id: LiquidityPoolId, _pair: TradingPair) -> Option<Permill> {
-		Some(Self::spread())
+	fn get_bid_spread(_pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance> {
+		let base_price = MockPrices::prices(pair.base)?;
+		let quote_price = MockPrices::prices(pair.quote)?;
+		let price = base_price.checked_div(&quote_price).unwrap();
+		Some(Self::spread().mul_ceil(price.deconstruct()))
 	}
 
-	fn get_ask_spread(_pool_id: LiquidityPoolId, _pair: TradingPair) -> Option<Permill> {
-		Some(Self::spread())
+	fn get_ask_spread(_pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance> {
+		let base_price = MockPrices::prices(pair.base)?;
+		let quote_price = MockPrices::prices(pair.quote)?;
+		let price = base_price.checked_div(&quote_price).unwrap();
+		Some(Self::spread().mul_ceil(price.deconstruct()))
 	}
 
 	fn get_swap_rate(_pool_id: LiquidityPoolId, _pair: TradingPair, _is_long: bool) -> Fixed128 {

@@ -189,6 +189,8 @@ pub fn laminar_testnet_latest_config() -> ChainSpec {
 	)
 }
 
+const ONE_DOLLAR: u128 = 1000000000000000000;
+
 fn dev_genesis(
 	initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId)>,
 	root_key: AccountId,
@@ -267,7 +269,7 @@ fn dev_genesis(
 						quote: CurrencyId::AUSD,
 					},
 					// MaxSpread
-					Permill::from_percent(1),
+					ONE_DOLLAR,
 					// Accumulates
 					AccumulateConfig {
 						frequency: 10,
@@ -301,7 +303,7 @@ fn dev_genesis(
 						quote: CurrencyId::AUSD,
 					},
 					// MaxSpread
-					Permill::from_percent(1),
+					ONE_DOLLAR,
 					// Accumulates
 					AccumulateConfig {
 						frequency: 10,
@@ -335,7 +337,7 @@ fn dev_genesis(
 						quote: CurrencyId::AUSD,
 					},
 					// MaxSpread
-					Permill::from_percent(1),
+					ONE_DOLLAR,
 					// Accumulates
 					AccumulateConfig {
 						frequency: 10,
@@ -369,7 +371,7 @@ fn dev_genesis(
 						quote: CurrencyId::AUSD,
 					},
 					// MaxSpread
-					Permill::from_percent(1),
+					ONE_DOLLAR,
 					// Accumulates
 					AccumulateConfig {
 						frequency: 10,
@@ -478,7 +480,7 @@ fn testnet_genesis(
 						quote: CurrencyId::AUSD,
 					},
 					// MaxSpread
-					Permill::from_percent(1),
+					ONE_DOLLAR,
 					// Accumulates
 					AccumulateConfig {
 						frequency: 10,
@@ -512,7 +514,7 @@ fn testnet_genesis(
 						quote: CurrencyId::AUSD,
 					},
 					// MaxSpread
-					Permill::from_percent(1),
+					ONE_DOLLAR,
 					// Accumulates
 					AccumulateConfig {
 						frequency: 10,
@@ -546,7 +548,7 @@ fn testnet_genesis(
 						quote: CurrencyId::AUSD,
 					},
 					// MaxSpread
-					Permill::from_percent(1),
+					ONE_DOLLAR,
 					// Accumulates
 					AccumulateConfig {
 						frequency: 10,
