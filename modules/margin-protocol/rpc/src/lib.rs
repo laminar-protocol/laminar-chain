@@ -11,7 +11,7 @@ use std::sync::Arc;
 #[rpc]
 pub trait MarginProtocolApi<BlockHash, AccountId> {
 	#[rpc(name = "margin_traderInfo")]
-	fn trader_info(&self, who: AccountId, at: Option<BlockHash>) -> Result<TraderInfo>;
+	fn trader_info(&self, who: AccountId, pool_id: LiquidityPoolId, at: Option<BlockHash>) -> Result<TraderInfo>;
 
 	#[rpc(name = "margin_poolInfo")]
 	fn pool_info(&self, pool_id: LiquidityPoolId, at: Option<BlockHash>) -> Result<Option<PoolInfo>>;
@@ -52,12 +52,17 @@ where
 	C::Api: MarginProtocolRuntimeApi<Block, AccountId>,
 	AccountId: Codec,
 {
-	fn trader_info(&self, who: AccountId, at: Option<<Block as BlockT>::Hash>) -> Result<TraderInfo> {
+	fn trader_info(
+		&self,
+		who: AccountId,
+		pool_id: LiquidityPoolId,
+		at: Option<<Block as BlockT>::Hash>,
+	) -> Result<TraderInfo> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
 			// If the block hash is not supplied assume the best block.
 			self.client.info().best_hash));
-		api.trader_info(&at, who)
+		api.trader_info(&at, who, pool_id)
 			.map_err(|e| RpcError {
 				code: ErrorCode::ServerError(Error::RuntimeError.into()),
 				message: "Unable to get trader info.".into(),

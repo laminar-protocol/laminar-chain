@@ -31,7 +31,7 @@ sp_api::decl_runtime_apis! {
 	pub trait MarginProtocolApi<AccountId> where
 		AccountId: Codec,
 	{
-		fn trader_info(who: AccountId) -> TraderInfo;
+		fn trader_info(who: AccountId, pool_id: LiquidityPoolId) -> TraderInfo;
 		fn pool_info(pool_id: LiquidityPoolId) -> Option<PoolInfo>;
 	}
 }

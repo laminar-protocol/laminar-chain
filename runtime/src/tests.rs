@@ -343,7 +343,7 @@ pub fn margin_set_default_min_leveraged_amount(amount: Balance) -> DispatchResul
 }
 
 pub fn margin_balance(who: &AccountId) -> Fixed128 {
-	ModuleMarginProtocol::balances(who)
+	ModuleMarginProtocol::balances(who, LIQUIDITY_POOL_ID_0)
 }
 
 pub fn margin_liquidity() -> Balance {
@@ -365,11 +365,11 @@ pub fn margin_close_position(who: &AccountId, position_id: PositionId, price: Pr
 }
 
 pub fn margin_deposit(who: &AccountId, amount: Balance) -> DispatchResult {
-	ModuleMarginProtocol::deposit(origin_of(who), amount)
+	ModuleMarginProtocol::deposit(origin_of(who), LIQUIDITY_POOL_ID_0, amount)
 }
 
 pub fn margin_withdraw(who: &AccountId, amount: Balance) -> DispatchResult {
-	ModuleMarginProtocol::withdraw(origin_of(who), amount)
+	ModuleMarginProtocol::withdraw(origin_of(who), LIQUIDITY_POOL_ID_0, amount)
 }
 
 pub fn margin_get_required_deposit() -> Balance {
@@ -377,15 +377,27 @@ pub fn margin_get_required_deposit() -> Balance {
 }
 
 pub fn margin_trader_margin_call(who: &AccountId) -> DispatchResult {
-	ModuleMarginProtocol::trader_margin_call(<Runtime as system::Trait>::Origin::NONE, Address::from(who.clone()))
+	ModuleMarginProtocol::trader_margin_call(
+		<Runtime as system::Trait>::Origin::NONE,
+		Address::from(who.clone()),
+		LIQUIDITY_POOL_ID_0,
+	)
 }
 
 pub fn margin_trader_become_safe(who: &AccountId) -> DispatchResult {
-	ModuleMarginProtocol::trader_become_safe(<Runtime as system::Trait>::Origin::NONE, Address::from(who.clone()))
+	ModuleMarginProtocol::trader_become_safe(
+		<Runtime as system::Trait>::Origin::NONE,
+		Address::from(who.clone()),
+		LIQUIDITY_POOL_ID_0,
+	)
 }
 
 pub fn margin_trader_stop_out(who: &AccountId) -> DispatchResult {
-	ModuleMarginProtocol::trader_stop_out(<Runtime as system::Trait>::Origin::NONE, Address::from(who.clone()))
+	ModuleMarginProtocol::trader_stop_out(
+		<Runtime as system::Trait>::Origin::NONE,
+		Address::from(who.clone()),
+		LIQUIDITY_POOL_ID_0,
+	)
 }
 
 pub fn margin_liquidity_pool_margin_call() -> DispatchResult {
@@ -401,13 +413,13 @@ pub fn margin_liquidity_pool_force_close() -> DispatchResult {
 }
 
 pub fn margin_held(who: &AccountId) -> Fixed128 {
-	ModuleMarginProtocol::margin_held(who)
+	ModuleMarginProtocol::margin_held(who, LIQUIDITY_POOL_ID_0)
 }
 
 pub fn free_margin(who: &AccountId) -> Fixed128 {
-	ModuleMarginProtocol::free_margin(who).unwrap()
+	ModuleMarginProtocol::free_margin(who, LIQUIDITY_POOL_ID_0).unwrap()
 }
 
 pub fn margin_equity(who: &AccountId) -> Fixed128 {
-	ModuleMarginProtocol::equity_of_trader(who).unwrap()
+	ModuleMarginProtocol::equity_of_trader(who, LIQUIDITY_POOL_ID_0).unwrap()
 }
