@@ -258,6 +258,7 @@ pub const ALICE: AccountId = 0;
 pub const BOB: AccountId = 1;
 pub const TREASURY_ACCOUNT: AccountId = 3;
 pub const MOCK_POOL: LiquidityPoolId = 100;
+pub const MOCK_POOL_1: LiquidityPoolId = 101;
 
 /// Print status of a trader, only for unit tests debugging purpose.
 pub fn print_trader_summary(who: &AccountId, pool_id: LiquidityPoolId, name: Option<&'static str>) {

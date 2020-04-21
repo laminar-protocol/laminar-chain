@@ -1242,6 +1242,33 @@ fn open_position_fails_if_run_out_of_position_id() {
 }
 
 #[test]
+fn free_margin_cannot_be_used_across_pool() {
+	ExtBuilder::default()
+		// USD/JPY = 107
+		.price(CurrencyId::FJPY, (1, 107))
+		// EUR/JPY = 140.9 => EUR/USD = 140.9/107
+		.price(CurrencyId::FEUR, (1409, 1070))
+		.accumulated_swap_rate(JPY_EUR_PAIR, Fixed128::from_natural(1))
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
+		.build()
+		.execute_with(|| {
+			System::set_block_number(1);
+			<Balances<Runtime>>::insert(ALICE, MOCK_POOL_1, fixed128_from_natural_currency_cent(10_000_00));
+			assert_noop!(
+				MarginProtocol::open_position(
+					Origin::signed(ALICE),
+					MOCK_POOL,
+					JPY_EUR_PAIR,
+					Leverage::LongTwenty,
+					balance_from_natural_currency_cent(100_000_00),
+					Price::from_natural(142)
+				),
+				Error::<Runtime>::InsufficientFreeMargin
+			);
+		});
+}
+
+#[test]
 fn close_loss_position_works() {
 	let alice_initial = fixed128_from_natural_currency_cent(10_000_00);
 	ExtBuilder::default()
