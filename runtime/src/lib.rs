@@ -38,7 +38,7 @@ use orml_traits::DataProvider;
 pub use orml_utilities::Fixed128;
 
 use margin_protocol_rpc_runtime_api::{PoolInfo, TraderInfo};
-use module_primitives::{BalancePriceConverter, Price};
+use module_primitives::Price;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
@@ -602,8 +602,6 @@ impl synthetic_protocol::Trait for Runtime {
 	type PriceProvider = orml_prices::DefaultPriceProvider<CurrencyId, LaminarDataProvider>;
 	type LiquidityPools = synthetic_liquidity_pools::Module<Runtime>;
 	type SyntheticProtocolLiquidityPools = synthetic_liquidity_pools::Module<Runtime>;
-	type BalanceToPrice = BalancePriceConverter;
-	type PriceToBalance = BalancePriceConverter;
 }
 
 type TransactionSubmitter = system::offchain::TransactionSubmitter<(), Runtime, UncheckedExtrinsic>;
