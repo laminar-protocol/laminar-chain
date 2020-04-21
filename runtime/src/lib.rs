@@ -828,12 +828,12 @@ impl_runtime_apis! {
 	}
 
 	impl margin_protocol_rpc_runtime_api::MarginProtocolApi<Block, AccountId> for Runtime {
-		fn trader_info(who: AccountId) -> TraderInfo {
-			let equity = MarginProtocol::equity_of_trader(&who).unwrap_or_default();
-			let margin_held = MarginProtocol::margin_held(&who);
-			let margin_level = MarginProtocol::margin_level(&who).unwrap_or_default();
-			let free_margin = MarginProtocol::free_margin(&who).unwrap_or_default();
-			let unrealized_pl = MarginProtocol::unrealized_pl_of_trader(&who).unwrap_or_default();
+		fn trader_info(who: AccountId, pool_id: LiquidityPoolId) -> TraderInfo {
+			let equity = MarginProtocol::equity_of_trader(&who, pool_id).unwrap_or_default();
+			let margin_held = MarginProtocol::margin_held(&who, pool_id);
+			let margin_level = MarginProtocol::margin_level(&who, pool_id).unwrap_or_default();
+			let free_margin = MarginProtocol::free_margin(&who, pool_id).unwrap_or_default();
+			let unrealized_pl = MarginProtocol::unrealized_pl_of_trader(&who, pool_id).unwrap_or_default();
 
 			TraderInfo {
 				equity,
