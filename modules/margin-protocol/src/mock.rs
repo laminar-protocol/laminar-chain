@@ -260,7 +260,7 @@ pub const TREASURY_ACCOUNT: AccountId = 3;
 pub const MOCK_POOL: LiquidityPoolId = 100;
 
 /// Print status of a trader, only for unit tests debugging purpose.
-pub fn print_trader_summary(who: &AccountId, name: Option<&'static str>) {
+pub fn print_trader_summary(who: &AccountId, pool_id: LiquidityPoolId, name: Option<&'static str>) {
 	println!("------------------------------");
 	if let Some(n) = name {
 		println!("Name: {:?}", n);
@@ -269,22 +269,25 @@ pub fn print_trader_summary(who: &AccountId, name: Option<&'static str>) {
 		.map(|((_, position_id), _)| position_id)
 		.collect();
 	println!("Positions: {:?}", position_ids);
-	println!("Balance: {:?}", MarginProtocol::balances(who));
-	println!("Free margin: {:?}", MarginProtocol::free_margin(who));
-	println!("Unrealized PL: {:?}", MarginProtocol::unrealized_pl_of_trader(who));
-	println!("Equity: {:?}", MarginProtocol::equity_of_trader(who));
-	println!("Margin level: {:?}", MarginProtocol::margin_level(who));
+	println!("Balance: {:?}", MarginProtocol::balances(who, pool_id));
+	println!("Free margin: {:?}", MarginProtocol::free_margin(who, pool_id));
+	println!(
+		"Unrealized PL: {:?}",
+		MarginProtocol::unrealized_pl_of_trader(who, pool_id)
+	);
+	println!("Equity: {:?}", MarginProtocol::equity_of_trader(who, pool_id));
+	println!("Margin level: {:?}", MarginProtocol::margin_level(who, pool_id));
 	println!("------------------------------");
 }
 
 #[allow(dead_code)]
 pub fn print_alice_summary() {
-	print_trader_summary(&ALICE, Some("Alice"));
+	print_trader_summary(&ALICE, MOCK_POOL, Some("Alice"));
 }
 
 #[allow(dead_code)]
 pub fn print_bob_summary() {
-	print_trader_summary(&BOB, Some("Bob"));
+	print_trader_summary(&BOB, MOCK_POOL, Some("Bob"));
 }
 
 pub struct ExtBuilder {
