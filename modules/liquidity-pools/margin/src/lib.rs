@@ -113,6 +113,8 @@ decl_event!(
 		SetDefaultMinLeveragedAmount(Balance),
 		/// Set min leveraged amount (pool_id, min_leveraged_amount)
 		SetMinLeveragedAmount(LiquidityPoolId, Balance),
+		/// Set trading pair risk threshold (pair, trader_risk_threshold, liquidity_pool_enp_threshold, liquidity_pool_ell_threshold)
+		SetTradingPairRiskThreshold(TradingPair, Option<RiskThreshold>, Option<RiskThreshold>, Option<RiskThreshold>),
 	}
 );
 
@@ -228,6 +230,25 @@ decl_module! {
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
 			MinLeveragedAmount::insert(pool_id, amount);
 			Self::deposit_event(RawEvent::SetMinLeveragedAmount(pool_id, amount))
+		}
+
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
+		pub fn set_trading_pair_risk_threshold(origin, pair: TradingPair, trader: Option<RiskThreshold>, enp: Option<RiskThreshold>, ell: Option<RiskThreshold>) {
+			T::UpdateOrigin::try_origin(origin)
+				.map(|_| ())
+				.or_else(ensure_root)?;
+
+			if let Some(v) = trader {
+				TraderRiskThreshold::insert(pair, v);
+			}
+			if let Some(v) = enp {
+				LiquidityPoolENPThreshold::insert(pair, v);
+			}
+			if let Some(v) = ell {
+				LiquidityPoolELLThreshold::insert(pair, v);
+			}
+
+			Self::deposit_event(RawEvent::SetTradingPairRiskThreshold(pair, trader, enp, ell))
 		}
 
 		fn on_initialize(n: T::BlockNumber) -> Weight {
@@ -354,6 +375,7 @@ impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
 	) -> bool {
 		Self::is_enabled(pool_id, pair, leverage)
 			&& Self::enabled_trading_pair(&pair).is_some()
+			//TODO enp & ell
 			&& Self::liquidity_pool_enabled_trading_pair(&pool_id, &pair).is_some()
 			&& leveraged_amount >= Self::get_min_leveraged_amount(pool_id)
 	}
