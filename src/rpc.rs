@@ -68,8 +68,8 @@ where
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
 	use substrate_frame_rpc_system::{FullSystem, SystemApi};
 
-	use orml_oracle_rpc::{Oracle, OracleApi};
 	use margin_protocol_rpc::{MarginProtocol, MarginProtocolApi};
+	use orml_oracle_rpc::{Oracle, OracleApi};
 	use synthetic_protocol_rpc::{SyntheticProtocol, SyntheticProtocolApi};
 
 	let mut io = jsonrpc_core::IoHandler::default();
@@ -98,7 +98,9 @@ where
 	)));
 	io.extend_with(OracleApi::to_delegate(Oracle::new(client.clone())));
 	io.extend_with(MarginProtocolApi::to_delegate(MarginProtocol::new(client.clone())));
-	io.extend_with(SyntheticProtocolApi::to_delegate(SyntheticProtocol::new(client.clone())));
+	io.extend_with(SyntheticProtocolApi::to_delegate(SyntheticProtocol::new(
+		client.clone(),
+	)));
 
 	io
 }

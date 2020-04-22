@@ -508,7 +508,10 @@ impl<T: Trait> Module<T> {
 		let current_ratio = FixedU128::from_rational(collateral_position, synthetic_position_value);
 
 		// in safe position if ratio > liquidation_ratio
-		ensure!(!Self::is_safe_collateral_ratio(currency_id, current_ratio), Error::<T>::StillInSafePosition);
+		ensure!(
+			!Self::is_safe_collateral_ratio(currency_id, current_ratio),
+			Error::<T>::StillInSafePosition
+		);
 
 		let new_synthetic_position = synthetic_position
 			.checked_sub(burned_synthetic)
