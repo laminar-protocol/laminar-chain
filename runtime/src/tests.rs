@@ -104,18 +104,53 @@ impl ExtBuilder {
 		.unwrap();
 
 		margin_protocol::GenesisConfig {
-			trader_risk_threshold: RiskThreshold {
-				margin_call: Permill::from_percent(3),
-				stop_out: Permill::from_percent(1),
-			},
-			liquidity_pool_enp_threshold: RiskThreshold {
-				margin_call: Permill::from_percent(30),
-				stop_out: Permill::from_percent(10),
-			},
-			liquidity_pool_ell_threshold: RiskThreshold {
-				margin_call: Permill::from_percent(30),
-				stop_out: Permill::from_percent(10),
-			},
+			margin_protocol_threshold: vec![
+				(
+					EUR_USD,
+					RiskThreshold {
+						margin_call: Permill::from_percent(3),
+						stop_out: Permill::from_percent(1),
+					},
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+				),
+				(
+					JPY_USD,
+					RiskThreshold {
+						margin_call: Permill::from_percent(3),
+						stop_out: Permill::from_percent(1),
+					},
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+				),
+				(
+					JPY_EUR,
+					RiskThreshold {
+						margin_call: Permill::from_percent(3),
+						stop_out: Permill::from_percent(1),
+					},
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+				),
+			],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

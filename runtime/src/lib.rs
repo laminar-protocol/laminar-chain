@@ -631,6 +631,7 @@ impl margin_protocol::Trait for Runtime {
 	type Call = Call;
 	type GetTraderMaxOpenPositions = GetTraderMaxOpenPositions;
 	type GetPoolMaxOpenPositions = GetPoolMaxOpenPositions;
+	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
 }
 
 construct_runtime!(

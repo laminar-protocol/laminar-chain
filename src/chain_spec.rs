@@ -191,6 +191,22 @@ pub fn laminar_testnet_latest_config() -> ChainSpec {
 }
 
 const ONE_DOLLAR: u128 = 1000000000000000000;
+const EUR_USD: TradingPair = TradingPair {
+	base: CurrencyId::FEUR,
+	quote: CurrencyId::AUSD,
+};
+const JPY_USD: TradingPair = TradingPair {
+	base: CurrencyId::FJPY,
+	quote: CurrencyId::AUSD,
+};
+const BTC_USD: TradingPair = TradingPair {
+	base: CurrencyId::FBTC,
+	quote: CurrencyId::AUSD,
+};
+const ETH_USD: TradingPair = TradingPair {
+	base: CurrencyId::FETH,
+	quote: CurrencyId::AUSD,
+};
 
 fn dev_genesis(
 	initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId)>,
@@ -265,10 +281,7 @@ fn dev_genesis(
 			margin_liquidity_config: vec![
 				(
 					// TradingPair
-					TradingPair {
-						base: CurrencyId::FEUR,
-						quote: CurrencyId::AUSD,
-					},
+					EUR_USD,
 					// MaxSpread
 					ONE_DOLLAR,
 					// Accumulates
@@ -284,10 +297,7 @@ fn dev_genesis(
 				),
 				(
 					// TradingPair
-					TradingPair {
-						base: CurrencyId::FJPY,
-						quote: CurrencyId::AUSD,
-					},
+					JPY_USD,
 					// MaxSpread
 					ONE_DOLLAR,
 					// Accumulates
@@ -303,10 +313,7 @@ fn dev_genesis(
 				),
 				(
 					// TradingPair
-					TradingPair {
-						base: CurrencyId::FBTC,
-						quote: CurrencyId::AUSD,
-					},
+					BTC_USD,
 					// MaxSpread
 					ONE_DOLLAR,
 					// Accumulates
@@ -322,10 +329,7 @@ fn dev_genesis(
 				),
 				(
 					// TradingPair
-					TradingPair {
-						base: CurrencyId::FETH,
-						quote: CurrencyId::AUSD,
-					},
+					ETH_USD,
 					// MaxSpread
 					ONE_DOLLAR,
 					// Accumulates
@@ -342,18 +346,68 @@ fn dev_genesis(
 			],
 		}),
 		margin_protocol: Some(MarginProtocolConfig {
-			trader_risk_threshold: RiskThreshold {
-				margin_call: Permill::from_percent(3),
-				stop_out: Permill::from_percent(1),
-			},
-			liquidity_pool_enp_threshold: RiskThreshold {
-				margin_call: Permill::from_percent(30),
-				stop_out: Permill::from_percent(10),
-			},
-			liquidity_pool_ell_threshold: RiskThreshold {
-				margin_call: Permill::from_percent(30),
-				stop_out: Permill::from_percent(10),
-			},
+			margin_protocol_threshold: vec![
+				(
+					EUR_USD,
+					RiskThreshold {
+						margin_call: Permill::from_percent(3),
+						stop_out: Permill::from_percent(1),
+					},
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+				),
+				(
+					JPY_USD,
+					RiskThreshold {
+						margin_call: Permill::from_percent(3),
+						stop_out: Permill::from_percent(1),
+					},
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+				),
+				(
+					BTC_USD,
+					RiskThreshold {
+						margin_call: Permill::from_percent(3),
+						stop_out: Permill::from_percent(1),
+					},
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+				),
+				(
+					ETH_USD,
+					RiskThreshold {
+						margin_call: Permill::from_percent(3),
+						stop_out: Permill::from_percent(1),
+					},
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+				),
+			],
 		}),
 	}
 }
@@ -430,10 +484,7 @@ fn testnet_genesis(
 			margin_liquidity_config: vec![
 				(
 					// TradingPair
-					TradingPair {
-						base: CurrencyId::FEUR,
-						quote: CurrencyId::AUSD,
-					},
+					EUR_USD,
 					// MaxSpread
 					ONE_DOLLAR,
 					// Accumulates
@@ -449,10 +500,7 @@ fn testnet_genesis(
 				),
 				(
 					// TradingPair
-					TradingPair {
-						base: CurrencyId::FJPY,
-						quote: CurrencyId::AUSD,
-					},
+					JPY_USD,
 					// MaxSpread
 					ONE_DOLLAR,
 					// Accumulates
@@ -468,10 +516,7 @@ fn testnet_genesis(
 				),
 				(
 					// TradingPair
-					TradingPair {
-						base: CurrencyId::FBTC,
-						quote: CurrencyId::AUSD,
-					},
+					BTC_USD,
 					// MaxSpread
 					ONE_DOLLAR,
 					// Accumulates
@@ -487,10 +532,7 @@ fn testnet_genesis(
 				),
 				(
 					// TradingPair
-					TradingPair {
-						base: CurrencyId::FETH,
-						quote: CurrencyId::AUSD,
-					},
+					ETH_USD,
 					// MaxSpread
 					ONE_DOLLAR,
 					// Accumulates
@@ -507,18 +549,68 @@ fn testnet_genesis(
 			],
 		}),
 		margin_protocol: Some(MarginProtocolConfig {
-			trader_risk_threshold: RiskThreshold {
-				margin_call: Permill::from_percent(3),
-				stop_out: Permill::from_percent(1),
-			},
-			liquidity_pool_enp_threshold: RiskThreshold {
-				margin_call: Permill::from_percent(30),
-				stop_out: Permill::from_percent(10),
-			},
-			liquidity_pool_ell_threshold: RiskThreshold {
-				margin_call: Permill::from_percent(30),
-				stop_out: Permill::from_percent(10),
-			},
+			margin_protocol_threshold: vec![
+				(
+					EUR_USD,
+					RiskThreshold {
+						margin_call: Permill::from_percent(3),
+						stop_out: Permill::from_percent(1),
+					},
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+				),
+				(
+					JPY_USD,
+					RiskThreshold {
+						margin_call: Permill::from_percent(3),
+						stop_out: Permill::from_percent(1),
+					},
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+				),
+				(
+					BTC_USD,
+					RiskThreshold {
+						margin_call: Permill::from_percent(3),
+						stop_out: Permill::from_percent(1),
+					},
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+				),
+				(
+					ETH_USD,
+					RiskThreshold {
+						margin_call: Permill::from_percent(3),
+						stop_out: Permill::from_percent(1),
+					},
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+					RiskThreshold {
+						margin_call: Permill::from_percent(30),
+						stop_out: Permill::from_percent(10),
+					},
+				),
+			],
 		}),
 	}
 }

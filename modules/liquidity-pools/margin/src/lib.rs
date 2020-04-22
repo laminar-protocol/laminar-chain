@@ -192,6 +192,10 @@ decl_module! {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
 			ensure!(Self::enabled_trading_pair(&pair).is_some(), Error::<T>::TradingPairNotEnabled);
+
+			// TODO: ensure configured threshold
+			// TODO: ensure threshold >= new trading pair threshold
+
 			LiquidityPoolEnabledTradingPairs::insert(&pool_id, &pair, true);
 			Self::deposit_event(RawEvent::LiquidityPoolTradingPairEnabled(pair))
 		}
