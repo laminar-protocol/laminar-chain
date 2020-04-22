@@ -25,6 +25,7 @@ pub struct TraderInfo {
 pub struct PoolInfo {
 	pub enp: Fixed128,
 	pub ell: Fixed128,
+	pub required_deposit: Fixed128,
 }
 
 sp_api::decl_runtime_apis! {

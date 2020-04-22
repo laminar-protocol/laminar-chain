@@ -1938,21 +1938,21 @@ fn liquidity_pool_manager_get_required_deposit_works() {
 			// need deposit because of ENP
 			assert_eq!(
 				MarginProtocol::pool_required_deposit(MOCK_POOL),
-				Ok(fixed128_from_natural_currency_cent(100)),
+				Some(fixed128_from_natural_currency_cent(100)),
 			);
 
 			// need deposit because of ELL
 			LiquidityPoolENPThreshold::put(risk_threshold(80, 0));
 			assert_eq!(
 				MarginProtocol::pool_required_deposit(MOCK_POOL),
-				Ok(fixed128_from_natural_currency_cent(90)),
+				Some(fixed128_from_natural_currency_cent(90)),
 			);
 
 			// no need to deposit
 			MockLiquidityPools::set_mock_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100));
 			assert_eq!(
 				MarginProtocol::pool_required_deposit(MOCK_POOL),
-				Ok(fixed128_from_natural_currency_cent(0)),
+				Some(fixed128_from_natural_currency_cent(0)),
 			);
 		});
 }

@@ -976,7 +976,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// Returns required deposit amount to make pool safe.
-	pub fn pool_required_deposit(pool: LiquidityPoolId) -> Fixed128Result {
+	pub fn pool_required_deposit(pool: LiquidityPoolId) -> Option<Fixed128> {
 		let (net_position, longest_leg) = Self::_net_position_and_longest_leg(pool, None);
 		let required_equity = {
 			let for_enp = net_position
@@ -987,13 +987,13 @@ impl<T: Trait> Module<T> {
 				.expect("ELL margin call threshold < 1; qed");
 			cmp::max(for_enp, for_ell)
 		};
-		let equity = Self::_equity_of_pool(pool)?;
-		let gap = required_equity.checked_sub(&equity).ok_or(Error::<T>::NumOutOfBound)?;
+		let equity = Self::_equity_of_pool(pool).ok()?;
+		let gap = required_equity.checked_sub(&equity)?;
 
 		if gap.is_positive() {
-			Ok(gap)
+			Some(gap)
 		} else {
-			Ok(Fixed128::zero())
+			Some(Fixed128::zero())
 		}
 	}
 }
