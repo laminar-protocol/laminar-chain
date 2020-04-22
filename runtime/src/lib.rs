@@ -845,8 +845,9 @@ impl_runtime_apis! {
 
 		fn pool_info(pool_id: LiquidityPoolId) -> Option<PoolInfo> {
 			let (enp, ell) = MarginProtocol::enp_and_ell(pool_id)?;
+			let required_deposit = MarginProtocol::pool_required_deposit(pool_id)?;
 
-			Some(PoolInfo { enp, ell })
+			Some(PoolInfo { enp, ell, required_deposit })
 		}
 	}
 
