@@ -16,7 +16,9 @@ use orml_utilities::Fixed128;
 use primitives::{AccumulateConfig, Balance, CurrencyId, Leverage, Leverages, LiquidityPoolId, TradingPair};
 use sp_runtime::{traits::Saturating, DispatchResult, ModuleId, RuntimeDebug};
 use sp_std::{cmp::max, prelude::*};
-use traits::{LiquidityPools, MarginProtocolLiquidityPools, OnDisableLiquidityPool, OnRemoveLiquidityPool};
+use traits::{
+	LiquidityPools, MarginProtocolLiquidityPools, OnDisableLiquidityPool, OnEnableTradingPair, OnRemoveLiquidityPool,
+};
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -43,6 +45,7 @@ pub trait Trait: frame_system::Trait {
 	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
 	type UpdateOrigin: EnsureOrigin<Self::Origin>;
 	type MaxSwap: Get<Fixed128>;
+	type OnEnableTradingPair: OnEnableTradingPair;
 }
 
 decl_storage! {
@@ -193,8 +196,7 @@ decl_module! {
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
 			ensure!(Self::enabled_trading_pair(&pair).is_some(), Error::<T>::TradingPairNotEnabled);
 
-			// TODO: ensure configured threshold
-			// TODO: ensure threshold >= new trading pair threshold
+			<T::OnEnableTradingPair as OnEnableTradingPair>::ensure_can_enable_trading_pair(pool_id, pair)?;
 
 			LiquidityPoolEnabledTradingPairs::insert(&pool_id, &pair, true);
 			Self::deposit_event(RawEvent::LiquidityPoolTradingPairEnabled(pair))

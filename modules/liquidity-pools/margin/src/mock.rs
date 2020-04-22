@@ -15,7 +15,7 @@ use sp_std::result;
 use orml_currencies::Currency;
 
 use primitives::{Balance, CurrencyId, LiquidityPoolId};
-use traits::LiquidityPoolManager;
+use traits::{LiquidityPoolManager, OnEnableTradingPair};
 
 pub type BlockNumber = u64;
 pub type AccountId = u32;
@@ -120,12 +120,20 @@ impl module_base_liquidity_pools::Trait<MarginInstance> for Runtime {
 }
 pub type BaseLiquidityPools = module_base_liquidity_pools::Module<Runtime, MarginInstance>;
 
+pub struct DummyOnEnableTradingPair;
+impl OnEnableTradingPair for DummyOnEnableTradingPair {
+	fn ensure_can_enable_trading_pair(_pool_id: LiquidityPoolId, _pair: TradingPair) -> DispatchResult {
+		Ok(())
+	}
+}
+
 impl Trait for Runtime {
 	type Event = ();
 	type BaseLiquidityPools = module_base_liquidity_pools::Module<Runtime, MarginInstance>;
 	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
 	type MaxSwap = MaxSwap;
+	type OnEnableTradingPair = DummyOnEnableTradingPair;
 }
 pub type ModuleLiquidityPools = Module<Runtime>;
 

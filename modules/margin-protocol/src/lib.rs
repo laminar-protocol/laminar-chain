@@ -31,7 +31,7 @@ use primitives::{
 	Balance, CurrencyId, Leverage, LiquidityPoolId, Price, TradingPair,
 };
 use sp_std::{cmp, prelude::*, result};
-use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools, Treasury};
+use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools, OnEnableTradingPair, Treasury};
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -86,9 +86,9 @@ decl_storage! {
 		Balances get(balances): map hasher(twox_64_concat) T::AccountId => Fixed128;
 		MarginCalledTraders get(margin_called_traders): map hasher(twox_64_concat) T::AccountId => Option<bool>;
 		MarginCalledPools get(margin_called_pools): map hasher(twox_64_concat) LiquidityPoolId => Option<bool>;
-		TraderRiskThreshold get(trader_risk_threshold): map hasher(twox_64_concat) TradingPair => RiskThreshold;
-		LiquidityPoolENPThreshold get(liquidity_pool_enp_threshold): map hasher(twox_64_concat) TradingPair => RiskThreshold;
-		LiquidityPoolELLThreshold get(liquidity_pool_ell_threshold): map hasher(twox_64_concat) TradingPair => RiskThreshold;
+		TraderRiskThreshold get(trader_risk_threshold): map hasher(twox_64_concat) TradingPair => Option<RiskThreshold>;
+		LiquidityPoolENPThreshold get(liquidity_pool_enp_threshold): map hasher(twox_64_concat) TradingPair => Option<RiskThreshold>;
+		LiquidityPoolELLThreshold get(liquidity_pool_ell_threshold): map hasher(twox_64_concat) TradingPair => Option<RiskThreshold>;
 	}
 
 	add_extra_genesis {
@@ -159,6 +159,7 @@ decl_error! {
 		CannotOpenPosition,
 		CannotOpenMorePosition,
 		InsufficientFreeMargin,
+		NoRiskThreshold,
 	}
 }
 
@@ -1007,13 +1008,13 @@ impl<T: Trait> Module<T> {
 
 		let trader_margin_call = trading_pairs
 			.iter()
-			.filter_map(|pair| Some(Self::trader_risk_threshold(pair)))
+			.filter_map(|pair| Some(Self::trader_risk_threshold(pair).unwrap_or_default()))
 			.max_by_key(|threshold| threshold.margin_call)
 			.map(|x| x.margin_call)
 			.unwrap_or_default();
 		let trader_stop_out = trading_pairs
 			.iter()
-			.filter_map(|pair| Some(Self::trader_risk_threshold(pair)))
+			.filter_map(|pair| Some(Self::trader_risk_threshold(pair).unwrap_or_default()))
 			.max_by_key(|threshold| threshold.stop_out)
 			.map(|x| x.stop_out)
 			.unwrap_or_default();
@@ -1044,25 +1045,25 @@ impl<T: Trait> Module<T> {
 
 		let enp_margin_call = trading_pairs
 			.iter()
-			.filter_map(|pair| Some(Self::liquidity_pool_enp_threshold(pair)))
+			.filter_map(|pair| Some(Self::liquidity_pool_enp_threshold(pair).unwrap_or_default()))
 			.max_by_key(|threshold| threshold.margin_call)
 			.map(|x| x.margin_call)
 			.unwrap_or_default();
 		let enp_stop_out = trading_pairs
 			.iter()
-			.filter_map(|pair| Some(Self::liquidity_pool_enp_threshold(pair)))
+			.filter_map(|pair| Some(Self::liquidity_pool_enp_threshold(pair).unwrap_or_default()))
 			.max_by_key(|threshold| threshold.stop_out)
 			.map(|x| x.stop_out)
 			.unwrap_or_default();
 		let ell_margin_call = trading_pairs
 			.iter()
-			.filter_map(|pair| Some(Self::liquidity_pool_ell_threshold(pair)))
+			.filter_map(|pair| Some(Self::liquidity_pool_ell_threshold(pair).unwrap_or_default()))
 			.max_by_key(|threshold| threshold.margin_call)
 			.map(|x| x.margin_call)
 			.unwrap_or_default();
 		let ell_stop_out = trading_pairs
 			.iter()
-			.filter_map(|pair| Some(Self::liquidity_pool_ell_threshold(pair)))
+			.filter_map(|pair| Some(Self::liquidity_pool_ell_threshold(pair).unwrap_or_default()))
 			.max_by_key(|threshold| threshold.stop_out)
 			.map(|x| x.stop_out)
 			.unwrap_or_default();
@@ -1108,6 +1109,22 @@ impl<T: Trait> LiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
 
 	fn ensure_can_withdraw(pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
 		Self::_ensure_pool_safe(pool_id, Action::Withdraw(amount))
+	}
+}
+
+impl<T: Trait> OnEnableTradingPair for Module<T> {
+	fn ensure_can_enable_trading_pair(pool_id: LiquidityPoolId, pair: TradingPair) -> DispatchResult {
+		Self::trader_risk_threshold(pair).ok_or(Error::<T>::NoRiskThreshold)?;
+		let enp_threshold = Self::liquidity_pool_enp_threshold(pair).ok_or(Error::<T>::NoRiskThreshold)?;
+		let ell_threshold = Self::liquidity_pool_ell_threshold(pair).ok_or(Error::<T>::NoRiskThreshold)?;
+
+		let (enp, ell) = Self::_enp_and_ell(pool_id, Action::None)?;
+		if enp <= enp_threshold.stop_out.into() || ell <= ell_threshold.stop_out.into() {
+			return Err(Error::<T>::PoolWouldBeUnsafe.into());
+		} else if enp <= enp_threshold.margin_call.into() || ell <= ell_threshold.margin_call.into() {
+			return Err(Error::<T>::PoolWouldBeUnsafe.into());
+		}
+		Ok(())
 	}
 }
 

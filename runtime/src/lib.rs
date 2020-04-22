@@ -581,6 +581,7 @@ impl margin_liquidity_pools::Trait for Runtime {
 	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
 	type MaxSwap = MaxSwap;
+	type OnEnableTradingPair = MarginProtocol;
 }
 
 impl synthetic_liquidity_pools::Trait for Runtime {

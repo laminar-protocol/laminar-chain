@@ -46,6 +46,10 @@ pub trait MarginProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
 	) -> bool;
 }
 
+pub trait OnEnableTradingPair {
+	fn ensure_can_enable_trading_pair(pool_id: LiquidityPoolId, pair: TradingPair) -> DispatchResult;
+}
+
 pub trait OnDisableLiquidityPool {
 	fn on_disable(pool_id: LiquidityPoolId);
 }
