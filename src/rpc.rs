@@ -59,15 +59,18 @@ where
 	C::Api: BabeApi<Block>,
 	C::Api: orml_oracle_rpc::OracleRuntimeApi<Block, CurrencyId, TimeStampedPrice>,
 	C::Api: margin_protocol_rpc::MarginProtocolRuntimeApi<Block, AccountId>,
+	C::Api: synthetic_protocol_rpc::SyntheticProtocolRuntimeApi<Block, AccountId>,
 	<C::Api as sp_api::ApiErrorExt>::Error: fmt::Debug,
 	P: TransactionPool + 'static,
 	M: jsonrpc_core::Metadata + Default,
 	SC: SelectChain<Block> + 'static,
 {
-	use margin_protocol_rpc::{MarginProtocol, MarginProtocolApi};
-	use orml_oracle_rpc::{Oracle, OracleApi};
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
 	use substrate_frame_rpc_system::{FullSystem, SystemApi};
+
+	use margin_protocol_rpc::{MarginProtocol, MarginProtocolApi};
+	use orml_oracle_rpc::{Oracle, OracleApi};
+	use synthetic_protocol_rpc::{SyntheticProtocol, SyntheticProtocolApi};
 
 	let mut io = jsonrpc_core::IoHandler::default();
 	let FullDeps {
@@ -95,6 +98,9 @@ where
 	)));
 	io.extend_with(OracleApi::to_delegate(Oracle::new(client.clone())));
 	io.extend_with(MarginProtocolApi::to_delegate(MarginProtocol::new(client.clone())));
+	io.extend_with(SyntheticProtocolApi::to_delegate(SyntheticProtocol::new(
+		client.clone(),
+	)));
 
 	io
 }
