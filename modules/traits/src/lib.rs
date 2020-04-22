@@ -2,8 +2,8 @@
 
 use orml_utilities::Fixed128;
 use primitives::{Balance, CurrencyId, Leverage, LiquidityPoolId, TradingPair};
-use sp_runtime::{DispatchError, DispatchResult, Permill};
-use sp_std::{prelude::*, result};
+use sp_runtime::{DispatchResult, Permill};
+use sp_std::prelude::*;
 
 pub trait LiquidityPools<AccountId> {
 	fn all() -> Vec<LiquidityPoolId>;
@@ -20,7 +20,6 @@ pub trait LiquidityPools<AccountId> {
 
 pub trait LiquidityPoolManager<LiquidityPoolId, Balance> {
 	fn can_remove(pool_id: LiquidityPoolId) -> bool;
-	fn get_required_deposit(pool_id: LiquidityPoolId) -> result::Result<Balance, DispatchError>;
 	fn ensure_can_withdraw(pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult;
 }
 

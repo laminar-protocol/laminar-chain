@@ -786,14 +786,6 @@ impl<T: Trait> Module<T> {
 
 		Ok(risk)
 	}
-
-	pub fn enp_and_ell(pool: LiquidityPoolId) -> Option<(Fixed128, Fixed128)> {
-		if <T::LiquidityPools as LiquidityPools<T::AccountId>>::pool_exists(pool) {
-			let result = Self::_enp_and_ell(pool, Action::None).ok()?;
-			return Some(result);
-		}
-		None
-	}
 }
 
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq)]
@@ -974,16 +966,17 @@ impl<T: Trait> Module<T> {
 
 		Ok(())
 	}
-}
 
-impl<T: Trait> LiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
-	/// Returns if `pool` has liability in margin protocol.
-	fn can_remove(pool: LiquidityPoolId) -> bool {
-		PositionsByPool::iter(pool).count() == 0
+	pub fn enp_and_ell(pool: LiquidityPoolId) -> Option<(Fixed128, Fixed128)> {
+		if <T::LiquidityPools as LiquidityPools<T::AccountId>>::pool_exists(pool) {
+			let result = Self::_enp_and_ell(pool, Action::None).ok()?;
+			return Some(result);
+		}
+		None
 	}
 
 	/// Returns required deposit amount to make pool safe.
-	fn get_required_deposit(pool: LiquidityPoolId) -> result::Result<Balance, DispatchError> {
+	pub fn pool_required_deposit(pool: LiquidityPoolId) -> Fixed128Result {
 		let (net_position, longest_leg) = Self::_net_position_and_longest_leg(pool, None);
 		let required_equity = {
 			let for_enp = net_position
@@ -997,8 +990,18 @@ impl<T: Trait> LiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
 		let equity = Self::_equity_of_pool(pool)?;
 		let gap = required_equity.checked_sub(&equity).ok_or(Error::<T>::NumOutOfBound)?;
 
-		// would be saturated into zero if gap < 0
-		return Ok(u128_from_fixed_128(gap));
+		if gap.is_positive() {
+			Ok(gap)
+		} else {
+			Ok(Fixed128::zero())
+		}
+	}
+}
+
+impl<T: Trait> LiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
+	/// Returns if `pool` has liability in margin protocol.
+	fn can_remove(pool: LiquidityPoolId) -> bool {
+		PositionsByPool::iter(pool).count() == 0
 	}
 
 	fn ensure_can_withdraw(pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {

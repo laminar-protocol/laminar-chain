@@ -7,7 +7,7 @@ use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
-	DispatchError, Perbill,
+	Perbill,
 };
 
 use orml_currencies::Currency;
@@ -89,10 +89,6 @@ pub struct PoolManager;
 impl LiquidityPoolManager<LiquidityPoolId, Balance> for PoolManager {
 	fn can_remove(_pool_id: LiquidityPoolId) -> bool {
 		true
-	}
-
-	fn get_required_deposit(_pool: LiquidityPoolId) -> result::Result<Balance, DispatchError> {
-		unimplemented!()
 	}
 	fn ensure_can_withdraw(_pool: LiquidityPoolId, _amount: Balance) -> DispatchResult {
 		Ok(())

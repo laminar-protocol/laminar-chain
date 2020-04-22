@@ -13,7 +13,6 @@ use frame_support::{assert_ok, parameter_types, traits::OnFinalize};
 use margin_liquidity_pools::SwapRate;
 use margin_protocol::RiskThreshold;
 use module_primitives::{Balance, Leverage, Leverages, TradingPair};
-use module_traits::LiquidityPoolManager;
 use orml_prices::Price;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
 use orml_utilities::Fixed128;
@@ -372,8 +371,8 @@ pub fn margin_withdraw(who: &AccountId, amount: Balance) -> DispatchResult {
 	ModuleMarginProtocol::withdraw(origin_of(who), LIQUIDITY_POOL_ID_0, amount)
 }
 
-pub fn margin_get_required_deposit() -> Balance {
-	ModuleMarginProtocol::get_required_deposit(LIQUIDITY_POOL_ID_0).unwrap()
+pub fn margin_pool_required_deposit() -> Fixed128 {
+	ModuleMarginProtocol::pool_required_deposit(LIQUIDITY_POOL_ID_0).unwrap()
 }
 
 pub fn margin_trader_margin_call(who: &AccountId) -> DispatchResult {

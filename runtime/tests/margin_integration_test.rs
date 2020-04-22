@@ -41,7 +41,7 @@ mod tests {
 					base_liquidity_pools::Error::<Runtime, BaseLiquidityPoolsMarginInstance>::NoPermission
 				);
 
-				assert_eq!(margin_get_required_deposit(), 0);
+				assert_eq!(margin_pool_required_deposit(), fixed_128_dollar(0));
 
 				assert_ok!(margin_set_spread(EUR_USD, cent(1)));
 				assert_ok!(margin_set_max_spread(EUR_USD, cent(2)));
