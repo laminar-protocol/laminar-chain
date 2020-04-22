@@ -54,6 +54,7 @@ orml-utilities = { path = "../orml/utilities", default-features = false }
 
 synthetic-tokens = { package = "module-synthetic-tokens", path = "../modules/synthetic-tokens", default-features = false }
 synthetic-protocol = { package = "module-synthetic-protocol", path = "../modules/synthetic-protocol", default-features = false }
+synthetic-protocol-rpc-runtime-api = { path = "../modules/synthetic-protocol/rpc/runtime-api", default-features = false }
 module-primitives = { path = "../modules/primitives", default-features = false }
 base-liquidity-pools = { package = "module-base-liquidity-pools", path = "../modules/liquidity-pools/base", default-features = false }
 margin-liquidity-pools = { package = "module-margin-liquidity-pools", path = "../modules/liquidity-pools/margin", default-features = false }
@@ -118,6 +119,7 @@ std = [
 	"synthetic-liquidity-pools/std",
 	"module-primitives/std",
 	"synthetic-protocol/std",
+	"synthetic-protocol-rpc-runtime-api/std",
 	"synthetic-tokens/std",
 	"margin-protocol/std",
 	"margin-protocol-rpc-runtime-api/std",

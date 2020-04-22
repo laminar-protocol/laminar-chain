@@ -4,10 +4,10 @@ use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get, weights::SimpleDispatchInfo,
 };
 use sp_runtime::{
-	traits::{Convert, Saturating, Zero},
+	traits::{Saturating, Zero},
 	DispatchError, DispatchResult, Permill,
 };
-use sp_std::{convert::TryInto, result};
+use sp_std::result;
 // FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
 // would cause compiling error in `decl_module!` and `construct_runtime!`
 // #3295 https://github.com/paritytech/substrate/issues/3295
@@ -31,8 +31,6 @@ pub trait Trait: module_synthetic_tokens::Trait {
 	type PriceProvider: PriceProvider<CurrencyId, Price>;
 	type LiquidityPools: LiquidityPools<Self::AccountId>;
 	type SyntheticProtocolLiquidityPools: SyntheticProtocolLiquidityPools<Self::AccountId>;
-	type BalanceToPrice: Convert<Balance, Price>;
-	type PriceToBalance: Convert<Price, Balance>;
 }
 
 const _MAX_SPREAD: Permill = Permill::from_percent(3); // TODO: set this
@@ -153,7 +151,6 @@ decl_error! {
 		LiquidityPoolCollateralPositionTooLow,
 		NotEnoughLockedCollateralAvailable,
 		StillInSafePosition,
-		BalanceToU128Failed,
 		NotPoolOwner,
 		NoBidSpread,
 		NoAskSpread,
@@ -191,17 +188,14 @@ impl<T: Trait> Module<T> {
 		let ask_price = Self::_get_ask_price(pool_id, currency_id, price, max_price)?;
 
 		// synthetic = collateral / ask_price
-		let synthetic_by_price = T::BalanceToPrice::convert(collateral)
+		let synthetic = Price::from_parts(collateral)
 			.checked_div(&ask_price)
+			.map(|x| x.deconstruct())
 			.ok_or(Error::<T>::NumOverflow)?;
-		let synthetic = T::PriceToBalance::convert(synthetic_by_price);
 
 		// synthetic_value = synthetic * price
 		// `synthetic_value` is how much `synthetic` values in collateral unit.
-		let synthetic_value = {
-			let in_price_type = synthetic_by_price.checked_mul(&price).ok_or(Error::<T>::NumOverflow)?;
-			T::PriceToBalance::convert(in_price_type)
-		};
+		let synthetic_value = price.checked_mul_int(&synthetic).ok_or(Error::<T>::NumOverflow)?;
 		// additional_collateral = synthetic_value * (1 + ratio) - collateral
 		let additional_collateral =
 			Self::_calc_additional_collateral_amount(pool_id, currency_id, collateral, synthetic_value)?;
@@ -243,16 +237,11 @@ impl<T: Trait> Module<T> {
 
 		let price =
 			T::PriceProvider::get_price(currency_id, T::GetCollateralCurrencyId::get()).ok_or(Error::<T>::NoPrice)?;
-		// bid_price = price * (1 - bid_spread)
+		// bid_price = price - bid_spread
 		let bid_price = Self::_get_bid_price(pool_id, currency_id, price, Some(min_price))?;
 
 		// collateral = synthetic * bid_price
-		let redeemed_collateral = {
-			let collateral_by_price = T::BalanceToPrice::convert(synthetic)
-				.checked_mul(&bid_price)
-				.ok_or(Error::<T>::NumOverflow)?;
-			T::PriceToBalance::convert(collateral_by_price)
-		};
+		let redeemed_collateral = bid_price.checked_mul_int(&synthetic).ok_or(Error::<T>::NumOverflow)?;
 
 		let (collateral_position_delta, pool_refund_collateral) =
 			Self::_calc_remove_position(pool_id, currency_id, price, synthetic, redeemed_collateral)?;
@@ -296,12 +285,7 @@ impl<T: Trait> Module<T> {
 			T::PriceProvider::get_price(currency_id, T::GetCollateralCurrencyId::get()).ok_or(Error::<T>::NoPrice)?;
 		let bid_price = Self::_get_bid_price(pool_id, currency_id, price, None)?;
 		// collateral = synthetic * bid_price
-		let collateral = {
-			let in_price = T::BalanceToPrice::convert(synthetic)
-				.checked_mul(&bid_price)
-				.ok_or(Error::<T>::NumOverflow)?;
-			T::PriceToBalance::convert(in_price)
-		};
+		let collateral = bid_price.checked_mul_int(&synthetic).ok_or(Error::<T>::NumOverflow)?;
 
 		let (collateral_position_delta, pool_refund_collateral, incentive) =
 			Self::_calc_remove_position_and_incentive(pool_id, currency_id, price, synthetic, collateral)?;
@@ -381,7 +365,7 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Module<T> {
 	/// Get ask price from liquidity pool for a given currency. Would fail if price could not meet max slippage.
 	///
-	/// ask_price = price * (1 + ask_spread)
+	/// ask_price = price + ask_spread
 	fn _get_ask_price(
 		pool_id: LiquidityPoolId,
 		currency_id: CurrencyId,
@@ -400,7 +384,7 @@ impl<T: Trait> Module<T> {
 
 	/// Get bid price from liquidity pool for a given currency. Would fail if price could not meet max slippage.
 	///
-	/// bid_price = price * (1 - bid_spread)
+	/// bid_price = price - bid_spread
 	fn _get_bid_price(
 		pool_id: LiquidityPoolId,
 		currency_id: CurrencyId,
@@ -468,12 +452,9 @@ impl<T: Trait> Module<T> {
 			.expect("ensured high enough synthetic position; qed");
 
 		// new_synthetic_value = new_synthetic_position * price
-		let new_synthetic_value = {
-			let in_price_type = T::BalanceToPrice::convert(new_synthetic_position)
-				.checked_mul(&price)
-				.ok_or(Error::<T>::NumOverflow)?;
-			T::PriceToBalance::convert(in_price_type)
-		};
+		let new_synthetic_value = price
+			.checked_mul_int(&new_synthetic_position)
+			.ok_or(Error::<T>::NumOverflow)?;
 		let required_collateral = Self::_with_additional_collateral(pool_id, currency_id, new_synthetic_value)?;
 
 		let mut collateral_position_delta = redeemed_collateral;
@@ -515,31 +496,22 @@ impl<T: Trait> Module<T> {
 		);
 
 		// synthetic_position_value = synthetic_position * price
-		let synthetic_position_value = {
-			let in_price = T::BalanceToPrice::convert(synthetic_position)
-				.checked_mul(&price)
-				.ok_or(Error::<T>::NumOverflow)?;
-			T::PriceToBalance::convert(in_price)
-		};
+		let synthetic_position_value = price
+			.checked_mul_int(&synthetic_position)
+			.ok_or(Error::<T>::NumOverflow)?;
 		// if synthetic position not backed by enough collateral, no incentive
 		if collateral_position <= synthetic_position_value {
 			return Ok((liquidized_collateral, Zero::zero(), Zero::zero()));
 		}
 
 		// current_ratio = collateral_position / synthetic_position_value
-		let current_ratio = {
-			let collateral_position_u128: u128 =
-				TryInto::<u128>::try_into(collateral_position).map_err(|_| Error::<T>::BalanceToU128Failed)?;
-			let synthetic_position_value_u128: u128 =
-				TryInto::<u128>::try_into(synthetic_position_value).map_err(|_| Error::<T>::BalanceToU128Failed)?;
-			FixedU128::from_rational(collateral_position_u128, synthetic_position_value_u128)
-		};
+		let current_ratio = FixedU128::from_rational(collateral_position, synthetic_position_value);
 
-		// in safe position if ratio >= liquidation_ratio
-		let one = FixedU128::from_rational(1, 1);
-		let liquidation_ratio = <SyntheticTokens<T>>::liquidation_ratio_or_default(currency_id);
-		let safe_ratio_threshold = Into::<FixedU128>::into(liquidation_ratio).saturating_add(one);
-		ensure!(current_ratio < safe_ratio_threshold, Error::<T>::StillInSafePosition);
+		// in safe position if ratio > liquidation_ratio
+		ensure!(
+			!Self::is_safe_collateral_ratio(currency_id, current_ratio),
+			Error::<T>::StillInSafePosition
+		);
 
 		let new_synthetic_position = synthetic_position
 			.checked_sub(burned_synthetic)
@@ -550,13 +522,13 @@ impl<T: Trait> Module<T> {
 
 		// with_current_ratio = new_synthetic_position * price * current_ratio
 		let with_current_ratio = {
-			let new_synthetic_position_value = T::BalanceToPrice::convert(new_synthetic_position)
-				.checked_mul(&price)
+			let new_synthetic_position_value = price
+				.checked_mul_int(&new_synthetic_position)
 				.ok_or(Error::<T>::NumOverflow)?;
-			let with_current_ratio = new_synthetic_position_value
-				.checked_mul(&current_ratio)
+			let with_current_ratio = current_ratio
+				.checked_mul_int(&new_synthetic_position_value)
 				.ok_or(Error::<T>::NumOverflow)?;
-			T::PriceToBalance::convert(with_current_ratio)
+			with_current_ratio
 		};
 
 		if new_collateral_position > with_current_ratio {
@@ -566,12 +538,9 @@ impl<T: Trait> Module<T> {
 				.expect("ensured new collateral position higher; qed");
 			let incentive_ratio = <SyntheticTokens<T>>::incentive_ratio(currency_id, current_ratio);
 			// incentive = available_for_incentive * incentive_ratio
-			let incentive = {
-				let in_price = T::BalanceToPrice::convert(available_for_incentive)
-					.checked_mul(&incentive_ratio)
-					.ok_or(Error::<T>::NumOverflow)?;
-				T::PriceToBalance::convert(in_price)
-			};
+			let incentive = incentive_ratio
+				.checked_mul_int(&available_for_incentive)
+				.ok_or(Error::<T>::NumOverflow)?;
 
 			let pool_refund_collateral = available_for_incentive
 				.checked_sub(incentive)
@@ -587,5 +556,28 @@ impl<T: Trait> Module<T> {
 			// no more incentive could be given
 			Ok((liquidized_collateral, Zero::zero(), Zero::zero()))
 		}
+	}
+}
+
+// public
+
+impl<T: Trait> Module<T> {
+	/// Collateral ratio of the `currency_id` in `pool_id`.
+	///
+	/// collateral_ratio = collateral_position / (synthetic_position * price)
+	pub fn collateral_ratio(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<FixedU128> {
+		let (collateral_position, synthetic_position) = <SyntheticTokens<T>>::get_position(pool_id, currency_id);
+		let price = T::PriceProvider::get_price(currency_id, T::GetCollateralCurrencyId::get())?;
+		let synthetic_position_value = price.checked_mul_int(&synthetic_position)?;
+
+		Some(FixedU128::from_rational(collateral_position, synthetic_position_value))
+	}
+
+	/// Check if a given collateral `ratio` of `currency_id` is safe or not.
+	pub fn is_safe_collateral_ratio(currency_id: CurrencyId, ratio: FixedU128) -> bool {
+		let one = FixedU128::from_rational(1, 1);
+		let liquidation_ratio = <SyntheticTokens<T>>::liquidation_ratio_or_default(currency_id);
+		let safe_ratio_threshold = Into::<FixedU128>::into(liquidation_ratio).saturating_add(one);
+		ratio > safe_ratio_threshold
 	}
 }

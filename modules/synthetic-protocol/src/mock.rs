@@ -13,7 +13,7 @@ use orml_currencies::Currency;
 use orml_prices::DefaultPriceProvider;
 use orml_traits::DataProvider;
 
-use module_primitives::{BalancePriceConverter, LiquidityPoolId};
+use module_primitives::LiquidityPoolId;
 use module_traits::{LiquidityPools, SyntheticProtocolLiquidityPools};
 
 use super::*;
@@ -237,8 +237,6 @@ impl Trait for Runtime {
 	type PriceProvider = DefaultPriceProvider<CurrencyId, MockPrices>;
 	type LiquidityPools = MockLiquidityPools;
 	type SyntheticProtocolLiquidityPools = MockLiquidityPools;
-	type BalanceToPrice = BalancePriceConverter;
-	type PriceToBalance = BalancePriceConverter;
 }
 pub type SyntheticProtocol = Module<Runtime>;
 

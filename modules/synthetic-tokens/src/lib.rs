@@ -12,9 +12,9 @@ use module_traits::LiquidityPoolManager;
 use orml_utilities::FixedU128;
 use sp_runtime::{
 	traits::{AccountIdConversion, Zero},
-	DispatchError, DispatchResult, ModuleId, Permill, RuntimeDebug,
+	DispatchResult, ModuleId, Permill, RuntimeDebug,
 };
-use sp_std::{prelude::Vec, result};
+use sp_std::prelude::Vec;
 
 mod mock;
 mod tests;
@@ -197,10 +197,6 @@ impl<T: Trait> LiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
 			.iter()
 			.map(|currency_id| -> (Balance, Balance) { Self::get_position(pool_id, *currency_id) })
 			.all(|x| x.1.is_zero())
-	}
-
-	fn get_required_deposit(_pool: LiquidityPoolId) -> result::Result<Balance, DispatchError> {
-		unimplemented!()
 	}
 
 	fn ensure_can_withdraw(_pool: LiquidityPoolId, _amount: Balance) -> DispatchResult {

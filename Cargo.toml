@@ -61,6 +61,7 @@ substrate-frame-rpc-system = { version = "2.0.0-alpha.6" }
 margin-protocol = { package = "module-margin-protocol", path = "modules/margin-protocol"}
 margin-protocol-rpc = { path = "modules/margin-protocol/rpc" }
 margin-liquidity-pools = { package = "module-margin-liquidity-pools", path = "modules/liquidity-pools/margin" }
+synthetic-protocol-rpc = { path = "modules/synthetic-protocol/rpc" }
 orml-oracle-rpc = { path = "orml/oracle/rpc" }
 orml-utilities = { path = "orml/utilities" }
 module-primitives = { path = "./modules/primitives" }

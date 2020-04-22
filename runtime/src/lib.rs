@@ -38,7 +38,8 @@ use orml_traits::DataProvider;
 pub use orml_utilities::Fixed128;
 
 use margin_protocol_rpc_runtime_api::{PoolInfo, TraderInfo};
-use module_primitives::{BalancePriceConverter, Price};
+use module_primitives::Price;
+use synthetic_protocol_rpc_runtime_api::PoolInfo as SyntheticProtocolPoolInfo;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
@@ -603,8 +604,6 @@ impl synthetic_protocol::Trait for Runtime {
 	type PriceProvider = orml_prices::DefaultPriceProvider<CurrencyId, LaminarDataProvider>;
 	type LiquidityPools = synthetic_liquidity_pools::Module<Runtime>;
 	type SyntheticProtocolLiquidityPools = synthetic_liquidity_pools::Module<Runtime>;
-	type BalanceToPrice = BalancePriceConverter;
-	type PriceToBalance = BalancePriceConverter;
 }
 
 type TransactionSubmitter = system::offchain::TransactionSubmitter<(), Runtime, UncheckedExtrinsic>;
@@ -830,12 +829,12 @@ impl_runtime_apis! {
 	}
 
 	impl margin_protocol_rpc_runtime_api::MarginProtocolApi<Block, AccountId> for Runtime {
-		fn trader_info(who: AccountId) -> TraderInfo {
-			let equity = MarginProtocol::equity_of_trader(&who).unwrap_or_default();
-			let margin_held = MarginProtocol::margin_held(&who);
-			let margin_level = MarginProtocol::margin_level(&who).unwrap_or_default();
-			let free_margin = MarginProtocol::free_margin(&who).unwrap_or_default();
-			let unrealized_pl = MarginProtocol::unrealized_pl_of_trader(&who).unwrap_or_default();
+		fn trader_info(who: AccountId, pool_id: LiquidityPoolId) -> TraderInfo {
+			let equity = MarginProtocol::equity_of_trader(&who, pool_id).unwrap_or_default();
+			let margin_held = MarginProtocol::margin_held(&who, pool_id);
+			let margin_level = MarginProtocol::margin_level(&who, pool_id).unwrap_or_default();
+			let free_margin = MarginProtocol::free_margin(&who, pool_id).unwrap_or_default();
+			let unrealized_pl = MarginProtocol::unrealized_pl_of_trader(&who, pool_id).unwrap_or_default();
 
 			TraderInfo {
 				equity,
@@ -848,8 +847,18 @@ impl_runtime_apis! {
 
 		fn pool_info(pool_id: LiquidityPoolId) -> Option<PoolInfo> {
 			let (enp, ell) = MarginProtocol::enp_and_ell(pool_id)?;
+			let required_deposit = MarginProtocol::pool_required_deposit(pool_id)?;
 
-			Some(PoolInfo { enp, ell })
+			Some(PoolInfo { enp, ell, required_deposit })
+		}
+	}
+
+	impl synthetic_protocol_rpc_runtime_api::SyntheticProtocolApi<Block, AccountId> for Runtime {
+		fn pool_info(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<SyntheticProtocolPoolInfo> {
+			let collateral_ratio = SyntheticProtocol::collateral_ratio(pool_id, currency_id)?;
+			let is_safe = SyntheticProtocol::is_safe_collateral_ratio(currency_id, collateral_ratio);
+
+			Some(SyntheticProtocolPoolInfo { collateral_ratio, is_safe })
 		}
 	}
 }
