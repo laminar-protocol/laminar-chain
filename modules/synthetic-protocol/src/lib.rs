@@ -507,11 +507,8 @@ impl<T: Trait> Module<T> {
 		// current_ratio = collateral_position / synthetic_position_value
 		let current_ratio = FixedU128::from_rational(collateral_position, synthetic_position_value);
 
-		// in safe position if ratio >= liquidation_ratio
-		let one = FixedU128::from_rational(1, 1);
-		let liquidation_ratio = <SyntheticTokens<T>>::liquidation_ratio_or_default(currency_id);
-		let safe_ratio_threshold = Into::<FixedU128>::into(liquidation_ratio).saturating_add(one);
-		ensure!(current_ratio < safe_ratio_threshold, Error::<T>::StillInSafePosition);
+		// in safe position if ratio > liquidation_ratio
+		ensure!(!Self::is_safe_collateral_ratio(currency_id, current_ratio), Error::<T>::StillInSafePosition);
 
 		let new_synthetic_position = synthetic_position
 			.checked_sub(burned_synthetic)
@@ -556,5 +553,28 @@ impl<T: Trait> Module<T> {
 			// no more incentive could be given
 			Ok((liquidized_collateral, Zero::zero(), Zero::zero()))
 		}
+	}
+}
+
+// public
+
+impl<T: Trait> Module<T> {
+	/// Collateral ratio of the `currency_id` in `pool_id`.
+	///
+	/// collateral_ratio = collateral_position / (synthetic_position * price)
+	pub fn collateral_ratio(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<FixedU128> {
+		let (collateral_position, synthetic_position) = <SyntheticTokens<T>>::get_position(pool_id, currency_id);
+		let price = T::PriceProvider::get_price(currency_id, T::GetCollateralCurrencyId::get())?;
+		let synthetic_position_value = price.checked_mul_int(&synthetic_position)?;
+
+		Some(FixedU128::from_rational(collateral_position, synthetic_position_value))
+	}
+
+	/// Check if a given collateral `ratio` of `currency_id` is safe or not.
+	pub fn is_safe_collateral_ratio(currency_id: CurrencyId, ratio: FixedU128) -> bool {
+		let one = FixedU128::from_rational(1, 1);
+		let liquidation_ratio = <SyntheticTokens<T>>::liquidation_ratio_or_default(currency_id);
+		let safe_ratio_threshold = Into::<FixedU128>::into(liquidation_ratio).saturating_add(one);
+		ratio > safe_ratio_threshold
 	}
 }

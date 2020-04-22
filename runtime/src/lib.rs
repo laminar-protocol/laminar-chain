@@ -39,6 +39,7 @@ pub use orml_utilities::Fixed128;
 
 use margin_protocol_rpc_runtime_api::{PoolInfo, TraderInfo};
 use module_primitives::Price;
+use synthetic_protocol_rpc_runtime_api::PoolInfo as SyntheticProtocolPoolInfo;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
@@ -846,6 +847,15 @@ impl_runtime_apis! {
 			let (enp, ell) = MarginProtocol::enp_and_ell(pool_id)?;
 
 			Some(PoolInfo { enp, ell })
+		}
+	}
+
+	impl synthetic_protocol_rpc_runtime_api::SyntheticProtocolApi<Block, AccountId> for Runtime {
+		fn pool_info(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<SyntheticProtocolPoolInfo> {
+			let collateral_ratio = SyntheticProtocol::collateral_ratio(pool_id, currency_id)?;
+			let is_safe = SyntheticProtocol::is_safe_collateral_ratio(currency_id, collateral_ratio);
+
+			Some(SyntheticProtocolPoolInfo { collateral_ratio, is_safe })
 		}
 	}
 }
