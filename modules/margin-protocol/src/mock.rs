@@ -270,6 +270,11 @@ pub const EUR_USD_PAIR: TradingPair = TradingPair {
 	quote: CurrencyId::AUSD,
 };
 
+pub const JPY_USD_PAIR: TradingPair = TradingPair {
+	base: CurrencyId::FJPY,
+	quote: CurrencyId::AUSD,
+};
+
 pub const JPY_EUR_PAIR: TradingPair = TradingPair {
 	base: CurrencyId::FEUR,
 	quote: CurrencyId::FJPY,

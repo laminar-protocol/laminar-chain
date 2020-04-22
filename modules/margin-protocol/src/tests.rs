@@ -30,7 +30,7 @@ fn risk_threshold(margin_call_percent: u32, stop_out_percent: u32) -> RiskThresh
 	}
 }
 
-fn eur_jpy_long() -> Position<Runtime> {
+fn jpy_eur_long() -> Position<Runtime> {
 	Position {
 		owner: ALICE,
 		pool: MOCK_POOL,
@@ -44,7 +44,7 @@ fn eur_jpy_long() -> Position<Runtime> {
 	}
 }
 
-fn eur_jpy_short() -> Position<Runtime> {
+fn jpy_eur_short() -> Position<Runtime> {
 	Position {
 		owner: ALICE,
 		pool: MOCK_POOL,
@@ -68,7 +68,7 @@ fn unrealized_pl_of_long_position_works() {
 		.build()
 		.execute_with(|| {
 			assert_eq!(
-				MarginProtocol::_unrealized_pl_of_position(&eur_jpy_long()),
+				MarginProtocol::_unrealized_pl_of_position(&jpy_eur_long()),
 				Ok(Fixed128::from_parts(-1073545454545441750827)),
 			);
 		});
@@ -84,7 +84,7 @@ fn unrealized_pl_of_short_position_works() {
 		.build()
 		.execute_with(|| {
 			assert_eq!(
-				MarginProtocol::_unrealized_pl_of_position(&eur_jpy_short()),
+				MarginProtocol::_unrealized_pl_of_position(&jpy_eur_short()),
 				Ok(Fixed128::from_parts(1470999999999987140172)),
 			);
 		});
@@ -99,8 +99,8 @@ fn unrealized_pl_of_trader_sums_all_positions() {
 		.price(CurrencyId::FEUR, (140, 110))
 		.build()
 		.execute_with(|| {
-			<Positions<Runtime>>::insert(0, eur_jpy_long());
-			<Positions<Runtime>>::insert(1, eur_jpy_short());
+			<Positions<Runtime>>::insert(0, jpy_eur_long());
+			<Positions<Runtime>>::insert(1, jpy_eur_short());
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), true);
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 1), true);
 			assert_eq!(
@@ -113,8 +113,8 @@ fn unrealized_pl_of_trader_sums_all_positions() {
 #[test]
 fn margin_held_sums_all_margin_held() {
 	ExtBuilder::default().build().execute_with(|| {
-		<Positions<Runtime>>::insert(0, eur_jpy_long());
-		<Positions<Runtime>>::insert(1, eur_jpy_short());
+		<Positions<Runtime>>::insert(0, jpy_eur_long());
+		<Positions<Runtime>>::insert(1, jpy_eur_short());
 		<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), true);
 		<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 1), true);
 		assert_eq!(
@@ -185,6 +185,22 @@ fn eur_usd_short_2() -> Position<Runtime> {
 		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(237_362_40),
 		open_accumulated_swap_rate: open_rate,
 		margin_held: fixed128_from_natural_currency_cent(4_747_00),
+	}
+}
+
+fn jpy_usd_long_1() -> Position<Runtime> {
+	let open_rate =
+		Fixed128::from_natural(1).saturating_add(Fixed128::from_rational(36_87, NonZeroI128::new(100_000_00).unwrap()));
+	Position {
+		owner: ALICE,
+		pool: MOCK_POOL,
+		pair: JPY_USD_PAIR,
+		leverage: Leverage::LongFive,
+		leveraged_held: Fixed128::from_natural(100_000),
+		leveraged_debits: fixed128_from_natural_currency_cent(-120_420_30),
+		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(-120_420_30),
+		open_accumulated_swap_rate: open_rate,
+		margin_held: fixed128_from_natural_currency_cent(24_084_00),
 	}
 }
 
@@ -870,7 +886,7 @@ fn open_long_position_works() {
 			));
 
 			let position = {
-				let mut p = eur_jpy_long();
+				let mut p = jpy_eur_long();
 				// with higher precision level
 				p.leveraged_debits = Fixed128::from_parts(-14104090000000000732600000);
 				p.leveraged_debits_in_usd = Fixed128::from_parts(-131813925233644859805488);
@@ -922,7 +938,7 @@ fn open_short_position_works() {
 			));
 
 			let position = {
-				let mut p = eur_jpy_short();
+				let mut p = jpy_eur_short();
 				// with higher precision level
 				p.leveraged_debits = Fixed128::from_parts(14175810000000000585500000);
 				p.leveraged_debits_in_usd = Fixed128::from_parts(133734056603773584812414);
@@ -1472,7 +1488,7 @@ fn close_position_fails_if_no_base_price() {
 		.execute_with(|| {
 			<Balances<Runtime>>::insert(ALICE, alice_initial);
 
-			let position = eur_jpy_long();
+			let position = jpy_eur_long();
 			let id = 0;
 			<Positions<Runtime>>::insert(id, position);
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), true);
@@ -1497,7 +1513,7 @@ fn close_position_fails_if_no_quote_price() {
 		.execute_with(|| {
 			<Balances<Runtime>>::insert(ALICE, alice_initial);
 
-			let position = eur_jpy_long();
+			let position = jpy_eur_long();
 			let id = 0;
 			<Positions<Runtime>>::insert(id, position);
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), true);
@@ -1844,7 +1860,7 @@ fn liquidity_pool_manager_can_remove_works() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert!(<MarginProtocol as LiquidityPoolManager<LiquidityPoolId, Balance>>::can_remove(MOCK_POOL));
 
-		<Positions<Runtime>>::insert(0, eur_jpy_long());
+		<Positions<Runtime>>::insert(0, jpy_eur_long());
 		PositionsByPool::insert(MOCK_POOL, (JPY_EUR_PAIR, 0), true);
 		assert!(!<MarginProtocol as LiquidityPoolManager<LiquidityPoolId, Balance>>::can_remove(MOCK_POOL));
 	});
@@ -1994,6 +2010,264 @@ fn pool_open_positions_limit() {
 					Price::from_natural(100)
 				),
 				Error::<Runtime>::CannotOpenMorePosition
+			);
+		});
+}
+
+#[test]
+fn set_trading_pair_risk_threshold_works() {
+	ExtBuilder::default()
+		.spread(Permill::zero())
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.price(CurrencyId::FEUR, (1, 1))
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(1000_00))
+		.build()
+		.execute_with(|| {
+			System::set_block_number(1);
+			assert_eq!(
+				MarginProtocol::trader_risk_threshold(EUR_USD_PAIR).unwrap(),
+				risk_threshold(0, 0)
+			);
+			assert_eq!(
+				MarginProtocol::liquidity_pool_ell_threshold(EUR_USD_PAIR).unwrap(),
+				risk_threshold(0, 0)
+			);
+			assert_eq!(
+				MarginProtocol::liquidity_pool_enp_threshold(EUR_USD_PAIR).unwrap(),
+				risk_threshold(0, 0)
+			);
+
+			assert_ok!(MarginProtocol::set_trading_pair_risk_threshold(
+				Origin::ROOT,
+				EUR_USD_PAIR,
+				None,
+				None,
+				None
+			));
+			let event =
+				TestEvent::margin_protocol(RawEvent::SetTradingPairRiskThreshold(EUR_USD_PAIR, None, None, None));
+			assert!(System::events().iter().any(|record| record.event == event));
+
+			assert_ok!(MarginProtocol::set_trading_pair_risk_threshold(
+				Origin::ROOT,
+				EUR_USD_PAIR,
+				Some(risk_threshold(1, 2)),
+				None,
+				None
+			));
+			let event = TestEvent::margin_protocol(RawEvent::SetTradingPairRiskThreshold(
+				EUR_USD_PAIR,
+				Some(risk_threshold(1, 2)),
+				None,
+				None,
+			));
+			assert!(System::events().iter().any(|record| record.event == event));
+			assert_eq!(
+				MarginProtocol::trader_risk_threshold(EUR_USD_PAIR).unwrap(),
+				risk_threshold(1, 2)
+			);
+			assert_eq!(
+				MarginProtocol::liquidity_pool_enp_threshold(EUR_USD_PAIR).unwrap(),
+				risk_threshold(0, 0)
+			);
+			assert_eq!(
+				MarginProtocol::liquidity_pool_ell_threshold(EUR_USD_PAIR).unwrap(),
+				risk_threshold(0, 0)
+			);
+
+			assert_ok!(MarginProtocol::set_trading_pair_risk_threshold(
+				Origin::ROOT,
+				EUR_USD_PAIR,
+				None,
+				Some(risk_threshold(3, 4)),
+				None
+			));
+			let event = TestEvent::margin_protocol(RawEvent::SetTradingPairRiskThreshold(
+				EUR_USD_PAIR,
+				None,
+				Some(risk_threshold(3, 4)),
+				None,
+			));
+			assert!(System::events().iter().any(|record| record.event == event));
+			assert_eq!(
+				MarginProtocol::trader_risk_threshold(EUR_USD_PAIR).unwrap(),
+				risk_threshold(1, 2)
+			);
+			assert_eq!(
+				MarginProtocol::liquidity_pool_enp_threshold(EUR_USD_PAIR).unwrap(),
+				risk_threshold(3, 4)
+			);
+			assert_eq!(
+				MarginProtocol::liquidity_pool_ell_threshold(EUR_USD_PAIR).unwrap(),
+				risk_threshold(0, 0)
+			);
+
+			assert_ok!(MarginProtocol::set_trading_pair_risk_threshold(
+				Origin::ROOT,
+				EUR_USD_PAIR,
+				None,
+				None,
+				Some(risk_threshold(5, 6))
+			));
+			let event = TestEvent::margin_protocol(RawEvent::SetTradingPairRiskThreshold(
+				EUR_USD_PAIR,
+				None,
+				None,
+				Some(risk_threshold(5, 6)),
+			));
+			assert!(System::events().iter().any(|record| record.event == event));
+			assert_eq!(
+				MarginProtocol::trader_risk_threshold(EUR_USD_PAIR).unwrap(),
+				risk_threshold(1, 2)
+			);
+			assert_eq!(
+				MarginProtocol::liquidity_pool_enp_threshold(EUR_USD_PAIR).unwrap(),
+				risk_threshold(3, 4)
+			);
+			assert_eq!(
+				MarginProtocol::liquidity_pool_ell_threshold(EUR_USD_PAIR).unwrap(),
+				risk_threshold(5, 6)
+			);
+		});
+}
+
+#[test]
+fn ensure_can_enable_trading_pair_works() {
+	ExtBuilder::default()
+		.spread(Permill::zero())
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.price(CurrencyId::FEUR, (1, 1))
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(1000_00))
+		.build()
+		.execute_with(|| {
+			assert_noop!(
+				MarginProtocol::ensure_can_enable_trading_pair(MOCK_POOL, JPY_USD_PAIR),
+				Error::<Runtime>::NoRiskThreshold
+			);
+
+			<Positions<Runtime>>::insert(0, eur_usd_long_1());
+			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), true);
+			assert_eq!(
+				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::OpenPosition(eur_usd_long_1())),
+				Ok((
+					Fixed128::from_parts(89092827372129117),
+					Fixed128::from_parts(89092827372129117)
+				))
+			);
+
+			assert_ok!(MarginProtocol::ensure_can_enable_trading_pair(MOCK_POOL, EUR_USD_PAIR));
+			LiquidityPoolELLThreshold::insert(EUR_USD_PAIR, risk_threshold(100, 0));
+			assert_noop!(
+				MarginProtocol::ensure_can_enable_trading_pair(MOCK_POOL, EUR_USD_PAIR),
+				Error::<Runtime>::PoolWouldBeUnsafe
+			);
+			LiquidityPoolELLThreshold::insert(EUR_USD_PAIR, risk_threshold(5, 5));
+			assert_ok!(MarginProtocol::ensure_can_enable_trading_pair(MOCK_POOL, EUR_USD_PAIR));
+		});
+}
+
+#[test]
+fn get_trader_max_threshold_works() {
+	ExtBuilder::default()
+		.spread(Permill::zero())
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.price(CurrencyId::FEUR, (1, 1))
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(1000_00))
+		.build()
+		.execute_with(|| {
+			TraderRiskThreshold::insert(EUR_USD_PAIR, risk_threshold(3, 5));
+			TraderRiskThreshold::insert(JPY_EUR_PAIR, risk_threshold(5, 3));
+			TraderRiskThreshold::insert(JPY_USD_PAIR, risk_threshold(6, 7));
+
+			<Positions<Runtime>>::insert(0, eur_usd_long_1());
+			<Positions<Runtime>>::insert(1, jpy_eur_short());
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), true);
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 1), true);
+
+			assert_eq!(
+				MarginProtocol::_get_trader_max_threshold(&ALICE, Action::None),
+				RiskThreshold {
+					margin_call: Permill::from_percent(5),
+					stop_out: Permill::from_percent(5),
+				}
+			);
+
+			assert_eq!(
+				MarginProtocol::_get_trader_max_threshold(&ALICE, Action::OpenPosition(eur_usd_long_1())),
+				RiskThreshold {
+					margin_call: Permill::from_percent(5),
+					stop_out: Permill::from_percent(5),
+				}
+			);
+
+			assert_eq!(
+				MarginProtocol::_get_trader_max_threshold(&ALICE, Action::OpenPosition(jpy_usd_long_1())),
+				RiskThreshold {
+					margin_call: Permill::from_percent(6),
+					stop_out: Permill::from_percent(7),
+				}
+			);
+		});
+}
+
+#[test]
+fn get_liquidity_pool_max_threshold_works() {
+	ExtBuilder::default()
+		.spread(Permill::zero())
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.price(CurrencyId::FEUR, (1, 1))
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(1000_00))
+		.build()
+		.execute_with(|| {
+			LiquidityPoolENPThreshold::insert(EUR_USD_PAIR, risk_threshold(3, 5));
+			LiquidityPoolENPThreshold::insert(JPY_EUR_PAIR, risk_threshold(5, 3));
+			LiquidityPoolENPThreshold::insert(JPY_USD_PAIR, risk_threshold(6, 7));
+
+			<Positions<Runtime>>::insert(0, eur_usd_long_1());
+			<Positions<Runtime>>::insert(1, jpy_eur_short());
+			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), true);
+			PositionsByPool::insert(MOCK_POOL, (JPY_EUR_PAIR, 1), true);
+
+			assert_eq!(
+				MarginProtocol::_get_liquidity_pool_max_threshold(MOCK_POOL, Action::None),
+				(
+					RiskThreshold {
+						margin_call: Permill::from_percent(5),
+						stop_out: Permill::from_percent(5),
+					},
+					RiskThreshold {
+						margin_call: Permill::from_percent(0),
+						stop_out: Permill::from_percent(0)
+					}
+				)
+			);
+
+			assert_eq!(
+				MarginProtocol::_get_liquidity_pool_max_threshold(MOCK_POOL, Action::OpenPosition(eur_usd_long_1())),
+				(
+					RiskThreshold {
+						margin_call: Permill::from_percent(5),
+						stop_out: Permill::from_percent(5),
+					},
+					RiskThreshold {
+						margin_call: Permill::from_percent(0),
+						stop_out: Permill::from_percent(0)
+					}
+				)
+			);
+
+			assert_eq!(
+				MarginProtocol::_get_liquidity_pool_max_threshold(MOCK_POOL, Action::OpenPosition(jpy_usd_long_1())),
+				(
+					RiskThreshold {
+						margin_call: Permill::from_percent(6),
+						stop_out: Permill::from_percent(7),
+					},
+					RiskThreshold {
+						margin_call: Permill::from_percent(0),
+						stop_out: Permill::from_percent(0)
+					}
+				)
 			);
 		});
 }
