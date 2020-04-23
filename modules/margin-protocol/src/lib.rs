@@ -11,7 +11,7 @@ use sp_arithmetic::{
 };
 use sp_runtime::{
 	offchain::{storage::StorageValueRef, Duration, Timestamp},
-	traits::{AccountIdConversion, StaticLookup, UniqueSaturatedInto},
+	traits::{AccountIdConversion, StaticLookup},
 	transaction_validity::{
 		InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity, ValidTransaction,
 	},
@@ -49,6 +49,7 @@ pub trait Trait: frame_system::Trait {
 	type Call: From<Call<Self>> + IsSubType<Module<Self>, Self>;
 	type GetTraderMaxOpenPositions: Get<usize>;
 	type GetPoolMaxOpenPositions: Get<usize>;
+	type UnsignedPriority: Get<TransactionPriority>;
 }
 
 pub type PositionId = u64;
@@ -1229,10 +1230,6 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 	type Call = Call<T>;
 
 	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
-		let base_priority = TransactionPriority::max_value() - 86400 * 365 * 100 / 2;
-		let block_number = <system::Module<T>>::block_number().unique_saturated_into() as u64;
-		let base_priority = base_priority.saturating_add(block_number);
-
 		match call {
 			Call::trader_margin_call(who, pool_id) => {
 				let trader = T::Lookup::lookup(who.clone()).expect(InvalidTransaction::Stale.into());
@@ -1241,7 +1238,7 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 				}
 
 				ValidTransaction::with_tag_prefix("margin_protocol/trader_margin_call")
-					.priority(base_priority)
+					.priority(T::UnsignedPriority::get())
 					.and_provides(who)
 					.longevity(64_u64)
 					.propagate(true)
@@ -1254,7 +1251,7 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 				}
 
 				ValidTransaction::with_tag_prefix("margin_protocol/trader_become_safe")
-					.priority(base_priority)
+					.priority(T::UnsignedPriority::get())
 					.and_provides(who)
 					.longevity(64_u64)
 					.propagate(true)
@@ -1264,7 +1261,7 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 				let trader = T::Lookup::lookup(who.clone()).expect(InvalidTransaction::Stale.into());
 				if Self::_should_stop_out_trader(&trader, *pool_id).ok() == Some(true) {
 					return ValidTransaction::with_tag_prefix("margin_protocol/trader_stop_out")
-						.priority(base_priority)
+						.priority(T::UnsignedPriority::get())
 						.and_provides(who)
 						.longevity(64_u64)
 						.propagate(true)
@@ -1277,7 +1274,7 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 					return InvalidTransaction::Stale.into();
 				}
 				ValidTransaction::with_tag_prefix("margin_protocol/liquidity_pool_margin_call")
-					.priority(base_priority)
+					.priority(T::UnsignedPriority::get())
 					.and_provides(pool_id)
 					.longevity(64_u64)
 					.propagate(true)
@@ -1289,7 +1286,7 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 				}
 
 				ValidTransaction::with_tag_prefix("margin_protocol/liquidity_pool_become_safe")
-					.priority(base_priority)
+					.priority(T::UnsignedPriority::get())
 					.and_provides(pool_id)
 					.longevity(64_u64)
 					.propagate(true)
@@ -1298,7 +1295,7 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 			Call::liquidity_pool_force_close(pool_id) => {
 				if Self::_should_liquidate_pool(*pool_id).ok() == Some(true) {
 					return ValidTransaction::with_tag_prefix("margin_protocol/liquidity_pool_force_close")
-						.priority(base_priority)
+						.priority(T::UnsignedPriority::get())
 						.and_provides(pool_id)
 						.longevity(64_u64)
 						.propagate(true)
