@@ -8,16 +8,18 @@ use crate::{
 	CurrencyId::{self, AUSD, FEUR},
 	LiquidityPoolId, MinimumCount, Runtime,
 };
-use frame_support::{assert_ok, parameter_types, traits::OnFinalize};
+use frame_support::{assert_ok, parameter_types, traits::OnFinalize, traits::OnInitialize};
 
 use margin_liquidity_pools::SwapRate;
 use margin_protocol::RiskThreshold;
 use module_primitives::{Balance, Leverage, Leverages, TradingPair};
+use module_traits::MarginProtocolLiquidityPools;
 use orml_prices::Price;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
 use orml_utilities::Fixed128;
 use pallet_indices::address::Address;
 use sp_runtime::{DispatchResult, Permill};
+use std::ops::Range;
 
 pub type PositionId = u64;
 pub type ModuleSyntheticProtocol = synthetic_protocol::Module<Runtime>;
@@ -421,4 +423,17 @@ pub fn free_margin(who: &AccountId) -> Fixed128 {
 
 pub fn margin_equity(who: &AccountId) -> Fixed128 {
 	ModuleMarginProtocol::equity_of_trader(who, LIQUIDITY_POOL_ID_0).unwrap()
+}
+
+pub fn margin_execute_block(range: Range<BlockNumber>) {
+	for i in range {
+		System::set_block_number(i);
+		MarginLiquidityPools::on_initialize(i);
+		println!(
+			"execute_block {:?}, accumulated_long_rate = {:?}, accumulated_short_rate = {:?}",
+			i,
+			MarginLiquidityPools::get_accumulated_swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD, true),
+			MarginLiquidityPools::get_accumulated_swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD, false)
+		);
+	}
 }

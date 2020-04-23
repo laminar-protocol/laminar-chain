@@ -8,6 +8,7 @@ use orml_utilities::{Fixed128, FixedU128};
 use runtime::tests::*;
 use runtime::{AccountId, BlockNumber, CurrencyId};
 use sp_runtime::{DispatchResult, Permill};
+use std::ops::Range;
 
 #[derive(Default)]
 pub struct World {
@@ -124,6 +125,14 @@ fn parse_pair(name: Option<&String>) -> TradingPair {
 fn parse_block_number(value: Option<&String>) -> BlockNumber {
 	let value = value.expect("Missing block number");
 	value.trim().parse().expect("Invalid block number")
+}
+
+fn parse_block_number_range(value: Option<&String>) -> Range<BlockNumber> {
+	let value = value.expect("Missing block number");
+	let range: Vec<&str> = value.trim().split("..").collect();
+	let start = range[0].parse().expect("Invalid block number");
+	let end = range[1].parse().expect("Invalid block number");
+	Range { start: start, end: end }
 }
 
 fn parse_leverage(leverage: Option<&String>) -> Leverage {
@@ -400,6 +409,18 @@ mod steps {
 				world.execute_with(|| {
 					let amount = parse_dollar(matches.get(1));
 					assert_eq!(margin_liquidity(), amount);
+				})
+			})
+			.then_regex(r"margin execute block ([\d]+..[\d]+)", |world, matches, _step| {
+				world.execute_with(|| {
+					let block_range = parse_block_number_range(matches.get(1));
+					margin_execute_block(block_range);
+				})
+			})
+			.then_regex(r"margin set additional swap (.+)", |world, matches, _step| {
+				world.execute_with(|| {
+					let swap = parse_fixed128(matches.get(1));
+					assert_ok!(margin_set_additional_swap(swap));
 				})
 			})
 			.then("trader margin positions are", |world, step| {

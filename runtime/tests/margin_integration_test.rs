@@ -3,7 +3,7 @@
 #[cfg(test)]
 
 mod tests {
-	use frame_support::{assert_noop, assert_ok, traits::OnInitialize};
+	use frame_support::{assert_noop, assert_ok};
 	use laminar_runtime::{
 		tests::*,
 		BaseLiquidityPoolsMarginInstance,
@@ -641,9 +641,7 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
 
-				for i in 1..9 {
-					MarginLiquidityPools::on_initialize(i);
-				}
+				margin_execute_block(1..9);
 
 				assert_ok!(margin_close_position(&ALICE::get(), 0, Price::from_rational(2, 1)));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
@@ -667,14 +665,7 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(4650));
 
-				for i in 9..22 {
-					MarginLiquidityPools::on_initialize(i);
-					println!(
-						"accumulated_long_rate = {:?}, accumulated_short_rate = {:?}",
-						MarginLiquidityPools::get_accumulated_swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD, true),
-						MarginLiquidityPools::get_accumulated_swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD, false)
-					);
-				}
+				margin_execute_block(9..22);
 
 				assert_ok!(margin_close_position(&ALICE::get(), 1, Price::from_rational(4, 1)));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
@@ -742,9 +733,7 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
 
-				for i in 1..9 {
-					MarginLiquidityPools::on_initialize(i);
-				}
+				margin_execute_block(1..9);
 
 				assert_ok!(margin_close_position(&ALICE::get(), 0, Price::from_rational(2, 1)));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
@@ -768,14 +757,7 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(4600));
 
-				for i in 9..22 {
-					MarginLiquidityPools::on_initialize(i);
-					println!(
-						"accumulated_long_rate = {:?}, accumulated_short_rate = {:?}",
-						MarginLiquidityPools::get_accumulated_swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD, true),
-						MarginLiquidityPools::get_accumulated_swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD, false)
-					);
-				}
+				margin_execute_block(9..22);
 
 				assert_ok!(margin_close_position(&ALICE::get(), 1, Price::from_rational(4, 1)));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
