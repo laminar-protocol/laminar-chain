@@ -7,7 +7,7 @@ use frame_support::{
 };
 use sp_arithmetic::{
 	traits::{Bounded, Saturating},
-	Permill,
+	Fixed128, Permill,
 };
 use sp_runtime::{
 	offchain::{storage::StorageValueRef, Duration, Timestamp},
@@ -23,7 +23,7 @@ use sp_runtime::{
 use frame_system as system;
 use frame_system::{ensure_none, ensure_signed, offchain::SubmitUnsignedTransaction};
 use orml_traits::{MultiCurrency, PriceProvider};
-use orml_utilities::{Fixed128, FixedU128};
+use orml_utilities::FixedU128;
 use primitives::{
 	arithmetic::{fixed_128_from_fixed_u128, fixed_128_from_u128, fixed_128_mul_signum, u128_from_fixed_128},
 	Balance, CurrencyId, Leverage, LiquidityPoolId, Price, TradingPair,
