@@ -824,6 +824,10 @@ impl_runtime_apis! {
 		fn get_value(key: CurrencyId) -> Option<TimeStampedPrice> {
 			Oracle::get_no_op(&key)
 		}
+
+		fn get_all_values() -> Vec<(CurrencyId, Option<TimeStampedPrice>)>{
+			Oracle::get_all_values()
+		}
 	}
 
 	impl margin_protocol_rpc_runtime_api::MarginProtocolApi<Block, AccountId> for Runtime {
