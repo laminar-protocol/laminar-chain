@@ -427,6 +427,7 @@ pub fn margin_equity(who: &AccountId) -> Fixed128 {
 
 pub fn margin_execute_block(range: Range<BlockNumber>) {
 	for i in range {
+		System::set_block_number(i);
 		MarginLiquidityPools::on_initialize(i);
 		println!(
 			"execute_block {:?}, accumulated_long_rate = {:?}, accumulated_short_rate = {:?}",
