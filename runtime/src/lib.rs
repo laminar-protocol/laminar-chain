@@ -247,6 +247,7 @@ parameter_types! {
 	pub const ImOnlineUnsignedPriority: TransactionPriority = TransactionPriority::max_value();
 	/// We prioritize im-online heartbeats over phragmen solution submission.
 	pub const StakingUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 2;
+	pub const MarginProtocolUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 2;
 }
 
 impl pallet_im_online::Trait for Runtime {
@@ -630,6 +631,7 @@ impl margin_protocol::Trait for Runtime {
 	type Call = Call;
 	type GetTraderMaxOpenPositions = GetTraderMaxOpenPositions;
 	type GetPoolMaxOpenPositions = GetPoolMaxOpenPositions;
+	type UnsignedPriority = MarginProtocolUnsignedPriority;
 }
 
 construct_runtime!(
