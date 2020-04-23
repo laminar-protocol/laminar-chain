@@ -2216,7 +2216,7 @@ fn ensure_can_enable_trading_pair_works() {
 }
 
 #[test]
-fn get_trader_max_threshold_works() {
+fn get_risk_threshold_of_trader_works() {
 	ExtBuilder::default()
 		.spread(Permill::zero())
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
@@ -2251,7 +2251,7 @@ fn get_trader_max_threshold_works() {
 }
 
 #[test]
-fn get_liquidity_pool_max_threshold_works() {
+fn get_enp_and_ell_risk_threshold_of_pool_works() {
 	ExtBuilder::default()
 		.spread(Permill::zero())
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
@@ -2262,6 +2262,8 @@ fn get_liquidity_pool_max_threshold_works() {
 			LiquidityPoolENPThreshold::insert(EUR_USD_PAIR, risk_threshold(3, 5));
 			LiquidityPoolENPThreshold::insert(EUR_JPY_PAIR, risk_threshold(5, 3));
 			LiquidityPoolENPThreshold::insert(JPY_USD_PAIR, risk_threshold(6, 7));
+			LiquidityPoolELLThreshold::insert(JPY_USD_PAIR, risk_threshold(8, 9));
+			LiquidityPoolELLThreshold::insert(EUR_USD_PAIR, risk_threshold(1, 2));
 
 			<Positions<Runtime>>::insert(0, eur_usd_long_1());
 			<Positions<Runtime>>::insert(1, eur_jpy_short());
@@ -2270,17 +2272,17 @@ fn get_liquidity_pool_max_threshold_works() {
 
 			assert_eq!(
 				MarginProtocol::_enp_and_ell_risk_threshold_of_pool(MOCK_POOL, Action::None),
-				(risk_threshold(5, 5), risk_threshold(0, 0))
+				(risk_threshold(5, 5), risk_threshold(1, 2))
 			);
 
 			assert_eq!(
 				MarginProtocol::_enp_and_ell_risk_threshold_of_pool(MOCK_POOL, Action::OpenPosition(eur_usd_long_1())),
-				(risk_threshold(5, 5), risk_threshold(0, 0))
+				(risk_threshold(5, 5), risk_threshold(1, 2))
 			);
 
 			assert_eq!(
 				MarginProtocol::_enp_and_ell_risk_threshold_of_pool(MOCK_POOL, Action::OpenPosition(jpy_usd_long_1())),
-				(risk_threshold(6, 7), risk_threshold(0, 0))
+				(risk_threshold(6, 7), risk_threshold(8, 9))
 			);
 		});
 }

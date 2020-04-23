@@ -19,6 +19,7 @@ use sp_runtime::{
 	},
 	DispatchError, DispatchResult, ModuleId, RuntimeDebug,
 };
+use std::collections::HashSet;
 // FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
 // would cause compiling error in `decl_module!` and `construct_runtime!`
 // #3295 https://github.com/paritytech/substrate/issues/3295
@@ -1014,22 +1015,19 @@ impl<T: Trait> Module<T> {
 			Action::OpenPosition(p) => Some(p),
 			_ => None,
 		};
-		let mut trading_pairs: Vec<TradingPair> = <PositionsByTrader<T>>::iter(who)
-			.filter_map(|((_, position_id), _)| {
-				let position = Self::positions(position_id)?;
-				Some(position.pair)
+		let (trader_margin_call, trader_stop_out) = <PositionsByTrader<T>>::iter(who)
+			.fold(HashSet::new(), |mut hs, ((_, position_id), _)| {
+				if let Some(position) = Self::positions(position_id) {
+					hs.insert(position.pair);
+				}
+				hs
 			})
-			.chain(new_position.map_or(vec![], |p| vec![p.pair]))
-			.collect();
-		trading_pairs.sort();
-		trading_pairs.dedup();
-
-		let (trader_margin_call, trader_stop_out) = trading_pairs
 			.iter()
+			.chain(&new_position.map_or(vec![], |p| vec![p.pair]))
 			.filter_map(|pair| Self::trader_risk_threshold(pair))
 			.map(|v| (v.margin_call, v.stop_out))
-			.fold((Permill::zero(), Permill::zero()), |x, v| {
-				(cmp::max(x.0, v.0), cmp::max(x.1, v.1))
+			.fold((Permill::zero(), Permill::zero()), |max, v| {
+				(cmp::max(max.0, v.0), cmp::max(max.1, v.1))
 			});
 
 		RiskThreshold {
@@ -1049,28 +1047,29 @@ impl<T: Trait> Module<T> {
 			Action::OpenPosition(p) => Some(p),
 			_ => None,
 		};
-		let mut trading_pairs: Vec<TradingPair> = PositionsByPool::iter(pool_id)
-			.map(|((pair, _), _)| pair)
-			.chain(new_position.map_or(vec![], |p| vec![p.pair]))
-			.collect();
-		trading_pairs.sort();
-		trading_pairs.dedup();
-
-		let (enp_margin_call, enp_stop_out) = trading_pairs
+		let (enp_margin_call, enp_stop_out, ell_margin_call, ell_stop_out) = PositionsByPool::iter(pool_id)
+			.fold(HashSet::new(), |mut hs, ((pair, _), _)| {
+				hs.insert(pair);
+				hs
+			})
 			.iter()
-			.filter_map(|pair| Self::liquidity_pool_enp_threshold(pair))
-			.map(|v| (v.margin_call, v.stop_out))
-			.fold((Permill::zero(), Permill::zero()), |x, v| {
-				(cmp::max(x.0, v.0), cmp::max(x.1, v.1))
-			});
-
-		let (ell_margin_call, ell_stop_out) = trading_pairs
-			.iter()
-			.filter_map(|pair| Self::liquidity_pool_ell_threshold(pair))
-			.map(|v| (v.margin_call, v.stop_out))
-			.fold((Permill::zero(), Permill::zero()), |x, v| {
-				(cmp::max(x.0, v.0), cmp::max(x.1, v.1))
-			});
+			.chain(&new_position.map_or(vec![], |p| vec![p.pair]))
+			.filter_map(|pair| {
+				let enp = Self::liquidity_pool_enp_threshold(pair)?;
+				let ell = Self::liquidity_pool_ell_threshold(pair)?;
+				Some((enp.margin_call, enp.stop_out, ell.margin_call, ell.stop_out))
+			})
+			.fold(
+				(Permill::zero(), Permill::zero(), Permill::zero(), Permill::zero()),
+				|max, v| {
+					(
+						cmp::max(max.0, v.0),
+						cmp::max(max.1, v.1),
+						cmp::max(max.2, v.2),
+						cmp::max(max.3, v.3),
+					)
+				},
+			);
 
 		(
 			RiskThreshold {

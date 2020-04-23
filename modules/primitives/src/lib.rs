@@ -16,7 +16,7 @@ pub use orml_prices::Price;
 
 pub type LiquidityPoolId = u32;
 
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CurrencyId {
 	LAMI = 0,
@@ -139,7 +139,7 @@ pub struct AccumulateConfig<BlockNumber> {
 	pub offset: BlockNumber,
 }
 
-#[derive(Encode, Decode, Copy, Clone, RuntimeDebug, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Encode, Decode, Copy, Clone, RuntimeDebug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct TradingPair {
 	pub base: CurrencyId,
