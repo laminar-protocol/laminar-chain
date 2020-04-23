@@ -4,10 +4,11 @@ use margin_protocol::RiskThreshold;
 use module_primitives::{AccumulateConfig, TradingPair};
 use orml_utilities::Fixed128;
 use runtime::{
-	opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, CurrencyId, FinancialCouncilMembershipConfig,
-	GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig,
-	MarginLiquidityPoolsConfig, MarginProtocolConfig, OperatorMembershipConfig, SessionConfig, Signature, StakerStatus,
-	StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SystemConfig, TokensConfig, WASM_BINARY,
+	opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, BlockNumber, CurrencyId,
+	FinancialCouncilMembershipConfig, GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, ImOnlineConfig,
+	IndicesConfig, MarginLiquidityPoolsConfig, MarginProtocolConfig, OperatorMembershipConfig, SessionConfig,
+	Signature, StakerStatus, StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SystemConfig, TokensConfig,
+	WASM_BINARY,
 };
 use sc_service;
 use sc_service::ChainType;
@@ -208,6 +209,27 @@ const ETH_USD: TradingPair = TradingPair {
 	quote: CurrencyId::AUSD,
 };
 
+fn accumulate_config(frequency: BlockNumber, offset: BlockNumber) -> AccumulateConfig<BlockNumber> {
+	AccumulateConfig {
+		frequency: frequency,
+		offset: offset,
+	}
+}
+
+fn swap_rate(long_percent: i32, short_percent: i32) -> SwapRate {
+	SwapRate {
+		long: Fixed128::from_rational(long_percent, NonZeroI128::new(100).unwrap()),
+		short: Fixed128::from_rational(short_percent, NonZeroI128::new(100).unwrap()),
+	}
+}
+
+fn risk_threshold(margin_call_percent: u32, stop_out_percent: u32) -> RiskThreshold {
+	RiskThreshold {
+		margin_call: Permill::from_percent(margin_call_percent),
+		stop_out: Permill::from_percent(stop_out_percent),
+	}
+}
+
 fn dev_genesis(
 	initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId)>,
 	root_key: AccountId,
@@ -285,15 +307,9 @@ fn dev_genesis(
 					// MaxSpread
 					ONE_DOLLAR,
 					// Accumulates
-					AccumulateConfig {
-						frequency: 10,
-						offset: 1,
-					},
+					accumulate_config(10, 1),
 					// SwapRates
-					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
-					},
+					swap_rate(-1, 1),
 				),
 				(
 					// TradingPair
@@ -301,15 +317,9 @@ fn dev_genesis(
 					// MaxSpread
 					ONE_DOLLAR,
 					// Accumulates
-					AccumulateConfig {
-						frequency: 10,
-						offset: 1,
-					},
+					accumulate_config(10, 2),
 					// SwapRates
-					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
-					},
+					swap_rate(-1, 1),
 				),
 				(
 					// TradingPair
@@ -317,15 +327,9 @@ fn dev_genesis(
 					// MaxSpread
 					ONE_DOLLAR,
 					// Accumulates
-					AccumulateConfig {
-						frequency: 10,
-						offset: 1,
-					},
+					accumulate_config(10, 3),
 					// SwapRates
-					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
-					},
+					swap_rate(-1, 1),
 				),
 				(
 					// TradingPair
@@ -333,79 +337,37 @@ fn dev_genesis(
 					// MaxSpread
 					ONE_DOLLAR,
 					// Accumulates
-					AccumulateConfig {
-						frequency: 10,
-						offset: 1,
-					},
+					accumulate_config(10, 4),
 					// SwapRates
-					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
-					},
+					swap_rate(-1, 1),
 				),
 			],
 		}),
 		margin_protocol: Some(MarginProtocolConfig {
-			margin_protocol_threshold: vec![
+			risk_thresholds: vec![
 				(
 					EUR_USD,
-					RiskThreshold {
-						margin_call: Permill::from_percent(3),
-						stop_out: Permill::from_percent(1),
-					},
-					RiskThreshold {
-						margin_call: Permill::from_percent(30),
-						stop_out: Permill::from_percent(10),
-					},
-					RiskThreshold {
-						margin_call: Permill::from_percent(30),
-						stop_out: Permill::from_percent(10),
-					},
+					risk_threshold(3, 1),
+					risk_threshold(30, 10),
+					risk_threshold(30, 10),
 				),
 				(
 					JPY_USD,
-					RiskThreshold {
-						margin_call: Permill::from_percent(3),
-						stop_out: Permill::from_percent(1),
-					},
-					RiskThreshold {
-						margin_call: Permill::from_percent(30),
-						stop_out: Permill::from_percent(10),
-					},
-					RiskThreshold {
-						margin_call: Permill::from_percent(30),
-						stop_out: Permill::from_percent(10),
-					},
+					risk_threshold(3, 1),
+					risk_threshold(30, 10),
+					risk_threshold(30, 10),
 				),
 				(
 					BTC_USD,
-					RiskThreshold {
-						margin_call: Permill::from_percent(3),
-						stop_out: Permill::from_percent(1),
-					},
-					RiskThreshold {
-						margin_call: Permill::from_percent(30),
-						stop_out: Permill::from_percent(10),
-					},
-					RiskThreshold {
-						margin_call: Permill::from_percent(30),
-						stop_out: Permill::from_percent(10),
-					},
+					risk_threshold(3, 1),
+					risk_threshold(30, 10),
+					risk_threshold(30, 10),
 				),
 				(
 					ETH_USD,
-					RiskThreshold {
-						margin_call: Permill::from_percent(3),
-						stop_out: Permill::from_percent(1),
-					},
-					RiskThreshold {
-						margin_call: Permill::from_percent(30),
-						stop_out: Permill::from_percent(10),
-					},
-					RiskThreshold {
-						margin_call: Permill::from_percent(30),
-						stop_out: Permill::from_percent(10),
-					},
+					risk_threshold(3, 1),
+					risk_threshold(30, 10),
+					risk_threshold(30, 10),
 				),
 			],
 		}),
@@ -488,15 +450,9 @@ fn testnet_genesis(
 					// MaxSpread
 					ONE_DOLLAR,
 					// Accumulates
-					AccumulateConfig {
-						frequency: 10,
-						offset: 1,
-					},
+					accumulate_config(10, 1),
 					// SwapRates
-					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
-					},
+					swap_rate(-1, 1),
 				),
 				(
 					// TradingPair
@@ -504,15 +460,9 @@ fn testnet_genesis(
 					// MaxSpread
 					ONE_DOLLAR,
 					// Accumulates
-					AccumulateConfig {
-						frequency: 10,
-						offset: 1,
-					},
+					accumulate_config(10, 2),
 					// SwapRates
-					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
-					},
+					swap_rate(-1, 1),
 				),
 				(
 					// TradingPair
@@ -520,15 +470,9 @@ fn testnet_genesis(
 					// MaxSpread
 					ONE_DOLLAR,
 					// Accumulates
-					AccumulateConfig {
-						frequency: 10,
-						offset: 1,
-					},
+					accumulate_config(10, 3),
 					// SwapRates
-					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
-					},
+					swap_rate(-1, 1),
 				),
 				(
 					// TradingPair
@@ -536,79 +480,37 @@ fn testnet_genesis(
 					// MaxSpread
 					ONE_DOLLAR,
 					// Accumulates
-					AccumulateConfig {
-						frequency: 10,
-						offset: 1,
-					},
+					accumulate_config(10, 4),
 					// SwapRates
-					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
-					},
+					swap_rate(-1, 1),
 				),
 			],
 		}),
 		margin_protocol: Some(MarginProtocolConfig {
-			margin_protocol_threshold: vec![
+			risk_thresholds: vec![
 				(
 					EUR_USD,
-					RiskThreshold {
-						margin_call: Permill::from_percent(3),
-						stop_out: Permill::from_percent(1),
-					},
-					RiskThreshold {
-						margin_call: Permill::from_percent(30),
-						stop_out: Permill::from_percent(10),
-					},
-					RiskThreshold {
-						margin_call: Permill::from_percent(30),
-						stop_out: Permill::from_percent(10),
-					},
+					risk_threshold(3, 1),
+					risk_threshold(30, 10),
+					risk_threshold(30, 10),
 				),
 				(
 					JPY_USD,
-					RiskThreshold {
-						margin_call: Permill::from_percent(3),
-						stop_out: Permill::from_percent(1),
-					},
-					RiskThreshold {
-						margin_call: Permill::from_percent(30),
-						stop_out: Permill::from_percent(10),
-					},
-					RiskThreshold {
-						margin_call: Permill::from_percent(30),
-						stop_out: Permill::from_percent(10),
-					},
+					risk_threshold(3, 1),
+					risk_threshold(30, 10),
+					risk_threshold(30, 10),
 				),
 				(
 					BTC_USD,
-					RiskThreshold {
-						margin_call: Permill::from_percent(3),
-						stop_out: Permill::from_percent(1),
-					},
-					RiskThreshold {
-						margin_call: Permill::from_percent(30),
-						stop_out: Permill::from_percent(10),
-					},
-					RiskThreshold {
-						margin_call: Permill::from_percent(30),
-						stop_out: Permill::from_percent(10),
-					},
+					risk_threshold(3, 1),
+					risk_threshold(30, 10),
+					risk_threshold(30, 10),
 				),
 				(
 					ETH_USD,
-					RiskThreshold {
-						margin_call: Permill::from_percent(3),
-						stop_out: Permill::from_percent(1),
-					},
-					RiskThreshold {
-						margin_call: Permill::from_percent(30),
-						stop_out: Permill::from_percent(10),
-					},
-					RiskThreshold {
-						margin_call: Permill::from_percent(30),
-						stop_out: Permill::from_percent(10),
-					},
+					risk_threshold(3, 1),
+					risk_threshold(30, 10),
+					risk_threshold(30, 10),
 				),
 			],
 		}),

@@ -45,6 +45,13 @@ pub const JPY_EUR: TradingPair = TradingPair {
 	quote: CurrencyId::FEUR,
 };
 
+fn risk_threshold(margin_call_percent: u32, stop_out_percent: u32) -> RiskThreshold {
+	RiskThreshold {
+		margin_call: Permill::from_percent(margin_call_percent),
+		stop_out: Permill::from_percent(stop_out_percent),
+	}
+}
+
 parameter_types! {
 	pub const POOL: AccountId = AccountId::from([0u8; 32]);
 	pub const ALICE: AccountId = AccountId::from([1u8; 32]);
@@ -103,51 +110,24 @@ impl ExtBuilder {
 		.unwrap();
 
 		margin_protocol::GenesisConfig {
-			margin_protocol_threshold: vec![
+			risk_thresholds: vec![
 				(
 					EUR_USD,
-					RiskThreshold {
-						margin_call: Permill::from_percent(3),
-						stop_out: Permill::from_percent(1),
-					},
-					RiskThreshold {
-						margin_call: Permill::from_percent(30),
-						stop_out: Permill::from_percent(10),
-					},
-					RiskThreshold {
-						margin_call: Permill::from_percent(30),
-						stop_out: Permill::from_percent(10),
-					},
+					risk_threshold(3, 1),
+					risk_threshold(30, 10),
+					risk_threshold(30, 10),
 				),
 				(
 					JPY_USD,
-					RiskThreshold {
-						margin_call: Permill::from_percent(3),
-						stop_out: Permill::from_percent(1),
-					},
-					RiskThreshold {
-						margin_call: Permill::from_percent(30),
-						stop_out: Permill::from_percent(10),
-					},
-					RiskThreshold {
-						margin_call: Permill::from_percent(30),
-						stop_out: Permill::from_percent(10),
-					},
+					risk_threshold(3, 1),
+					risk_threshold(30, 10),
+					risk_threshold(30, 10),
 				),
 				(
 					JPY_EUR,
-					RiskThreshold {
-						margin_call: Permill::from_percent(3),
-						stop_out: Permill::from_percent(1),
-					},
-					RiskThreshold {
-						margin_call: Permill::from_percent(30),
-						stop_out: Permill::from_percent(10),
-					},
-					RiskThreshold {
-						margin_call: Permill::from_percent(30),
-						stop_out: Permill::from_percent(10),
-					},
+					risk_threshold(3, 1),
+					risk_threshold(30, 10),
+					risk_threshold(30, 10),
 				),
 			],
 		}

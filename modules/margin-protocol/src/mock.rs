@@ -276,7 +276,7 @@ pub const JPY_USD_PAIR: TradingPair = TradingPair {
 	quote: CurrencyId::AUSD,
 };
 
-pub const JPY_EUR_PAIR: TradingPair = TradingPair {
+pub const EUR_JPY_PAIR: TradingPair = TradingPair {
 	base: CurrencyId::FEUR,
 	quote: CurrencyId::FJPY,
 };
@@ -399,7 +399,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		GenesisConfig {
-			margin_protocol_threshold: vec![
+			risk_thresholds: vec![
 				(
 					EUR_USD_PAIR,
 					RiskThreshold::default(),
@@ -407,7 +407,7 @@ impl ExtBuilder {
 					RiskThreshold::default(),
 				),
 				(
-					JPY_EUR_PAIR,
+					EUR_JPY_PAIR,
 					RiskThreshold::default(),
 					RiskThreshold::default(),
 					RiskThreshold::default(),
