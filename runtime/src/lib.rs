@@ -631,7 +631,7 @@ impl margin_protocol::Trait for Runtime {
 	type Call = Call;
 	type GetTraderMaxOpenPositions = GetTraderMaxOpenPositions;
 	type GetPoolMaxOpenPositions = GetPoolMaxOpenPositions;
-	type UnsignedPriority = ImOnlineUnsignedPriority;
+	type UnsignedPriority = MarginProtocolUnsignedPriority;
 }
 
 construct_runtime!(
