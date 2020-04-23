@@ -4,9 +4,10 @@ use cucumber::cucumber;
 
 use frame_support::{assert_noop, assert_ok};
 use module_primitives::{Balance, Leverage, TradingPair};
-use orml_utilities::{Fixed128, FixedU128};
+use orml_utilities::FixedU128;
 use runtime::tests::*;
 use runtime::{AccountId, BlockNumber, CurrencyId};
+use sp_arithmetic::Fixed128;
 use sp_runtime::{DispatchResult, Permill};
 use std::ops::Range;
 

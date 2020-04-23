@@ -16,8 +16,8 @@ use module_primitives::{Balance, Leverage, Leverages, TradingPair};
 use module_traits::MarginProtocolLiquidityPools;
 use orml_prices::Price;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
-use orml_utilities::Fixed128;
 use pallet_indices::address::Address;
+use sp_arithmetic::Fixed128;
 use sp_runtime::{DispatchResult, Permill};
 use std::ops::Range;
 

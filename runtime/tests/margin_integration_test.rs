@@ -14,7 +14,7 @@ mod tests {
 	use module_primitives::Leverage::*;
 	use module_traits::{MarginProtocolLiquidityPools, Treasury};
 	use orml_prices::Price;
-	use orml_utilities::Fixed128;
+	use sp_arithmetic::Fixed128;
 
 	#[test]
 	fn test_margin_liquidity_pools() {

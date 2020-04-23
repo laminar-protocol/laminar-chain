@@ -4,7 +4,7 @@
 
 use codec::{Codec, Decode, Encode};
 use module_primitives::LiquidityPoolId;
-use orml_utilities::Fixed128;
+use sp_arithmetic::Fixed128;
 use sp_std::prelude::*;
 
 #[cfg(feature = "std")]

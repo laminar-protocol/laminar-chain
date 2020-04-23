@@ -35,7 +35,7 @@ pub use module_primitives::{CurrencyId, LiquidityPoolId};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_oracle::OperatorProvider;
 use orml_traits::DataProvider;
-pub use orml_utilities::Fixed128;
+pub use sp_arithmetic::Fixed128;
 
 use margin_protocol_rpc_runtime_api::{PoolInfo, TraderInfo};
 use module_primitives::Price;
@@ -825,6 +825,10 @@ impl_runtime_apis! {
 	> for Runtime {
 		fn get_value(key: CurrencyId) -> Option<TimeStampedPrice> {
 			Oracle::get_no_op(&key)
+		}
+
+		fn get_all_values() -> Vec<(CurrencyId, Option<TimeStampedPrice>)>{
+			Oracle::get_all_values()
 		}
 	}
 
