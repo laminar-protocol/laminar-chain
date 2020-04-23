@@ -1231,14 +1231,7 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
 		let base_priority = TransactionPriority::max_value() - 86400 * 365 * 100 / 2;
 		let block_number = <system::Module<T>>::block_number().unique_saturated_into() as u64;
-
-		let defaults = ValidTransaction {
-			priority: base_priority.saturating_add(block_number),
-			requires: vec![],
-			provides: vec![],
-			longevity: 64_u64,
-			propagate: true,
-		};
+		let base_priority = base_priority.saturating_add(block_number);
 
 		match call {
 			Call::trader_margin_call(who, pool_id) => {
@@ -1247,10 +1240,12 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 					return InvalidTransaction::Stale.into();
 				}
 
-				Ok(ValidTransaction {
-					provides: vec![("margin_protocol/trader_margin_call", who).encode()],
-					..defaults
-				})
+				ValidTransaction::with_tag_prefix("margin_protocol/trader_margin_call")
+					.priority(base_priority)
+					.and_provides(who)
+					.longevity(64_u64)
+					.propagate(true)
+					.build()
 			}
 			Call::trader_become_safe(who, pool_id) => {
 				let trader = T::Lookup::lookup(who.clone()).expect(InvalidTransaction::Stale.into());
@@ -1258,18 +1253,22 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 					return InvalidTransaction::Stale.into();
 				}
 
-				Ok(ValidTransaction {
-					provides: vec![("margin_protocol/trader_become_safe", who).encode()],
-					..defaults
-				})
+				ValidTransaction::with_tag_prefix("margin_protocol/trader_become_safe")
+					.priority(base_priority)
+					.and_provides(who)
+					.longevity(64_u64)
+					.propagate(true)
+					.build()
 			}
 			Call::trader_stop_out(who, pool_id) => {
 				let trader = T::Lookup::lookup(who.clone()).expect(InvalidTransaction::Stale.into());
 				if Self::_should_stop_out_trader(&trader, *pool_id).ok() == Some(true) {
-					return Ok(ValidTransaction {
-						provides: vec![("margin_protocol/trader_stop_out", who).encode()],
-						..defaults
-					});
+					return ValidTransaction::with_tag_prefix("margin_protocol/trader_stop_out")
+						.priority(base_priority)
+						.and_provides(who)
+						.longevity(64_u64)
+						.propagate(true)
+						.build();
 				}
 				InvalidTransaction::Stale.into()
 			}
@@ -1277,28 +1276,33 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 				if Self::_is_pool_margin_called(pool_id) {
 					return InvalidTransaction::Stale.into();
 				}
-
-				Ok(ValidTransaction {
-					provides: vec![("margin_protocol/liquidity_pool_margin_call", pool_id).encode()],
-					..defaults
-				})
+				ValidTransaction::with_tag_prefix("margin_protocol/liquidity_pool_margin_call")
+					.priority(base_priority)
+					.and_provides(pool_id)
+					.longevity(64_u64)
+					.propagate(true)
+					.build()
 			}
 			Call::liquidity_pool_become_safe(pool_id) => {
 				if !Self::_is_pool_margin_called(pool_id) {
 					return InvalidTransaction::Stale.into();
 				}
 
-				Ok(ValidTransaction {
-					provides: vec![("margin_protocol/liquidity_pool_become_safe", pool_id).encode()],
-					..defaults
-				})
+				ValidTransaction::with_tag_prefix("margin_protocol/liquidity_pool_become_safe")
+					.priority(base_priority)
+					.and_provides(pool_id)
+					.longevity(64_u64)
+					.propagate(true)
+					.build()
 			}
 			Call::liquidity_pool_force_close(pool_id) => {
 				if Self::_should_liquidate_pool(*pool_id).ok() == Some(true) {
-					return Ok(ValidTransaction {
-						provides: vec![("margin_protocol/liquidity_pool_force_close", pool_id).encode()],
-						..defaults
-					});
+					return ValidTransaction::with_tag_prefix("margin_protocol/liquidity_pool_force_close")
+						.priority(base_priority)
+						.and_provides(pool_id)
+						.longevity(64_u64)
+						.propagate(true)
+						.build();
 				}
 
 				InvalidTransaction::Stale.into()
