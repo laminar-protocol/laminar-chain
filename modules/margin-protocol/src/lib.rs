@@ -817,11 +817,18 @@ impl<T: Trait> Module<T> {
 	/// Return `Ok(Risk)`, or `Err` if check fails.
 	fn _check_trader(who: &T::AccountId, pool_id: LiquidityPoolId, action: Action<T>) -> Result<Risk, DispatchError> {
 		let margin_level = Self::margin_level(who, pool_id)?;
-		let trader_threshold = Self::_risk_threshold_of_trader(who, action);
 
-		let risk = if margin_level <= trader_threshold.stop_out.into() {
+		let new_pair_risk_threshold = match action.clone() {
+			Action::OpenPosition(p) => Self::trader_risk_threshold(p.pair).unwrap_or_default(),
+			_ => RiskThreshold::default(),
+		};
+
+		let trader_threshold = Self::_risk_threshold_of_trader(who);
+		let risk = if margin_level <= cmp::max(trader_threshold.stop_out, new_pair_risk_threshold.stop_out).into() {
 			Risk::StopOut
-		} else if margin_level <= trader_threshold.margin_call.into() {
+		} else if margin_level
+			<= cmp::max(trader_threshold.margin_call.into(), new_pair_risk_threshold.margin_call).into()
+		{
 			Risk::MarginCall
 		} else {
 			Risk::None
@@ -954,12 +961,23 @@ impl<T: Trait> Module<T> {
 	///
 	/// Return `Ok(Risk)`, or `Err` if check fails.
 	fn _check_pool(pool_id: LiquidityPoolId, action: Action<T>) -> Result<Risk, DispatchError> {
-		let (enp_threshold, ell_threshold) = Self::_enp_and_ell_risk_threshold_of_pool(pool_id, action.clone());
+		let (new_pair_enp_threshold, new_pair_ell_threshold) = match action.clone() {
+			Action::OpenPosition(p) => (
+				Self::liquidity_pool_enp_threshold(p.pair).unwrap_or_default(),
+				Self::liquidity_pool_ell_threshold(p.pair).unwrap_or_default(),
+			),
+			_ => (RiskThreshold::default(), RiskThreshold::default()),
+		};
+		let (enp_threshold, ell_threshold) = Self::_enp_and_ell_risk_threshold_of_pool(pool_id);
 
 		let (enp, ell) = Self::_enp_and_ell(pool_id, action)?;
-		if enp <= enp_threshold.stop_out.into() || ell <= ell_threshold.stop_out.into() {
+		if enp <= cmp::max(enp_threshold.stop_out, new_pair_enp_threshold.stop_out).into()
+			|| ell <= cmp::max(ell_threshold.stop_out, new_pair_ell_threshold.stop_out).into()
+		{
 			return Ok(Risk::StopOut);
-		} else if enp <= enp_threshold.margin_call.into() || ell <= ell_threshold.margin_call.into() {
+		} else if enp <= cmp::max(enp_threshold.margin_call, new_pair_enp_threshold.margin_call).into()
+			|| ell <= cmp::max(ell_threshold.margin_call, new_pair_ell_threshold.margin_call).into()
+		{
 			return Ok(Risk::MarginCall);
 		}
 		Ok(Risk::None)
@@ -1013,11 +1031,7 @@ impl<T: Trait> Module<T> {
 	/// Return risk threshold of trader based on opened positions after performing an action.
 	///
 	/// Return `RiskThreshold` or `Default` value.
-	fn _risk_threshold_of_trader(who: &T::AccountId, action: Action<T>) -> RiskThreshold {
-		let new_position = match action {
-			Action::OpenPosition(p) => Some(p),
-			_ => None,
-		};
+	fn _risk_threshold_of_trader(who: &T::AccountId) -> RiskThreshold {
 		let (trader_margin_call, trader_stop_out) = <PositionsByTrader<T>>::iter(who)
 			.fold(vec![], |mut v, ((_, position_id), _)| {
 				if let Some(position) = Self::positions(position_id) {
@@ -1028,7 +1042,6 @@ impl<T: Trait> Module<T> {
 				v
 			})
 			.iter()
-			.chain(&new_position.map_or(vec![], |p| vec![p.pair]))
 			.filter_map(|pair| Self::trader_risk_threshold(pair))
 			.map(|v| (v.margin_call, v.stop_out))
 			.fold((Permill::zero(), Permill::zero()), |max, v| {
@@ -1044,14 +1057,7 @@ impl<T: Trait> Module<T> {
 	/// Return risk threshold of liquidity pool based on opened positions after performing an action.
 	///
 	/// Return `RiskThreshold` or `Default` value.
-	fn _enp_and_ell_risk_threshold_of_pool(
-		pool_id: LiquidityPoolId,
-		action: Action<T>,
-	) -> (RiskThreshold, RiskThreshold) {
-		let new_position = match action {
-			Action::OpenPosition(p) => Some(p),
-			_ => None,
-		};
+	fn _enp_and_ell_risk_threshold_of_pool(pool_id: LiquidityPoolId) -> (RiskThreshold, RiskThreshold) {
 		let (enp_margin_call, enp_stop_out, ell_margin_call, ell_stop_out) = PositionsByPool::iter(pool_id)
 			.fold(vec![], |mut v, ((pair, _), _)| {
 				if !v.contains(&pair) {
@@ -1060,7 +1066,6 @@ impl<T: Trait> Module<T> {
 				v
 			})
 			.iter()
-			.chain(&new_position.map_or(vec![], |p| vec![p.pair]))
 			.filter_map(|pair| {
 				let enp = Self::liquidity_pool_enp_threshold(pair)?;
 				let ell = Self::liquidity_pool_ell_threshold(pair)?;
@@ -1101,7 +1106,7 @@ impl<T: Trait> Module<T> {
 	/// Returns required deposit amount to make pool safe.
 	pub fn pool_required_deposit(pool: LiquidityPoolId) -> Option<Fixed128> {
 		let (net_position, longest_leg) = Self::_net_position_and_longest_leg(pool, None);
-		let (enp_threshold, ell_threshold) = Self::_enp_and_ell_risk_threshold_of_pool(pool, Action::None);
+		let (enp_threshold, ell_threshold) = Self::_enp_and_ell_risk_threshold_of_pool(pool);
 		let required_equity = {
 			let for_enp = net_position
 				.checked_mul(&enp_threshold.margin_call.into())
