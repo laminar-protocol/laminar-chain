@@ -8,7 +8,7 @@ use frame_support::{
 };
 use frame_system::{self as system, ensure_root};
 use module_primitives::{Balance, CurrencyId, LiquidityPoolId};
-use module_traits::LiquidityPoolManager;
+use module_traits::BaseLiquidityPoolManager;
 use orml_utilities::FixedU128;
 use sp_runtime::{
 	traits::{AccountIdConversion, Zero},
@@ -191,7 +191,7 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> LiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
+impl<T: Trait> BaseLiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
 	fn can_remove(pool_id: LiquidityPoolId) -> bool {
 		T::SyntheticCurrencyIds::get()
 			.iter()

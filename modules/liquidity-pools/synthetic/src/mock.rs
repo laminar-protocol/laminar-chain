@@ -13,7 +13,7 @@ use sp_runtime::{
 
 use orml_currencies::Currency;
 use primitives::{Balance, CurrencyId, LiquidityPoolId};
-use traits::LiquidityPoolManager;
+use traits::BaseLiquidityPoolManager;
 
 pub type BlockNumber = u64;
 pub type AccountId = u32;
@@ -88,7 +88,7 @@ impl orml_tokens::Trait for Runtime {
 
 pub struct PoolManager;
 
-impl LiquidityPoolManager<LiquidityPoolId, Balance> for PoolManager {
+impl BaseLiquidityPoolManager<LiquidityPoolId, Balance> for PoolManager {
 	fn can_remove(_pool_id: LiquidityPoolId) -> bool {
 		true
 	}

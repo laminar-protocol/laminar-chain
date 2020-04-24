@@ -12,7 +12,7 @@ use sp_runtime::{
 	DispatchResult, ModuleId,
 };
 use sp_std::{prelude::*, result};
-use traits::{LiquidityPoolManager, LiquidityPools, OnDisableLiquidityPool, OnRemoveLiquidityPool};
+use traits::{BaseLiquidityPoolManager, LiquidityPools, OnDisableLiquidityPool, OnRemoveLiquidityPool};
 
 mod mock;
 mod tests;
@@ -20,7 +20,7 @@ mod tests;
 pub trait Trait<I: Instance = DefaultInstance>: system::Trait {
 	type Event: From<Event<Self, I>> + Into<<Self as frame_system::Trait>::Event>;
 	type LiquidityCurrency: BasicCurrency<Self::AccountId, Balance = Balance>;
-	type PoolManager: LiquidityPoolManager<LiquidityPoolId, Balance>;
+	type PoolManager: BaseLiquidityPoolManager<LiquidityPoolId, Balance>;
 	type ExistentialDeposit: Get<Balance>;
 	type ModuleId: Get<ModuleId>;
 	type OnDisableLiquidityPool: OnDisableLiquidityPool;

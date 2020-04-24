@@ -1907,11 +1907,14 @@ fn offchain_worker_should_work() {
 #[test]
 fn liquidity_pool_manager_can_remove_works() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert!(<MarginProtocol as LiquidityPoolManager<LiquidityPoolId, Balance>>::can_remove(MOCK_POOL));
+		assert!(<MarginProtocol as BaseLiquidityPoolManager<LiquidityPoolId, Balance>>::can_remove(MOCK_POOL));
 
 		<Positions<Runtime>>::insert(0, eur_jpy_long());
 		PositionsByPool::insert(MOCK_POOL, (EUR_JPY_PAIR, 0), true);
-		assert!(!<MarginProtocol as LiquidityPoolManager<LiquidityPoolId, Balance>>::can_remove(MOCK_POOL));
+		assert!(!<MarginProtocol as BaseLiquidityPoolManager<
+			LiquidityPoolId,
+			Balance,
+		>>::can_remove(MOCK_POOL));
 	});
 }
 

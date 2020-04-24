@@ -14,7 +14,7 @@ use sp_runtime::{
 use orml_currencies::Currency;
 
 use primitives::{Balance, CurrencyId, LiquidityPoolId};
-use traits::{LiquidityPoolManager, OnEnableTradingPair};
+use traits::{BaseLiquidityPoolManager, MarginProtocolLiquidityPoolsManager};
 
 pub type BlockNumber = u64;
 pub type AccountId = u32;
@@ -89,7 +89,7 @@ impl orml_tokens::Trait for Runtime {
 }
 
 pub struct PoolManager;
-impl LiquidityPoolManager<LiquidityPoolId, Balance> for PoolManager {
+impl BaseLiquidityPoolManager<LiquidityPoolId, Balance> for PoolManager {
 	fn can_remove(_pool_id: LiquidityPoolId) -> bool {
 		true
 	}
@@ -115,8 +115,8 @@ impl module_base_liquidity_pools::Trait<MarginInstance> for Runtime {
 }
 pub type BaseLiquidityPools = module_base_liquidity_pools::Module<Runtime, MarginInstance>;
 
-pub struct DummyOnEnableTradingPair;
-impl OnEnableTradingPair for DummyOnEnableTradingPair {
+pub struct DummyPoolManager;
+impl MarginProtocolLiquidityPoolsManager for DummyPoolManager {
 	fn ensure_can_enable_trading_pair(_pool_id: LiquidityPoolId, _pair: TradingPair) -> DispatchResult {
 		Ok(())
 	}
@@ -125,10 +125,10 @@ impl OnEnableTradingPair for DummyOnEnableTradingPair {
 impl Trait for Runtime {
 	type Event = ();
 	type BaseLiquidityPools = module_base_liquidity_pools::Module<Runtime, MarginInstance>;
+	type PoolManager = DummyPoolManager;
 	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
 	type MaxSwap = MaxSwap;
-	type OnEnableTradingPair = DummyOnEnableTradingPair;
 }
 pub type ModuleLiquidityPools = Module<Runtime>;
 

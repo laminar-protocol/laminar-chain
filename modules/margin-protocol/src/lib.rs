@@ -31,7 +31,10 @@ use primitives::{
 	Balance, CurrencyId, Leverage, LiquidityPoolId, Price, TradingPair,
 };
 use sp_std::{cmp, prelude::*, result};
-use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools, OnEnableTradingPair, Treasury};
+use traits::{
+	BaseLiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools, MarginProtocolLiquidityPoolsManager,
+	Treasury,
+};
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -1016,13 +1019,13 @@ impl<T: Trait> Module<T> {
 			_ => None,
 		};
 		let (trader_margin_call, trader_stop_out) = <PositionsByTrader<T>>::iter(who)
-			.fold(vec![], |mut hs, ((_, position_id), _)| {
+			.fold(vec![], |mut v, ((_, position_id), _)| {
 				if let Some(position) = Self::positions(position_id) {
-					if !hs.contains(&position.pair) {
-						hs.push(position.pair);
+					if !v.contains(&position.pair) {
+						v.push(position.pair);
 					}
 				}
-				hs
+				v
 			})
 			.iter()
 			.chain(&new_position.map_or(vec![], |p| vec![p.pair]))
@@ -1050,11 +1053,11 @@ impl<T: Trait> Module<T> {
 			_ => None,
 		};
 		let (enp_margin_call, enp_stop_out, ell_margin_call, ell_stop_out) = PositionsByPool::iter(pool_id)
-			.fold(vec![], |mut hs, ((pair, _), _)| {
-				if !hs.contains(&pair) {
-					hs.push(pair);
+			.fold(vec![], |mut v, ((pair, _), _)| {
+				if !v.contains(&pair) {
+					v.push(pair);
 				}
-				hs
+				v
 			})
 			.iter()
 			.chain(&new_position.map_or(vec![], |p| vec![p.pair]))
@@ -1119,7 +1122,7 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> LiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
+impl<T: Trait> BaseLiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
 	/// Returns if `pool` has liability in margin protocol.
 	fn can_remove(pool: LiquidityPoolId) -> bool {
 		PositionsByPool::iter(pool).count() == 0
@@ -1130,7 +1133,7 @@ impl<T: Trait> LiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
 	}
 }
 
-impl<T: Trait> OnEnableTradingPair for Module<T> {
+impl<T: Trait> MarginProtocolLiquidityPoolsManager for Module<T> {
 	fn ensure_can_enable_trading_pair(pool_id: LiquidityPoolId, pair: TradingPair) -> DispatchResult {
 		Self::trader_risk_threshold(pair).ok_or(Error::<T>::NoRiskThreshold)?;
 		let enp_threshold = Self::liquidity_pool_enp_threshold(pair).ok_or(Error::<T>::NoRiskThreshold)?;
