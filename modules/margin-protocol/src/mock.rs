@@ -244,6 +244,7 @@ type SubmitTransaction = frame_system::offchain::TransactionSubmitter<(), Call, 
 parameter_types! {
 	pub const GetTraderMaxOpenPositions: usize = 200;
 	pub const GetPoolMaxOpenPositions: usize = 1000;
+	pub const UnsignedPriority: u64 = 1 << 20;
 }
 
 impl Trait for Runtime {
@@ -257,6 +258,7 @@ impl Trait for Runtime {
 	type GetTraderMaxOpenPositions = GetTraderMaxOpenPositions;
 	type GetPoolMaxOpenPositions = GetPoolMaxOpenPositions;
 	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
+	type UnsignedPriority = UnsignedPriority;
 }
 pub type MarginProtocol = Module<Runtime>;
 

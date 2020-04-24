@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use orml_utilities::{Fixed128, FixedU128};
-use sp_arithmetic::traits::UniqueSaturatedInto;
+use orml_utilities::FixedU128;
+use sp_arithmetic::{traits::UniqueSaturatedInto, Fixed128};
 
 /// Create a `Fixed128` from `FixedU128`. Note it could be lossy.
 pub fn fixed_128_from_fixed_u128(f: FixedU128) -> Fixed128 {

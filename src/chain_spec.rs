@@ -2,7 +2,6 @@ use hex_literal::hex;
 use margin_liquidity_pools::SwapRate;
 use margin_protocol::RiskThreshold;
 use module_primitives::{AccumulateConfig, TradingPair};
-use orml_utilities::Fixed128;
 use runtime::{
 	opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, BlockNumber, CurrencyId,
 	FinancialCouncilMembershipConfig, GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, ImOnlineConfig,
@@ -14,6 +13,7 @@ use sc_service;
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use serde_json::map::Map;
+use sp_arithmetic::Fixed128;
 use sp_consensus_babe::AuthorityId as BabeId;
 use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;

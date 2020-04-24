@@ -35,7 +35,7 @@ pub use module_primitives::{CurrencyId, LiquidityPoolId};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_oracle::OperatorProvider;
 use orml_traits::DataProvider;
-pub use orml_utilities::Fixed128;
+pub use sp_arithmetic::Fixed128;
 
 use margin_protocol_rpc_runtime_api::{PoolInfo, TraderInfo};
 use module_primitives::Price;
@@ -247,6 +247,7 @@ parameter_types! {
 	pub const ImOnlineUnsignedPriority: TransactionPriority = TransactionPriority::max_value();
 	/// We prioritize im-online heartbeats over phragmen solution submission.
 	pub const StakingUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 2;
+	pub const MarginProtocolUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 2;
 }
 
 impl pallet_im_online::Trait for Runtime {
@@ -632,6 +633,7 @@ impl margin_protocol::Trait for Runtime {
 	type GetTraderMaxOpenPositions = GetTraderMaxOpenPositions;
 	type GetPoolMaxOpenPositions = GetPoolMaxOpenPositions;
 	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
+	type UnsignedPriority = MarginProtocolUnsignedPriority;
 }
 
 construct_runtime!(
@@ -825,6 +827,10 @@ impl_runtime_apis! {
 	> for Runtime {
 		fn get_value(key: CurrencyId) -> Option<TimeStampedPrice> {
 			Oracle::get_no_op(&key)
+		}
+
+		fn get_all_values() -> Vec<(CurrencyId, Option<TimeStampedPrice>)>{
+			Oracle::get_all_values()
 		}
 	}
 

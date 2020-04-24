@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use orml_utilities::Fixed128;
 use primitives::{Balance, CurrencyId, Leverage, LiquidityPoolId, TradingPair};
+use sp_arithmetic::Fixed128;
 use sp_runtime::{DispatchResult, Permill};
 use sp_std::prelude::*;
 
