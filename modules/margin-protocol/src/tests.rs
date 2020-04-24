@@ -2094,7 +2094,7 @@ fn set_trading_pair_risk_threshold_works() {
 				None
 			));
 			let event =
-				TestEvent::margin_protocol(RawEvent::SetTradingPairRiskThreshold(EUR_USD_PAIR, None, None, None));
+				TestEvent::margin_protocol(RawEvent::TradingPairRiskThresholdSet(EUR_USD_PAIR, None, None, None));
 			assert!(System::events().iter().any(|record| record.event == event));
 
 			assert_ok!(MarginProtocol::set_trading_pair_risk_threshold(
@@ -2104,7 +2104,7 @@ fn set_trading_pair_risk_threshold_works() {
 				None,
 				None
 			));
-			let event = TestEvent::margin_protocol(RawEvent::SetTradingPairRiskThreshold(
+			let event = TestEvent::margin_protocol(RawEvent::TradingPairRiskThresholdSet(
 				EUR_USD_PAIR,
 				Some(risk_threshold(1, 2)),
 				None,
@@ -2131,7 +2131,7 @@ fn set_trading_pair_risk_threshold_works() {
 				Some(risk_threshold(3, 4)),
 				None
 			));
-			let event = TestEvent::margin_protocol(RawEvent::SetTradingPairRiskThreshold(
+			let event = TestEvent::margin_protocol(RawEvent::TradingPairRiskThresholdSet(
 				EUR_USD_PAIR,
 				None,
 				Some(risk_threshold(3, 4)),
@@ -2158,7 +2158,7 @@ fn set_trading_pair_risk_threshold_works() {
 				None,
 				Some(risk_threshold(5, 6))
 			));
-			let event = TestEvent::margin_protocol(RawEvent::SetTradingPairRiskThreshold(
+			let event = TestEvent::margin_protocol(RawEvent::TradingPairRiskThresholdSet(
 				EUR_USD_PAIR,
 				None,
 				None,

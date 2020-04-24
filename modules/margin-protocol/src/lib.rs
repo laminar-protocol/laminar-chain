@@ -19,7 +19,6 @@ use sp_runtime::{
 	},
 	DispatchError, DispatchResult, ModuleId, RuntimeDebug,
 };
-use std::collections::HashSet;
 // FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
 // would cause compiling error in `decl_module!` and `construct_runtime!`
 // #3295 https://github.com/paritytech/substrate/issues/3295
@@ -132,7 +131,7 @@ decl_event! {
 		/// LiquidityPoolForceClosed: (pool_id)
 		LiquidityPoolForceClosed(LiquidityPoolId),
 		/// Set trading pair risk threshold (pair, trader_risk_threshold, liquidity_pool_enp_threshold, liquidity_pool_ell_threshold)
-		SetTradingPairRiskThreshold(TradingPair, Option<RiskThreshold>, Option<RiskThreshold>, Option<RiskThreshold>),
+		TradingPairRiskThresholdSet(TradingPair, Option<RiskThreshold>, Option<RiskThreshold>, Option<RiskThreshold>),
 	}
 }
 
@@ -281,7 +280,7 @@ decl_module! {
 				LiquidityPoolELLThreshold::insert(pair, v);
 			}
 
-			Self::deposit_event(RawEvent::SetTradingPairRiskThreshold(pair, trader, enp, ell))
+			Self::deposit_event(RawEvent::TradingPairRiskThresholdSet(pair, trader, enp, ell))
 		}
 
 		fn offchain_worker(block_number: T::BlockNumber) {
@@ -1016,9 +1015,11 @@ impl<T: Trait> Module<T> {
 			_ => None,
 		};
 		let (trader_margin_call, trader_stop_out) = <PositionsByTrader<T>>::iter(who)
-			.fold(HashSet::new(), |mut hs, ((_, position_id), _)| {
+			.fold(vec![], |mut hs, ((_, position_id), _)| {
 				if let Some(position) = Self::positions(position_id) {
-					hs.insert(position.pair);
+					if !hs.contains(&position.pair) {
+						hs.push(position.pair);
+					}
 				}
 				hs
 			})
@@ -1048,8 +1049,10 @@ impl<T: Trait> Module<T> {
 			_ => None,
 		};
 		let (enp_margin_call, enp_stop_out, ell_margin_call, ell_stop_out) = PositionsByPool::iter(pool_id)
-			.fold(HashSet::new(), |mut hs, ((pair, _), _)| {
-				hs.insert(pair);
+			.fold(vec![], |mut hs, ((pair, _), _)| {
+				if !hs.contains(&pair) {
+					hs.push(pair);
+				}
 				hs
 			})
 			.iter()
