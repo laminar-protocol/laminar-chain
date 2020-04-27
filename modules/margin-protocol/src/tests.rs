@@ -2225,7 +2225,7 @@ fn open_position_check_trader_works() {
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
 		.price(CurrencyId::FEUR, (1, 1))
-		.price(CurrencyId::FJPY, (1, 1))
+		.price(CurrencyId::FJPY, (1, 105))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(1000_00))
 		.build()
 		.execute_with(|| {
@@ -2247,7 +2247,7 @@ fn open_position_check_trader_works() {
 
 			assert_eq!(
 				MarginProtocol::_check_trader(&ALICE, MOCK_POOL, Action::OpenPosition(jpy_usd_long_1())),
-				Ok(Risk::None)
+				Ok(Risk::StopOut)
 			);
 		});
 }
@@ -2259,15 +2259,15 @@ fn open_position_check_pool_works() {
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
 		.price(CurrencyId::FEUR, (1, 1))
-		.price(CurrencyId::FJPY, (1, 1))
-		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(1000_00))
+		.price(CurrencyId::FJPY, (70589, 10000))
+		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_000_00))
 		.build()
 		.execute_with(|| {
-			LiquidityPoolENPThreshold::insert(EUR_USD_PAIR, risk_threshold(3, 5));
-			LiquidityPoolENPThreshold::insert(EUR_JPY_PAIR, risk_threshold(5, 3));
-			LiquidityPoolENPThreshold::insert(JPY_USD_PAIR, risk_threshold(6, 7));
-			LiquidityPoolELLThreshold::insert(JPY_USD_PAIR, risk_threshold(8, 9));
-			LiquidityPoolELLThreshold::insert(EUR_USD_PAIR, risk_threshold(1, 2));
+			LiquidityPoolENPThreshold::insert(EUR_USD_PAIR, risk_threshold(30, 50));
+			LiquidityPoolENPThreshold::insert(EUR_JPY_PAIR, risk_threshold(50, 30));
+			LiquidityPoolENPThreshold::insert(JPY_USD_PAIR, risk_threshold(60, 70));
+			LiquidityPoolELLThreshold::insert(JPY_USD_PAIR, risk_threshold(80, 90));
+			LiquidityPoolELLThreshold::insert(EUR_USD_PAIR, risk_threshold(10, 20));
 
 			<Positions<Runtime>>::insert(0, eur_usd_long_1());
 			<Positions<Runtime>>::insert(1, eur_jpy_short());
@@ -2276,12 +2276,12 @@ fn open_position_check_pool_works() {
 
 			assert_eq!(
 				MarginProtocol::_enp_and_ell_risk_threshold_of_pool(MOCK_POOL),
-				(risk_threshold(5, 5), risk_threshold(1, 2))
+				(risk_threshold(50, 50), risk_threshold(10, 20))
 			);
 
 			assert_eq!(
 				MarginProtocol::_check_pool(MOCK_POOL, Action::OpenPosition(eur_usd_long_1())),
-				Ok(Risk::StopOut)
+				Ok(Risk::None)
 			);
 
 			assert_eq!(
