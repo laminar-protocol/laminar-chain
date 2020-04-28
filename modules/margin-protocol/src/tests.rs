@@ -1319,8 +1319,12 @@ fn close_loss_position_works() {
 			assert_eq!(MarginProtocol::positions_by_trader(ALICE, (MOCK_POOL, id)), None);
 			assert_eq!(MarginProtocol::positions_by_pool(MOCK_POOL, (EUR_USD_PAIR, id)), None);
 
-			let event =
-				TestEvent::margin_protocol(RawEvent::PositionClosed(ALICE, id, Price::from_rational(11988, 10000)));
+			let event = TestEvent::margin_protocol(RawEvent::PositionClosed(
+				ALICE,
+				id,
+				MOCK_POOL,
+				Price::from_rational(11988, 10000),
+			));
 			assert!(System::events().iter().any(|record| record.event == event));
 		});
 }
