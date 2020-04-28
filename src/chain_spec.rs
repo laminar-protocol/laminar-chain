@@ -3,10 +3,11 @@ use margin_liquidity_pools::SwapRate;
 use margin_protocol::RiskThreshold;
 use module_primitives::{AccumulateConfig, TradingPair};
 use runtime::{
-	opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, CurrencyId, FinancialCouncilMembershipConfig,
-	GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig,
-	MarginLiquidityPoolsConfig, MarginProtocolConfig, OperatorMembershipConfig, SessionConfig, Signature, StakerStatus,
-	StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SystemConfig, TokensConfig, WASM_BINARY,
+	opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, BlockNumber, CurrencyId,
+	FinancialCouncilMembershipConfig, GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, ImOnlineConfig,
+	IndicesConfig, MarginLiquidityPoolsConfig, MarginProtocolConfig, OperatorMembershipConfig, SessionConfig,
+	Signature, StakerStatus, StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SystemConfig, TokensConfig,
+	WASM_BINARY,
 };
 use sc_service;
 use sc_service::ChainType;
@@ -191,6 +192,43 @@ pub fn laminar_testnet_latest_config() -> ChainSpec {
 }
 
 const ONE_DOLLAR: u128 = 1000000000000000000;
+const EUR_USD: TradingPair = TradingPair {
+	base: CurrencyId::FEUR,
+	quote: CurrencyId::AUSD,
+};
+const JPY_USD: TradingPair = TradingPair {
+	base: CurrencyId::FJPY,
+	quote: CurrencyId::AUSD,
+};
+const BTC_USD: TradingPair = TradingPair {
+	base: CurrencyId::FBTC,
+	quote: CurrencyId::AUSD,
+};
+const ETH_USD: TradingPair = TradingPair {
+	base: CurrencyId::FETH,
+	quote: CurrencyId::AUSD,
+};
+
+fn accumulate_config(frequency: BlockNumber, offset: BlockNumber) -> AccumulateConfig<BlockNumber> {
+	AccumulateConfig {
+		frequency: frequency,
+		offset: offset,
+	}
+}
+
+fn swap_rate(long_percent: i32, short_percent: i32) -> SwapRate {
+	SwapRate {
+		long: Fixed128::from_rational(long_percent, NonZeroI128::new(100).unwrap()),
+		short: Fixed128::from_rational(short_percent, NonZeroI128::new(100).unwrap()),
+	}
+}
+
+fn risk_threshold(margin_call_percent: u32, stop_out_percent: u32) -> RiskThreshold {
+	RiskThreshold {
+		margin_call: Permill::from_percent(margin_call_percent),
+		stop_out: Permill::from_percent(stop_out_percent),
+	}
+}
 
 fn dev_genesis(
 	initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId)>,
@@ -265,95 +303,73 @@ fn dev_genesis(
 			margin_liquidity_config: vec![
 				(
 					// TradingPair
-					TradingPair {
-						base: CurrencyId::FEUR,
-						quote: CurrencyId::AUSD,
-					},
+					EUR_USD,
 					// MaxSpread
 					ONE_DOLLAR,
 					// Accumulates
-					AccumulateConfig {
-						frequency: 10,
-						offset: 1,
-					},
+					accumulate_config(10, 1),
 					// SwapRates
-					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
-					},
+					swap_rate(-1, 1),
 				),
 				(
 					// TradingPair
-					TradingPair {
-						base: CurrencyId::FJPY,
-						quote: CurrencyId::AUSD,
-					},
+					JPY_USD,
 					// MaxSpread
 					ONE_DOLLAR,
 					// Accumulates
-					AccumulateConfig {
-						frequency: 10,
-						offset: 1,
-					},
+					accumulate_config(10, 2),
 					// SwapRates
-					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
-					},
+					swap_rate(-1, 1),
 				),
 				(
 					// TradingPair
-					TradingPair {
-						base: CurrencyId::FBTC,
-						quote: CurrencyId::AUSD,
-					},
+					BTC_USD,
 					// MaxSpread
 					ONE_DOLLAR,
 					// Accumulates
-					AccumulateConfig {
-						frequency: 10,
-						offset: 1,
-					},
+					accumulate_config(10, 3),
 					// SwapRates
-					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
-					},
+					swap_rate(-1, 1),
 				),
 				(
 					// TradingPair
-					TradingPair {
-						base: CurrencyId::FETH,
-						quote: CurrencyId::AUSD,
-					},
+					ETH_USD,
 					// MaxSpread
 					ONE_DOLLAR,
 					// Accumulates
-					AccumulateConfig {
-						frequency: 10,
-						offset: 1,
-					},
+					accumulate_config(10, 4),
 					// SwapRates
-					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
-					},
+					swap_rate(-1, 1),
 				),
 			],
 		}),
 		margin_protocol: Some(MarginProtocolConfig {
-			trader_risk_threshold: RiskThreshold {
-				margin_call: Permill::from_percent(3),
-				stop_out: Permill::from_percent(1),
-			},
-			liquidity_pool_enp_threshold: RiskThreshold {
-				margin_call: Permill::from_percent(30),
-				stop_out: Permill::from_percent(10),
-			},
-			liquidity_pool_ell_threshold: RiskThreshold {
-				margin_call: Permill::from_percent(30),
-				stop_out: Permill::from_percent(10),
-			},
+			risk_thresholds: vec![
+				(
+					EUR_USD,
+					risk_threshold(3, 1),
+					risk_threshold(30, 10),
+					risk_threshold(30, 10),
+				),
+				(
+					JPY_USD,
+					risk_threshold(3, 1),
+					risk_threshold(30, 10),
+					risk_threshold(30, 10),
+				),
+				(
+					BTC_USD,
+					risk_threshold(3, 1),
+					risk_threshold(30, 10),
+					risk_threshold(30, 10),
+				),
+				(
+					ETH_USD,
+					risk_threshold(3, 1),
+					risk_threshold(30, 10),
+					risk_threshold(30, 10),
+				),
+			],
 		}),
 	}
 }
@@ -430,95 +446,73 @@ fn testnet_genesis(
 			margin_liquidity_config: vec![
 				(
 					// TradingPair
-					TradingPair {
-						base: CurrencyId::FEUR,
-						quote: CurrencyId::AUSD,
-					},
+					EUR_USD,
 					// MaxSpread
 					ONE_DOLLAR,
 					// Accumulates
-					AccumulateConfig {
-						frequency: 10,
-						offset: 1,
-					},
+					accumulate_config(10, 1),
 					// SwapRates
-					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
-					},
+					swap_rate(-1, 1),
 				),
 				(
 					// TradingPair
-					TradingPair {
-						base: CurrencyId::FJPY,
-						quote: CurrencyId::AUSD,
-					},
+					JPY_USD,
 					// MaxSpread
 					ONE_DOLLAR,
 					// Accumulates
-					AccumulateConfig {
-						frequency: 10,
-						offset: 1,
-					},
+					accumulate_config(10, 2),
 					// SwapRates
-					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
-					},
+					swap_rate(-1, 1),
 				),
 				(
 					// TradingPair
-					TradingPair {
-						base: CurrencyId::FBTC,
-						quote: CurrencyId::AUSD,
-					},
+					BTC_USD,
 					// MaxSpread
 					ONE_DOLLAR,
 					// Accumulates
-					AccumulateConfig {
-						frequency: 10,
-						offset: 1,
-					},
+					accumulate_config(10, 3),
 					// SwapRates
-					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
-					},
+					swap_rate(-1, 1),
 				),
 				(
 					// TradingPair
-					TradingPair {
-						base: CurrencyId::FETH,
-						quote: CurrencyId::AUSD,
-					},
+					ETH_USD,
 					// MaxSpread
 					ONE_DOLLAR,
 					// Accumulates
-					AccumulateConfig {
-						frequency: 10,
-						offset: 1,
-					},
+					accumulate_config(10, 4),
 					// SwapRates
-					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
-					},
+					swap_rate(-1, 1),
 				),
 			],
 		}),
 		margin_protocol: Some(MarginProtocolConfig {
-			trader_risk_threshold: RiskThreshold {
-				margin_call: Permill::from_percent(3),
-				stop_out: Permill::from_percent(1),
-			},
-			liquidity_pool_enp_threshold: RiskThreshold {
-				margin_call: Permill::from_percent(30),
-				stop_out: Permill::from_percent(10),
-			},
-			liquidity_pool_ell_threshold: RiskThreshold {
-				margin_call: Permill::from_percent(30),
-				stop_out: Permill::from_percent(10),
-			},
+			risk_thresholds: vec![
+				(
+					EUR_USD,
+					risk_threshold(3, 1),
+					risk_threshold(30, 10),
+					risk_threshold(30, 10),
+				),
+				(
+					JPY_USD,
+					risk_threshold(3, 1),
+					risk_threshold(30, 10),
+					risk_threshold(30, 10),
+				),
+				(
+					BTC_USD,
+					risk_threshold(3, 1),
+					risk_threshold(30, 10),
+					risk_threshold(30, 10),
+				),
+				(
+					ETH_USD,
+					risk_threshold(3, 1),
+					risk_threshold(30, 10),
+					risk_threshold(30, 10),
+				),
+			],
 		}),
 	}
 }

@@ -2,7 +2,9 @@
 
 use codec::{Decode, Encode};
 use frame_support::{
-	debug, decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get, weights::SimpleDispatchInfo,
+	debug, decl_error, decl_event, decl_module, decl_storage, ensure,
+	traits::{EnsureOrigin, Get},
+	weights::SimpleDispatchInfo,
 	IsSubType, IterableStorageDoubleMap, IterableStorageMap,
 };
 use sp_arithmetic::{
@@ -21,7 +23,7 @@ use sp_runtime::{
 // would cause compiling error in `decl_module!` and `construct_runtime!`
 // #3295 https://github.com/paritytech/substrate/issues/3295
 use frame_system as system;
-use frame_system::{ensure_none, ensure_signed, offchain::SubmitUnsignedTransaction};
+use frame_system::{ensure_none, ensure_root, ensure_signed, offchain::SubmitUnsignedTransaction};
 use orml_traits::{MultiCurrency, PriceProvider};
 use orml_utilities::FixedU128;
 use primitives::{
@@ -29,7 +31,10 @@ use primitives::{
 	Balance, CurrencyId, Leverage, LiquidityPoolId, Price, TradingPair,
 };
 use sp_std::{cmp, prelude::*, result};
-use traits::{LiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools, Treasury};
+use traits::{
+	BaseLiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools, MarginProtocolLiquidityPoolsManager,
+	Treasury,
+};
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -49,6 +54,7 @@ pub trait Trait: frame_system::Trait {
 	type Call: From<Call<Self>> + IsSubType<Module<Self>, Self>;
 	type GetTraderMaxOpenPositions: Get<usize>;
 	type GetPoolMaxOpenPositions: Get<usize>;
+	type UpdateOrigin: EnsureOrigin<Self::Origin>;
 	type UnsignedPriority: Get<TransactionPriority>;
 }
 
@@ -84,9 +90,20 @@ decl_storage! {
 		Balances get(balances): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) LiquidityPoolId => Fixed128;
 		MarginCalledTraders get(margin_called_traders): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) LiquidityPoolId => Option<bool>;
 		MarginCalledPools get(margin_called_pools): map hasher(twox_64_concat) LiquidityPoolId => Option<bool>;
-		TraderRiskThreshold get(trader_risk_threshold) config(): RiskThreshold;
-		LiquidityPoolENPThreshold get(liquidity_pool_enp_threshold) config(): RiskThreshold;
-		LiquidityPoolELLThreshold get(liquidity_pool_ell_threshold) config(): RiskThreshold;
+		TraderRiskThreshold get(trader_risk_threshold): map hasher(twox_64_concat) TradingPair => Option<RiskThreshold>;
+		LiquidityPoolENPThreshold get(liquidity_pool_enp_threshold): map hasher(twox_64_concat) TradingPair => Option<RiskThreshold>;
+		LiquidityPoolELLThreshold get(liquidity_pool_ell_threshold): map hasher(twox_64_concat) TradingPair => Option<RiskThreshold>;
+	}
+
+	add_extra_genesis {
+		config(risk_thresholds): Vec<(TradingPair, RiskThreshold, RiskThreshold, RiskThreshold)>;
+		build(|config: &GenesisConfig| {
+			config.risk_thresholds.iter().for_each(|(pair, trader_threshold, enp_threshold, ell_threshold)| {
+				TraderRiskThreshold::insert(pair, trader_threshold);
+				LiquidityPoolENPThreshold::insert(pair, enp_threshold);
+				LiquidityPoolELLThreshold::insert(pair, ell_threshold);
+			})
+		})
 	}
 }
 
@@ -117,6 +134,8 @@ decl_event! {
 		LiquidityPoolBecameSafe(LiquidityPoolId),
 		/// LiquidityPoolForceClosed: (pool_id)
 		LiquidityPoolForceClosed(LiquidityPoolId),
+		/// Set trading pair risk threshold (pair, trader_risk_threshold, liquidity_pool_enp_threshold, liquidity_pool_ell_threshold)
+		TradingPairRiskThresholdSet(TradingPair, Option<RiskThreshold>, Option<RiskThreshold>, Option<RiskThreshold>),
 	}
 }
 
@@ -144,6 +163,7 @@ decl_error! {
 		CannotOpenPosition,
 		CannotOpenMorePosition,
 		InsufficientFreeMargin,
+		NoRiskThreshold,
 	}
 }
 
@@ -248,6 +268,25 @@ decl_module! {
 			Self::deposit_event(RawEvent::LiquidityPoolForceClosed(pool));
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
+		pub fn set_trading_pair_risk_threshold(origin, pair: TradingPair, trader: Option<RiskThreshold>, enp: Option<RiskThreshold>, ell: Option<RiskThreshold>) {
+			T::UpdateOrigin::try_origin(origin)
+				.map(|_| ())
+				.or_else(ensure_root)?;
+
+			if let Some(v) = trader {
+				TraderRiskThreshold::insert(pair, v);
+			}
+			if let Some(v) = enp {
+				LiquidityPoolENPThreshold::insert(pair, v);
+			}
+			if let Some(v) = ell {
+				LiquidityPoolELLThreshold::insert(pair, v);
+			}
+
+			Self::deposit_event(RawEvent::TradingPairRiskThresholdSet(pair, trader, enp, ell))
+		}
+
 		fn offchain_worker(block_number: T::BlockNumber) {
 			if let Err(error) = Self::_offchain_worker(block_number) {
 				match error {
@@ -337,6 +376,7 @@ impl<T: Trait> Module<T> {
 
 		let free_margin = Self::free_margin(who, pool_id)?;
 		ensure!(free_margin >= margin_held, Error::<T>::InsufficientFreeMargin);
+		Self::_ensure_trader_safe(who, pool_id, Action::OpenPosition(position.clone()))?;
 		Self::_ensure_pool_safe(pool_id, Action::OpenPosition(position.clone()))?;
 
 		let id = Self::_insert_position(who, pool_id, pair, position)?;
@@ -432,7 +472,7 @@ impl<T: Trait> Module<T> {
 
 	fn _trader_margin_call(who: &T::AccountId, pool_id: LiquidityPoolId) -> DispatchResult {
 		if !Self::_is_trader_margin_called(who, pool_id) {
-			if Self::_ensure_trader_safe(who, pool_id).is_err() {
+			if Self::_ensure_trader_safe(who, pool_id, Action::None).is_err() {
 				<MarginCalledTraders<T>>::insert(who, pool_id, true);
 			} else {
 				return Err(Error::<T>::SafeTrader.into());
@@ -443,7 +483,7 @@ impl<T: Trait> Module<T> {
 
 	fn _trader_become_safe(who: &T::AccountId, pool_id: LiquidityPoolId) -> DispatchResult {
 		if Self::_is_trader_margin_called(who, pool_id) {
-			if Self::_ensure_trader_safe(who, pool_id).is_ok() {
+			if Self::_ensure_trader_safe(who, pool_id, Action::None).is_ok() {
 				<MarginCalledTraders<T>>::remove(who, pool_id);
 			} else {
 				return Err(Error::<T>::UnsafeTrader.into());
@@ -453,7 +493,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _trader_stop_out(who: &T::AccountId, pool_id: LiquidityPoolId) -> DispatchResult {
-		let risk = Self::_check_trader(who, pool_id)?;
+		let risk = Self::_check_trader(who, pool_id, Action::None)?;
 		match risk {
 			Risk::StopOut => {
 				// To stop out a trader:
@@ -477,14 +517,16 @@ impl<T: Trait> Module<T> {
 
 				for (id, _) in positions {
 					let _ = Self::_close_position(who, id, None);
-					let new_risk = Self::_check_trader(who, pool_id)?;
+					let new_risk = Self::_check_trader(who, pool_id, Action::None)?;
 					match new_risk {
 						Risk::StopOut => {}
 						_ => break,
 					}
 				}
 
-				if Self::_ensure_trader_safe(who, pool_id).is_ok() && Self::_is_trader_margin_called(who, pool_id) {
+				if Self::_ensure_trader_safe(who, pool_id, Action::None).is_ok()
+					&& Self::_is_trader_margin_called(who, pool_id)
+				{
 					<MarginCalledTraders<T>>::remove(who, pool_id);
 				}
 				Ok(())
@@ -762,8 +804,8 @@ impl<T: Trait> Module<T> {
 	/// Ensure a trader is safe.
 	///
 	/// Return `Ok` if ensured safe, or `Err` if not.
-	fn _ensure_trader_safe(who: &T::AccountId, pool_id: LiquidityPoolId) -> DispatchResult {
-		let risk = Self::_check_trader(who, pool_id)?;
+	fn _ensure_trader_safe(who: &T::AccountId, pool_id: LiquidityPoolId, action: Action<T>) -> DispatchResult {
+		let risk = Self::_check_trader(who, pool_id, action)?;
 		match risk {
 			Risk::None => Ok(()),
 			_ => Err(Error::<T>::UnsafeTrader.into()),
@@ -773,13 +815,20 @@ impl<T: Trait> Module<T> {
 	/// Check trader risk after performing an action.
 	///
 	/// Return `Ok(Risk)`, or `Err` if check fails.
-	fn _check_trader(who: &T::AccountId, pool_id: LiquidityPoolId) -> Result<Risk, DispatchError> {
+	fn _check_trader(who: &T::AccountId, pool_id: LiquidityPoolId, action: Action<T>) -> Result<Risk, DispatchError> {
 		let margin_level = Self::margin_level(who, pool_id)?;
-		let RiskThreshold { stop_out, margin_call } = Self::trader_risk_threshold();
 
-		let risk = if margin_level <= stop_out.into() {
+		let new_pair_risk_threshold = match action.clone() {
+			Action::OpenPosition(p) => Self::trader_risk_threshold(p.pair).unwrap_or_default(),
+			_ => RiskThreshold::default(),
+		};
+
+		let trader_threshold = Self::_risk_threshold_of_trader(who);
+		let risk = if margin_level <= cmp::max(trader_threshold.stop_out, new_pair_risk_threshold.stop_out).into() {
 			Risk::StopOut
-		} else if margin_level <= margin_call.into() {
+		} else if margin_level
+			<= cmp::max(trader_threshold.margin_call.into(), new_pair_risk_threshold.margin_call).into()
+		{
 			Risk::MarginCall
 		} else {
 			Risk::None
@@ -912,12 +961,23 @@ impl<T: Trait> Module<T> {
 	///
 	/// Return `Ok(Risk)`, or `Err` if check fails.
 	fn _check_pool(pool_id: LiquidityPoolId, action: Action<T>) -> Result<Risk, DispatchError> {
-		let enp_threshold = Self::liquidity_pool_enp_threshold();
-		let ell_threshold = Self::liquidity_pool_ell_threshold();
+		let (new_pair_enp_threshold, new_pair_ell_threshold) = match action.clone() {
+			Action::OpenPosition(p) => (
+				Self::liquidity_pool_enp_threshold(p.pair).unwrap_or_default(),
+				Self::liquidity_pool_ell_threshold(p.pair).unwrap_or_default(),
+			),
+			_ => (RiskThreshold::default(), RiskThreshold::default()),
+		};
+		let (enp_threshold, ell_threshold) = Self::_enp_and_ell_risk_threshold_of_pool(pool_id);
+
 		let (enp, ell) = Self::_enp_and_ell(pool_id, action)?;
-		if enp <= enp_threshold.stop_out.into() || ell <= ell_threshold.stop_out.into() {
+		if enp <= cmp::max(enp_threshold.stop_out, new_pair_enp_threshold.stop_out).into()
+			|| ell <= cmp::max(ell_threshold.stop_out, new_pair_ell_threshold.stop_out).into()
+		{
 			return Ok(Risk::StopOut);
-		} else if enp <= enp_threshold.margin_call.into() || ell <= ell_threshold.margin_call.into() {
+		} else if enp <= cmp::max(enp_threshold.margin_call, new_pair_enp_threshold.margin_call).into()
+			|| ell <= cmp::max(ell_threshold.margin_call, new_pair_ell_threshold.margin_call).into()
+		{
 			return Ok(Risk::MarginCall);
 		}
 		Ok(Risk::None)
@@ -968,6 +1028,73 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
+	/// Return risk threshold of trader based on opened positions after performing an action.
+	///
+	/// Return `RiskThreshold` or `Default` value.
+	fn _risk_threshold_of_trader(who: &T::AccountId) -> RiskThreshold {
+		let (trader_margin_call, trader_stop_out) = <PositionsByTrader<T>>::iter(who)
+			.fold(vec![], |mut v, ((_, position_id), _)| {
+				if let Some(position) = Self::positions(position_id) {
+					if !v.contains(&position.pair) {
+						v.push(position.pair);
+					}
+				}
+				v
+			})
+			.iter()
+			.filter_map(|pair| Self::trader_risk_threshold(pair))
+			.map(|v| (v.margin_call, v.stop_out))
+			.fold((Permill::zero(), Permill::zero()), |max, v| {
+				(cmp::max(max.0, v.0), cmp::max(max.1, v.1))
+			});
+
+		RiskThreshold {
+			margin_call: trader_margin_call,
+			stop_out: trader_stop_out,
+		}
+	}
+
+	/// Return risk threshold of liquidity pool based on opened positions after performing an action.
+	///
+	/// Return `RiskThreshold` or `Default` value.
+	fn _enp_and_ell_risk_threshold_of_pool(pool_id: LiquidityPoolId) -> (RiskThreshold, RiskThreshold) {
+		let (enp_margin_call, enp_stop_out, ell_margin_call, ell_stop_out) = PositionsByPool::iter(pool_id)
+			.fold(vec![], |mut v, ((pair, _), _)| {
+				if !v.contains(&pair) {
+					v.push(pair);
+				}
+				v
+			})
+			.iter()
+			.filter_map(|pair| {
+				let enp = Self::liquidity_pool_enp_threshold(pair)?;
+				let ell = Self::liquidity_pool_ell_threshold(pair)?;
+				Some((enp.margin_call, enp.stop_out, ell.margin_call, ell.stop_out))
+			})
+			.fold(
+				(Permill::zero(), Permill::zero(), Permill::zero(), Permill::zero()),
+				|max, v| {
+					(
+						cmp::max(max.0, v.0),
+						cmp::max(max.1, v.1),
+						cmp::max(max.2, v.2),
+						cmp::max(max.3, v.3),
+					)
+				},
+			);
+
+		(
+			RiskThreshold {
+				margin_call: enp_margin_call,
+				stop_out: enp_stop_out,
+			},
+			RiskThreshold {
+				margin_call: ell_margin_call,
+				stop_out: ell_stop_out,
+			},
+		)
+	}
+
 	pub fn enp_and_ell(pool: LiquidityPoolId) -> Option<(Fixed128, Fixed128)> {
 		if <T::LiquidityPools as LiquidityPools<T::AccountId>>::pool_exists(pool) {
 			let result = Self::_enp_and_ell(pool, Action::None).ok()?;
@@ -979,12 +1106,13 @@ impl<T: Trait> Module<T> {
 	/// Returns required deposit amount to make pool safe.
 	pub fn pool_required_deposit(pool: LiquidityPoolId) -> Option<Fixed128> {
 		let (net_position, longest_leg) = Self::_net_position_and_longest_leg(pool, None);
+		let (enp_threshold, ell_threshold) = Self::_enp_and_ell_risk_threshold_of_pool(pool);
 		let required_equity = {
 			let for_enp = net_position
-				.checked_mul(&Self::liquidity_pool_enp_threshold().margin_call.into())
+				.checked_mul(&enp_threshold.margin_call.into())
 				.expect("ENP margin call threshold < 1; qed");
 			let for_ell = longest_leg
-				.checked_mul(&Self::liquidity_pool_ell_threshold().margin_call.into())
+				.checked_mul(&ell_threshold.margin_call.into())
 				.expect("ELL margin call threshold < 1; qed");
 			cmp::max(for_enp, for_ell)
 		};
@@ -999,7 +1127,7 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> LiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
+impl<T: Trait> BaseLiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
 	/// Returns if `pool` has liability in margin protocol.
 	fn can_remove(pool: LiquidityPoolId) -> bool {
 		PositionsByPool::iter(pool).count() == 0
@@ -1007,6 +1135,22 @@ impl<T: Trait> LiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
 
 	fn ensure_can_withdraw(pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
 		Self::_ensure_pool_safe(pool_id, Action::Withdraw(amount))
+	}
+}
+
+impl<T: Trait> MarginProtocolLiquidityPoolsManager for Module<T> {
+	fn ensure_can_enable_trading_pair(pool_id: LiquidityPoolId, pair: TradingPair) -> DispatchResult {
+		Self::trader_risk_threshold(pair).ok_or(Error::<T>::NoRiskThreshold)?;
+		let enp_threshold = Self::liquidity_pool_enp_threshold(pair).ok_or(Error::<T>::NoRiskThreshold)?;
+		let ell_threshold = Self::liquidity_pool_ell_threshold(pair).ok_or(Error::<T>::NoRiskThreshold)?;
+
+		let (enp, ell) = Self::_enp_and_ell(pool_id, Action::None)?;
+		if enp <= enp_threshold.stop_out.into() || ell <= ell_threshold.stop_out.into() {
+			return Err(Error::<T>::PoolWouldBeUnsafe.into());
+		} else if enp <= enp_threshold.margin_call.into() || ell <= ell_threshold.margin_call.into() {
+			return Err(Error::<T>::PoolWouldBeUnsafe.into());
+		}
+		Ok(())
 	}
 }
 
@@ -1071,7 +1215,7 @@ impl<T: Trait> Module<T> {
 		debug::native::trace!(target: TAG, "Started [block_number = {:?}]", block_number);
 
 		for (trader, pool_id) in Self::_get_traders() {
-			match Self::_check_trader(&trader, pool_id).map_err(|_| OffchainErr::CheckFail)? {
+			match Self::_check_trader(&trader, pool_id, Action::None).map_err(|_| OffchainErr::CheckFail)? {
 				Risk::StopOut => {
 					let who = T::Lookup::unlookup(trader.clone());
 					let call = Call::<T>::trader_stop_out(who, pool_id);
@@ -1170,7 +1314,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _should_stop_out_trader(who: &T::AccountId, pool_id: LiquidityPoolId) -> Result<bool, OffchainErr> {
-		match Self::_check_trader(who, pool_id).map_err(|_| OffchainErr::CheckFail)? {
+		match Self::_check_trader(who, pool_id, Action::None).map_err(|_| OffchainErr::CheckFail)? {
 			Risk::StopOut => Ok(true),
 			_ => Ok(false),
 		}

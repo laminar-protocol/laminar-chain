@@ -580,6 +580,7 @@ impl base_liquidity_pools::Trait<BaseLiquidityPoolsSyntheticInstance> for Runtim
 impl margin_liquidity_pools::Trait for Runtime {
 	type Event = Event;
 	type BaseLiquidityPools = BaseLiquidityPoolsForMargin;
+	type PoolManager = MarginProtocol;
 	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
 	type MaxSwap = MaxSwap;
@@ -631,6 +632,7 @@ impl margin_protocol::Trait for Runtime {
 	type Call = Call;
 	type GetTraderMaxOpenPositions = GetTraderMaxOpenPositions;
 	type GetPoolMaxOpenPositions = GetPoolMaxOpenPositions;
+	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
 	type UnsignedPriority = MarginProtocolUnsignedPriority;
 }
 

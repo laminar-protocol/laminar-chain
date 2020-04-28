@@ -18,7 +18,7 @@ pub trait LiquidityPools<AccountId> {
 	fn withdraw_liquidity(dest: &AccountId, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult;
 }
 
-pub trait LiquidityPoolManager<LiquidityPoolId, Balance> {
+pub trait BaseLiquidityPoolManager<LiquidityPoolId, Balance> {
 	fn can_remove(pool_id: LiquidityPoolId) -> bool;
 	fn ensure_can_withdraw(pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult;
 }
@@ -43,6 +43,10 @@ pub trait MarginProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
 		leverage: Leverage,
 		leveraged_amount: Balance,
 	) -> bool;
+}
+
+pub trait MarginProtocolLiquidityPoolsManager {
+	fn ensure_can_enable_trading_pair(pool_id: LiquidityPoolId, pair: TradingPair) -> DispatchResult;
 }
 
 pub trait OnDisableLiquidityPool {

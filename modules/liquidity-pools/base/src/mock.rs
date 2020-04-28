@@ -86,7 +86,7 @@ impl orml_tokens::Trait for Runtime {
 }
 
 pub struct PoolManager;
-impl LiquidityPoolManager<LiquidityPoolId, Balance> for PoolManager {
+impl BaseLiquidityPoolManager<LiquidityPoolId, Balance> for PoolManager {
 	fn can_remove(_pool_id: LiquidityPoolId) -> bool {
 		true
 	}

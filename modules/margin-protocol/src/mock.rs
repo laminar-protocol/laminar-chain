@@ -2,8 +2,9 @@
 
 #![cfg(test)]
 
-use frame_support::{impl_outer_dispatch, impl_outer_event, impl_outer_origin, parameter_types};
+use frame_support::{impl_outer_dispatch, impl_outer_event, impl_outer_origin, ord_parameter_types, parameter_types};
 use frame_system as system;
+use frame_system::EnsureSignedBy;
 use orml_prices::DefaultPriceProvider;
 use orml_traits::DataProvider;
 use primitives::{Balance, CurrencyId, LiquidityPoolId, TradingPair};
@@ -17,6 +18,10 @@ use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
 use traits::LiquidityPools;
 
 use super::*;
+
+ord_parameter_types! {
+	pub const One: AccountId = 0;
+}
 
 impl_outer_origin! {
 	pub enum Origin for Runtime {}
@@ -252,6 +257,7 @@ impl Trait for Runtime {
 	type Call = Call;
 	type GetTraderMaxOpenPositions = GetTraderMaxOpenPositions;
 	type GetPoolMaxOpenPositions = GetPoolMaxOpenPositions;
+	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
 	type UnsignedPriority = UnsignedPriority;
 }
 pub type MarginProtocol = Module<Runtime>;
@@ -261,6 +267,21 @@ pub const BOB: AccountId = 1;
 pub const TREASURY_ACCOUNT: AccountId = 3;
 pub const MOCK_POOL: LiquidityPoolId = 100;
 pub const MOCK_POOL_1: LiquidityPoolId = 101;
+
+pub const EUR_USD_PAIR: TradingPair = TradingPair {
+	base: CurrencyId::FEUR,
+	quote: CurrencyId::AUSD,
+};
+
+pub const JPY_USD_PAIR: TradingPair = TradingPair {
+	base: CurrencyId::FJPY,
+	quote: CurrencyId::AUSD,
+};
+
+pub const EUR_JPY_PAIR: TradingPair = TradingPair {
+	base: CurrencyId::FEUR,
+	quote: CurrencyId::FJPY,
+};
 
 /// Print status of a trader, only for unit tests debugging purpose.
 pub fn print_trader_summary(who: &AccountId, pool_id: LiquidityPoolId, name: Option<&'static str>) {
@@ -298,10 +319,7 @@ pub struct ExtBuilder {
 	spread: Permill,
 	prices: Vec<(CurrencyId, Price)>,
 	swap_rates: Vec<(TradingPair, Fixed128)>,
-	trader_risk_threshold: RiskThreshold,
 	pool_liquidities: Vec<(LiquidityPoolId, Balance)>,
-	liquidity_pool_enp_threshold: RiskThreshold,
-	liquidity_pool_ell_threshold: RiskThreshold,
 }
 
 impl Default for ExtBuilder {
@@ -312,9 +330,6 @@ impl Default for ExtBuilder {
 			spread: Permill::from_rational_approximation(1, 1000u32),
 			prices: vec![(CurrencyId::AUSD, FixedU128::from_rational(1, 1))],
 			swap_rates: vec![],
-			trader_risk_threshold: RiskThreshold::default(),
-			liquidity_pool_enp_threshold: RiskThreshold::default(),
-			liquidity_pool_ell_threshold: RiskThreshold::default(),
 			pool_liquidities: vec![],
 		}
 	}
@@ -352,25 +367,10 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn trader_risk_threshold(mut self, threshold: RiskThreshold) -> Self {
-		self.trader_risk_threshold = threshold;
-		self
-	}
-
 	pub fn pool_liquidity(mut self, pool: LiquidityPoolId, liquidity: Balance) -> Self {
 		self.pool_liquidities.push((pool, liquidity));
 		self.endowed_accounts
 			.push((MOCK_LIQUIDITY_LOCK_ACCOUNT, CurrencyId::AUSD, liquidity));
-		self
-	}
-
-	pub fn liquidity_pool_enp_threshold(mut self, threshold: RiskThreshold) -> Self {
-		self.liquidity_pool_enp_threshold = threshold;
-		self
-	}
-
-	pub fn liquidity_pool_ell_threshold(mut self, threshold: RiskThreshold) -> Self {
-		self.liquidity_pool_ell_threshold = threshold;
 		self
 	}
 
@@ -401,9 +401,20 @@ impl ExtBuilder {
 		.unwrap();
 
 		GenesisConfig {
-			trader_risk_threshold: self.trader_risk_threshold,
-			liquidity_pool_enp_threshold: self.liquidity_pool_enp_threshold,
-			liquidity_pool_ell_threshold: self.liquidity_pool_ell_threshold,
+			risk_thresholds: vec![
+				(
+					EUR_USD_PAIR,
+					RiskThreshold::default(),
+					RiskThreshold::default(),
+					RiskThreshold::default(),
+				),
+				(
+					EUR_JPY_PAIR,
+					RiskThreshold::default(),
+					RiskThreshold::default(),
+					RiskThreshold::default(),
+				),
+			],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

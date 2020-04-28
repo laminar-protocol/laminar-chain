@@ -16,7 +16,10 @@ use primitives::{AccumulateConfig, Balance, CurrencyId, Leverage, Leverages, Liq
 use sp_arithmetic::Fixed128;
 use sp_runtime::{traits::Saturating, DispatchResult, ModuleId, RuntimeDebug};
 use sp_std::{cmp::max, prelude::*};
-use traits::{LiquidityPools, MarginProtocolLiquidityPools, OnDisableLiquidityPool, OnRemoveLiquidityPool};
+use traits::{
+	LiquidityPools, MarginProtocolLiquidityPools, MarginProtocolLiquidityPoolsManager, OnDisableLiquidityPool,
+	OnRemoveLiquidityPool,
+};
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -40,6 +43,7 @@ pub const MODULE_ID: ModuleId = ModuleId(*b"lami/mlp");
 pub trait Trait: frame_system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 	type BaseLiquidityPools: LiquidityPools<Self::AccountId>;
+	type PoolManager: MarginProtocolLiquidityPoolsManager;
 	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
 	type UpdateOrigin: EnsureOrigin<Self::Origin>;
 	type MaxSwap: Get<Fixed128>;
@@ -192,6 +196,9 @@ decl_module! {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
 			ensure!(Self::enabled_trading_pair(&pair).is_some(), Error::<T>::TradingPairNotEnabled);
+
+			<T::PoolManager as MarginProtocolLiquidityPoolsManager>::ensure_can_enable_trading_pair(pool_id, pair)?;
+
 			LiquidityPoolEnabledTradingPairs::insert(&pool_id, &pair, true);
 			Self::deposit_event(RawEvent::LiquidityPoolTradingPairEnabled(pair))
 		}
