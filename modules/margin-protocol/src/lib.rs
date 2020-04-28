@@ -116,8 +116,8 @@ decl_event! {
 	{
 		/// Position opened: (who, position_id, pool_id, trading_pair, leverage, leveraged_amount, market_price)
 		PositionOpened(AccountId, PositionId, LiquidityPoolId, TradingPair, Leverage, Amount, Price),
-		/// Position closed: (who, position_id, market_price)
-		PositionClosed(AccountId, PositionId, Price),
+		/// Position closed: (who, position_id, pool_id, market_price)
+		PositionClosed(AccountId, PositionId, LiquidityPoolId, Price),
 		/// Deposited: (who, pool_id, amount)
 		Deposited(AccountId, LiquidityPoolId, Amount),
 		/// Withdrew: (who, pool_id, amount)
@@ -446,6 +446,7 @@ impl<T: Trait> Module<T> {
 		Self::deposit_event(RawEvent::PositionClosed(
 			who.clone(),
 			position_id,
+			position.pool,
 			FixedU128::from_parts(u128_from_fixed_128(market_price)),
 		));
 
