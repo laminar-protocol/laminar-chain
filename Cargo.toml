@@ -58,6 +58,7 @@ sp-transaction-pool = { version = "2.0.0-alpha.6" }
 sp-std = { version = "2.0.0-alpha.6" }
 sp-arithmetic = { version = "2.0.0-alpha.6" }
 substrate-frame-rpc-system = { version = "2.0.0-alpha.6" }
+frame-benchmarking-cli = { version = "2.0.0-alpha.6" }
 
 margin-protocol = { package = "module-margin-protocol", path = "modules/margin-protocol"}
 margin-protocol-rpc = { path = "modules/margin-protocol/rpc" }
@@ -67,6 +68,7 @@ orml-oracle-rpc = { path = "orml/oracle/rpc" }
 orml-utilities = { path = "orml/utilities" }
 module-primitives = { path = "./modules/primitives" }
 runtime = { package = "laminar-runtime", path = "runtime" }
+inspect = { package = "laminar-inspect", path = "inspect" }
 
 [dev-dependencies]
 cucumber = { package = "cucumber_rust", version = "^0.6.0" }
@@ -74,6 +76,11 @@ frame-support = { version = "2.0.0-alpha.6" }
 
 [build-dependencies]
 build-script-utils = { package = "substrate-build-script-utils", version = "2.0.0-alpha.6" }
+
+[features]
+runtime-benchmarks = [
+	"runtime/runtime-benchmarks",
+]
 
 [workspace]
 members = [
@@ -92,6 +99,7 @@ members = [
 	"orml/utilities",
 	"orml/vesting",
 	"runtime",
+	"inspect",
 	"orml/schedule-update",
 	"orml/gradually-update",
 ]
