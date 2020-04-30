@@ -865,4 +865,31 @@ impl_runtime_apis! {
 			Some(SyntheticProtocolPoolInfo { collateral_ratio, is_safe })
 		}
 	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	impl frame_benchmarking::Benchmark<Block> for Runtime {
+		fn dispatch_benchmark(
+			pallet: Vec<u8>,
+			benchmark: Vec<u8>,
+			lowest_range_values: Vec<u32>,
+			highest_range_values: Vec<u32>,
+			steps: Vec<u32>,
+			repeat: u32,
+		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
+			use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark};
+
+			let mut batches = Vec::<BenchmarkBatch>::new();
+			let params = (&pallet, &benchmark, &lowest_range_values, &highest_range_values, &steps, repeat);
+
+			//add_benchmark!(params, batches, b"base-liquidity-pools-margin", BaseLiquidityPoolsForMargin);
+			//add_benchmark!(params, batches, b"base-liquidity-pools-synthetic", BaseLiquidityPoolsForSynthetic);
+			//add_benchmark!(params, batches, b"margin-liquidity-pools", MarginLiquidityPools);
+			//add_benchmark!(params, batches, b"synthetic-liquidity-pools", SyntheticLiquidityPools);
+			//add_benchmark!(params, batches, b"margin-protocol", MarginProtocol);
+			//add_benchmark!(params, batches, b"synthetic-protocol", SyntheticProtocol);
+
+			if batches.is_empty() { return Err("Benchmark not found for this module.".into()) }
+			Ok(batches)
+		}
+	}
 }
