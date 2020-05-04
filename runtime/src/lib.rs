@@ -14,7 +14,6 @@ mod types;
 
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::AuthorityList as GrandpaAuthorityList;
-use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use sp_api::impl_runtime_apis;
 use sp_core::u32_trait::{_1, _2, _3, _4};
 use sp_core::OpaqueMetadata;
@@ -54,6 +53,9 @@ pub use pallet_staking::StakerStatus;
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Percent, Permill};
 
+pub use constants::{currency::*, time::*};
+pub use types::*;
+
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
@@ -72,8 +74,8 @@ pub mod opaque {
 
 	impl_opaque_keys! {
 		pub struct SessionKeys {
-			pub babe: Babe,
 			pub grandpa: Grandpa,
+			pub babe: Babe,
 		}
 	}
 }
@@ -83,11 +85,11 @@ pub use types::*;
 
 /// This runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("laminar-chain"),
-	impl_name: create_runtime_str!("laminar-chain"),
+	spec_name: create_runtime_str!("laminar"),
+	impl_name: create_runtime_str!("laminar"),
 	authoring_version: 1,
-	spec_version: 6,
-	impl_version: 1,
+	spec_version: 1,
+	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 };
 
@@ -102,7 +104,7 @@ pub fn native_version() -> NativeVersion {
 
 parameter_types! {
 	pub const BlockHashCount: BlockNumber = 250;
-	pub const MaximumBlockWeight: Weight = 1_000_000;
+	pub const MaximumBlockWeight: Weight = 1_000_000_000;
 	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 	pub const MaximumBlockLength: u32 = 5 * 1024 * 1024;
 	pub const Version: RuntimeVersion = VERSION;
@@ -152,8 +154,8 @@ impl system::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const MultisigDepositBase: Balance = 500;
-	pub const MultisigDepositFactor: Balance = 100;
+	pub const MultisigDepositBase: Balance = 500 * MILLICENTS;
+	pub const MultisigDepositFactor: Balance = 100 * MILLICENTS;
 	pub const MaxSignatories: u16 = 100;
 }
 
@@ -183,7 +185,7 @@ impl pallet_grandpa::Trait for Runtime {
 
 parameter_types! {
 	/// How much an index costs.
-	pub const IndexDeposit: u128 = 100;
+	pub const IndexDeposit: Balance = 1 * DOLLARS;
 }
 
 impl pallet_indices::Trait for Runtime {
@@ -210,7 +212,7 @@ impl pallet_timestamp::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: u128 = 500;
+	pub const LamiExistentialDeposit: Balance = 100 * MILLICENTS;
 }
 
 impl pallet_balances::Trait for Runtime {
@@ -219,13 +221,13 @@ impl pallet_balances::Trait for Runtime {
 	type DustRemoval = ();
 	/// The ubiquitous event type.
 	type Event = Event;
-	type ExistentialDeposit = ExistentialDeposit;
+	type ExistentialDeposit = LamiExistentialDeposit;
 	type AccountStore = System;
 }
 
 parameter_types! {
-	pub const TransactionBaseFee: Balance = 0;
-	pub const TransactionByteFee: Balance = 1;
+	pub const TransactionBaseFee: Balance = 200 * MILLICENTS;
+	pub const TransactionByteFee: Balance = 10 * MILLICENTS;
 }
 
 impl pallet_transaction_payment::Trait for Runtime {
@@ -244,20 +246,8 @@ impl pallet_sudo::Trait for Runtime {
 
 parameter_types! {
 	pub const SessionDuration: BlockNumber = EPOCH_DURATION_IN_SLOTS as _;
-	pub const ImOnlineUnsignedPriority: TransactionPriority = TransactionPriority::max_value();
-	/// We prioritize im-online heartbeats over phragmen solution submission.
 	pub const StakingUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 2;
 	pub const MarginProtocolUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 2;
-}
-
-impl pallet_im_online::Trait for Runtime {
-	type AuthorityId = ImOnlineId;
-	type Event = Event;
-	type Call = Call;
-	type SubmitTransaction = TransactionSubmitter;
-	type SessionDuration = SessionDuration;
-	type ReportUnresponsiveness = Offences;
-	type UnsignedPriority = ImOnlineUnsignedPriority;
 }
 
 impl pallet_offences::Trait for Runtime {
@@ -267,7 +257,7 @@ impl pallet_offences::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const GeneralCouncilMotionDuration: BlockNumber = 5 * DAYS; // TODO: update this
+	pub const GeneralCouncilMotionDuration: BlockNumber = 1 * DAYS;
 }
 
 type GeneralCouncilInstance = pallet_collective::Instance1;
@@ -291,7 +281,7 @@ impl pallet_membership::Trait<GeneralCouncilMembershipInstance> for Runtime {
 }
 
 parameter_types! {
-	pub const FinancialCouncilMotionDuration: BlockNumber = 5 * DAYS; // TODO: update this
+	pub const FinancialCouncilMotionDuration: BlockNumber = 1 * DAYS;
 }
 
 type FinancialCouncilInstance = pallet_collective::Instance2;
@@ -315,7 +305,7 @@ impl pallet_membership::Trait<FinancialCouncilMembershipInstance> for Runtime {
 }
 
 parameter_types! {
-	pub const OperatorCollectiveMotionDuration: BlockNumber = 5 * DAYS; // TODO: update this
+	pub const OperatorCollectiveMotionDuration: BlockNumber = 1 * DAYS;
 }
 
 type OperatorCollectiveInstance = pallet_collective::Instance3;
@@ -351,13 +341,13 @@ impl Contains<AccountId> for GeneralCouncilProvider {
 
 parameter_types! {
 	pub const ProposalBond: Permill = Permill::from_percent(5);
-	pub const ProposalBondMinimum: Balance = 1_000_000_000_000_000_000;
+	pub const ProposalBondMinimum: Balance = 1 * DOLLARS;
 	pub const SpendPeriod: BlockNumber = 1 * DAYS;
 	pub const Burn: Permill = Permill::from_percent(0);
 	pub const TipCountdown: BlockNumber = 1 * DAYS;
-	pub const TipFindersFee: Percent = Percent::from_percent(20);
-	pub const TipReportDepositBase: Balance = 1_000_000_000_000_000_000;
-	pub const TipReportDepositPerByte: Balance = 1_000_000_000_000_000;
+	pub const TipFindersFee: Percent = Percent::from_percent(10);
+	pub const TipReportDepositBase: Balance = 1 * DOLLARS;
+	pub const TipReportDepositPerByte: Balance = 1 * CENTS;
 }
 
 impl pallet_treasury::Trait for Runtime {
@@ -432,12 +422,12 @@ impl Convert<u128, Balance> for CurrencyToVoteHandler {
 }
 
 parameter_types! {
-	pub const SessionsPerEra: sp_staking::SessionIndex = 6;
-	pub const BondingDuration: pallet_staking::EraIndex = 24 * 28;
-	pub const SlashDeferDuration: pallet_staking::EraIndex = 24 * 7; // 1/4 the bonding duration.
+	pub const SessionsPerEra: sp_staking::SessionIndex = 3; // 3 hours
+	pub const BondingDuration: pallet_staking::EraIndex = 4; // 12 hours
+	pub const SlashDeferDuration: pallet_staking::EraIndex = 2; // 6 hours
 	pub const RewardCurve: &'static PiecewiseLinear<'static> = &REWARD_CURVE;
-	pub const ElectionLookahead: BlockNumber = 25; // 10 minutes per session => 100 block.
-	pub const MaxNominatorRewardedPerValidator: u32 = 64; // TODO: update this
+	pub const MaxNominatorRewardedPerValidator: u32 = 64;
+	pub const ElectionLookahead: BlockNumber = 25;
 }
 
 impl pallet_staking::Trait for Runtime {
@@ -475,8 +465,8 @@ impl OperatorProvider<AccountId> for OperatorCollectiveProvider {
 }
 
 parameter_types! {
-	pub const MinimumCount: u32 = 1; // TODO: change this
-	pub const ExpiresIn: u64 = 1000 * 60 * 60 * 24 * 100; // 100days for now TODO: change this
+	pub const MinimumCount: u32 = 1;
+	pub const ExpiresIn: Moment = 1000 * 60 * 60 * 24 * 3; // 3 days
 }
 
 impl orml_oracle::Trait for Runtime {
@@ -493,12 +483,16 @@ impl orml_oracle::Trait for Runtime {
 
 pub type TimeStampedPrice = orml_oracle::TimestampedValueOf<Runtime>;
 
+parameter_types! {
+	pub const TokenExistentialDeposit: Balance = 0;
+}
+
 impl orml_tokens::Trait for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
-	type ExistentialDeposit = ExistentialDeposit;
+	type ExistentialDeposit = TokenExistentialDeposit;
 	type DustRemoval = ();
 }
 
@@ -510,9 +504,9 @@ parameter_types! {
 		CurrencyId::FBTC,
 		CurrencyId::FETH,
 	];
-	pub const DefaultExtremeRatio: Permill = Permill::from_percent(1); // TODO: set this
-	pub const DefaultLiquidationRatio: Permill = Permill::from_percent(5); // TODO: set this
-	pub const DefaultCollateralRatio: Permill = Permill::from_percent(10); // TODO: set this
+	pub const DefaultExtremeRatio: Permill = Permill::from_percent(2);
+	pub const DefaultLiquidationRatio: Permill = Permill::from_percent(5);
+	pub const DefaultCollateralRatio: Permill = Permill::from_percent(10);
 }
 
 pub type LaminarToken = BasicCurrencyAdapter<Runtime, pallet_balances::Module<Runtime>, Balance>;
@@ -650,7 +644,6 @@ construct_runtime!(
 		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
-		ImOnline: pallet_im_online::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
 		Offences: pallet_offences::{Module, Call, Storage, Event},
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
 		GeneralCouncil: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},

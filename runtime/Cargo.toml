@@ -28,7 +28,6 @@ pallet-transaction-payment = { version = "2.0.0-alpha.6", default-features = fal
 pallet-transaction-payment-rpc-runtime-api = { version = "2.0.0-alpha.6", default-features = false }
 pallet-treasury = { version = "2.0.0-alpha.6", default-features = false }
 pallet-utility = { version = "2.0.0-alpha.6", default-features = false }
-pallet-im-online = { version = "2.0.0-alpha.6", default-features = false }
 pallet-offences = { version = "2.0.0-alpha.6", default-features = false }
 sp-api = { version = "2.0.0-alpha.6", default-features = false }
 sp-block-builder = { version = "2.0.0-alpha.6", default-features = false }
@@ -97,7 +96,6 @@ std = [
 	"pallet-transaction-payment/std",
 	"pallet-treasury/std",
 	"pallet-utility/std",
-	"pallet-im-online/std",
 	"pallet-offences/std",
 	"sp-api/std",
 	"sp-block-builder/std",
