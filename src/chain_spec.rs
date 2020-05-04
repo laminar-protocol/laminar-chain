@@ -124,11 +124,11 @@ pub fn local_testnet_config() -> ChainSpec {
 	)
 }
 
-pub fn laminar_testnet_config() -> Result<ChainSpec, String> {
-	ChainSpec::from_json_bytes(&include_bytes!("../resources/testnet-dist.json")[..])
+pub fn laminar_turbulence_config() -> Result<ChainSpec, String> {
+	ChainSpec::from_json_bytes(&include_bytes!("../resources/turbulence-dist.json")[..])
 }
 
-pub fn laminar_testnet_latest_config() -> ChainSpec {
+pub fn laminar_turbulence_latest_config() -> ChainSpec {
 	let mut properties = Map::new();
 	properties.insert("tokenSymbol".into(), "LAMI".into());
 	properties.insert("tokenDecimals".into(), 18.into());
