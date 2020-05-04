@@ -4,9 +4,9 @@ use margin_protocol::RiskThreshold;
 use module_primitives::{AccumulateConfig, TradingPair};
 use runtime::{
 	opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, BlockNumber, CurrencyId,
-	FinancialCouncilMembershipConfig, GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, ImOnlineConfig,
-	IndicesConfig, MarginLiquidityPoolsConfig, MarginProtocolConfig, OperatorMembershipConfig, SessionConfig,
-	Signature, StakerStatus, StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SystemConfig, TokensConfig,
+	FinancialCouncilMembershipConfig, GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, IndicesConfig,
+	MarginLiquidityPoolsConfig, MarginProtocolConfig, OperatorMembershipConfig, SessionConfig, Signature, StakerStatus,
+	StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SystemConfig, TokensConfig, CENTS, DOLLARS, HOURS,
 	WASM_BINARY,
 };
 use sc_service;
@@ -20,9 +20,6 @@ use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::{Perbill, Permill};
 use sp_std::num::NonZeroI128;
-
-// Note this is the URL for the telemetry server
-//const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig>;
@@ -58,9 +55,6 @@ fn session_keys(grandpa: GrandpaId, babe: BabeId) -> SessionKeys {
 	SessionKeys { grandpa, babe }
 }
 
-const INITIAL_BALANCE: u128 = 1_000_000_000_000_000_000_000_000_u128; // $1M
-const INITIAL_STAKING: u128 = 1_000_000_000_000_000_000_u128;
-
 pub fn development_config() -> ChainSpec {
 	let mut properties = Map::new();
 	properties.insert("tokenSymbol".into(), "LAMI".into());
@@ -80,7 +74,6 @@ pub fn development_config() -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
 				],
-				true,
 			)
 		},
 		vec![],
@@ -121,7 +114,6 @@ pub fn local_testnet_config() -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
-				true,
 			)
 		},
 		vec![],
@@ -142,39 +134,53 @@ pub fn laminar_testnet_latest_config() -> ChainSpec {
 	properties.insert("tokenDecimals".into(), 18.into());
 
 	ChainSpec::from_genesis(
-		"Laminar Testnet",
-		"laminar-testnet",
+		"Laminar Turbulence TC1",
+		"turbulence1",
 		ChainType::Live,
+		// SECRET="..."
+		// ./target/debug/subkey inspect "$SECRET//laminar//root"
+		// ./target/debug/subkey --ed25519 inspect "$SECRET//laminar//oracle"
+		// ./target/debug/subkey --sr25519 inspect "$SECRET//laminar//1//validator"
+		// ./target/debug/subkey --sr25519 inspect "$SECRET//laminar//1//babe"
+		// ./target/debug/subkey --ed25519 inspect "$SECRET//laminar//1//grandpa"
+		// ./target/debug/subkey --sr25519 inspect "$SECRET//laminar//2//validator"
+		// ./target/debug/subkey --sr25519 inspect "$SECRET//laminar//2//babe"
+		// ./target/debug/subkey --ed25519 inspect "$SECRET//laminar//2//grandpa"
+		// ./target/debug/subkey --sr25519 inspect "$SECRET//laminar//3//validator"
+		// ./target/debug/subkey --sr25519 inspect "$SECRET//laminar//3//babe"
+		// ./target/debug/subkey --ed25519 inspect "$SECRET//laminar//3//grandpa"
 		|| {
-			// TODO: regenerate alphanet according to babe-grandpa consensus
-			// SECRET="..."
-			// ./target/debug/subkey --sr25519 inspect "$SECRET//laminar//aura"
-			// ./target/debug/subkey --ed25519 inspect "$SECRET//laminar//grandpa"
-			// ./target/debug/subkey inspect "$SECRET//laminar//root"
-			// ./target/debug/subkey inspect "$SECRET//laminar//oracle"
-			testnet_genesis(
-				vec![(
-					// TODO: regenerate alphanet according to babe-grandpa consensus
-					// 5HGU1TsEkXDgpGdhwpYdzdgxfMAyRUYK3FuiaE5CYR9s78y5
-					hex!["e6257e9066e63b860259ee5c7cb752ac37a9ddf9f8bf889d6a3b95cf89ccab5a"]
-						.into(),
-					// 5HGU1TsEkXDgpGdhwpYdzdgxfMAyRUYK3FuiaE5CYR9s78y5
-					hex!["e6257e9066e63b860259ee5c7cb752ac37a9ddf9f8bf889d6a3b95cf89ccab5a"]
-						.into(),
-					// 5HGU1TsEkXDgpGdhwpYdzdgxfMAyRUYK3FuiaE5CYR9s78y5
-					hex!["e6257e9066e63b860259ee5c7cb752ac37a9ddf9f8bf889d6a3b95cf89ccab5a"]
-						.unchecked_into(),
-					// 5H5NcTUZRmV4nwZAjaJgiSyfYBafAcrkU2dBAJ9bSArqZi4E
-					hex!["ddafa0cdbaab3c9662b535c544a01b0ba5d09e850dd15c61525e626821695926"]
-						.unchecked_into(),
-				)],
-				// 5FeowPepSWZ1rP11pKRLmhBxtxLVnHvayxHxJBk6SD6THKZF
-				hex!["9eb78419050eff5d5d95d889b125ca69af78f399bf4641aac2cb39d7c18edb79"].into(),
+			turbulence_genesis(
 				vec![
-					// 5FeowPepSWZ1rP11pKRLmhBxtxLVnHvayxHxJBk6SD6THKZF
-					hex!["9eb78419050eff5d5d95d889b125ca69af78f399bf4641aac2cb39d7c18edb79"].into(),
-					// 5EZC7fb3W1F5548fakGVb19tDaM1zKHxBpg7UvzpkpmuyYki
-					hex!["6e32770eef925d3e31a575b1fdc1c67d387eaac589daecfc77a2661c97711036"].into(),
+					(
+						// 5E6jm6dgDZQBFW79gd3uvTKymjqUSzAPfkvD7Exx5GvdbHZ6
+						hex!["5a055df2cbdebc8fce61a70db71fcf64c1853dca54d8c3e52b2d65cb8cf7e533"].into(),
+						hex!["5a055df2cbdebc8fce61a70db71fcf64c1853dca54d8c3e52b2d65cb8cf7e533"].into(),
+						hex!["b48963cb1572aa90e4202db400e7b5aa887b3c6aaf7e61de3a6beb14dae2c97b"].unchecked_into(),
+						hex!["f2415a6cedee17c766c7e8f696fb3499519d85a3248b05de35bc7b58d59e4149"].unchecked_into(),
+					),
+					(
+						// 5GGqathCVPRvwTTMEvURf2f16iKu4i8SccxCc6UNGDF4g447
+						hex!["ba31e4b5576a5d60b2dbdb4d4144f6478636b84313fe6f41a44e002ddc64ec6c"].into(),
+						hex!["ba31e4b5576a5d60b2dbdb4d4144f6478636b84313fe6f41a44e002ddc64ec6c"].into(),
+						hex!["293bd01494343a94520531d844953e947e4a1ff84bdae948565e49bdf3304c09"].unchecked_into(),
+						hex!["cade610afbc4ce7ca0c6972f5c774c2c4710eed431cc23ac6e5e806870a8dd02"].unchecked_into(),
+					),
+					(
+						// 5GmrbvqhDBp7jmaRB5SsiY5kfkLPXMbELm6MTVsMpbCX19tD
+						hex!["d0536fc56cac85d6b61e128becdc367e8d7652d9a95663c7e88cb6119aea966d"].into(),
+						hex!["d0536fc56cac85d6b61e128becdc367e8d7652d9a95663c7e88cb6119aea966d"].into(),
+						hex!["849c1ea65bc37705aafd4e753fde8395612e9da8d88240d27b2dfc4a2e115599"].unchecked_into(),
+						hex!["d84cdabe21cead3f88de87b63116405182cf78ef97d3d590011bc235a983447a"].unchecked_into(),
+					),
+				],
+				// 5FySxAHYXDzgDY8BTVnbZ6dygkXJwG27pKmgCLeSRSFEG2dy
+				hex!["acee87f3026e9ef8cf334fe94bc9eb9e9e689318611eca21e5aef919e3e5bc30"].into(),
+				vec![
+					// 5FySxAHYXDzgDY8BTVnbZ6dygkXJwG27pKmgCLeSRSFEG2dy
+					hex!["acee87f3026e9ef8cf334fe94bc9eb9e9e689318611eca21e5aef919e3e5bc30"].into(),
+					// 5FrJvwPu7hGaEvD5josFPSxp3uVgQiDZRavEYUL76Wbn58Ss
+					hex!["a77ccfd77b70b2a6c52ed5d713ce1f8482d013a8727e64793101ab458adf2f96"].into(),
 				],
 			)
 		},
@@ -185,20 +191,22 @@ pub fn laminar_testnet_latest_config() -> ChainSpec {
 			"wss://telemetry.polkadot.io/submit/".parse().unwrap(),
 			0,
 		)]).ok(),
-		Some("lami-test"),
+		Some("turbulence1"),
 		Some(properties),
 		Default::default(),
 	)
 }
 
-const ONE_DOLLAR: u128 = 1000000000000000000;
+const INITIAL_BALANCE: u128 = 1_000_000 * DOLLARS;
+const INITIAL_STAKING: u128 = 100_000 * DOLLARS;
+
 const EUR_USD: TradingPair = TradingPair {
 	base: CurrencyId::FEUR,
 	quote: CurrencyId::AUSD,
 };
-const JPY_USD: TradingPair = TradingPair {
-	base: CurrencyId::FJPY,
-	quote: CurrencyId::AUSD,
+const USD_JPY: TradingPair = TradingPair {
+	base: CurrencyId::AUSD,
+	quote: CurrencyId::FJPY,
 };
 const BTC_USD: TradingPair = TradingPair {
 	base: CurrencyId::FBTC,
@@ -216,13 +224,6 @@ fn accumulate_config(frequency: BlockNumber, offset: BlockNumber) -> AccumulateC
 	}
 }
 
-fn swap_rate(long_percent: i32, short_percent: i32) -> SwapRate {
-	SwapRate {
-		long: Fixed128::from_rational(long_percent, NonZeroI128::new(100).unwrap()),
-		short: Fixed128::from_rational(short_percent, NonZeroI128::new(100).unwrap()),
-	}
-}
-
 fn risk_threshold(margin_call_percent: u32, stop_out_percent: u32) -> RiskThreshold {
 	RiskThreshold {
 		margin_call: Permill::from_percent(margin_call_percent),
@@ -234,20 +235,13 @@ fn dev_genesis(
 	initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId)>,
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
-	_enable_println: bool,
 ) -> GenesisConfig {
 	GenesisConfig {
 		system: Some(SystemConfig {
 			code: WASM_BINARY.to_vec(),
 			changes_trie_config: Default::default(),
 		}),
-		pallet_indices: Some(IndicesConfig {
-			indices: endowed_accounts
-				.iter()
-				.enumerate()
-				.map(|(index, x)| (index as u32, (*x).clone()))
-				.collect(),
-		}),
+		pallet_indices: Some(IndicesConfig { indices: vec![] }),
 		pallet_balances: Some(BalancesConfig {
 			balances: endowed_accounts.iter().cloned().map(|k| (k, INITIAL_BALANCE)).collect(),
 		}),
@@ -270,7 +264,6 @@ fn dev_genesis(
 		}),
 		pallet_sudo: Some(SudoConfig { key: root_key.clone() }),
 		pallet_babe: Some(BabeConfig { authorities: vec![] }),
-		pallet_im_online: Some(ImOnlineConfig { keys: vec![] }),
 		pallet_grandpa: Some(GrandpaConfig { authorities: vec![] }),
 		pallet_collective_Instance1: Some(Default::default()),
 		pallet_membership_Instance1: Some(GeneralCouncilMembershipConfig {
@@ -305,41 +298,53 @@ fn dev_genesis(
 					// TradingPair
 					EUR_USD,
 					// MaxSpread
-					ONE_DOLLAR,
+					1 * CENTS,
 					// Accumulates
-					accumulate_config(10, 1),
+					accumulate_config(100, 10),
 					// SwapRates
-					swap_rate(-1, 1),
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
+					},
 				),
 				(
 					// TradingPair
-					JPY_USD,
+					USD_JPY,
 					// MaxSpread
-					ONE_DOLLAR,
+					1 * DOLLARS,
 					// Accumulates
-					accumulate_config(10, 2),
+					accumulate_config(100, 20),
 					// SwapRates
-					swap_rate(-1, 1),
+					SwapRate {
+						long: Fixed128::from_rational(-1, NonZeroI128::new(1000).unwrap()),
+						short: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
+					},
 				),
 				(
 					// TradingPair
 					BTC_USD,
 					// MaxSpread
-					ONE_DOLLAR,
+					100 * DOLLARS,
 					// Accumulates
-					accumulate_config(10, 3),
+					accumulate_config(100, 30),
 					// SwapRates
-					swap_rate(-1, 1),
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
+						short: Fixed128::from_rational(2, NonZeroI128::new(1000).unwrap()),
+					},
 				),
 				(
 					// TradingPair
 					ETH_USD,
 					// MaxSpread
-					ONE_DOLLAR,
+					20 * DOLLARS,
 					// Accumulates
-					accumulate_config(10, 4),
+					accumulate_config(100, 30),
 					// SwapRates
-					swap_rate(-1, 1),
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
+						short: Fixed128::from_rational(2, NonZeroI128::new(1000).unwrap()),
+					},
 				),
 			],
 		}),
@@ -352,7 +357,7 @@ fn dev_genesis(
 					risk_threshold(30, 10),
 				),
 				(
-					JPY_USD,
+					USD_JPY,
 					risk_threshold(3, 1),
 					risk_threshold(30, 10),
 					risk_threshold(30, 10),
@@ -374,7 +379,7 @@ fn dev_genesis(
 	}
 }
 
-fn testnet_genesis(
+fn turbulence_genesis(
 	initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId)>,
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
@@ -384,15 +389,13 @@ fn testnet_genesis(
 			code: WASM_BINARY.to_vec(),
 			changes_trie_config: Default::default(),
 		}),
-		pallet_indices: Some(IndicesConfig {
-			indices: endowed_accounts
-				.iter()
-				.enumerate()
-				.map(|(index, x)| (index as u32, (*x).clone()))
-				.collect(),
-		}),
+		pallet_indices: Some(IndicesConfig { indices: vec![] }),
 		pallet_balances: Some(BalancesConfig {
-			balances: endowed_accounts.iter().cloned().map(|k| (k, INITIAL_BALANCE)).collect(),
+			balances: initial_authorities
+				.iter()
+				.map(|x| (x.0.clone(), INITIAL_STAKING))
+				.chain(endowed_accounts.iter().cloned().map(|k| (k, INITIAL_BALANCE)))
+				.collect(),
 		}),
 		pallet_session: Some(SessionConfig {
 			keys: initial_authorities
@@ -401,8 +404,8 @@ fn testnet_genesis(
 				.collect::<Vec<_>>(),
 		}),
 		pallet_staking: Some(StakingConfig {
-			validator_count: initial_authorities.len() as u32 * 2,
-			minimum_validator_count: initial_authorities.len() as u32,
+			validator_count: 3,
+			minimum_validator_count: 3,
 			stakers: initial_authorities
 				.iter()
 				.map(|x| (x.0.clone(), x.1.clone(), INITIAL_STAKING, StakerStatus::Validator))
@@ -413,7 +416,6 @@ fn testnet_genesis(
 		}),
 		pallet_sudo: Some(SudoConfig { key: root_key.clone() }),
 		pallet_babe: Some(BabeConfig { authorities: vec![] }),
-		pallet_im_online: Some(ImOnlineConfig { keys: vec![] }),
 		pallet_grandpa: Some(GrandpaConfig { authorities: vec![] }),
 		pallet_collective_Instance1: Some(Default::default()),
 		pallet_membership_Instance1: Some(GeneralCouncilMembershipConfig {
@@ -427,7 +429,7 @@ fn testnet_genesis(
 		}),
 		pallet_collective_Instance3: Some(Default::default()),
 		pallet_membership_Instance3: Some(OperatorMembershipConfig {
-			members: vec![root_key.clone()],
+			members: endowed_accounts.clone(),
 			phantom: Default::default(),
 		}),
 		pallet_treasury: Some(Default::default()),
@@ -440,49 +442,60 @@ fn testnet_genesis(
 		synthetic_liquidity_pools: Some(SyntheticLiquidityPoolsConfig {
 			min_additional_collateral_ratio: Permill::from_percent(10), // default min additional collateral ratio
 		}),
-		// TODO: update chain spec
 		margin_liquidity_pools: Some(MarginLiquidityPoolsConfig {
-			default_min_leveraged_amount: 1000,
+			default_min_leveraged_amount: 1 * DOLLARS,
 			margin_liquidity_config: vec![
 				(
 					// TradingPair
 					EUR_USD,
 					// MaxSpread
-					ONE_DOLLAR,
+					1 * CENTS,
 					// Accumulates
-					accumulate_config(10, 1),
+					accumulate_config(24 * HOURS, 0),
 					// SwapRates
-					swap_rate(-1, 1),
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
+					},
 				),
 				(
 					// TradingPair
-					JPY_USD,
+					USD_JPY,
 					// MaxSpread
-					ONE_DOLLAR,
+					1 * DOLLARS,
 					// Accumulates
-					accumulate_config(10, 2),
+					accumulate_config(24 * HOURS, 0),
 					// SwapRates
-					swap_rate(-1, 1),
+					SwapRate {
+						long: Fixed128::from_rational(-1, NonZeroI128::new(1000).unwrap()),
+						short: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
+					},
 				),
 				(
 					// TradingPair
 					BTC_USD,
 					// MaxSpread
-					ONE_DOLLAR,
+					100 * DOLLARS,
 					// Accumulates
-					accumulate_config(10, 3),
+					accumulate_config(8 * HOURS, 0),
 					// SwapRates
-					swap_rate(-1, 1),
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
+						short: Fixed128::from_rational(2, NonZeroI128::new(1000).unwrap()),
+					},
 				),
 				(
 					// TradingPair
 					ETH_USD,
 					// MaxSpread
-					ONE_DOLLAR,
+					20 * DOLLARS,
 					// Accumulates
-					accumulate_config(10, 4),
+					accumulate_config(8 * HOURS, 0),
 					// SwapRates
-					swap_rate(-1, 1),
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
+						short: Fixed128::from_rational(2, NonZeroI128::new(1000).unwrap()),
+					},
 				),
 			],
 		}),
@@ -490,27 +503,30 @@ fn testnet_genesis(
 			risk_thresholds: vec![
 				(
 					EUR_USD,
-					risk_threshold(3, 1),
-					risk_threshold(30, 10),
-					risk_threshold(30, 10),
+					// TraderRiskThreshold
+					risk_threshold(2, 1),
+					// LiquidityPoolENPThreshold
+					risk_threshold(80, 50),
+					// LiquidityPoolELLThreshold
+					risk_threshold(50, 30),
 				),
 				(
-					JPY_USD,
-					risk_threshold(3, 1),
-					risk_threshold(30, 10),
-					risk_threshold(30, 10),
+					USD_JPY,
+					risk_threshold(2, 1),
+					risk_threshold(80, 50),
+					risk_threshold(50, 30),
 				),
 				(
 					BTC_USD,
-					risk_threshold(3, 1),
-					risk_threshold(30, 10),
-					risk_threshold(30, 10),
+					risk_threshold(10, 5),
+					risk_threshold(100, 80),
+					risk_threshold(60, 40),
 				),
 				(
 					ETH_USD,
-					risk_threshold(3, 1),
-					risk_threshold(30, 10),
-					risk_threshold(30, 10),
+					risk_threshold(10, 5),
+					risk_threshold(100, 80),
+					risk_threshold(60, 40),
 				),
 			],
 		}),

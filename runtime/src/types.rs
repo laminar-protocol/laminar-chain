@@ -1,3 +1,5 @@
+pub use module_primitives::Balance;
+
 use sp_runtime::{
 	generic,
 	traits::{IdentifyAccount, Verify},

@@ -1,5 +1,14 @@
 //! A set of constant values used in runtime.
 
+/// Money matters.
+pub mod currency {
+	use crate::types::Balance;
+
+	pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
+	pub const CENTS: Balance = DOLLARS / 100;
+	pub const MILLICENTS: Balance = CENTS / 1000;
+}
+
 /// Time.
 pub mod time {
 	use crate::types::{BlockNumber, Moment};
