@@ -4,10 +4,10 @@ use margin_protocol::RiskThreshold;
 use module_primitives::{AccumulateConfig, TradingPair};
 use runtime::{
 	opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, BlockNumber, CurrencyId,
-	FinancialCouncilMembershipConfig, GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, ImOnlineConfig,
-	IndicesConfig, MarginLiquidityPoolsConfig, MarginProtocolConfig, OperatorMembershipConfig, SessionConfig,
-	Signature, StakerStatus, StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SystemConfig, TokensConfig,
-	CENTS, CENTS, DAYS, DOLLARS, HOURS, WASM_BINARY,
+	FinancialCouncilMembershipConfig, GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, IndicesConfig,
+	MarginLiquidityPoolsConfig, MarginProtocolConfig, OperatorMembershipConfig, SessionConfig, Signature, StakerStatus,
+	StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SystemConfig, TokensConfig, CENTS, DOLLARS, HOURS,
+	WASM_BINARY,
 };
 use sc_service;
 use sc_service::ChainType;
@@ -303,8 +303,8 @@ fn dev_genesis(
 					accumulate_config(100, 10),
 					// SwapRates
 					SwapRate {
-						long: Fixed128::from_rational(long_percent, NonZeroI128::new(100).unwrap()),
-						short: Fixed128::from_rational(short_percent, NonZeroI128::new(100).unwrap()),
+						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
 					},
 				),
 				(
@@ -316,7 +316,7 @@ fn dev_genesis(
 					accumulate_config(100, 20),
 					// SwapRates
 					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
+						long: Fixed128::from_rational(-1, NonZeroI128::new(1000).unwrap()),
 						short: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
 					},
 				),
@@ -330,7 +330,7 @@ fn dev_genesis(
 					// SwapRates
 					SwapRate {
 						long: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
-						short: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
+						short: Fixed128::from_rational(2, NonZeroI128::new(1000).unwrap()),
 					},
 				),
 				(
@@ -343,7 +343,7 @@ fn dev_genesis(
 					// SwapRates
 					SwapRate {
 						long: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
-						short: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
+						short: Fixed128::from_rational(2, NonZeroI128::new(1000).unwrap()),
 					},
 				),
 			],
@@ -454,8 +454,8 @@ fn turbulence_genesis(
 					accumulate_config(24 * HOURS, 0),
 					// SwapRates
 					SwapRate {
-						long: Fixed128::from_rational(long_percent, NonZeroI128::new(100).unwrap()),
-						short: Fixed128::from_rational(short_percent, NonZeroI128::new(100).unwrap()),
+						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
 					},
 				),
 				(
@@ -467,7 +467,7 @@ fn turbulence_genesis(
 					accumulate_config(24 * HOURS, 0),
 					// SwapRates
 					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
+						long: Fixed128::from_rational(-1, NonZeroI128::new(1000).unwrap()),
 						short: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
 					},
 				),
@@ -481,7 +481,7 @@ fn turbulence_genesis(
 					// SwapRates
 					SwapRate {
 						long: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
-						short: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
+						short: Fixed128::from_rational(2, NonZeroI128::new(1000).unwrap()),
 					},
 				),
 				(
@@ -494,7 +494,7 @@ fn turbulence_genesis(
 					// SwapRates
 					SwapRate {
 						long: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
-						short: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
+						short: Fixed128::from_rational(2, NonZeroI128::new(1000).unwrap()),
 					},
 				),
 			],

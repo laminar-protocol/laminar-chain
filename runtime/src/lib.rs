@@ -30,14 +30,13 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
-pub use module_primitives::{CurrencyId, LiquidityPoolId};
+pub use module_primitives::{Balance, CurrencyId, LiquidityPoolId, Price};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_oracle::OperatorProvider;
 use orml_traits::DataProvider;
 pub use sp_arithmetic::Fixed128;
 
 use margin_protocol_rpc_runtime_api::{PoolInfo, TraderInfo};
-use module_primitives::Price;
 use synthetic_protocol_rpc_runtime_api::PoolInfo as SyntheticProtocolPoolInfo;
 
 // A few exports that help ease life for downstream crates.
@@ -47,7 +46,6 @@ pub use frame_support::{
 	weights::Weight,
 	StorageValue,
 };
-pub use module_primitives::Balance;
 pub use pallet_staking::StakerStatus;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -88,7 +86,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("laminar"),
 	impl_name: create_runtime_str!("laminar"),
 	authoring_version: 1,
-	spec_version: 1,
+	spec_version: 100,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 };
@@ -546,12 +544,14 @@ type LiquidityCurrency = orml_currencies::Currency<Runtime, GetLiquidityCurrency
 pub type BaseLiquidityPoolsMarginInstance = base_liquidity_pools::Instance1;
 parameter_types! {
 	pub const MarginLiquidityPoolsModuleId: ModuleId = margin_liquidity_pools::MODULE_ID;
+	pub const LiquidityPoolExistentialDeposit: Balance = 10 * DOLLARS;
 }
+
 impl base_liquidity_pools::Trait<BaseLiquidityPoolsMarginInstance> for Runtime {
 	type Event = Event;
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = MarginProtocol;
-	type ExistentialDeposit = ExistentialDeposit;
+	type ExistentialDeposit = LiquidityPoolExistentialDeposit;
 	type ModuleId = MarginLiquidityPoolsModuleId;
 	type OnDisableLiquidityPool = MarginLiquidityPools;
 	type OnRemoveLiquidityPool = MarginLiquidityPools;
@@ -565,7 +565,7 @@ impl base_liquidity_pools::Trait<BaseLiquidityPoolsSyntheticInstance> for Runtim
 	type Event = Event;
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = SyntheticTokens;
-	type ExistentialDeposit = ExistentialDeposit;
+	type ExistentialDeposit = LiquidityPoolExistentialDeposit;
 	type ModuleId = SyntheticLiquidityPoolsModuleId;
 	type OnDisableLiquidityPool = SyntheticLiquidityPools;
 	type OnRemoveLiquidityPool = SyntheticLiquidityPools;
