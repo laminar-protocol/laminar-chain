@@ -78,6 +78,8 @@ frame-support = { version = "2.0.0-alpha.6" }
 build-script-utils = { package = "substrate-build-script-utils", version = "2.0.0-alpha.6" }
 
 [features]
+default = ["wasmtime"]
+wasmtime = [ "sc-cli/wasmtime" ]
 runtime-benchmarks = [
 	"runtime/runtime-benchmarks",
 ]
