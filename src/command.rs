@@ -38,8 +38,8 @@ impl SubstrateCli for Cli {
 		Ok(match id {
 			"dev" => Box::new(chain_spec::development_config()),
 			"local" => Box::new(chain_spec::local_testnet_config()),
-			"" | "testnet" => Box::new(chain_spec::laminar_testnet_config()?),
-			"testnet-latest" => Box::new(chain_spec::laminar_testnet_latest_config()),
+			"" | "turbulence" => Box::new(chain_spec::laminar_turbulence_config()?),
+			"turbulence-latest" => Box::new(chain_spec::laminar_turbulence_latest_config()),
 			path => Box::new(chain_spec::ChainSpec::from_json_file(std::path::PathBuf::from(path))?),
 		})
 	}
