@@ -880,12 +880,17 @@ impl_runtime_apis! {
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
 			use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark};
 
+			use margin_liquidity_pools_benchmarking::Module as MarginLiquidityPoolsBench;
+
+			impl margin_liquidity_pools_benchmarking::BaseLiquidityPoolsForMarginTrait for Runtime {}
+			impl margin_liquidity_pools_benchmarking::Trait for Runtime {}
+
 			let mut batches = Vec::<BenchmarkBatch>::new();
 			let params = (&pallet, &benchmark, &lowest_range_values, &highest_range_values, &steps, repeat);
 
 			//add_benchmark!(params, batches, b"base-liquidity-pools-margin", BaseLiquidityPoolsForMargin);
 			//add_benchmark!(params, batches, b"base-liquidity-pools-synthetic", BaseLiquidityPoolsForSynthetic);
-			//add_benchmark!(params, batches, b"margin-liquidity-pools", MarginLiquidityPools);
+			add_benchmark!(params, batches, b"margin-liquidity-pools", MarginLiquidityPoolsBench::<Runtime>);
 			//add_benchmark!(params, batches, b"synthetic-liquidity-pools", SyntheticLiquidityPools);
 			//add_benchmark!(params, batches, b"margin-protocol", MarginProtocol);
 			//add_benchmark!(params, batches, b"synthetic-protocol", SyntheticProtocol);
