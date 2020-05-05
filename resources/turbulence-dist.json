@@ -3,7 +3,7 @@
   "id": "turbulence1",
   "chainType": "Live",
   "bootNodes": [
-    "/dns4/testnet-bootnode-1.laminar-chain.laminar.one/tcp/30333/p2p/QmQUpeDzQk4jszwMsb9zUKMfGMZT4fkC1iTiPyCnGVGY8H"
+    "/dns4/testnet-bootnode-1.laminar-chain.laminar.one/tcp/30333/p2p/QmZKdYinGon2nUXgfkipdRuGSmQnmks3q6EhmXUSwULUFT"
   ],
   "telemetryEndpoints": [
     [

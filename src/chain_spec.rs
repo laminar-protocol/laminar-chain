@@ -185,7 +185,7 @@ pub fn laminar_turbulence_latest_config() -> ChainSpec {
 			)
 		},
 		vec![
-			"/dns4/testnet-bootnode-1.laminar-chain.laminar.one/tcp/30333/p2p/QmQUpeDzQk4jszwMsb9zUKMfGMZT4fkC1iTiPyCnGVGY8H".parse().unwrap(),
+			"/dns4/testnet-bootnode-1.laminar-chain.laminar.one/tcp/30333/p2p/QmZKdYinGon2nUXgfkipdRuGSmQnmks3q6EhmXUSwULUFT".parse().unwrap(),
 		],
 		TelemetryEndpoints::new(vec![(
 			"wss://telemetry.polkadot.io/submit/".parse().unwrap(),
