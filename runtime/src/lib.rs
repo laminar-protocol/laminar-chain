@@ -881,9 +881,12 @@ impl_runtime_apis! {
 			use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark};
 
 			use margin_liquidity_pools_benchmarking::Module as MarginLiquidityPoolsBench;
+			use margin_protocol_benchmarking::Module as MarginProtocolBench;
 
 			impl margin_liquidity_pools_benchmarking::BaseLiquidityPoolsForMarginTrait for Runtime {}
 			impl margin_liquidity_pools_benchmarking::Trait for Runtime {}
+
+			impl margin_protocol_benchmarking::Trait for Runtime {}
 
 			let mut batches = Vec::<BenchmarkBatch>::new();
 			let params = (&pallet, &benchmark, &lowest_range_values, &highest_range_values, &steps, repeat);
@@ -892,7 +895,7 @@ impl_runtime_apis! {
 			//add_benchmark!(params, batches, b"base-liquidity-pools-synthetic", BaseLiquidityPoolsForSynthetic);
 			add_benchmark!(params, batches, b"margin-liquidity-pools", MarginLiquidityPoolsBench::<Runtime>);
 			//add_benchmark!(params, batches, b"synthetic-liquidity-pools", SyntheticLiquidityPools);
-			//add_benchmark!(params, batches, b"margin-protocol", MarginProtocol);
+			add_benchmark!(params, batches, b"margin-protocol", MarginProtocolBench::<Runtime>);
 			//add_benchmark!(params, batches, b"synthetic-protocol", SyntheticProtocol);
 
 			if batches.is_empty() { return Err("Benchmark not found for this module.".into()) }

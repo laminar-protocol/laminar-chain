@@ -1,0 +1,51 @@
+[package]
+name = "module-margin-protocol-benchmarking"
+version = "0.0.1"
+authors = ["Laminar Developers <hello@laminar.one>"]
+edition = "2018"
+
+[dependencies]
+serde = { version = "1.0.101", optional = true }
+codec = { package = "parity-scale-codec", version = "1.3.0", default-features = false }
+sp-runtime = { version = "2.0.0-alpha.6", default-features = false }
+sp-arithmetic = { version = "2.0.0-alpha.6", default-features = false }
+sp-std = { version = "2.0.0-alpha.6", default-features = false }
+sp-io = { version = "2.0.0-alpha.6", default-features = false }
+sp-core = { version = "2.0.0-alpha.6", default-features = false }
+
+frame-support = { version = "2.0.0-alpha.6", default-features = false }
+frame-system = { version = "2.0.0-alpha.6", default-features = false }
+frame-benchmarking = { version = "2.0.0-alpha.6", default-features = false, optional = true }
+
+orml-traits = { path = "../../../orml/traits", default-features = false }
+orml-utilities = { path = "../../../orml/utilities", default-features = false }
+orml-oracle = { path = "../../../orml/oracle", default-features = false }
+
+primitives = { package = "module-primitives", path = "../../primitives", default-features = false }
+traits = { package = "module-traits", path = "../../traits", default-features = false }
+base-liquidity-pools = { package = "module-base-liquidity-pools", path = "../../liquidity-pools/base", default-features = false }
+margin-liquidity-pools = { package = "module-margin-liquidity-pools", path = "../../liquidity-pools/margin", default-features = false }
+margin-protocol = { package = "module-margin-protocol", path = "..", default-features = false }
+
+[dev-dependencies]
+#sp-core = { version = "2.0.0-alpha.6", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+	"serde",
+	"codec/std",
+	"sp-runtime/std",
+	"sp-io/std",
+	"sp-core/std",
+	"sp-arithmetic/std",
+	"sp-std/std",
+	"frame-support/std",
+	"frame-system/std",
+	"orml-traits/std",
+	"orml-utilities/std",
+	"orml-oracle/std",
+	"primitives/std",
+	"traits/std",
+]
+runtime-benchmarks = ["frame-benchmarking"]

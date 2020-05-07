@@ -1,3 +1,4 @@
+use frame_benchmarking::account;
 use hex_literal::hex;
 use margin_liquidity_pools::SwapRate;
 use margin_protocol::RiskThreshold;
@@ -79,6 +80,8 @@ pub fn development_config() -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+					// benchmarking accounts
+					account::<AccountId>("Alice", 0, 0),
 				],
 				true,
 			)

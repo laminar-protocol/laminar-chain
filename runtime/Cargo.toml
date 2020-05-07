@@ -64,6 +64,7 @@ margin-protocol = { package = "module-margin-protocol", path = "../modules/margi
 margin-protocol-rpc-runtime-api = { path = "../modules/margin-protocol/rpc/runtime-api", default-features = false }
 module-traits = { package = "module-traits", path = "../modules/traits", default-features = false }
 margin-liquidity-pools-benchmarking = { package = "module-margin-liquidity-pools-benchmarking", path = "../modules/liquidity-pools/margin/benchmarking", default-features = false }
+margin-protocol-benchmarking = { package = "module-margin-protocol-benchmarking", path = "../modules/margin-protocol/benchmarking", default-features = false }
 
 [build-dependencies]
 wasm-builder-runner = { package = "substrate-wasm-builder-runner", version = "1.0.5" }
@@ -131,4 +132,5 @@ std = [
 runtime-benchmarks = [
     "frame-benchmarking",
     "margin-liquidity-pools-benchmarking/runtime-benchmarks",
+    "margin-protocol-benchmarking/runtime-benchmarks",
 ]
