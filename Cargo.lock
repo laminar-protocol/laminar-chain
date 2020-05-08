@@ -2232,7 +2232,7 @@ dependencies = [
  "sp-std 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-transaction-pool 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-version 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "substrate-wasm-builder-runner 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "substrate-wasm-builder-runner 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "synthetic-protocol-rpc-runtime-api 0.1.0",
 ]
 
@@ -6400,7 +6400,7 @@ dependencies = [
 
 [[package]]
 name = "substrate-wasm-builder-runner"
-version = "1.0.5"
+version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -8082,7 +8082,7 @@ dependencies = [
 "checksum substrate-build-script-utils 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)" = "a0abd8ab46d560d0d5cffd8d016c6b75eb5df91885b1b226b819ab600f02237c"
 "checksum substrate-frame-rpc-system 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)" = "d0f8911ddad33fdcf1d4b546ca6a9bd166434b2f1010b300bb790460b98e6d4a"
 "checksum substrate-prometheus-endpoint 0.8.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)" = "61cad984ef1fec55fe46843630566f98cde0ad3de07efbbf8a4f857b36fedf30"
-"checksum substrate-wasm-builder-runner 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)" = "e30c70de7e7d5fd404fe26db1e7a4d6b553e2760b1ac490f249c04a960c483b8"
+"checksum substrate-wasm-builder-runner 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)" = "d2a965994514ab35d3893e9260245f2947fd1981cdd4fffd2c6e6d1a9ce02e6a"
 "checksum substrate-wasmtime 0.13.0-threadsafe.1 (registry+https://github.com/rust-lang/crates.io-index)" = "9e512629525ecfe43bffe1f3d9e6bb0f08bf01155288ef27fcaae4ea086e4a9d"
 "checksum substrate-wasmtime-jit 0.13.0-threadsafe.1 (registry+https://github.com/rust-lang/crates.io-index)" = "a20de5564886d2bcffdd351c9cd114ceb50758aa58eac3cedb14faabf7f93b91"
 "checksum substrate-wasmtime-runtime 0.13.0-threadsafe.1 (registry+https://github.com/rust-lang/crates.io-index)" = "6d08846f04293a7fc27eeb30f06262ca2e1b4ee20f5192cec1f3ce201e08ceb8"
