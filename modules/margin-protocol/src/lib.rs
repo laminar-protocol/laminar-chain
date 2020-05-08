@@ -39,6 +39,7 @@ use traits::{
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
+mod benchmarking_utilities;
 mod mock;
 mod tests;
 

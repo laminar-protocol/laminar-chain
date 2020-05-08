@@ -42,3 +42,4 @@ std = [
 	"primitives/std",
 	"traits/std",
 ]
+runtime-benchmarks = []

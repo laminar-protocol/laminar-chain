@@ -48,4 +48,7 @@ std = [
 	"primitives/std",
 	"traits/std",
 ]
-runtime-benchmarks = ["frame-benchmarking"]
+runtime-benchmarks = [
+	"frame-benchmarking",
+	"margin-protocol/runtime-benchmarks",
+]

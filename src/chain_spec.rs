@@ -80,8 +80,8 @@ pub fn development_config() -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-					// benchmarking accounts
-					account::<AccountId>("Alice", 0, 0),
+					// for benchmarking
+					account::<AccountId>("BenchFund", 0, 0),
 				],
 				true,
 			)
