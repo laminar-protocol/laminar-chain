@@ -13,7 +13,7 @@ use frame_support::{assert_ok, parameter_types, traits::OnFinalize, traits::OnIn
 use margin_liquidity_pools::SwapRate;
 use margin_protocol::RiskThreshold;
 use module_primitives::{Balance, Leverage, Leverages, TradingPair};
-use module_traits::MarginProtocolLiquidityPools;
+use module_traits::{MarginProtocolLiquidityPools, Treasury};
 use orml_prices::Price;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
 use pallet_indices::address::Address;
@@ -451,4 +451,9 @@ pub fn margin_execute_block(range: Range<BlockNumber>) {
 			MarginLiquidityPools::get_accumulated_swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD, false)
 		);
 	}
+}
+
+pub fn treasury_balance() -> Balance {
+	let account_id = MockLaminarTreasury::account_id();
+	<Runtime as synthetic_protocol::Trait>::CollateralCurrency::free_balance(&account_id)
 }

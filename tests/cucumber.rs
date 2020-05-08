@@ -440,6 +440,12 @@ mod steps {
 						assert_eq!(margin_held(&name), held, "Margin held for {}", get_name(&name));
 					}
 				})
+			})
+			.then_regex(r"treasury balance is (\$?[\W\d]+)", |world, matches, _step| {
+				world.execute_with(|| {
+					let amount = parse_dollar(matches.get(1));
+					assert_eq!(treasury_balance(), amount);
+				})
 			});
 
 		builder.build()
