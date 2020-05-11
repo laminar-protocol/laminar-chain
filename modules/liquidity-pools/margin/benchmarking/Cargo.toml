@@ -41,4 +41,7 @@ std = [
 	"module-base-liquidity-pools/std",
 	"module-margin-liquidity-pools/std",
 ]
-runtime-benchmarks = ["frame-benchmarking"]
+runtime-benchmarks = [
+	"frame-benchmarking",
+	"frame-system/runtime-benchmarks",
+]

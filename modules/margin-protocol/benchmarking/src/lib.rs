@@ -3,7 +3,7 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use sp_arithmetic::traits::SaturatedConversion;
-use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
+use sp_core::{crypto::UncheckedInto, sr25519};
 use sp_runtime::traits::StaticLookup;
 
 use frame_benchmarking::{account, benchmarks};
