@@ -347,6 +347,9 @@ impl Contains<AccountId> for GeneralCouncilProvider {
 	fn sorted_members() -> Vec<AccountId> {
 		GeneralCouncil::members()
 	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn add(_m: &AccountId) {}
 }
 
 parameter_types! {

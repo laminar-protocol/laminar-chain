@@ -131,6 +131,8 @@ std = [
 
 runtime-benchmarks = [
 	"frame-benchmarking",
+	"frame-support/runtime-benchmarks",
+	"system/runtime-benchmarks",
 	"pallet-collective/runtime-benchmarks",
 	"margin-liquidity-pools-benchmarking/runtime-benchmarks",
 	"margin-protocol-benchmarking/runtime-benchmarks",
