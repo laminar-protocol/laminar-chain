@@ -304,7 +304,7 @@ mod tests {
 				assert_ok!(margin_trader_stop_out(&ALICE::get()));
 
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(4500));
-				assert_eq!(margin_balance(&ALICE::get()), Fixed128::from_natural(-300));
+				assert_eq!(margin_balance(&ALICE::get()), Fixed128::from_natural(0));
 				assert_eq!(margin_liquidity(), dollar(15_500));
 			});
 	}

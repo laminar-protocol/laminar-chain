@@ -443,6 +443,15 @@ impl<T: Trait> Module<T> {
 		<PositionsByTrader<T>>::remove(who, (position.pool, position_id));
 		PositionsByPool::remove(position.pool, (position.pair, position_id));
 
+		// reset trader's equity to $0
+		let count = <PositionsByTrader<T>>::iter(who)
+			.filter(|((p, _), _)| *p == position.pool)
+			.count();
+
+		if count == 0 && Self::balances(who, position.pool).is_negative() {
+			<Balances<T>>::remove(who, position.pool);
+		}
+
 		Self::deposit_event(RawEvent::PositionClosed(
 			who.clone(),
 			position_id,
