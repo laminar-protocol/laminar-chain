@@ -870,13 +870,10 @@ fn liquidity_pool_force_close_works() {
 				MarginProtocol::balances(ALICE, MOCK_POOL),
 				fixed128_from_natural_currency_cent(19_700_00)
 			);
-			assert_eq!(
-				MockLiquidityPools::liquidity(MOCK_POOL),
-				balance_from_natural_currency_cent(0)
-			);
+			assert_eq!(MockLiquidityPools::liquidity(MOCK_POOL), 299960000000000000000);
 			assert_eq!(
 				OrmlTokens::total_balance(CurrencyId::AUSD, &TREASURY_ACCOUNT),
-				balance_from_natural_currency_cent(300_00)
+				40000000000000000
 			);
 		});
 }

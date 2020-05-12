@@ -382,8 +382,11 @@ mod tests {
 
 				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(14700));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_eq!(margin_liquidity(), dollar(500));
-				assert_eq!(collateral_balance(&MockLaminarTreasury::account_id()), dollar(300));
+				assert_eq!(margin_liquidity(), 799940000000000000000);
+				assert_eq!(
+					collateral_balance(&MockLaminarTreasury::account_id()),
+					60000000000000000
+				);
 			});
 	}
 
