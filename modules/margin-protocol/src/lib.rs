@@ -444,11 +444,9 @@ impl<T: Trait> Module<T> {
 		PositionsByPool::remove(position.pool, (position.pair, position_id));
 
 		// reset trader's equity to $0
-		let count = <PositionsByTrader<T>>::iter(who)
-			.filter(|((p, _), _)| *p == position.pool)
-			.count();
+		let has_position = <PositionsByTrader<T>>::iter(who).any(|((p, _), _)| p == position.pool);
 
-		if count == 0 && Self::balances(who, position.pool).is_negative() {
+		if !has_position && Self::balances(who, position.pool).is_negative() {
 			<Balances<T>>::remove(who, position.pool);
 		}
 
