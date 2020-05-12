@@ -121,8 +121,8 @@ mod tests {
 
 				assert_ok!(margin_close_position(&ALICE::get(), 0, Price::from_rational(2, 1)));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				// open_price = 3 * (1 + 0.01) = 3.03
-				// close_price = 3 * (1 - 0.01) = 2.97
+				// open_price = 3 + 0.03 = 3.03
+				// close_price = 3 - 0.03 = 2.97
 				// profit = leveraged_held * (close_price - open_price)
 				// -300 = 5000 * (2.97 - 3.03)
 				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(4700));
@@ -223,10 +223,10 @@ mod tests {
 
 				assert_ok!(margin_close_position(&ALICE::get(), 0, Price::from_rational(1, 1)));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				// open_price = 3 * (1 + 0.01) = 3.03
-				// close_price = 2.8 * (1 - 0.01) = 2.772
+				// open_price = 3 + 0.03 = 3.03
+				// close_price = 2.8 - 0.03 = 2.77
 				// profit = leveraged_held * (close_price - open_price)
-				// -1290 = 5000 * (2.772 - 3.03)
+				// -1300 = 5000 * (2.77 - 3.03)
 				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(3700));
 				assert_eq!(margin_liquidity(), dollar(11_300));
 			});
@@ -645,14 +645,17 @@ mod tests {
 
 				assert_ok!(margin_close_position(&ALICE::get(), 0, Price::from_rational(2, 1)));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				// open_price = 3 * (1 + 0.01) = 3.03
-				// close_price = 3 * (1 - 0.01) = 2.97
+				// open_price = 3 + 0.03 = 3.03
+				// close_price = 3 - 0.03 = 2.97
 				// profit = leveraged_held * (close_price - open_price)
 				// -300 = 5000 * (2.97 - 3.03)
-				// accumulated_swap_usd_value = leveraged_held * (accumulated_swap_rate - open_accumulated_swap_rate)) * price
-				// -150 = 5000 * (-0.01 - 0) * 3
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(4550));
-				assert_eq!(margin_liquidity(), dollar(10450));
+				// accumulated_swap_usd_value = leveraged_debits * (accumulated_swap_rate - open_accumulated_swap_rate))
+				// -151.5 = 5000 * 3.03 * (-0.01 - 0)
+				assert_eq!(
+					margin_balance(&ALICE::get()),
+					Fixed128::from_parts(4548500000000000000000)
+				);
+				assert_eq!(margin_liquidity(), 10451500000000000000000);
 
 				// ShortTen
 				assert_ok!(margin_open_position(
@@ -663,25 +666,28 @@ mod tests {
 					Price::from_rational(2, 1)
 				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(4550));
+				assert_eq!(
+					margin_balance(&ALICE::get()),
+					Fixed128::from_parts(4548500000000000000000)
+				);
 
 				margin_execute_block(9..22);
 
 				assert_ok!(margin_close_position(&ALICE::get(), 1, Price::from_rational(4, 1)));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				// open_price = 3 * (1 + 0.01) = 3.03
-				// close_price = 3 * (1 - 0.01) = 2.97
+				// open_price = 3 + 0.03 = 3.03
+				// close_price = 3 - 0.03 = 2.97
 				// profit = leveraged_held * (close_price - open_price)
 				// -300 = 5000 * (2.97 - 3.03)
 				// accumulated_swap_use_value = leveraged_held * (accumulated_swap_rate - open_accumulated_swap_rate) * price
 				// 304.515 = 5000 * (0.030301 - 0.01) * 3
 				assert_eq!(
 					margin_balance(&ALICE::get()),
-					Fixed128::from_parts(3945485000000000000000)
+					Fixed128::from_parts(4549969850000000000000)
 				);
-				assert_eq!(margin_liquidity(), 11054515000000000000000);
-				assert_ok!(margin_withdraw(&ALICE::get(), 3945485000000000000000));
-				assert_eq!(collateral_balance(&ALICE::get()), 8945485000000000000000);
+				assert_eq!(margin_liquidity(), 10450030150000000000000);
+				assert_ok!(margin_withdraw(&ALICE::get(), 4549969850000000000000));
+				assert_eq!(collateral_balance(&ALICE::get()), 9549969850000000000000);
 			});
 	}
 
@@ -737,14 +743,14 @@ mod tests {
 
 				assert_ok!(margin_close_position(&ALICE::get(), 0, Price::from_rational(2, 1)));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				// open_price = 3 * (1 + 0.01) = 3.03
-				// close_price = 3 * (1 - 0.01) = 2.97
+				// open_price = 3 + 0.03 = 3.03
+				// close_price = 3 - 0.03 = 2.97
 				// profit = leveraged_held * (close_price - open_price)
 				// -300 = 5000 * (2.97 - 3.03)
-				// accumulated_swap_usd_value = leveraged_held * (accumulated_swap_rate - open_accumulated_swap_rate) * price
-				// -300 = 5000 * -0.02 * 3
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(4400));
-				assert_eq!(margin_liquidity(), dollar(10600));
+				// accumulated_swap_usd_value = leveraged_debits * (accumulated_swap_rate - open_accumulated_swap_rate)
+				// -303 = 5000 * 3.03 * -0.02
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(4397));
+				assert_eq!(margin_liquidity(), dollar(10603));
 
 				// ShortTen
 				assert_ok!(margin_open_position(
@@ -755,20 +761,20 @@ mod tests {
 					Price::from_rational(2, 1)
 				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(4400));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(4397));
 
 				margin_execute_block(9..22);
 
 				assert_ok!(margin_close_position(&ALICE::get(), 1, Price::from_rational(4, 1)));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				// open_price = 3 * (1 + 0.01) = 3.03
-				// close_price = 3 * (1 - 0.01) = 2.97
+				// open_price = 3 + 0.03 = 3.03
+				// close_price = 3 - 0.03 = 2.97
 				// profit = leveraged_held * (close_price - open_price)
 				// -300 = 5000 * (2.97 - 3.03)
 				// accumulated_swap_usd_value = leveraged_held * (accumulated_swap_rate - open_accumulated_swap_rate) * price
 				// 0 = 5000 * 0 * 3
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(4100));
-				assert_eq!(margin_liquidity(), dollar(10900));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(4097));
+				assert_eq!(margin_liquidity(), dollar(10903));
 			});
 	}
 }

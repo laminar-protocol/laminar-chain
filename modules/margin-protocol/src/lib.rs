@@ -750,10 +750,12 @@ impl<T: Trait> Module<T> {
 				.checked_sub(&position.open_accumulated_swap_rate)
 				.ok_or(Error::<T>::NumOutOfBound)?;
 		let accumulated_swap_rate = position
-			.leveraged_held
+			.leveraged_debits
+			.saturating_abs()
 			.checked_mul(&rate)
 			.ok_or(Error::<T>::NumOutOfBound)?;
-		let usd_value = Self::_usd_value(position.pair.base, accumulated_swap_rate)?;
+
+		let usd_value = Self::_usd_value(position.pair.quote, accumulated_swap_rate)?;
 		return Ok(usd_value);
 	}
 
