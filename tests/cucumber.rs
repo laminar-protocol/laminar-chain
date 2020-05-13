@@ -164,22 +164,18 @@ fn parse_position_id(value: Option<&String>) -> PositionId {
 }
 
 fn parse_threshold(value: Option<&String>) -> Option<RiskThreshold> {
-	let value = value.expect("Missing percentage");
+	let value = value.expect("Missing threshold");
 	let value = value.replace("(", "").replace(")", "").replace(" ", "");
 	let threshold = value
 		.trim()
 		.split(",")
-		.collect::<Vec<&str>>()
-		.iter()
 		.map(|value| {
 			if value.ends_with("%") {
-				let num = value[..value.len() - 1]
-					.parse::<u32>()
-					.expect("Invalid percentage value");
+				let num = value[..value.len() - 1].parse::<u32>().expect("Invalid threshold");
 				Permill::from_percent(num)
 			} else {
-				let num = value.parse::<u32>().expect("Invalid percentage value");
-				Permill::from_percent(num)
+				let num = value.parse::<u32>().expect("Invalid threshold");
+				Permill::from_parts(num)
 			}
 		})
 		.collect::<Vec<Permill>>();
