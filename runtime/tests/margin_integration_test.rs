@@ -261,6 +261,12 @@ mod tests {
 
 				assert_ok!(margin_enable_trading_pair(EUR_USD));
 				assert_ok!(margin_liquidity_pool_enable_trading_pair(EUR_USD));
+				assert_ok!(margin_set_risk_threshold(
+					EUR_USD,
+					Some(risk_threshold(3, 1)),
+					Some(risk_threshold(30, 10)),
+					Some(risk_threshold(3, 1))
+				));
 
 				assert_ok!(margin_open_position(
 					&ALICE::get(),
@@ -338,6 +344,12 @@ mod tests {
 
 				assert_ok!(margin_enable_trading_pair(EUR_USD));
 				assert_ok!(margin_liquidity_pool_enable_trading_pair(EUR_USD));
+				assert_ok!(margin_set_risk_threshold(
+					EUR_USD,
+					Some(risk_threshold(3, 1)),
+					Some(risk_threshold(30, 10)),
+					Some(risk_threshold(3, 1))
+				));
 
 				assert_ok!(margin_open_position(
 					&ALICE::get(),

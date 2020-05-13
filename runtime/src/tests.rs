@@ -47,7 +47,7 @@ pub const JPY_EUR: TradingPair = TradingPair {
 	quote: CurrencyId::FEUR,
 };
 
-fn risk_threshold(margin_call_percent: u32, stop_out_percent: u32) -> RiskThreshold {
+pub fn risk_threshold(margin_call_percent: u32, stop_out_percent: u32) -> RiskThreshold {
 	RiskThreshold {
 		margin_call: Permill::from_percent(margin_call_percent),
 		stop_out: Permill::from_percent(stop_out_percent),
@@ -451,6 +451,21 @@ pub fn margin_execute_block(range: Range<BlockNumber>) {
 			MarginLiquidityPools::get_accumulated_swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD, false)
 		);
 	}
+}
+
+pub fn margin_set_risk_threshold(
+	pair: TradingPair,
+	trader: Option<RiskThreshold>,
+	enp: Option<RiskThreshold>,
+	ell: Option<RiskThreshold>,
+) -> DispatchResult {
+	ModuleMarginProtocol::set_trading_pair_risk_threshold(
+		<Runtime as system::Trait>::Origin::ROOT,
+		pair,
+		trader,
+		enp,
+		ell,
+	)
 }
 
 pub fn treasury_balance() -> Balance {
