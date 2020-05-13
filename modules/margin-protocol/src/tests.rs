@@ -207,12 +207,13 @@ fn jpy_usd_long_1() -> Position<Runtime> {
 #[test]
 fn accumulated_swap_rate_of_long_position_works() {
 	ExtBuilder::default()
+		.price(CurrencyId::FEUR, (1, 1))
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.build()
 		.execute_with(|| {
 			assert_eq!(
 				MarginProtocol::_accumulated_swap_rate_of_position(&eur_usd_long_1()),
-				Ok(fixed128_from_natural_currency_cent(-36_87))
+				Ok(Fixed128::from_parts(-44398964610000000000))
 			);
 		});
 }
@@ -220,12 +221,13 @@ fn accumulated_swap_rate_of_long_position_works() {
 #[test]
 fn accumulated_swap_rate_of_short_position_works() {
 	ExtBuilder::default()
+		.price(CurrencyId::FEUR, (1, 1))
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.build()
 		.execute_with(|| {
 			assert_eq!(
 				MarginProtocol::_accumulated_swap_rate_of_position(&eur_usd_short_1()),
-				Ok(fixed128_from_natural_currency_cent(10_96))
+				Ok(Fixed128::from_parts(-13127898960000000000))
 			);
 		});
 }
@@ -233,6 +235,7 @@ fn accumulated_swap_rate_of_short_position_works() {
 #[test]
 fn accumulated_swap_rate_of_trader_sums_all_positions() {
 	ExtBuilder::default()
+		.price(CurrencyId::FEUR, (1, 1))
 		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
 		.build()
 		.execute_with(|| {
@@ -242,7 +245,7 @@ fn accumulated_swap_rate_of_trader_sums_all_positions() {
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 1), true);
 			assert_eq!(
 				MarginProtocol::_accumulated_swap_rate_of_trader(&ALICE, MOCK_POOL),
-				Ok(fixed128_from_natural_currency_cent(-25_91))
+				Ok(Fixed128::from_parts(-57526863570000000000))
 			);
 		});
 }
@@ -265,7 +268,7 @@ fn equity_of_trader_works() {
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 3), true);
 			assert_eq!(
 				MarginProtocol::equity_of_trader(&ALICE, MOCK_POOL),
-				Ok(fixed128_from_natural_currency_cent(116_665_86))
+				Ok(Fixed128::from_parts(116614700431840000000000))
 			);
 		});
 }
@@ -288,8 +291,8 @@ fn margin_level_works() {
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 3), true);
 			assert_eq!(
 				MarginProtocol::margin_level(&ALICE, MOCK_POOL),
-				// 19.44%
-				Ok(Fixed128::from_parts(195426060513372176))
+				// 19.54%
+				Ok(Fixed128::from_parts(195340363524869506))
 			);
 		});
 }
@@ -363,7 +366,7 @@ fn equity_of_pool_works() {
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 3), true);
 			assert_eq!(
 				MarginProtocol::_equity_of_pool(MOCK_POOL),
-				Ok(fixed128_from_natural_currency_cent(103_334_14))
+				Ok(Fixed128::from_parts(103385299568160000000000))
 			);
 		});
 }
@@ -388,8 +391,8 @@ fn enp_and_ell_without_new_position_works() {
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::None),
 				Ok((
-					Fixed128::from_parts(880917181075659681),
-					Fixed128::from_parts(289335881335881335)
+					Fixed128::from_parts(881353313244259093),
+					Fixed128::from_parts(289479128269976269)
 				))
 			);
 		});
@@ -432,8 +435,8 @@ fn enp_and_ell_without_position_with_liquidity_works() {
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::Withdraw(balance_from_natural_currency_cent(10))),
 				Ok((
-					Fixed128::from_parts(880916328581816817),
-					Fixed128::from_parts(289335601335601335)
+					Fixed128::from_parts(881352460750416230),
+					Fixed128::from_parts(289478848269696269)
 				))
 			);
 		});
@@ -1300,15 +1303,12 @@ fn close_loss_position_works() {
 			// realized math
 			assert_eq!(
 				MarginProtocol::balances(ALICE, MOCK_POOL),
-				fixed128_from_natural_currency_cent(9422_83)
+				Fixed128::from_parts(9415301035390000000000)
 			);
-			assert_eq!(
-				MockLiquidityPools::liquidity(MOCK_POOL),
-				balance_from_natural_currency_cent(100577_17)
-			);
+			assert_eq!(MockLiquidityPools::liquidity(MOCK_POOL), 100584698964610000000000);
 			assert_eq!(
 				OrmlTokens::free_balance(CurrencyId::AUSD, &MarginProtocol::account_id()),
-				balance_from_natural_currency_cent(9422_83)
+				9415301035390000000000
 			);
 
 			// position removed
@@ -1438,15 +1438,12 @@ fn close_profit_position_works() {
 
 			assert_eq!(
 				MarginProtocol::balances(ALICE, MOCK_POOL),
-				fixed128_from_natural_currency_cent(10442_27)
+				Fixed128::from_parts(10438691023010000000000)
 			);
-			assert_eq!(
-				MockLiquidityPools::liquidity(MOCK_POOL),
-				balance_from_natural_currency_cent(99557_73)
-			);
+			assert_eq!(MockLiquidityPools::liquidity(MOCK_POOL), 99561308976990000000000);
 			assert_eq!(
 				OrmlTokens::free_balance(CurrencyId::AUSD, &MarginProtocol::account_id()),
-				balance_from_natural_currency_cent(10442_27)
+				10438691023010000000000
 			);
 		});
 }
@@ -2203,8 +2200,8 @@ fn ensure_can_enable_trading_pair_works() {
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::OpenPosition(eur_usd_long_1())),
 				Ok((
-					Fixed128::from_parts(89092827372129117),
-					Fixed128::from_parts(89092827372129117)
+					Fixed128::from_parts(89124088565673727),
+					Fixed128::from_parts(89124088565673727)
 				))
 			);
 
