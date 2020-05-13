@@ -1363,7 +1363,7 @@ fn close_loss_position_realizing_part_on_not_enough_equity() {
 				MockLiquidityPools::liquidity(MOCK_POOL),
 				balance_from_natural_currency_cent(1_001_00)
 			);
-			assert_eq!(MarginProtocol::balances(&ALICE, MOCK_POOL), Fixed128::from_natural(-89));
+			assert_eq!(MarginProtocol::balances(&ALICE, MOCK_POOL), Fixed128::zero());
 		});
 }
 
