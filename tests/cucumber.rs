@@ -3,6 +3,7 @@
 use cucumber::cucumber;
 
 use frame_support::{assert_noop, assert_ok};
+use margin_protocol::RiskThreshold;
 use module_primitives::{Balance, Leverage, TradingPair};
 use orml_utilities::FixedU128;
 use runtime::tests::*;
@@ -162,6 +163,29 @@ fn parse_position_id(value: Option<&String>) -> PositionId {
 	value.trim().parse().expect("Invalid position ID")
 }
 
+fn parse_threshold(value: Option<&String>) -> Option<RiskThreshold> {
+	let value = value.expect("Missing threshold");
+	let value = value.replace("(", "").replace(")", "").replace(" ", "");
+	let threshold = value
+		.trim()
+		.split(",")
+		.map(|value| {
+			if value.ends_with("%") {
+				let num = value[..value.len() - 1].parse::<u32>().expect("Invalid threshold");
+				Permill::from_percent(num)
+			} else {
+				let num = value.parse::<u32>().expect("Invalid threshold");
+				Permill::from_parts(num)
+			}
+		})
+		.collect::<Vec<Permill>>();
+
+	Some(RiskThreshold {
+		margin_call: threshold[0],
+		stop_out: threshold[1],
+	})
+}
+
 enum AssertResult {
 	Ok,
 	Error(String),
@@ -305,6 +329,21 @@ mod steps {
 					assert_ok!(margin_liquidity_pool_enable_trading_pair(pair));
 				})
 			})
+			.given("margin set risk threshold(margin_call, stop_out)", |world, step| {
+				world.execute_with(|| {
+					let iter = get_rows(step).iter().map(|x| {
+						(
+							parse_pair(x.get(0)),
+							parse_threshold(x.get(1)),
+							parse_threshold(x.get(2)),
+							parse_threshold(x.get(3)),
+						)
+					});
+					for (pair, trader, enp, ell) in iter {
+						assert_ok!(margin_set_risk_threshold(pair, trader, enp, ell));
+					}
+				})
+			})
 			.when("open positions", |world, step| {
 				world.execute_with(|| {
 					let iter = get_rows(step).iter().map(|x| {
@@ -330,6 +369,21 @@ mod steps {
 					assert_ok!(set_oracle_price(iter.collect()));
 				})
 			})
+			.then("margin set risk threshold(margin_call, stop_out)", |world, step| {
+				world.execute_with(|| {
+					let iter = get_rows(step).iter().map(|x| {
+						(
+							parse_pair(x.get(0)),
+							parse_threshold(x.get(1)),
+							parse_threshold(x.get(2)),
+							parse_threshold(x.get(3)),
+						)
+					});
+					for (pair, trader, enp, ell) in iter {
+						assert_ok!(margin_set_risk_threshold(pair, trader, enp, ell));
+					}
+				})
+			})
 			.then("margin trader margin call", |world, step| {
 				world.execute_with(|| {
 					let iter = get_rows(step)
@@ -350,6 +404,16 @@ mod steps {
 					}
 				})
 			})
+			.then("margin trader become safe", |world, step| {
+				world.execute_with(|| {
+					let iter = get_rows(step)
+						.iter()
+						.map(|x| (parse_name(x.get(0)), parse_result(x.get(1))));
+					for (name, result) in iter {
+						result.assert(margin_trader_become_safe(&name));
+					}
+				})
+			})
 			.then("margin liquidity pool margin call", |world, step| {
 				world.execute_with(|| {
 					let iter = get_rows(step).iter().map(|x| parse_result(x.get(0)));
@@ -363,6 +427,14 @@ mod steps {
 					let iter = get_rows(step).iter().map(|x| parse_result(x.get(0)));
 					for result in iter {
 						result.assert(margin_liquidity_pool_force_close());
+					}
+				})
+			})
+			.then("margin liquidity pool become safe", |world, step| {
+				world.execute_with(|| {
+					let iter = get_rows(step).iter().map(|x| parse_result(x.get(0)));
+					for result in iter {
+						result.assert(margin_liquidity_pool_become_safe());
 					}
 				})
 			})

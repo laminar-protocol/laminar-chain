@@ -261,6 +261,12 @@ mod tests {
 
 				assert_ok!(margin_enable_trading_pair(EUR_USD));
 				assert_ok!(margin_liquidity_pool_enable_trading_pair(EUR_USD));
+				assert_ok!(margin_set_risk_threshold(
+					EUR_USD,
+					Some(risk_threshold(3, 1)),
+					Some(risk_threshold(30, 10)),
+					Some(risk_threshold(3, 1))
+				));
 
 				assert_ok!(margin_open_position(
 					&ALICE::get(),
@@ -304,7 +310,7 @@ mod tests {
 				assert_ok!(margin_trader_stop_out(&ALICE::get()));
 
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(4500));
-				assert_eq!(margin_balance(&ALICE::get()), Fixed128::from_natural(-300));
+				assert_eq!(margin_balance(&ALICE::get()), Fixed128::from_natural(0));
 				assert_eq!(margin_liquidity(), dollar(15_500));
 			});
 	}
@@ -338,6 +344,12 @@ mod tests {
 
 				assert_ok!(margin_enable_trading_pair(EUR_USD));
 				assert_ok!(margin_liquidity_pool_enable_trading_pair(EUR_USD));
+				assert_ok!(margin_set_risk_threshold(
+					EUR_USD,
+					Some(risk_threshold(3, 1)),
+					Some(risk_threshold(30, 10)),
+					Some(risk_threshold(3, 1))
+				));
 
 				assert_ok!(margin_open_position(
 					&ALICE::get(),
@@ -382,8 +394,11 @@ mod tests {
 
 				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(14700));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_eq!(margin_liquidity(), dollar(500));
-				assert_eq!(collateral_balance(&MockLaminarTreasury::account_id()), dollar(300));
+				assert_eq!(margin_liquidity(), 799940000000000000000);
+				assert_eq!(
+					collateral_balance(&MockLaminarTreasury::account_id()),
+					60000000000000000
+				);
 			});
 	}
 

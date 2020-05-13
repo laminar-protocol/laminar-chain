@@ -443,6 +443,13 @@ impl<T: Trait> Module<T> {
 		<PositionsByTrader<T>>::remove(who, (position.pool, position_id));
 		PositionsByPool::remove(position.pool, (position.pair, position_id));
 
+		// reset trader's equity to $0
+		let has_position = <PositionsByTrader<T>>::iter(who).any(|((p, _), _)| p == position.pool);
+
+		if !has_position && Self::balances(who, position.pool).is_negative() {
+			<Balances<T>>::remove(who, position.pool);
+		}
+
 		Self::deposit_event(RawEvent::PositionClosed(
 			who.clone(),
 			position_id,
@@ -1006,13 +1013,7 @@ impl<T: Trait> Module<T> {
 			}
 		};
 
-		let spread_profit = position
-			.leveraged_held
-			.saturating_abs()
-			.checked_mul(&spread)
-			.ok_or(Error::<T>::NumOutOfBound)?;
-
-		let spread_profit_in_usd = Self::_usd_value(position.pair.quote, spread_profit)?;
+		let spread_profit_in_usd = Self::_usd_value(position.pair.quote, spread)?;
 		let penalty = spread_profit_in_usd;
 		let sub_amount = spread_profit_in_usd
 			.checked_add(&penalty)
