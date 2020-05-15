@@ -172,7 +172,6 @@ fn mint_does_correct_math() {
 		.ten_percent_additional_collateral_ratio()
 		.build()
 		.execute_with(|| {
-			System::set_block_number(1);
 			assert_ok!(mint_feur(ALICE, ONE_MILL));
 
 			// minted synthetic
@@ -384,7 +383,6 @@ fn redeem_does_correct_math() {
 		.ten_percent_additional_collateral_ratio()
 		.build()
 		.execute_with(|| {
-			System::set_block_number(1);
 			assert_ok!(mint_feur(ALICE, ONE_MILL));
 
 			// after minting...
@@ -658,7 +656,6 @@ fn liquidate_does_correct_math() {
 		.ten_percent_additional_collateral_ratio()
 		.build()
 		.execute_with(|| {
-			System::set_block_number(1);
 			assert_ok!(mint_feur(ALICE, ONE_MILL));
 
 			// after minting...
@@ -808,7 +805,6 @@ fn add_collateral_works() {
 		.ten_percent_additional_collateral_ratio()
 		.build()
 		.execute_with(|| {
-			System::set_block_number(1);
 			assert_ok!(mint_feur(ALICE, ONE_MILL / 2));
 			let minted_synthetic_amount = SyntheticCurrency::total_issuance();
 			let (collateral_position, synthetic_position) = position();
@@ -923,7 +919,6 @@ fn withdraw_collateral_does_correct_math() {
 		.ten_percent_additional_collateral_ratio()
 		.build()
 		.execute_with(|| {
-			System::set_block_number(1);
 			assert_ok!(mint_feur(ALICE, ONE_MILL));
 			let minted_synthetic_amount = SyntheticCurrency::total_issuance();
 			let (collateral_position, synthetic_position) = position();

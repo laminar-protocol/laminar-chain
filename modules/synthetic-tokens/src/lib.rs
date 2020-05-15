@@ -4,7 +4,6 @@ use codec::{Decode, Encode};
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
 	traits::{EnsureOrigin, Get},
-	weights::SimpleDispatchInfo,
 };
 use frame_system::{self as system, ensure_root};
 use module_primitives::{Balance, CurrencyId, LiquidityPoolId};
@@ -45,10 +44,10 @@ impl Default for Position {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as SyntheticTokens {
-		ExtremeRatio get(extreme_ratio): map hasher(twox_64_concat) CurrencyId => Option<Permill>;
-		LiquidationRatio get(liquidation_ratio): map hasher(twox_64_concat) CurrencyId => Option<Permill>;
-		CollateralRatio get(collateral_ratio): map hasher(twox_64_concat) CurrencyId => Option<Permill>;
-		Positions get(positions): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) CurrencyId => Position;
+		ExtremeRatio get(fn extreme_ratio): map hasher(twox_64_concat) CurrencyId => Option<Permill>;
+		LiquidationRatio get(fn liquidation_ratio): map hasher(twox_64_concat) CurrencyId => Option<Permill>;
+		CollateralRatio get(fn collateral_ratio): map hasher(twox_64_concat) CurrencyId => Option<Permill>;
+		Positions get(fn positions): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) CurrencyId => Position;
 	}
 }
 
@@ -78,7 +77,7 @@ decl_module! {
 		const DefaultCollateralRatio: Permill = T::DefaultCollateralRatio::get();
 		const SyntheticCurrencyIds: Vec<CurrencyId> = T::SyntheticCurrencyIds::get();
 
-		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
+		#[weight = 10_000]
 		pub fn set_extreme_ratio(origin, currency_id: CurrencyId, #[compact] ratio: Permill) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
@@ -88,7 +87,7 @@ decl_module! {
 			Self::deposit_event(Event::ExtremeRatioUpdated(currency_id, ratio));
 		}
 
-		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
+		#[weight = 10_000]
 		pub fn set_liquidation_ratio(origin, currency_id: CurrencyId, #[compact] ratio: Permill) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
@@ -98,7 +97,7 @@ decl_module! {
 			Self::deposit_event(Event::LiquidationRatioUpdated(currency_id, ratio));
 		}
 
-		#[weight = SimpleDispatchInfo::FixedNormal(10_000)]
+		#[weight = 10_000]
 		pub fn set_collateral_ratio(origin, currency_id: CurrencyId, #[compact] ratio: Permill) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
