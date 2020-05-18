@@ -18,6 +18,25 @@ Table of Contents
     - [Margin Trading Liquidity Pool](#margin-trading-liquidity-pool)
     - [Margin Protocol](#margin-protocol)
         - [Trader's Risk Profile](#traders-risk-profile)
+            - [Financing Fee - Swap](#financing-fee---swap)
+            - [Equity, Margin Held, Free Margin, Margin Level](#equity-margin-held-free-margin-margin-level)
+            - [Margin Call for Unsafe Traders](#margin-call-for-unsafe-traders)
+            - [Stop Out for Trader Liquidation](#stop-out-for-trader-liquidation)
+- [The Money Market Protocol](#the-money-market-protocol)
+    - [iToken](#itoken)
+    - [Interest Allocation](#interest-allocation)
+        - [Interest Share](#interest-share)
+            - [Allocation to Liquidity Provider](#allocation-to-liquidity-provider)
+            - [Allocation to fToken depositor](#allocation-to-ftoken-depositor)
+- [Implementation](#implementation)
+    - [Ethereum Implementation](#ethereum-implementation)
+    - [Substrate Implementation - LaminarChain](#substrate-implementation---laminarchain)
+    - [Oracle Implementation](#oracle-implementation)
+        - [Oracle Server](#oracle-server)
+- [Building & Running LaminarChain](#building--running-laminarchain)
+    - [Building](#building)
+    - [Run](#run)
+    - [Development](#development)
 
 <!-- /TOC -->
 
@@ -49,6 +68,8 @@ Below we will introduce the following protocols
 - Collateralized Margin Trading Protocol ([draft white-paper](https://github.com/laminar-protocol/flow-protocol-whitepaper/blob/master/LaminarMarginTradingWhitePaperDraft_29Jan2020.pdf))
 
 Our protocols are under review by financial partner, do expect change and we will release update as we progress. 
+
+Refer to [the user guide wiki](https://github.com/laminar-protocol/laminar-chain/wiki) for more details.
 
 # Liquidity Pool
 A liquidity pool is set up by a liquidity provider funded with USD stablecoins as collaterals to support certain types of trading namely synthetic asset trading, or margin trading. Each pool can set up bid and ask spread for each trading pair, which is essentially the fee structure for the liquidity provider. Anyone can become a liquidity provider by setting up their own pool. An efficient market with multiple liquidity pools will trend towards competitive spread and reputable players.
@@ -239,40 +260,51 @@ function liquidityPoolLiquidate(LiquidityPool pool)
 A trading pair e.g. EURUSD consists of a base currency/asset (EUR) and a quote currency/asset (USD). It indicates how much quote currency e.g. USD is needed to purchase one unit of base currency.
 
 ### Trader's Risk Profile
-A trader's risk profile is established for each liquidity pool that he/she is trading in. 
+A trader's risk profile is established for each liquidity pool that he/she is trading in. A trader is required to deposit some funds into a pool as `initial balance` before trading. As the trader opens a position, the margin of the trade will be taken out of his/her deposited balance and locked in the protocol as `margin held`. Once the price is moved, the trader may make `unrealized profit or loss`, which would increase or decrease his/her `current equity`.  
 
-**Margin Call for Unsafe Traders**
+As an example, a trader deposits $30,000 into a pool, and decides to long EURUSD $100,000 with 20x leverage at bid/ask price of 1.1808/1.1908
+- $5,000 ($100,000/20) is margin held
+- say EUR appreciates to 1.2008/1.2108 (bid/ask price), the trader's unrealized profit is $1,000 (= 100,000 * (1.2008 - 1.1908))
+- the trader's current equity becomes $31,000 (= 30,000 + 1,000)
+
+#### Financing Fee - Swap
+When we trade a currency, and hold the trade from one trading period to another (referred to as a cutoff time or rollover time), we'd either earn or pay interest for carrying the trade over that period. In **Forex and CFD** trading, the general **cutoff time is 5pm New York time**; in cryptocurrencies, the cutoff times are 4:00 UTC, 12:00 UTC and 20:00 UTC each day. If we carry our trades passing the cutoff time, we will be charged or paid interest depending on interest rates of the currencies (that's why it's also called `carry` or `carry trades`). If the interest rate of holding currency is higher than that of the borrowing currency, then the swap rate is positive meaning you will earn some interest, otherwise it will be negative and you will pay interest. 
+
+The `swap rates` are fed into the system via oracle. Each liquidity pool can set an `additional swap rate` on top (within the protocol's allowed range `MaxSwap`) to cater for variance in real-life.
+
+**swap income/expense = value of a margin position x swap rate**
+
+As an example, if the swap rate for long EURUSD (that is holding EUR) is -0.00009, max additional swap rate is 10%, a trader has a standard lot $100,000 long EURUSD trade, then financing fee is -$9.9 (= 100,000 x (-0.00009 x 110%)). That is the trader would need to pay an interest of $9.9 for one carry period. 
+
+#### Equity, Margin Held, Free Margin, Margin Level
+`Equity` reflects the trader's ability to open further trades. It is trader's total deposits minus total withdraws reflected as `balance`, plus unrealized profit/loss and accumulated swap. 
+
+**Equity = Balance + Unrealized Profit/Loss + Accumulated Swap**
+
+`Margin held` is the margin used and locked in opened positions. 
+
+`Free margin` is the amount can be used for opening additional positions.
+
+**Free margin = Equity - Margin held**
+
+`Margin level` is the key risk indicator for a trader, reflecting equity available to cover outstanding positions.
+**Margin Level = Equity / Total Leveraged Positions**
+
+#### Margin Call for Unsafe Traders
 While trading with a liquidity pool, a trader is considered `unsafe` (with `margin call` status) if his/her `margin level` is equal or below the `Margin Call Threshold`. The trader is required to deposit more funds to the pool or close some existing positions until the `margin level` is above the `Margin Call Threshold`, otherwise no new positions can be open. 
 
-**Stop Out for Liquidating Traders**
-While trading with a liquidity pool, a trader will be liquidated (with `stop out` status) if his/her `margin level` is equal or below the `Stop Out Threshold`. Open positions will all or partly be closed until it becomes `safe` (TODO) again. 
+#### Stop Out for Trader Liquidation
+If a trader's `margin level` is equal or below the `Stop Out Threshold`, then all of his/her open positions will be in `liquidation`. 
 
-**Margin Level**
+In Ethereum implementation, the trader can no longer trade, and his/her trades can be closed by anyone for a liquidation fee. 
+In Substrate, `Off-chain Worker` is used to automate liquidation, where trades with biggest losses are closed first, until the trader is no long in `liquidation` or all positions are closed. 
 
-**Unrealized Profit & Loss**
-Here we work through a simple example to demonstrate how profit and loss is calculated. As a trader, I open a long 10x EURUSD position with $105 (where $5 is liquidation fee and $100 as investment principle) 
-```
-//Pseudo P&L calculation
-    const openPrice = startPrice + askSpread;
-    const closePrice = endPrice - bidSpread;
-    const diff = (closePrice - openPrice) / openPrice;
-    const leverage = await pair.leverage();
-    const leveragedDiff = diff * leverage.toNumber();
-    const expectedProfit = principal * leveragedDiff;
-```
-```
-//Plug in the numbers
-    openPrice = 1.2 + 0.01 = 1.21
-    closePrice = 1.31 - 0.01 = 1.3 // the EURUSD price jumps up 10% in trader's favor
-    diff = (1.3 - 1.21) / 1.21 = 0.07438
-    leveraged diff = 0.07438 x 10 = 0.7438
-    profit = 100 * 0.7438 = 74.38 //wow
-```
 
-**Swap - Financing Cost**
 
-# 7. The Money Market Protocol 
+# The Money Market Protocol 
 The money market protocol serves the synthetic asset and margin trading protocols to further increase liquidity on chain. It connects to chosen money markets e.g. Compound.Finance to maximize return while guaranteeing liquidity of the asset and trading protocols. Liquidity provider would earn interest on funds in liquidity pools and collaterals. Users would earn interest on deposited fTokens. Not all the funds managed by the Money Market would earn interest, as a certain amount of cash is required to ensure liquidity for trading.
+
+P.S. The Money Market protocol s only implemented in Ethereum.
 
 ## iToken
 iToken e.g. iUSD similar to the concept of cToken in Compound.Finance, is a way to account for interest earned for the funds managed by the money market. The value of iToken increases overtime. 
@@ -338,7 +370,7 @@ When a fToken holder deposits fToken to the Money Market, then an equivalent amo
 
 Following on the previous example, if a user deposits 9 fEUR (=10 USD), then 10 interest shares would be minted and accounted as the contribution of this user. At this point, liquidity provider will receive 50% (10/20 interest shares) of total interest earned, while the user will receive 50% of total interest earned.
 
-# 8. Implementation 
+# Implementation 
 We have been R&D our protocol on Ethereum, where the network is highly secure with valuable assets as basis for trading. There are also existing DeFi community and DeFi building blocks such as stablecoin. However for our target protocol participants - traders and liquidity providers, a high performance and low cost specialized trading blockchain is required to deliver the intended experience. For instance, the platform needs to be capable of handling large trading volume and frequent price fluctuations. Hence we extend our R&D to Polkadot and substrate, to develop the LaminarChain parachain.
 
 The Ethereum implementation will be the value gateway and will leverage the DeFi ecosystem there, for example leveraging stablecoin like DAI and money markets like Compound. Meanwhile LaminarChain based on Substrate and later launched as parachain in the Polkadot ecosystem will serve as the high performance financial service and trading chain. Later the two will be integrated using Polkadot Ethereum Bridge to provide the full benefits of both worlds.
@@ -372,7 +404,7 @@ Note: any compromised oracle server is able to influence the price to a limited 
 
 Again we will continue watch closely the development in the Oracle space and open to collaboration to make it more resilient for our trading platform.
 
-# 9. Building & Running LaminarChain
+# Building & Running LaminarChain
 
 [![Status badge](https://github.com/laminar-protocol/laminar-chain/workflows/Test/badge.svg)](https://github.com/laminar-protocol/laminar-chain/actions?workflow=Test)
 
