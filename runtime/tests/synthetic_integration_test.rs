@@ -11,7 +11,9 @@ mod tests {
 		Runtime,
 	};
 	use orml_prices::Price;
+	use orml_utilities::FixedU128;
 	use sp_runtime::Permill;
+	use synthetic_protocol_rpc_runtime_api::PoolInfo;
 
 	#[test]
 	fn test_synthetic_buy_and_sell() {
@@ -36,6 +38,13 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(synthetic_liquidity(), dollar(10_000));
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::zero(),
+						is_safe: false
+					})
+				);
 				assert_eq!(synthetic_balance(), 0);
 				assert_ok!(synthetic_buy(&ALICE::get(), FEUR, dollar(5000)));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
@@ -53,6 +62,13 @@ mod tests {
 				// 9555 = 10_000 - 445
 				//assert_eq!(liquidity(), dollar(9555));
 				assert_eq!(synthetic_liquidity(), 9554455445544554455447);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::from_rational(11, 10),
+						is_safe: true
+					})
+				);
 
 				assert_ok!(synthetic_sell(&ALICE::get(), FEUR, dollar(800)));
 				assert_eq!(multi_currency_balance(&ALICE::get(), FEUR), 850165016501650165016);
@@ -67,6 +83,13 @@ mod tests {
 				// 264 = ModuleTokens -> LiquidityPool
 				// 9819 = 9555 + 264
 				assert_eq!(synthetic_liquidity(), 9818455445544554455447);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::from_rational(11, 10),
+						is_safe: true
+					})
+				);
 			});
 	}
 

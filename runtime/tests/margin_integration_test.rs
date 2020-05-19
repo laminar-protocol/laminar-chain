@@ -11,10 +11,12 @@ mod tests {
 		MaxSwap, MockLaminarTreasury, Runtime,
 	};
 
+	use margin_protocol_rpc_runtime_api::{PoolInfo, TraderInfo};
 	use module_primitives::Leverage::*;
 	use module_traits::{MarginProtocolLiquidityPools, Treasury};
 	use orml_prices::Price;
 	use sp_arithmetic::Fixed128;
+	use sp_runtime::traits::Bounded;
 
 	#[test]
 	fn test_margin_liquidity_pools() {
@@ -108,7 +110,24 @@ mod tests {
 
 				assert_ok!(margin_enable_trading_pair(EUR_USD));
 				assert_ok!(margin_liquidity_pool_enable_trading_pair(EUR_USD));
-
+				assert_eq!(
+					margin_pool_info(),
+					Some(PoolInfo {
+						enp: Fixed128::max_value(),
+						ell: Fixed128::max_value(),
+						required_deposit: Fixed128::zero()
+					})
+				);
+				assert_eq!(
+					margin_trader_info(&ALICE::get()),
+					TraderInfo {
+						equity: Fixed128::from_natural(5000),
+						margin_held: Fixed128::zero(),
+						margin_level: Fixed128::max_value(),
+						free_margin: Fixed128::from_natural(5000),
+						unrealized_pl: Fixed128::zero()
+					}
+				);
 				assert_ok!(margin_open_position(
 					&ALICE::get(),
 					EUR_USD,
@@ -118,6 +137,24 @@ mod tests {
 				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
+				assert_eq!(
+					margin_pool_info(),
+					Some(PoolInfo {
+						enp: Fixed128::from_parts(679867986798679867),
+						ell: Fixed128::from_parts(679867986798679867),
+						required_deposit: Fixed128::zero()
+					})
+				);
+				assert_eq!(
+					margin_trader_info(&ALICE::get()),
+					TraderInfo {
+						equity: Fixed128::from_natural(4700),
+						margin_held: Fixed128::from_natural(1515),
+						margin_level: Fixed128::from_parts(310231023102310231),
+						free_margin: Fixed128::from_natural(3185),
+						unrealized_pl: Fixed128::from_natural(-300)
+					}
+				);
 
 				assert_ok!(margin_close_position(&ALICE::get(), 0, Price::from_rational(2, 1)));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
@@ -127,6 +164,24 @@ mod tests {
 				// -300 = 5000 * (2.97 - 3.03)
 				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(4700));
 				assert_eq!(margin_liquidity(), dollar(10_300));
+				assert_eq!(
+					margin_pool_info(),
+					Some(PoolInfo {
+						enp: Fixed128::max_value(),
+						ell: Fixed128::max_value(),
+						required_deposit: Fixed128::zero()
+					})
+				);
+				assert_eq!(
+					margin_trader_info(&ALICE::get()),
+					TraderInfo {
+						equity: Fixed128::from_natural(4700),
+						margin_held: Fixed128::zero(),
+						margin_level: Fixed128::max_value(),
+						free_margin: Fixed128::from_natural(4700),
+						unrealized_pl: Fixed128::zero()
+					}
+				);
 				assert_ok!(margin_withdraw(&ALICE::get(), dollar(4700)));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(9700));
 			});

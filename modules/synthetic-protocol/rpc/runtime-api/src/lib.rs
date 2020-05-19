@@ -11,7 +11,7 @@ use sp_std::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(Encode, Decode, Eq, PartialEq, Default)]
+#[derive(Encode, Decode, Eq, PartialEq, Default, Debug)]
 pub struct PoolInfo {
 	pub collateral_ratio: FixedU128,
 	pub is_safe: bool,

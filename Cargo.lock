@@ -2114,6 +2114,7 @@ dependencies = [
  "laminar-runtime 0.1.0",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "margin-protocol-rpc 0.1.0",
+ "margin-protocol-rpc-runtime-api 0.1.0",
  "module-margin-liquidity-pools 0.1.0",
  "module-margin-protocol 0.1.0",
  "module-primitives 0.1.0",
@@ -2157,6 +2158,7 @@ dependencies = [
  "substrate-build-script-utils 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "substrate-frame-rpc-system 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "synthetic-protocol-rpc 0.1.0",
+ "synthetic-protocol-rpc-runtime-api 0.1.0",
 ]
 
 [[package]]
@@ -2199,6 +2201,7 @@ dependencies = [
  "orml-prices 0.1.0",
  "orml-tokens 0.0.1",
  "orml-traits 0.0.1",
+ "orml-utilities 0.0.1",
  "pallet-babe 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-balances 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-collective 2.0.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",

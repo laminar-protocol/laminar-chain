@@ -11,7 +11,7 @@ use sp_std::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(Encode, Decode, Eq, PartialEq, Default)]
+#[derive(Encode, Decode, Eq, PartialEq, Default, Debug)]
 pub struct TraderInfo {
 	pub equity: Fixed128,
 	pub margin_held: Fixed128,
@@ -21,7 +21,7 @@ pub struct TraderInfo {
 }
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(Encode, Decode, Eq, PartialEq, Default)]
+#[derive(Encode, Decode, Eq, PartialEq, Default, Debug)]
 pub struct PoolInfo {
 	pub enp: Fixed128,
 	pub ell: Fixed128,
