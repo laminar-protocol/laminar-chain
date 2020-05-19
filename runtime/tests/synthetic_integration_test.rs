@@ -376,7 +376,7 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_parts(1523558421851289000),
+						collateral_ratio: FixedU128::from_parts(1523558421851289833),
 						is_safe: true
 					})
 				);
@@ -395,7 +395,7 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_rational(11, 10),
+						collateral_ratio: FixedU128::from_parts(1099999999999999999),
 						is_safe: true
 					})
 				);
@@ -407,7 +407,7 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_rational(11, 10),
+						collateral_ratio: FixedU128::from_parts(1099999999999999999),
 						is_safe: true
 					})
 				);
@@ -431,8 +431,8 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_rational(11, 10),
-						is_safe: true
+						collateral_ratio: FixedU128::zero(),
+						is_safe: false
 					})
 				);
 			});
@@ -533,7 +533,7 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_parts(1444386181369524000),
+						collateral_ratio: FixedU128::from_parts(1444386181369524984),
 						is_safe: true
 					})
 				);
@@ -547,7 +547,7 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_rational(11, 10),
+						collateral_ratio: FixedU128::from_parts(1099999999999999999),
 						is_safe: true
 					})
 				);
@@ -560,7 +560,7 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_rational(11, 10),
+						collateral_ratio: FixedU128::from_parts(1099999999999999999),
 						is_safe: true
 					})
 				);
@@ -574,7 +574,7 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_rational(11, 10),
+						collateral_ratio: FixedU128::from_parts(1099999999999999999),
 						is_safe: true
 					})
 				);
@@ -587,7 +587,7 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_rational(11, 10),
+						collateral_ratio: FixedU128::from_parts(1099999999999999999),
 						is_safe: true
 					})
 				);
@@ -723,7 +723,7 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_parts(1449999999999999999),
+						collateral_ratio: FixedU128::from_parts(1044999999999999999),
 						is_safe: false
 					})
 				);
@@ -740,8 +740,8 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_rational(11, 10),
-						is_safe: true
+						collateral_ratio: FixedU128::zero(),
+						is_safe: false
 					})
 				);
 				assert_ok!(synthetic_withdraw_liquidity(&POOL::get(), dollar(1000)));

@@ -7,10 +7,9 @@ use margin_protocol::RiskThreshold;
 use margin_protocol_rpc_runtime_api::{PoolInfo, TraderInfo};
 use module_primitives::{Balance, Leverage, TradingPair};
 use orml_utilities::FixedU128;
-use runtime::tests::*;
-use runtime::{AccountId, BlockNumber, CurrencyId};
+use runtime::{tests::*, AccountId, BlockNumber, CurrencyId};
 use sp_arithmetic::Fixed128;
-use sp_runtime::{DispatchResult, Permill};
+use sp_runtime::{traits::Bounded, DispatchResult, Permill};
 use std::ops::Range;
 use synthetic_protocol_rpc_runtime_api::PoolInfo as SyntheticProtocolPoolInfo;
 
@@ -102,6 +101,8 @@ fn parse_fixed128(value: Option<&String>) -> Fixed128 {
 	if value.ends_with("%") {
 		let num = value[..value.len() - 1].parse::<f64>().expect("Invalid dollar value");
 		Fixed128::from_parts((num / 100f64 * (10u64.pow(18) as f64)) as i128)
+	} else if value == "MaxValue" {
+		Fixed128::max_value()
 	} else {
 		Fixed128::from_parts(value.parse::<i128>().expect("invalid dollar value"))
 	}
