@@ -2,8 +2,9 @@
 
 use std::{fmt, sync::Arc};
 
-use runtime::{opaque::Block, AccountId, Balance, CurrencyId, Hash, Index, TimeStampedPrice, UncheckedExtrinsic};
-use sc_client::blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
+use runtime::{
+	opaque::Block, AccountId, Balance, BlockNumber, CurrencyId, Hash, Index, TimeStampedPrice, UncheckedExtrinsic,
+};
 use sc_consensus_babe::{Config, Epoch};
 use sc_consensus_babe_rpc::BabeRPCHandler;
 use sc_consensus_epochs::SharedEpochChanges;
@@ -11,6 +12,7 @@ use sc_finality_grandpa::{SharedAuthoritySet, SharedVoterState};
 use sc_finality_grandpa_rpc::GrandpaRpcHandler;
 use sc_keystore::KeyStorePtr;
 use sp_api::ProvideRuntimeApi;
+use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sp_consensus::SelectChain;
 use sp_consensus_babe::BabeApi;
 use sp_transaction_pool::TransactionPool;
@@ -37,12 +39,12 @@ pub struct BabeDeps {
 	pub keystore: KeyStorePtr,
 }
 
-/// Dependencies for GRANDPA
+/// Extra dependencies for GRANDPA
 pub struct GrandpaDeps {
 	/// Voting round info.
-	pub shared_voter_state: sc_finality_grandpa::SharedVoterState,
+	pub shared_voter_state: SharedVoterState,
 	/// Authority set info.
-	pub shared_authority_set: sc_finality_grandpa::SharedAuthoritySet<Hash, BlockNumber>,
+	pub shared_authority_set: SharedAuthoritySet<Hash, BlockNumber>,
 }
 
 /// Full client dependencies.
@@ -76,11 +78,10 @@ where
 	M: jsonrpc_core::Metadata + Default,
 	SC: SelectChain<Block> + 'static,
 {
-	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
-	use substrate_frame_rpc_system::{FullSystem, SystemApi};
-
 	use margin_protocol_rpc::{MarginProtocol, MarginProtocolApi};
 	use orml_oracle_rpc::{Oracle, OracleApi};
+	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
+	use substrate_frame_rpc_system::{FullSystem, SystemApi};
 	use synthetic_protocol_rpc::{SyntheticProtocol, SyntheticProtocolApi};
 
 	let mut io = jsonrpc_core::IoHandler::default();
@@ -112,14 +113,12 @@ where
 		babe_config,
 		select_chain,
 	)));
-	io.extend_with(OracleApi::to_delegate(Oracle::new(client.clone())));
-	io.extend_with(MarginProtocolApi::to_delegate(MarginProtocol::new(client.clone())));
-	io.extend_with(SyntheticProtocolApi::to_delegate(SyntheticProtocol::new(
-		client.clone(),
-	)));
 	io.extend_with(sc_finality_grandpa_rpc::GrandpaApi::to_delegate(
 		GrandpaRpcHandler::new(shared_authority_set, shared_voter_state),
 	));
+	io.extend_with(OracleApi::to_delegate(Oracle::new(client.clone())));
+	io.extend_with(MarginProtocolApi::to_delegate(MarginProtocol::new(client.clone())));
+	io.extend_with(SyntheticProtocolApi::to_delegate(SyntheticProtocol::new(client)));
 
 	io
 }

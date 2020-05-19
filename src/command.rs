@@ -1,9 +1,11 @@
-use crate::chain_spec;
-use crate::cli::{Cli, Subcommand};
 use crate::executor::Executor;
-use crate::service;
+use crate::{
+	chain_spec,
+	cli::{Cli, Subcommand},
+	service,
+};
 use runtime::{Block, RuntimeApi};
-use sc_cli::SubstrateCli;
+use sc_cli::{Result, SubstrateCli};
 
 impl SubstrateCli for Cli {
 	fn impl_name() -> &'static str {
@@ -34,7 +36,7 @@ impl SubstrateCli for Cli {
 		env!("CARGO_PKG_NAME")
 	}
 
-	fn load_spec(&self, id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
+	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 		Ok(match id {
 			"dev" => Box::new(chain_spec::development_config()),
 			"local" => Box::new(chain_spec::local_testnet_config()),
@@ -45,8 +47,8 @@ impl SubstrateCli for Cli {
 	}
 }
 
-/// Parse and run command line arguments
-pub fn run() -> sc_cli::Result<()> {
+/// Parse command line arguments into service configuration.
+pub fn run() -> Result<()> {
 	let cli = Cli::from_args();
 
 	match &cli.subcommand {
@@ -57,6 +59,7 @@ pub fn run() -> sc_cli::Result<()> {
 
 		Some(Subcommand::Base(subcommand)) => {
 			let runner = cli.create_runner(subcommand)?;
+
 			runner.run_subcommand(subcommand, |config| Ok(new_full_start!(config).0))
 		}
 
