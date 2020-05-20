@@ -678,7 +678,6 @@ fn trader_stop_out_should_work() {
 		.price(CurrencyId::FEUR, (1, 1))
 		.build()
 		.execute_with(|| {
-			System::set_block_number(1);
 			TraderRiskThreshold::insert(EUR_USD_PAIR, risk_threshold(5, 3));
 			<Balances<Runtime>>::insert(ALICE, MOCK_POOL, fixed128_from_natural_currency_cent(100));
 			let position: Position<Runtime> = Position {
@@ -777,7 +776,6 @@ fn liquidity_pool_margin_call_and_become_safe_work() {
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100))
 		.build()
 		.execute_with(|| {
-			System::set_block_number(1);
 			LiquidityPoolENPThreshold::insert(EUR_USD_PAIR, risk_threshold(99, 0));
 			LiquidityPoolELLThreshold::insert(EUR_USD_PAIR, risk_threshold(99, 0));
 			let position: Position<Runtime> = Position {
@@ -835,7 +833,6 @@ fn liquidity_pool_force_close_works() {
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(10_000_00))
 		.build()
 		.execute_with(|| {
-			System::set_block_number(1);
 			LiquidityPoolENPThreshold::insert(EUR_USD_PAIR, risk_threshold(0, 99));
 			LiquidityPoolELLThreshold::insert(EUR_USD_PAIR, risk_threshold(0, 99));
 			<Balances<Runtime>>::insert(ALICE, MOCK_POOL, fixed128_from_natural_currency_cent(10_000_00));
@@ -892,7 +889,6 @@ fn open_long_position_works() {
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
-			System::set_block_number(1);
 			<Balances<Runtime>>::insert(ALICE, MOCK_POOL, fixed128_from_natural_currency_cent(10_000_00));
 			assert_ok!(MarginProtocol::open_position(
 				Origin::signed(ALICE),
@@ -1258,7 +1254,6 @@ fn free_margin_cannot_be_used_across_pool() {
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
-			System::set_block_number(1);
 			<Balances<Runtime>>::insert(ALICE, MOCK_POOL_1, fixed128_from_natural_currency_cent(10_000_00));
 			assert_noop!(
 				MarginProtocol::open_position(
@@ -1285,7 +1280,6 @@ fn close_loss_position_works() {
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
-			System::set_block_number(1);
 			<Balances<Runtime>>::insert(ALICE, MOCK_POOL, alice_initial);
 
 			let position = eur_usd_long_1();
@@ -1624,7 +1618,6 @@ fn close_short_position_fails_if_market_price_too_high() {
 #[test]
 fn deposit_works() {
 	ExtBuilder::default().alice_balance(1000).build().execute_with(|| {
-		System::set_block_number(1);
 		assert_eq!(OrmlTokens::free_balance(CurrencyId::AUSD, &ALICE), 1000);
 		assert_eq!(
 			OrmlTokens::free_balance(CurrencyId::AUSD, &MarginProtocol::account_id()),
@@ -1661,7 +1654,6 @@ fn withdraw_works() {
 		.module_balance(Fixed128::from_parts(1000))
 		.build()
 		.execute_with(|| {
-			System::set_block_number(1);
 			<Balances<Runtime>>::insert(ALICE, MOCK_POOL, Fixed128::from_parts(1000));
 			assert_ok!(MarginProtocol::withdraw(Origin::signed(ALICE), MOCK_POOL, 500));
 
@@ -1980,7 +1972,7 @@ fn trader_open_positions_limit() {
 
 			// trader has no open positions
 			assert_eq!(
-				<PositionsByTrader<Runtime>>::iter(&ALICE)
+				<PositionsByTrader<Runtime>>::iter_prefix(&ALICE)
 					.filter(|((p, _), _)| *p == MOCK_POOL)
 					.count(),
 				0
@@ -1993,7 +1985,7 @@ fn trader_open_positions_limit() {
 
 			// trader has 200 open positions
 			assert_eq!(
-				<PositionsByTrader<Runtime>>::iter(&ALICE)
+				<PositionsByTrader<Runtime>>::iter_prefix(&ALICE)
 					.filter(|((p, _), _)| *p == MOCK_POOL)
 					.count(),
 				200
@@ -2030,7 +2022,7 @@ fn pool_open_positions_limit() {
 
 			// pool & pair has no open positions
 			assert_eq!(
-				PositionsByPool::iter(MOCK_POOL)
+				PositionsByPool::iter_prefix(MOCK_POOL)
 					.filter(|((p, _), _)| *p == EUR_USD_PAIR)
 					.count(),
 				0
@@ -2043,7 +2035,7 @@ fn pool_open_positions_limit() {
 
 			// pool & pair has 1000 open positions
 			assert_eq!(
-				PositionsByPool::iter(MOCK_POOL)
+				PositionsByPool::iter_prefix(MOCK_POOL)
 					.filter(|((p, _), _)| *p == EUR_USD_PAIR)
 					.count(),
 				1000
@@ -2073,7 +2065,6 @@ fn set_trading_pair_risk_threshold_works() {
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(1000_00))
 		.build()
 		.execute_with(|| {
-			System::set_block_number(1);
 			assert_eq!(
 				MarginProtocol::trader_risk_threshold(EUR_USD_PAIR).unwrap(),
 				risk_threshold(0, 0)

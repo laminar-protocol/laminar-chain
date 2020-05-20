@@ -36,18 +36,6 @@ fn parse_name(name: Option<&String>) -> AccountId {
 	}
 }
 
-fn get_name(address: &AccountId) -> String {
-	if address == &POOL::get() {
-		"Pool".into()
-	} else if address == &ALICE::get() {
-		"Alice".into()
-	} else if address == &BOB::get() {
-		"Bob".into()
-	} else {
-		format!("{}", address)
-	}
-}
-
 fn parse_dollar(value: Option<&String>) -> Balance {
 	let value = value.expect("Missing balance");
 	let value = value.replace(" ", "").replace("_", "");
