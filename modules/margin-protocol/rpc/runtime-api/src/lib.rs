@@ -5,13 +5,14 @@
 use codec::{Codec, Decode, Encode};
 use module_primitives::LiquidityPoolId;
 use sp_arithmetic::Fixed128;
+use sp_core::RuntimeDebug;
 use sp_std::prelude::*;
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(Encode, Decode, Eq, PartialEq, Default, Debug)]
+#[derive(Encode, Decode, Eq, PartialEq, Default, RuntimeDebug)]
 pub struct TraderInfo {
 	pub equity: Fixed128,
 	pub margin_held: Fixed128,
@@ -21,7 +22,7 @@ pub struct TraderInfo {
 }
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(Encode, Decode, Eq, PartialEq, Default, Debug)]
+#[derive(Encode, Decode, Eq, PartialEq, Default, RuntimeDebug)]
 pub struct PoolInfo {
 	pub enp: Fixed128,
 	pub ell: Fixed128,

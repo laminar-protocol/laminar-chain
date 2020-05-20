@@ -5,13 +5,14 @@
 use codec::{Codec, Decode, Encode};
 use module_primitives::{CurrencyId, LiquidityPoolId};
 use orml_utilities::FixedU128;
+use sp_core::RuntimeDebug;
 use sp_std::prelude::*;
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(Encode, Decode, Eq, PartialEq, Default, Debug)]
+#[derive(Encode, Decode, Eq, PartialEq, Default, RuntimeDebug)]
 pub struct PoolInfo {
 	pub collateral_ratio: FixedU128,
 	pub is_safe: bool,
