@@ -68,6 +68,9 @@ impl frame_system::Trait for Runtime {
 	type Event = TestEvent;
 	type BlockHashCount = BlockHashCount;
 	type MaximumBlockWeight = MaximumBlockWeight;
+	type DbWeight = ();
+	type BlockExecutionWeight = ();
+	type ExtrinsicBaseWeight = ();
 	type MaximumBlockLength = MaximumBlockLength;
 	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
@@ -239,7 +242,13 @@ impl Treasury<AccountId> for MockTreasury {
 }
 
 pub type Extrinsic = TestXt<Call, ()>;
-type SubmitTransaction = frame_system::offchain::TransactionSubmitter<(), Call, Extrinsic>;
+impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
+where
+	Call: From<C>,
+{
+	type OverarchingCall = Call;
+	type Extrinsic = Extrinsic;
+}
 
 parameter_types! {
 	pub const GetTraderMaxOpenPositions: usize = 200;
@@ -253,8 +262,6 @@ impl Trait for Runtime {
 	type LiquidityPools = MockLiquidityPools;
 	type PriceProvider = DefaultPriceProvider<CurrencyId, MockPrices>;
 	type Treasury = MockTreasury;
-	type SubmitTransaction = SubmitTransaction;
-	type Call = Call;
 	type GetTraderMaxOpenPositions = GetTraderMaxOpenPositions;
 	type GetPoolMaxOpenPositions = GetPoolMaxOpenPositions;
 	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
@@ -289,7 +296,7 @@ pub fn print_trader_summary(who: &AccountId, pool_id: LiquidityPoolId, name: Opt
 	if let Some(n) = name {
 		println!("Name: {:?}", n);
 	}
-	let position_ids: Vec<PositionId> = <PositionsByTrader<Runtime>>::iter(who)
+	let position_ids: Vec<PositionId> = <PositionsByTrader<Runtime>>::iter_prefix(who)
 		.map(|((_, position_id), _)| position_id)
 		.collect();
 	println!("Positions: {:?}", position_ids);
@@ -419,6 +426,8 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		t.into()
+		let mut ext = sp_io::TestExternalities::new(t);
+		ext.execute_with(|| System::set_block_number(1));
+		ext
 	}
 }

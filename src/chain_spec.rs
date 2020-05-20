@@ -3,15 +3,17 @@ use margin_liquidity_pools::SwapRate;
 use margin_protocol::RiskThreshold;
 use module_primitives::{AccumulateConfig, TradingPair};
 use runtime::{
-	opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, BlockNumber, CurrencyId,
+	opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, Block, BlockNumber, CurrencyId,
 	FinancialCouncilMembershipConfig, GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, IndicesConfig,
 	MarginLiquidityPoolsConfig, MarginProtocolConfig, OperatorMembershipConfig, SessionConfig, Signature, StakerStatus,
 	StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SystemConfig, TokensConfig, CENTS, DOLLARS, HOURS,
 	WASM_BINARY,
 };
+use sc_chain_spec::ChainSpecExtension;
 use sc_service;
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
+use serde::{Deserialize, Serialize};
 use serde_json::map::Map;
 use sp_arithmetic::Fixed128;
 use sp_consensus_babe::AuthorityId as BabeId;
@@ -21,8 +23,29 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::{Perbill, Permill};
 use sp_std::num::NonZeroI128;
 
-/// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
-pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig>;
+type AccountPublic = <Signature as Verify>::Signer;
+
+const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
+
+/// Node `ChainSpec` extensions.
+///
+/// Additional parameters for some Substrate core modules,
+/// customizable from the chain spec.
+#[derive(Default, Clone, Serialize, Deserialize, ChainSpecExtension)]
+#[serde(rename_all = "camelCase")]
+pub struct Extensions {
+	/// Block numbers with known hashes.
+	pub fork_blocks: sc_client_api::ForkBlocks<Block>,
+	/// Known bad block hashes.
+	pub bad_blocks: sc_client_api::BadBlocks<Block>,
+}
+
+/// Specialized `ChainSpec`.
+pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
+
+fn session_keys(grandpa: GrandpaId, babe: BabeId) -> SessionKeys {
+	SessionKeys { grandpa, babe }
+}
 
 /// Helper function to generate a crypto pair from seed
 pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
@@ -30,8 +53,6 @@ pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Pu
 		.expect("static values are valid; qed")
 		.public()
 }
-
-type AccountPublic = <Signature as Verify>::Signer;
 
 /// Helper function to generate an account ID from seed
 pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
@@ -41,18 +62,14 @@ where
 	AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
 
-/// Helper function to generate an authority key from seed
-pub fn get_authority_keys_from_seed(seed: &str) -> (AccountId, AccountId, GrandpaId, BabeId) {
+/// Helper function to generate stash, controller and session key from seed
+pub fn authority_keys_from_seed(seed: &str) -> (AccountId, AccountId, GrandpaId, BabeId) {
 	(
 		get_account_id_from_seed::<sr25519::Public>(&format!("{}//stash", seed)),
 		get_account_id_from_seed::<sr25519::Public>(seed),
 		get_from_seed::<GrandpaId>(seed),
 		get_from_seed::<BabeId>(seed),
 	)
-}
-
-fn session_keys(grandpa: GrandpaId, babe: BabeId) -> SessionKeys {
-	SessionKeys { grandpa, babe }
 }
 
 pub fn development_config() -> ChainSpec {
@@ -66,7 +83,7 @@ pub fn development_config() -> ChainSpec {
 		ChainType::Development,
 		|| {
 			dev_genesis(
-				vec![get_authority_keys_from_seed("Alice")],
+				vec![authority_keys_from_seed("Alice")],
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -95,10 +112,7 @@ pub fn local_testnet_config() -> ChainSpec {
 		ChainType::Local,
 		|| {
 			dev_genesis(
-				vec![
-					get_authority_keys_from_seed("Alice"),
-					get_authority_keys_from_seed("Bob"),
-				],
+				vec![authority_keys_from_seed("Alice"), authority_keys_from_seed("Bob")],
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -187,10 +201,8 @@ pub fn laminar_turbulence_latest_config() -> ChainSpec {
 		vec![
 			"/dns4/testnet-bootnode-1.laminar-chain.laminar.one/tcp/30333/p2p/QmZKdYinGon2nUXgfkipdRuGSmQnmks3q6EhmXUSwULUFT".parse().unwrap(),
 		],
-		TelemetryEndpoints::new(vec![(
-			"wss://telemetry.polkadot.io/submit/".parse().unwrap(),
-			0,
-		)]).ok(),
+		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
+			.expect("Staging telemetry url is valid; qed")),
 		Some("turbulence1"),
 		Some(properties),
 		Default::default(),
@@ -237,7 +249,7 @@ fn dev_genesis(
 	endowed_accounts: Vec<AccountId>,
 ) -> GenesisConfig {
 	GenesisConfig {
-		system: Some(SystemConfig {
+		frame_system: Some(SystemConfig {
 			code: WASM_BINARY.to_vec(),
 			changes_trie_config: Default::default(),
 		}),
@@ -385,7 +397,7 @@ fn turbulence_genesis(
 	endowed_accounts: Vec<AccountId>,
 ) -> GenesisConfig {
 	GenesisConfig {
-		system: Some(SystemConfig {
+		frame_system: Some(SystemConfig {
 			code: WASM_BINARY.to_vec(),
 			changes_trie_config: Default::default(),
 		}),
