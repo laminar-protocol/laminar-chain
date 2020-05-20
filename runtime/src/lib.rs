@@ -40,7 +40,6 @@ use sp_version::RuntimeVersion;
 pub use frame_system::{self as system, Call as SystemCall};
 pub use module_primitives::{Balance, CurrencyId, LiquidityPoolId, Price};
 use orml_currencies::BasicCurrencyAdapter;
-use orml_oracle::OperatorProvider;
 use orml_traits::DataProvider;
 pub use sp_arithmetic::Fixed128;
 
@@ -274,8 +273,9 @@ impl pallet_sudo::Trait for Runtime {
 
 parameter_types! {
 	pub const SessionDuration: BlockNumber = EPOCH_DURATION_IN_SLOTS as _;
-	pub const StakingUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 2;
-	pub const MarginProtocolUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 2;
+	pub const StakingUnsignedPriority: TransactionPriority = TransactionPriority::max_value();
+	pub const OracleUnsignedPriority: TransactionPriority = TransactionPriority::max_value() - 1;
+	pub const MarginProtocolUnsignedPriority: TransactionPriority = TransactionPriority::max_value() - 2;
 }
 
 impl pallet_offences::Trait for Runtime {
@@ -499,17 +499,6 @@ impl pallet_staking::Trait for Runtime {
 	type UnsignedPriority = StakingUnsignedPriority;
 }
 
-pub struct OperatorCollectiveProvider;
-impl OperatorProvider<AccountId> for OperatorCollectiveProvider {
-	fn can_feed_data(who: &AccountId) -> bool {
-		OperatorCollective::is_member(who)
-	}
-
-	fn operators() -> Vec<AccountId> {
-		OperatorCollective::members()
-	}
-}
-
 parameter_types! {
 	pub const MinimumCount: u32 = 1;
 	pub const ExpiresIn: Moment = 1000 * 60 * 60 * 24 * 3; // 3 days
@@ -519,26 +508,21 @@ impl orml_oracle::Trait for Runtime {
 	type Event = Event;
 	type Call = Call;
 	type OnNewData = (); // TODO: update this
-	type OnRedundantCall = (); // TODO: update this
-	type OperatorProvider = OperatorCollectiveProvider;
 	type CombineData = orml_oracle::DefaultCombineData<Runtime, MinimumCount, ExpiresIn>;
 	type Time = Timestamp;
 	type OracleKey = CurrencyId;
 	type OracleValue = Price;
+	type UnsignedPriority = OracleUnsignedPriority;
+	type AuthorityId = orml_oracle::AuthorityId;
 }
 
 pub type TimeStampedPrice = orml_oracle::TimestampedValueOf<Runtime>;
-
-parameter_types! {
-	pub const TokenExistentialDeposit: Balance = 0;
-}
 
 impl orml_tokens::Trait for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
-	type ExistentialDeposit = TokenExistentialDeposit;
 	type DustRemoval = ();
 }
 

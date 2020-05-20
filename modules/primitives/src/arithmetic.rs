@@ -1,5 +1,3 @@
-#![cfg_attr(not(feature = "std"), no_std)]
-
 use orml_utilities::FixedU128;
 use sp_arithmetic::{traits::UniqueSaturatedInto, Fixed128};
 

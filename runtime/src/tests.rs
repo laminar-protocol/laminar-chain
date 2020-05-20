@@ -146,8 +146,11 @@ pub fn set_oracle_price(prices: Vec<(CurrencyId, Price)>) -> DispatchResult {
 	ModuleOracle::on_finalize(0);
 	for i in 1..=MinimumCount::get() {
 		assert_ok!(ModuleOracle::feed_values(
-			origin_of(&OracleList::get()[i as usize]),
-			prices.clone()
+			<Runtime as system::Trait>::Origin::NONE,
+			// origin_of(&OracleList::get()[i as usize]),
+			prices.clone(),
+			i as u32,
+			Default::default()
 		));
 	}
 	get_price();

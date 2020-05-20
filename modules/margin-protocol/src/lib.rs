@@ -1177,6 +1177,7 @@ enum OffchainErr {
 const LOCK_EXPIRE_DURATION: u64 = 60_000; // 60 sec
 const LOCK_UPDATE_DURATION: u64 = 40_000; // 40 sec
 const DB_PREFIX: &[u8] = b"laminar/margin-protocol-offchain-worker/";
+#[cfg(feature = "std")]
 const TAG: &str = "MARGIN_PROTOCOL_OFFCHAIN_WORKER";
 
 impl sp_std::fmt::Debug for OffchainErr {
