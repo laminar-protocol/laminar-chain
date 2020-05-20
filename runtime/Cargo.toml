@@ -52,6 +52,7 @@ orml-oracle-rpc-runtime-api = { path = "../orml/oracle/rpc/runtime-api", default
 orml-prices = { path = "../orml/prices", default-features = false }
 orml-tokens = { path = "../orml/tokens", default-features = false }
 orml-traits = { path = "../orml/traits", default-features = false }
+orml-utilities = { path = "../orml/utilities", default-features = false }
 
 synthetic-tokens = { package = "module-synthetic-tokens", path = "../modules/synthetic-tokens", default-features = false }
 synthetic-protocol = { package = "module-synthetic-protocol", path = "../modules/synthetic-protocol", default-features = false }
@@ -114,6 +115,7 @@ std = [
 	"orml-prices/std",
 	"orml-tokens/std",
 	"orml-traits/std",
+	"orml-utilities/std",
 
 	"margin-liquidity-pools/std",
 	"synthetic-liquidity-pools/std",

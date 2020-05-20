@@ -11,7 +11,9 @@ mod tests {
 		Runtime,
 	};
 	use orml_prices::Price;
+	use orml_utilities::FixedU128;
 	use sp_runtime::Permill;
+	use synthetic_protocol_rpc_runtime_api::PoolInfo;
 
 	#[test]
 	fn test_synthetic_buy_and_sell() {
@@ -36,6 +38,13 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(synthetic_liquidity(), dollar(10_000));
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::zero(),
+						is_safe: false
+					})
+				);
 				assert_eq!(synthetic_balance(), 0);
 				assert_ok!(synthetic_buy(&ALICE::get(), FEUR, dollar(5000)));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
@@ -53,6 +62,13 @@ mod tests {
 				// 9555 = 10_000 - 445
 				//assert_eq!(liquidity(), dollar(9555));
 				assert_eq!(synthetic_liquidity(), 9554455445544554455447);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::from_rational(11, 10),
+						is_safe: true
+					})
+				);
 
 				assert_ok!(synthetic_sell(&ALICE::get(), FEUR, dollar(800)));
 				assert_eq!(multi_currency_balance(&ALICE::get(), FEUR), 850165016501650165016);
@@ -67,6 +83,13 @@ mod tests {
 				// 264 = ModuleTokens -> LiquidityPool
 				// 9819 = 9555 + 264
 				assert_eq!(synthetic_liquidity(), 9818455445544554455447);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::from_rational(11, 10),
+						is_safe: true
+					})
+				);
 			});
 	}
 
@@ -89,6 +112,13 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), 1000);
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(synthetic_liquidity(), 1000);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::zero(),
+						is_safe: false
+					})
+				);
 				assert_eq!(synthetic_balance(), 0);
 				assert_ok!(synthetic_buy(&ALICE::get(), FEUR, 1000));
 				// synthetic = collateral / ask_price
@@ -105,6 +135,13 @@ mod tests {
 				// collateralise = balance - additional_collateral
 				// 20 = 1000 - 980
 				assert_eq!(synthetic_liquidity(), 20);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::from_natural(2),
+						is_safe: true
+					})
+				);
 
 				assert_ok!(synthetic_sell(&ALICE::get(), FEUR, 990));
 				// synthetic balance is 190, below ExistentialDeposit
@@ -120,6 +157,13 @@ mod tests {
 				// 1000 = ModuleTokens -> LiquidityPool
 				// 1020 = 1000 + 20
 				assert_eq!(synthetic_liquidity(), 1020);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::zero(),
+						is_safe: false
+					})
+				);
 			});
 	}
 
@@ -146,6 +190,13 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(synthetic_liquidity(), dollar(10_000));
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::zero(),
+						is_safe: false
+					})
+				);
 				assert_eq!(synthetic_balance(), 0);
 				assert_ok!(synthetic_buy(&ALICE::get(), FEUR, dollar(5000)));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
@@ -155,6 +206,13 @@ mod tests {
 				assert_eq!(synthetic_balance(), 5445544554455445544553);
 				//assert_eq!(synthetic_liquidity(), dollar(9555));
 				assert_eq!(synthetic_liquidity(), 9554455445544554455447);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::from_rational(11, 10),
+						is_safe: true
+					})
+				);
 
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(31, 10))]));
 
@@ -167,6 +225,13 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), 10066006600660066006599);
 				assert_eq!(synthetic_balance(), 0);
 				assert_eq!(synthetic_liquidity(), 9933993399339933993401);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::zero(),
+						is_safe: false
+					})
+				);
 			});
 	}
 
@@ -193,6 +258,13 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(synthetic_liquidity(), dollar(10_000));
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::zero(),
+						is_safe: false
+					})
+				);
 				assert_eq!(synthetic_balance(), 0);
 				assert_ok!(synthetic_buy(&ALICE::get(), FEUR, dollar(5000)));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
@@ -202,6 +274,13 @@ mod tests {
 				assert_eq!(synthetic_balance(), 5445544554455445544553);
 				//assert_eq!(synthetic_liquidity(), dollar(9555));
 				assert_eq!(synthetic_liquidity(), 9554455445544554455447);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::from_rational(11, 10),
+						is_safe: true
+					})
+				);
 
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(2, 1))]));
 
@@ -214,6 +293,13 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), 8250825082508250825081);
 				assert_eq!(synthetic_balance(), 0);
 				assert_eq!(synthetic_liquidity(), 11749174917491749174919);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::zero(),
+						is_safe: false
+					})
+				);
 			});
 	}
 
@@ -242,6 +328,13 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
 				assert_eq!(collateral_balance(&BOB::get()), dollar(10_000));
 				assert_eq!(synthetic_liquidity(), dollar(20_000));
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::zero(),
+						is_safe: false
+					})
+				);
 				assert_eq!(synthetic_balance(), 0);
 
 				// ALICE buy synthetic
@@ -250,6 +343,13 @@ mod tests {
 				assert_eq!(multi_currency_balance(&ALICE::get(), FEUR), 1650165016501650165016);
 				assert_eq!(synthetic_balance(), 5445544554455445544553);
 				assert_eq!(synthetic_liquidity(), 19554455445544554455447);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::from_rational(11, 10),
+						is_safe: true
+					})
+				);
 
 				// BOB buy synthetic
 				assert_ok!(synthetic_buy(&BOB::get(), FEUR, dollar(5000)));
@@ -257,6 +357,13 @@ mod tests {
 				assert_eq!(multi_currency_balance(&BOB::get(), FEUR), 1650165016501650165016);
 				assert_eq!(synthetic_balance(), 10891089108910891089106);
 				assert_eq!(synthetic_liquidity(), 19108910891089108910894);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::from_rational(11, 10),
+						is_safe: true
+					})
+				);
 
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(2, 1))]));
 
@@ -266,6 +373,13 @@ mod tests {
 				assert_eq!(multi_currency_balance(&ALICE::get(), FEUR), 2635386691378497455656);
 				assert_eq!(synthetic_balance(), 13058576793639955128514);
 				assert_eq!(synthetic_liquidity(), 18941423206360044871486);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::from_parts(1523558421851289833),
+						is_safe: true
+					})
+				);
 				assert_ok!(synthetic_sell(&BOB::get(), FEUR, dollar(1000)));
 				assert_eq!(collateral_balance(&BOB::get()), 6970000000000000000000);
 				assert_eq!(multi_currency_balance(&BOB::get(), FEUR), 650165016501650165016);
@@ -278,11 +392,25 @@ mod tests {
 				assert_eq!(multi_currency_balance(&ALICE::get(), FEUR), 1635386691378497455656);
 				assert_eq!(synthetic_balance(), 5028213757336324765478);
 				assert_eq!(synthetic_liquidity(), 23031786242663675234522);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::from_parts(1099999999999999999),
+						is_safe: true
+					})
+				);
 				assert_ok!(synthetic_buy(&BOB::get(), FEUR, dollar(2000)));
 				assert_eq!(collateral_balance(&BOB::get()), 4970000000000000000000);
 				assert_eq!(multi_currency_balance(&BOB::get(), FEUR), 1635386691378497455656);
 				assert_eq!(synthetic_balance(), 7195701442065388804886);
 				assert_eq!(synthetic_liquidity(), 22864298557934611195114);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::from_parts(1099999999999999999),
+						is_safe: true
+					})
+				);
 
 				assert_ok!(synthetic_sell(
 					&ALICE::get(),
@@ -300,6 +428,13 @@ mod tests {
 				assert_eq!(collateral_balance(&BOB::get()), 8191711782015639987642);
 				assert_eq!(synthetic_balance(), 0);
 				assert_eq!(synthetic_liquidity(), 23616576435968720024716);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::zero(),
+						is_safe: false
+					})
+				);
 			});
 	}
 
@@ -336,6 +471,13 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
 				assert_eq!(collateral_balance(&BOB::get()), dollar(10_000));
 				assert_eq!(synthetic_liquidity(), dollar(40_000));
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::zero(),
+						is_safe: false
+					})
+				);
 				assert_eq!(synthetic_balance(), 0);
 
 				// ALICE buy synthetic FEUR and BOB buy synthetic FJPY
@@ -344,12 +486,26 @@ mod tests {
 				assert_eq!(multi_currency_balance(&ALICE::get(), FEUR), 1650165016501650165016);
 				assert_eq!(synthetic_balance(), 5445544554455445544553);
 				assert_eq!(synthetic_liquidity(), 39554455445544554455447);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::from_rational(11, 10),
+						is_safe: true
+					})
+				);
 
 				assert_ok!(synthetic_buy(&BOB::get(), FJPY, dollar(5000)));
 				assert_eq!(collateral_balance(&BOB::get()), dollar(5000));
 				assert_eq!(multi_currency_balance(&BOB::get(), FJPY), 1237623762376237623762);
 				assert_eq!(synthetic_balance(), 10891089108910891089106);
 				assert_eq!(synthetic_liquidity(), 39108910891089108910894);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::from_rational(11, 10),
+						is_safe: true
+					})
+				);
 
 				// change price
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(2, 1))]));
@@ -361,12 +517,26 @@ mod tests {
 				assert_eq!(multi_currency_balance(&ALICE::get(), FJPY), 396825396825396825396);
 				assert_eq!(synthetic_balance(), 13073628791450573628784);
 				assert_eq!(synthetic_liquidity(), 38926371208549426371216);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::from_parts(1650000000000000000),
+						is_safe: true
+					})
+				);
 
 				assert_ok!(synthetic_buy(&BOB::get(), FEUR, dollar(2000)));
 				assert_eq!(collateral_balance(&BOB::get()), dollar(3000));
 				assert_eq!(multi_currency_balance(&BOB::get(), FEUR), 985221674876847290640);
 				assert_eq!(synthetic_balance(), 15241116476179637668192);
 				assert_eq!(synthetic_liquidity(), 38758883523820362331808);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::from_parts(1444386181369524984),
+						is_safe: true
+					})
+				);
 
 				// ALICE sell synthetic FEUR and BOB sell synthetic FJPY
 				assert_ok!(synthetic_sell(&ALICE::get(), FEUR, dollar(100)));
@@ -374,12 +544,26 @@ mod tests {
 				assert_eq!(multi_currency_balance(&ALICE::get(), FEUR), 1550165016501650165016);
 				assert_eq!(synthetic_balance(), 13205934958027822486674);
 				assert_eq!(synthetic_liquidity(), 40597065041972177513326);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::from_parts(1099999999999999999),
+						is_safe: true
+					})
+				);
 
 				assert_ok!(synthetic_sell(&BOB::get(), FJPY, dollar(100)));
 				assert_eq!(collateral_balance(&BOB::get()), 3496000000000000000000);
 				assert_eq!(multi_currency_balance(&BOB::get(), FJPY), 1137623762376237623762);
 				assert_eq!(synthetic_balance(), 12709934958027822486674);
 				assert_eq!(synthetic_liquidity(), 40597065041972177513326);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::from_parts(1099999999999999999),
+						is_safe: true
+					})
+				);
 
 				// ALICE sell synthetic FJPY and BOB sell synthetic FEUR
 				assert_ok!(synthetic_sell(&ALICE::get(), FJPY, dollar(100)));
@@ -387,12 +571,26 @@ mod tests {
 				assert_eq!(multi_currency_balance(&ALICE::get(), FJPY), 296825396825396825396);
 				assert_eq!(synthetic_balance(), 12213934958027822486674);
 				assert_eq!(synthetic_liquidity(), 40597065041972177513326);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::from_parts(1099999999999999999),
+						is_safe: true
+					})
+				);
 
 				assert_ok!(synthetic_sell(&BOB::get(), FEUR, dollar(100)));
 				assert_eq!(collateral_balance(&BOB::get()), 3693000000000000000000);
 				assert_eq!(multi_currency_balance(&BOB::get(), FEUR), 885221674876847290640);
 				assert_eq!(synthetic_balance(), 11993934958027822486674);
 				assert_eq!(synthetic_liquidity(), 40620065041972177513326);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::from_parts(1099999999999999999),
+						is_safe: true
+					})
+				);
 			});
 	}
 
@@ -415,6 +613,13 @@ mod tests {
 				));
 				assert_ok!(synthetic_set_spread(FEUR, cent(3)));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::zero(),
+						is_safe: false
+					})
+				);
 
 				assert_ok!(synthetic_buy(&ALICE::get(), FEUR, dollar(5000)));
 
@@ -426,6 +631,13 @@ mod tests {
 					multi_currency_balance(&ALICE::get(), FEUR)
 				));
 				assert_eq!(synthetic_liquidity(), 19791123849227027966364);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::zero(),
+						is_safe: false
+					})
+				);
 				assert_eq!(collateral_balance(&ALICE::get()), 10208876150772972033636);
 				assert_eq!(multi_currency_balance(&ALICE::get(), FEUR), 0);
 				assert_eq!(synthetic_balance(), 0);
@@ -451,6 +663,13 @@ mod tests {
 				));
 				assert_ok!(synthetic_set_spread(FEUR, cent(3)));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::zero(),
+						is_safe: false
+					})
+				);
 
 				assert_ok!(synthetic_buy(&ALICE::get(), FEUR, dollar(5000)));
 
@@ -461,6 +680,13 @@ mod tests {
 				assert_noop!(
 					synthetic_liquidate(&ALICE::get(), FEUR, 1),
 					synthetic_protocol::Error::<Runtime>::StillInSafePosition
+				);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::from_parts(4626000000000000000),
+						is_safe: true
+					})
 				);
 			});
 	}
@@ -494,6 +720,13 @@ mod tests {
 				assert_eq!(multi_currency_balance(&ALICE::get(), FEUR), 850165016501650165016);
 				assert_eq!(synthetic_balance(), 2805544554455445544412);
 				assert_eq!(synthetic_liquidity(), 19669192287649817613657);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::from_parts(1044999999999999999),
+						is_safe: false
+					})
+				);
 
 				assert_ok!(synthetic_liquidate(
 					&ALICE::get(),
@@ -504,6 +737,13 @@ mod tests {
 				assert_eq!(multi_currency_balance(&ALICE::get(), FEUR), 0);
 				assert_eq!(synthetic_balance(), 0);
 				assert_eq!(synthetic_liquidity(), 19791123849227027961389);
+				assert_eq!(
+					synthetic_pool_info(FEUR),
+					Some(PoolInfo {
+						collateral_ratio: FixedU128::zero(),
+						is_safe: false
+					})
+				);
 				assert_ok!(synthetic_withdraw_liquidity(&POOL::get(), dollar(1000)));
 			});
 	}

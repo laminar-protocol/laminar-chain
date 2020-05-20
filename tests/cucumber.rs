@@ -4,13 +4,14 @@ use cucumber::cucumber;
 
 use frame_support::{assert_noop, assert_ok};
 use margin_protocol::RiskThreshold;
+use margin_protocol_rpc_runtime_api::{PoolInfo, TraderInfo};
 use module_primitives::{Balance, Leverage, TradingPair};
 use orml_utilities::FixedU128;
-use runtime::tests::*;
-use runtime::{AccountId, BlockNumber, CurrencyId};
+use runtime::{tests::*, AccountId, BlockNumber, CurrencyId};
 use sp_arithmetic::Fixed128;
-use sp_runtime::{DispatchResult, Permill};
+use sp_runtime::{traits::Bounded, DispatchResult, Permill};
 use std::ops::Range;
+use synthetic_protocol_rpc_runtime_api::PoolInfo as SyntheticProtocolPoolInfo;
 
 #[derive(Default)]
 pub struct World {
@@ -32,18 +33,6 @@ fn parse_name(name: Option<&String>) -> AccountId {
 		"alice" => ALICE::get(),
 		"bob" => BOB::get(),
 		_ => panic!("Invalid account name"),
-	}
-}
-
-fn get_name(address: &AccountId) -> String {
-	if address == &POOL::get() {
-		"Pool".into()
-	} else if address == &ALICE::get() {
-		"Alice".into()
-	} else if address == &BOB::get() {
-		"Bob".into()
-	} else {
-		format!("{}", address)
 	}
 }
 
@@ -74,6 +63,15 @@ fn parse_price(value: Option<&String>) -> FixedU128 {
 	FixedU128::from_parts(parse_dollar(value))
 }
 
+fn parse_bool(value: Option<&String>) -> bool {
+	let value = value.expect("Missing bool");
+	match value.to_ascii_lowercase().trim() {
+		"true" => true,
+		"false" => false,
+		_ => panic!("Invalid bool value"),
+	}
+}
+
 fn parse_permill(value: Option<&String>) -> Permill {
 	let value = value.expect("Missing percentage");
 	let value = value.replace(" ", "").replace("_", "");
@@ -91,8 +89,21 @@ fn parse_fixed128(value: Option<&String>) -> Fixed128 {
 	if value.ends_with("%") {
 		let num = value[..value.len() - 1].parse::<f64>().expect("Invalid dollar value");
 		Fixed128::from_parts((num / 100f64 * (10u64.pow(18) as f64)) as i128)
+	} else if value == "MaxValue" {
+		Fixed128::max_value()
 	} else {
 		Fixed128::from_parts(value.parse::<i128>().expect("invalid dollar value"))
+	}
+}
+
+fn parse_fixed_u128(value: Option<&String>) -> FixedU128 {
+	let value = value.expect("Missing percentage");
+	let value = value.replace(" ", "").replace("_", "");
+	if value.ends_with("%") {
+		let num = value[..value.len() - 1].parse::<f64>().expect("Invalid dollar value");
+		FixedU128::from_parts((num / 100f64 * (10u64.pow(18) as f64)) as u128)
+	} else {
+		FixedU128::from_parts(value.parse::<u128>().expect("invalid dollar value"))
 	}
 }
 
@@ -496,20 +507,50 @@ mod steps {
 					assert_ok!(margin_set_additional_swap(swap));
 				})
 			})
-			.then("trader margin positions are", |world, step| {
+			.then("margin trader info are", |world, step| {
 				world.execute_with(|| {
 					let iter = get_rows(step).iter().map(|x| {
 						(
 							parse_name(x.get(0)),
 							parse_fixed_128_dollar(x.get(1)),
 							parse_fixed_128_dollar(x.get(2)),
-							parse_fixed_128_dollar(x.get(3)),
+							parse_fixed128(x.get(3)),
+							parse_fixed_128_dollar(x.get(4)),
+							parse_fixed_128_dollar(x.get(5)),
 						)
 					});
-					for (name, equity, free, held) in iter {
-						assert_eq!(margin_equity(&name), equity, "Equity for {}", get_name(&name));
-						assert_eq!(free_margin(&name), free, "Free margin for {}", get_name(&name));
-						assert_eq!(margin_held(&name), held, "Margin held for {}", get_name(&name));
+					for (name, equity, margin_held, margin_level, free_margin, unrealized_pl) in iter {
+						assert_eq!(
+							margin_trader_info(&name),
+							TraderInfo {
+								equity: equity,
+								margin_held: margin_held,
+								margin_level: margin_level,
+								free_margin: free_margin,
+								unrealized_pl: unrealized_pl,
+							}
+						);
+					}
+				})
+			})
+			.then("margin pool info are", |world, step| {
+				world.execute_with(|| {
+					let iter = get_rows(step).iter().map(|x| {
+						(
+							parse_fixed128(x.get(0)),
+							parse_fixed128(x.get(1)),
+							parse_fixed_128_dollar(x.get(2)),
+						)
+					});
+					for (enp, ell, required_deposit) in iter {
+						assert_eq!(
+							margin_pool_info(),
+							Some(PoolInfo {
+								enp: enp,
+								ell: ell,
+								required_deposit: required_deposit,
+							})
+						);
 					}
 				})
 			})
@@ -627,6 +668,26 @@ mod steps {
 					for (name, free, currency, synthetic) in iter {
 						assert_eq!(collateral_balance(&name), free);
 						assert_eq!(multi_currency_balance(&name, currency), synthetic);
+					}
+				})
+			})
+			.then("synthetic pool info are", |world, step| {
+				world.execute_with(|| {
+					let iter = get_rows(step).iter().map(|x| {
+						(
+							parse_currency(x.get(0)),
+							parse_fixed_u128(x.get(1)),
+							parse_bool(x.get(2)),
+						)
+					});
+					for (currency_id, collateral_ratio, is_safe) in iter {
+						assert_eq!(
+							synthetic_pool_info(currency_id),
+							Some(SyntheticProtocolPoolInfo {
+								collateral_ratio: collateral_ratio,
+								is_safe: is_safe,
+							})
+						);
 					}
 				})
 			})

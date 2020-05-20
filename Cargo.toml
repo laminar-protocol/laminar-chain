@@ -65,8 +65,10 @@ frame-benchmarking-cli = { version = "2.0.0-alpha.8", git = "https://github.com/
 
 margin-protocol = { package = "module-margin-protocol", path = "modules/margin-protocol"}
 margin-protocol-rpc = { path = "modules/margin-protocol/rpc" }
+margin-protocol-rpc-runtime-api = { path = "modules/margin-protocol/rpc/runtime-api" }
 margin-liquidity-pools = { package = "module-margin-liquidity-pools", path = "modules/liquidity-pools/margin" }
 synthetic-protocol-rpc = { path = "modules/synthetic-protocol/rpc" }
+synthetic-protocol-rpc-runtime-api = { path = "modules/synthetic-protocol/rpc/runtime-api" }
 orml-oracle-rpc = { path = "orml/oracle/rpc" }
 orml-utilities = { path = "orml/utilities" }
 module-primitives = { path = "./modules/primitives" }

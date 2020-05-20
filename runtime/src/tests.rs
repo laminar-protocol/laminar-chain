@@ -12,6 +12,7 @@ use frame_support::{assert_ok, parameter_types, traits::OnFinalize, traits::OnIn
 
 use margin_liquidity_pools::SwapRate;
 use margin_protocol::RiskThreshold;
+use margin_protocol_rpc_runtime_api::runtime_decl_for_MarginProtocolApi::MarginProtocolApi;
 use module_primitives::{Balance, Leverage, Leverages, TradingPair};
 use module_traits::{MarginProtocolLiquidityPools, Treasury};
 use orml_prices::Price;
@@ -20,6 +21,7 @@ use pallet_indices::address::Address;
 use sp_arithmetic::Fixed128;
 use sp_runtime::{DispatchResult, Permill};
 use std::ops::Range;
+use synthetic_protocol_rpc_runtime_api::runtime_decl_for_SyntheticProtocolApi::SyntheticProtocolApi;
 
 pub type PositionId = u64;
 pub type ModuleSyntheticProtocol = synthetic_protocol::Module<Runtime>;
@@ -471,4 +473,16 @@ pub fn margin_set_risk_threshold(
 pub fn treasury_balance() -> Balance {
 	let account_id = MockLaminarTreasury::account_id();
 	<Runtime as synthetic_protocol::Trait>::CollateralCurrency::free_balance(&account_id)
+}
+
+pub fn margin_trader_info(who: &AccountId) -> TraderInfo {
+	Runtime::trader_info(who.clone(), LIQUIDITY_POOL_ID_0)
+}
+
+pub fn margin_pool_info() -> Option<PoolInfo> {
+	<Runtime as MarginProtocolApi<Block, AccountId>>::pool_info(LIQUIDITY_POOL_ID_0)
+}
+
+pub fn synthetic_pool_info(currency_id: CurrencyId) -> Option<SyntheticProtocolPoolInfo> {
+	<Runtime as SyntheticProtocolApi<Block, AccountId>>::pool_info(LIQUIDITY_POOL_ID_0, currency_id)
 }

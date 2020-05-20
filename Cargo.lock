@@ -2088,6 +2088,7 @@ dependencies = [
  "laminar-runtime 0.1.0",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "margin-protocol-rpc 0.1.0",
+ "margin-protocol-rpc-runtime-api 0.1.0",
  "module-margin-liquidity-pools 0.1.0",
  "module-margin-protocol 0.1.0",
  "module-primitives 0.1.0",
@@ -2133,6 +2134,7 @@ dependencies = [
  "substrate-build-script-utils 2.0.0-alpha.8 (git+https://github.com/paritytech/substrate?tag=v2.0.0-alpha.8)",
  "substrate-frame-rpc-system 2.0.0-alpha.8 (git+https://github.com/paritytech/substrate?tag=v2.0.0-alpha.8)",
  "synthetic-protocol-rpc 0.1.0",
+ "synthetic-protocol-rpc-runtime-api 0.1.0",
 ]
 
 [[package]]
@@ -2175,6 +2177,7 @@ dependencies = [
  "orml-prices 0.1.0",
  "orml-tokens 0.1.0",
  "orml-traits 0.1.0",
+ "orml-utilities 0.1.0",
  "pallet-babe 2.0.0-alpha.8 (git+https://github.com/paritytech/substrate?tag=v2.0.0-alpha.8)",
  "pallet-balances 2.0.0-alpha.8 (git+https://github.com/paritytech/substrate?tag=v2.0.0-alpha.8)",
  "pallet-collective 2.0.0-alpha.8 (git+https://github.com/paritytech/substrate?tag=v2.0.0-alpha.8)",
@@ -2675,6 +2678,7 @@ dependencies = [
  "serde 1.0.105 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-api 2.0.0-alpha.8 (git+https://github.com/paritytech/substrate?tag=v2.0.0-alpha.8)",
  "sp-arithmetic 2.0.0-alpha.8 (git+https://github.com/paritytech/substrate?tag=v2.0.0-alpha.8)",
+ "sp-core 2.0.0-alpha.8 (git+https://github.com/paritytech/substrate?tag=v2.0.0-alpha.8)",
  "sp-std 2.0.0-alpha.8 (git+https://github.com/paritytech/substrate?tag=v2.0.0-alpha.8)",
 ]
 
@@ -6642,6 +6646,7 @@ dependencies = [
  "parity-scale-codec 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.105 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-api 2.0.0-alpha.8 (git+https://github.com/paritytech/substrate?tag=v2.0.0-alpha.8)",
+ "sp-core 2.0.0-alpha.8 (git+https://github.com/paritytech/substrate?tag=v2.0.0-alpha.8)",
  "sp-std 2.0.0-alpha.8 (git+https://github.com/paritytech/substrate?tag=v2.0.0-alpha.8)",
 ]
 
