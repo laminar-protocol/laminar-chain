@@ -40,6 +40,7 @@ use sp_version::RuntimeVersion;
 pub use frame_system::{self as system, Call as SystemCall};
 pub use module_primitives::{Balance, CurrencyId, LiquidityPoolId, Price};
 use orml_currencies::BasicCurrencyAdapter;
+pub use orml_oracle::AuthorityId as OracleId;
 use orml_traits::DataProvider;
 pub use sp_arithmetic::Fixed128;
 

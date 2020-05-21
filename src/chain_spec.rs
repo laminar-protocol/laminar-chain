@@ -5,9 +5,9 @@ use module_primitives::{AccumulateConfig, TradingPair};
 use runtime::{
 	opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, Block, BlockNumber, CurrencyId,
 	FinancialCouncilMembershipConfig, GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, IndicesConfig,
-	MarginLiquidityPoolsConfig, MarginProtocolConfig, OperatorMembershipConfig, SessionConfig, Signature, StakerStatus,
-	StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SystemConfig, TokensConfig, CENTS, DOLLARS, HOURS,
-	WASM_BINARY,
+	MarginLiquidityPoolsConfig, MarginProtocolConfig, OperatorMembershipConfig, OracleConfig, OracleId, SessionConfig,
+	Signature, StakerStatus, StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SystemConfig, TokensConfig,
+	CENTS, DOLLARS, HOURS, WASM_BINARY,
 };
 use sc_chain_spec::ChainSpecExtension;
 use sc_service;
