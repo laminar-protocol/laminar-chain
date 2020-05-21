@@ -308,7 +308,7 @@ fn should_get_swap() {
 		));
 		assert_eq!(
 			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_swap_rate(0, pair, true),
-			MaxSwap::get()
+			fixed_128_mul_signum(MaxSwap::get(), -1)
 		);
 		assert_eq!(
 			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_swap_rate(0, pair, false),
@@ -355,11 +355,11 @@ fn should_get_accumulated_swap() {
 		<ModuleLiquidityPools as OnInitialize<u64>>::on_initialize(1);
 		assert_eq!(
 			accumulated_rate(pair, true),
-			Fixed128::from_rational(-32, NonZeroI128::new(100).unwrap())
+			Fixed128::from_rational(-221, NonZeroI128::new(1000).unwrap())
 		);
 		assert_eq!(
 			accumulated_rate(pair, false),
-			Fixed128::from_rational(10, NonZeroI128::new(100).unwrap())
+			Fixed128::from_rational(199, NonZeroI128::new(1000).unwrap())
 		);
 	});
 }

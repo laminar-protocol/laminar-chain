@@ -12,7 +12,10 @@ use frame_support::{
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
 use orml_traits::MultiCurrency;
-use primitives::{AccumulateConfig, Balance, CurrencyId, Leverage, Leverages, LiquidityPoolId, TradingPair};
+use primitives::{
+	arithmetic::fixed_128_mul_signum, AccumulateConfig, Balance, CurrencyId, Leverage, Leverages, LiquidityPoolId,
+	TradingPair,
+};
 use sp_arithmetic::Fixed128;
 use sp_runtime::{traits::Saturating, DispatchResult, ModuleId, RuntimeDebug};
 use sp_std::{cmp::max, prelude::*};
@@ -147,8 +150,6 @@ decl_module! {
 		pub fn set_additional_swap(origin, #[compact] pool_id: LiquidityPoolId,  rate: Fixed128) {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
-
-			ensure!(rate.saturating_abs() <= T::MaxSwap::get(), Error::<T>::SwapRateTooHigh);
 
 			AdditionalSwapRate::insert(pool_id, rate);
 			Self::deposit_event(RawEvent::AdditionalSwapRateUpdated(who, pool_id, rate));
@@ -318,20 +319,25 @@ impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
 	fn get_swap_rate(pool_id: LiquidityPoolId, pair: TradingPair, is_long: bool) -> Fixed128 {
 		let max_swap = T::MaxSwap::get();
 		let swap_rate = Self::swap_rate(pair).unwrap_or_default();
-		let adjust_rate: Fixed128;
-		if is_long {
-			adjust_rate = swap_rate
-				.long
-				.saturating_sub(Self::additional_swap_rate(pool_id).unwrap_or_default());
-		} else {
-			adjust_rate = swap_rate
-				.short
-				.saturating_sub(Self::additional_swap_rate(pool_id).unwrap_or_default());
-		}
+		let additional_swap_rate = Self::additional_swap_rate(pool_id).unwrap_or_default();
+		let one = Fixed128::from_natural(1);
+		let adjust_rate = {
+			if is_long {
+				// swap_rate = long_rate * (1 + additional_swap_rate)
+				swap_rate.long.saturating_mul(one.saturating_add(additional_swap_rate))
+			} else {
+				// swap_rate = short_rate * (1 - additional_swap_rate)
+				swap_rate.short.saturating_mul(one.saturating_sub(additional_swap_rate))
+			}
+		};
 		if adjust_rate.saturating_abs() <= max_swap {
 			adjust_rate
 		} else {
-			max_swap
+			if adjust_rate.is_positive() {
+				max_swap
+			} else {
+				fixed_128_mul_signum(max_swap, -1)
+			}
 		}
 	}
 

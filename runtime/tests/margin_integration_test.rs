@@ -865,8 +865,8 @@ mod tests {
 				// close_price = 3 - 0.03 = 2.97
 				// profit = leveraged_held * (close_price - open_price)
 				// -300 = 5000 * (2.97 - 3.03)
-				// accumulated_swap_use_value = leveraged_held * (accumulated_swap_rate - open_accumulated_swap_rate) * price
-				// 304.515 = 5000 * (0.030301 - 0.01) * 3
+				// accumulated_swap_use_value = leveraged_debits * (accumulated_swap_rate - open_accumulated_swap_rate)
+				// 304.515 = 5000 * (0.030301 - 0.01) * 2.97
 				assert_eq!(
 					margin_balance(&ALICE::get()),
 					Fixed128::from_parts(4549969850000000000000)
@@ -907,7 +907,7 @@ mod tests {
 				assert_ok!(margin_enable_trading_pair(EUR_USD));
 				assert_ok!(margin_liquidity_pool_enable_trading_pair(EUR_USD));
 
-				// set_additional_swap, so long = -0.02%, short = 0%
+				// set_additional_swap, so long = -0.0101, short = 0.0099
 				assert_ok!(margin_set_additional_swap(one_percent()));
 				println!(
 					"long_rate = {:?}, short_rate = {:?}",
@@ -934,9 +934,12 @@ mod tests {
 				// profit = leveraged_held * (close_price - open_price)
 				// -300 = 5000 * (2.97 - 3.03)
 				// accumulated_swap_usd_value = leveraged_debits * (accumulated_swap_rate - open_accumulated_swap_rate)
-				// -303 = 5000 * 3.03 * -0.02
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(4397));
-				assert_eq!(margin_liquidity(), dollar(10603));
+				// -153.015 = 5000 * 3.03 * (-0.0101 - 0)
+				assert_eq!(
+					margin_balance(&ALICE::get()),
+					Fixed128::from_parts(4546_985000000000000000)
+				);
+				assert_eq!(margin_liquidity(), 10453_015000000000000000);
 
 				// ShortTen
 				assert_ok!(margin_open_position(
@@ -947,7 +950,10 @@ mod tests {
 					Price::from_rational(2, 1)
 				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(4397));
+				assert_eq!(
+					margin_balance(&ALICE::get()),
+					Fixed128::from_parts(4546_985000000000000000)
+				);
 
 				margin_execute_block(9..22);
 
@@ -957,10 +963,13 @@ mod tests {
 				// close_price = 3 - 0.03 = 2.97
 				// profit = leveraged_held * (close_price - open_price)
 				// -300 = 5000 * (2.97 - 3.03)
-				// accumulated_swap_usd_value = leveraged_held * (accumulated_swap_rate - open_accumulated_swap_rate) * price
-				// 0 = 5000 * 0 * 3
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(4097));
-				assert_eq!(margin_liquidity(), dollar(10903));
+				// accumulated_swap_usd_value = leveraged_debits * (accumulated_swap_rate - open_accumulated_swap_rate) * price
+				// 298.41075444015 = 5000 * 2.97 * (0.029995000299 - 0.0099)
+				assert_eq!(
+					margin_balance(&ALICE::get()),
+					Fixed128::from_parts(4545_395754440150000000)
+				);
+				assert_eq!(margin_liquidity(), 10454_604245559850000000);
 			});
 	}
 }
