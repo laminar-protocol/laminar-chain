@@ -40,7 +40,6 @@ use sp_version::RuntimeVersion;
 pub use frame_system::{self as system, Call as SystemCall};
 pub use module_primitives::{Balance, CurrencyId, LiquidityPoolId, Price};
 use orml_currencies::BasicCurrencyAdapter;
-use orml_oracle::OperatorProvider;
 use orml_traits::DataProvider;
 pub use sp_arithmetic::Fixed128;
 
@@ -274,8 +273,9 @@ impl pallet_sudo::Trait for Runtime {
 
 parameter_types! {
 	pub const SessionDuration: BlockNumber = EPOCH_DURATION_IN_SLOTS as _;
-	pub const StakingUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 2;
-	pub const MarginProtocolUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 2;
+	pub const StakingUnsignedPriority: TransactionPriority = TransactionPriority::max_value();
+	pub const OracleUnsignedPriority: TransactionPriority = TransactionPriority::max_value() - 1;
+	pub const MarginProtocolUnsignedPriority: TransactionPriority = TransactionPriority::max_value() - 2;
 }
 
 impl pallet_offences::Trait for Runtime {
@@ -336,30 +336,16 @@ impl pallet_membership::Trait<FinancialCouncilMembershipInstance> for Runtime {
 	type MembershipChanged = FinancialCouncil;
 }
 
-parameter_types! {
-	pub const OperatorCollectiveMotionDuration: BlockNumber = 1 * DAYS;
-	pub const OperatorCollectiveMaxProposals: u32 = 100;
-}
-
-type OperatorCollectiveInstance = pallet_collective::Instance3;
-impl pallet_collective::Trait<OperatorCollectiveInstance> for Runtime {
-	type Origin = Origin;
-	type Proposal = Call;
-	type Event = Event;
-	type MotionDuration = OperatorCollectiveMotionDuration;
-	type MaxProposals = OperatorCollectiveMaxProposals;
-}
-
 type OperatorMembershipInstance = pallet_membership::Instance3;
 impl pallet_membership::Trait<OperatorMembershipInstance> for Runtime {
 	type Event = Event;
-	type AddOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, OperatorCollectiveInstance>;
-	type RemoveOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, OperatorCollectiveInstance>;
-	type SwapOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, OperatorCollectiveInstance>;
-	type ResetOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, OperatorCollectiveInstance>;
-	type PrimeOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, OperatorCollectiveInstance>;
-	type MembershipInitialized = OperatorCollective;
-	type MembershipChanged = OperatorCollective;
+	type AddOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, GeneralCouncilInstance>;
+	type RemoveOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, GeneralCouncilInstance>;
+	type SwapOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, GeneralCouncilInstance>;
+	type ResetOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, GeneralCouncilInstance>;
+	type PrimeOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, GeneralCouncilInstance>;
+	type MembershipInitialized = Oracle;
+	type MembershipChanged = Oracle;
 }
 
 pub struct GeneralCouncilProvider;
@@ -499,17 +485,6 @@ impl pallet_staking::Trait for Runtime {
 	type UnsignedPriority = StakingUnsignedPriority;
 }
 
-pub struct OperatorCollectiveProvider;
-impl OperatorProvider<AccountId> for OperatorCollectiveProvider {
-	fn can_feed_data(who: &AccountId) -> bool {
-		OperatorCollective::is_member(who)
-	}
-
-	fn operators() -> Vec<AccountId> {
-		OperatorCollective::members()
-	}
-}
-
 parameter_types! {
 	pub const MinimumCount: u32 = 1;
 	pub const ExpiresIn: Moment = 1000 * 60 * 60 * 24 * 3; // 3 days
@@ -519,26 +494,21 @@ impl orml_oracle::Trait for Runtime {
 	type Event = Event;
 	type Call = Call;
 	type OnNewData = (); // TODO: update this
-	type OnRedundantCall = (); // TODO: update this
-	type OperatorProvider = OperatorCollectiveProvider;
 	type CombineData = orml_oracle::DefaultCombineData<Runtime, MinimumCount, ExpiresIn>;
 	type Time = Timestamp;
 	type OracleKey = CurrencyId;
 	type OracleValue = Price;
+	type UnsignedPriority = OracleUnsignedPriority;
+	type AuthorityId = orml_oracle::AuthorityId;
 }
 
 pub type TimeStampedPrice = orml_oracle::TimestampedValueOf<Runtime>;
-
-parameter_types! {
-	pub const TokenExistentialDeposit: Balance = 0;
-}
 
 impl orml_tokens::Trait for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
-	type ExistentialDeposit = TokenExistentialDeposit;
 	type DustRemoval = ();
 }
 
@@ -752,7 +722,6 @@ construct_runtime!(
 		GeneralCouncilMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
 		FinancialCouncil: pallet_collective::<Instance2>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		FinancialCouncilMembership: pallet_membership::<Instance2>::{Module, Call, Storage, Event<T>, Config<T>},
-		OperatorCollective: pallet_collective::<Instance3>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		OperatorMembership: pallet_membership::<Instance3>::{Module, Call, Storage, Event<T>, Config<T>},
 		Oracle: orml_oracle::{Module, Storage, Call, Event<T>},
 		Utility: pallet_utility::{Module, Call, Storage, Event<T>},

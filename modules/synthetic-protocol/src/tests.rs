@@ -1042,7 +1042,6 @@ fn mint_all_of_collateral() {
 			assert_ok!(mint_feur(ALICE, 1000));
 			assert_eq!(collateral_balance(ALICE), 0);
 			assert_eq!(synthetic_balance(ALICE), 990);
-			// Balance below ExistentialDeposit(100)
-			assert_eq!(mock_pool_liquidity(), 0);
+			assert_eq!(mock_pool_liquidity(), 20);
 		});
 }
