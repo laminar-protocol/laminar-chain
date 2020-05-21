@@ -79,16 +79,11 @@ pub type System = system::Module<Runtime>;
 
 type Amount = i128;
 
-parameter_types! {
-	pub const ExistentialDeposit: u128 = 100;
-}
-
 impl orml_tokens::Trait for Runtime {
 	type Event = TestEvent;
 	type Balance = Balance;
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
-	type ExistentialDeposit = ExistentialDeposit;
 	type DustRemoval = ();
 }
 
