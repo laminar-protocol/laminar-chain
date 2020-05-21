@@ -5,9 +5,9 @@ use module_primitives::{AccumulateConfig, TradingPair};
 use runtime::{
 	opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, Block, BlockNumber, CurrencyId,
 	FinancialCouncilMembershipConfig, GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, IndicesConfig,
-	MarginLiquidityPoolsConfig, MarginProtocolConfig, OperatorMembershipConfig, SessionConfig, Signature, StakerStatus,
-	StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SystemConfig, TokensConfig, CENTS, DOLLARS, HOURS,
-	WASM_BINARY,
+	MarginLiquidityPoolsConfig, MarginProtocolConfig, OperatorMembershipConfig, OracleConfig, OracleId, SessionConfig,
+	Signature, StakerStatus, StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SystemConfig, TokensConfig,
+	CENTS, DOLLARS, HOURS, WASM_BINARY,
 };
 use sc_chain_spec::ChainSpecExtension;
 use sc_service;
@@ -72,6 +72,13 @@ pub fn authority_keys_from_seed(seed: &str) -> (AccountId, AccountId, GrandpaId,
 	)
 }
 
+pub fn get_oracle_keys_from_seed(seed: &str) -> (AccountId, OracleId) {
+	(
+		get_account_id_from_seed::<sr25519::Public>(seed),
+		get_from_seed::<OracleId>(seed),
+	)
+}
+
 pub fn development_config() -> ChainSpec {
 	let mut properties = Map::new();
 	properties.insert("tokenSymbol".into(), "LAMI".into());
@@ -91,6 +98,7 @@ pub fn development_config() -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
 				],
+				vec![get_oracle_keys_from_seed("Alice")],
 			)
 		},
 		vec![],
@@ -128,6 +136,7 @@ pub fn local_testnet_config() -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
+				vec![get_oracle_keys_from_seed("Alice")],
 			)
 		},
 		vec![],
@@ -153,7 +162,7 @@ pub fn laminar_turbulence_latest_config() -> ChainSpec {
 		ChainType::Live,
 		// SECRET="..."
 		// ./target/debug/subkey inspect "$SECRET//laminar//root"
-		// ./target/debug/subkey --ed25519 inspect "$SECRET//laminar//oracle"
+		// ./target/debug/subkey --sr25519 inspect "$SECRET//laminar//oracle"
 		// ./target/debug/subkey --sr25519 inspect "$SECRET//laminar//1//validator"
 		// ./target/debug/subkey --sr25519 inspect "$SECRET//laminar//1//babe"
 		// ./target/debug/subkey --ed25519 inspect "$SECRET//laminar//1//grandpa"
@@ -196,6 +205,13 @@ pub fn laminar_turbulence_latest_config() -> ChainSpec {
 					// 5FrJvwPu7hGaEvD5josFPSxp3uVgQiDZRavEYUL76Wbn58Ss
 					hex!["a77ccfd77b70b2a6c52ed5d713ce1f8482d013a8727e64793101ab458adf2f96"].into(),
 				],
+				vec![
+					(
+						// 5FySxAHYXDzgDY8BTVnbZ6dygkXJwG27pKmgCLeSRSFEG2dy
+						hex!["acee87f3026e9ef8cf334fe94bc9eb9e9e689318611eca21e5aef919e3e5bc30"].into(),
+						hex!["54865b9eff8c291658e3fbda202f4260536618c31a0056372d121a5206010d53"].unchecked_into(),
+					)
+				]
 			)
 		},
 		vec![
@@ -247,6 +263,7 @@ fn dev_genesis(
 	initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId)>,
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
+	oracle_session_keys: Vec<(AccountId, OracleId)>,
 ) -> GenesisConfig {
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
@@ -387,6 +404,10 @@ fn dev_genesis(
 				),
 			],
 		}),
+		orml_oracle: Some(OracleConfig {
+			members: Default::default(), // initialized by OperatorMembership
+			session_keys: oracle_session_keys,
+		}),
 	}
 }
 
@@ -394,6 +415,7 @@ fn turbulence_genesis(
 	initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId)>,
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
+	oracle_session_keys: Vec<(AccountId, OracleId)>,
 ) -> GenesisConfig {
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
@@ -539,6 +561,10 @@ fn turbulence_genesis(
 					risk_threshold(60, 40),
 				),
 			],
+		}),
+		orml_oracle: Some(OracleConfig {
+			members: Default::default(), // initialized by OperatorMembership
+			session_keys: oracle_session_keys,
 		}),
 	}
 }
