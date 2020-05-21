@@ -8,6 +8,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+mod benchmarking;
 mod constants;
 pub mod tests;
 mod types;
@@ -357,6 +358,9 @@ impl Contains<AccountId> for GeneralCouncilProvider {
 	fn sorted_members() -> Vec<AccountId> {
 		GeneralCouncil::members()
 	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn add(_who: &AccountId) {}
 }
 
 impl ContainsLengthBound for GeneralCouncilProvider {
@@ -972,14 +976,15 @@ impl_runtime_apis! {
 			steps: Vec<u32>,
 			repeat: u32,
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-			use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark};
+			use frame_benchmarking::{Benchmarking, BenchmarkBatch};
+			use orml_benchmarking::add_benchmark;
 
 			let mut batches = Vec::<BenchmarkBatch>::new();
 			let params = (&pallet, &benchmark, &lowest_range_values, &highest_range_values, &steps, repeat);
 
 			//add_benchmark!(params, batches, b"base-liquidity-pools-margin", BaseLiquidityPoolsForMargin);
 			//add_benchmark!(params, batches, b"base-liquidity-pools-synthetic", BaseLiquidityPoolsForSynthetic);
-			//add_benchmark!(params, batches, b"margin-liquidity-pools", MarginLiquidityPools);
+			add_benchmark!(params, batches, b"margin-liquidity-pools", benchmarking::margin_liquidity_pools);
 			//add_benchmark!(params, batches, b"synthetic-liquidity-pools", SyntheticLiquidityPools);
 			//add_benchmark!(params, batches, b"margin-protocol", MarginProtocol);
 			//add_benchmark!(params, batches, b"synthetic-protocol", SyntheticProtocol);
