@@ -3495,6 +3495,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "orml-benchmarking"
+version = "0.1.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "linregress",
+ "parity-scale-codec",
+ "paste",
+ "sp-api",
+ "sp-io",
+ "sp-runtime",
+ "sp-runtime-interface",
+ "sp-std",
+]
+
+[[package]]
 name = "orml-currencies"
 version = "0.1.0"
 dependencies = [

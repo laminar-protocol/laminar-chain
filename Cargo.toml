@@ -91,23 +91,25 @@ runtime-benchmarks = [
 
 [workspace]
 members = [
-	"modules/primitives",
-	"modules/synthetic-tokens",
-	"modules/synthetic-protocol",
-	"modules/margin-protocol",
+	"inspect",
+	"runtime",
+
 	"modules/liquidity-pools/*",
+	"modules/margin-protocol",
+	"modules/primitives",
+	"modules/synthetic-protocol",
+	"modules/synthetic-tokens",
+
 	"orml/auction",
+	"orml/benchmarking",
 	"orml/currencies",
 	"orml/gradually-update",
 	"orml/oracle",
 	"orml/prices",
+	"orml/schedule-update",
 	"orml/tokens",
 	"orml/traits",
 	"orml/utilities",
 	"orml/vesting",
-	"runtime",
-	"inspect",
-	"orml/schedule-update",
-	"orml/gradually-update",
 ]
 exclude = [ "runtime/wasm" ]
