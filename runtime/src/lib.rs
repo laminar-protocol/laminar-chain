@@ -723,7 +723,7 @@ construct_runtime!(
 		FinancialCouncil: pallet_collective::<Instance2>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		FinancialCouncilMembership: pallet_membership::<Instance2>::{Module, Call, Storage, Event<T>, Config<T>},
 		OperatorMembership: pallet_membership::<Instance3>::{Module, Call, Storage, Event<T>, Config<T>},
-		Oracle: orml_oracle::{Module, Storage, Call, Event<T>},
+		Oracle: orml_oracle::{Module, Storage, Call, Config<T>, Event<T>},
 		Utility: pallet_utility::{Module, Call, Storage, Event<T>},
 		PalletTreasury: pallet_treasury::{Module, Call, Storage, Config, Event<T>},
 		Staking: pallet_staking::{Module, Call, Config<T>, Storage, Event<T>},
