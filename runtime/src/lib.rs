@@ -336,30 +336,16 @@ impl pallet_membership::Trait<FinancialCouncilMembershipInstance> for Runtime {
 	type MembershipChanged = FinancialCouncil;
 }
 
-parameter_types! {
-	pub const OperatorCollectiveMotionDuration: BlockNumber = 1 * DAYS;
-	pub const OperatorCollectiveMaxProposals: u32 = 100;
-}
-
-type OperatorCollectiveInstance = pallet_collective::Instance3;
-impl pallet_collective::Trait<OperatorCollectiveInstance> for Runtime {
-	type Origin = Origin;
-	type Proposal = Call;
-	type Event = Event;
-	type MotionDuration = OperatorCollectiveMotionDuration;
-	type MaxProposals = OperatorCollectiveMaxProposals;
-}
-
 type OperatorMembershipInstance = pallet_membership::Instance3;
 impl pallet_membership::Trait<OperatorMembershipInstance> for Runtime {
 	type Event = Event;
-	type AddOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, OperatorCollectiveInstance>;
-	type RemoveOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, OperatorCollectiveInstance>;
-	type SwapOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, OperatorCollectiveInstance>;
-	type ResetOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, OperatorCollectiveInstance>;
-	type PrimeOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, OperatorCollectiveInstance>;
-	type MembershipInitialized = OperatorCollective;
-	type MembershipChanged = OperatorCollective;
+	type AddOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, GeneralCouncilInstance>;
+	type RemoveOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, GeneralCouncilInstance>;
+	type SwapOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, GeneralCouncilInstance>;
+	type ResetOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, GeneralCouncilInstance>;
+	type PrimeOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, GeneralCouncilInstance>;
+	type MembershipInitialized = Oracle;
+	type MembershipChanged = Oracle;
 }
 
 pub struct GeneralCouncilProvider;
@@ -736,7 +722,6 @@ construct_runtime!(
 		GeneralCouncilMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
 		FinancialCouncil: pallet_collective::<Instance2>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		FinancialCouncilMembership: pallet_membership::<Instance2>::{Module, Call, Storage, Event<T>, Config<T>},
-		OperatorCollective: pallet_collective::<Instance3>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		OperatorMembership: pallet_membership::<Instance3>::{Module, Call, Storage, Event<T>, Config<T>},
 		Oracle: orml_oracle::{Module, Storage, Call, Event<T>},
 		Utility: pallet_utility::{Module, Call, Storage, Event<T>},

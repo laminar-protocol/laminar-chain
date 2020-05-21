@@ -106,13 +106,6 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		pallet_collective::GenesisConfig::<Runtime, pallet_collective::Instance3> {
-			members: OracleList::get(),
-			phantom: Default::default(),
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
-
 		margin_protocol::GenesisConfig {
 			risk_thresholds: vec![
 				(

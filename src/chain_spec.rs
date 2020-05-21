@@ -287,7 +287,6 @@ fn dev_genesis(
 			members: vec![root_key.clone()],
 			phantom: Default::default(),
 		}),
-		pallet_collective_Instance3: Some(Default::default()),
 		pallet_membership_Instance3: Some(OperatorMembershipConfig {
 			members: vec![root_key.clone()],
 			phantom: Default::default(),
@@ -439,7 +438,6 @@ fn turbulence_genesis(
 			members: vec![root_key.clone()],
 			phantom: Default::default(),
 		}),
-		pallet_collective_Instance3: Some(Default::default()),
 		pallet_membership_Instance3: Some(OperatorMembershipConfig {
 			members: endowed_accounts.clone(),
 			phantom: Default::default(),
