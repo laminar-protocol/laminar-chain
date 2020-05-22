@@ -316,7 +316,7 @@ mod steps {
 				})
 			})
 			.given_regex(
-				r"margin set min leveraged amount to (\$?[\W\d]+)",
+				r"margin set min leveraged amount to (\$?[\W\d_]+)",
 				|world, matches, _step| {
 					world.execute_with(|| {
 						let amount = parse_dollar(matches.get(1));
@@ -325,7 +325,7 @@ mod steps {
 				},
 			)
 			.given_regex(
-				r"margin set default min leveraged amount to (\$?[\W\d]+)",
+				r"margin set default min leveraged amount to (\$?[\W\d_]+)",
 				|world, matches, _step| {
 					world.execute_with(|| {
 						let amount = parse_dollar(matches.get(1));
@@ -489,7 +489,7 @@ mod steps {
 					}
 				})
 			})
-			.then_regex(r"margin liquidity is (\$?[\W\d]+)", |world, matches, _step| {
+			.then_regex(r"margin liquidity is (\$?[\W\d_]+)", |world, matches, _step| {
 				world.execute_with(|| {
 					let amount = parse_dollar(matches.get(1));
 					assert_eq!(margin_liquidity(), amount);
@@ -554,7 +554,7 @@ mod steps {
 					}
 				})
 			})
-			.then_regex(r"treasury balance is (\$?[\W\d]+)", |world, matches, _step| {
+			.then_regex(r"treasury balance is (\$?[\W\d_]+)", |world, matches, _step| {
 				world.execute_with(|| {
 					let amount = parse_dollar(matches.get(1));
 					assert_eq!(treasury_balance(), amount);
@@ -597,7 +597,7 @@ mod steps {
 				})
 			})
 			.given_regex(
-				r"synthetic set min additional collateral ratio to (\$?[\W\d]+)",
+				r"synthetic set min additional collateral ratio to (\$?[\W\d_]+)",
 				|world, matches, _step| {
 					world.execute_with(|| {
 						let ratio = parse_permill(matches.get(1));
@@ -691,13 +691,13 @@ mod steps {
 					}
 				})
 			})
-			.then_regex(r"synthetic module balance is (\$?[\W\d]+)", |world, matches, _step| {
+			.then_regex(r"synthetic module balance is (\$?[\W\d_]+)", |world, matches, _step| {
 				world.execute_with(|| {
 					let amount = parse_dollar(matches.get(1));
 					assert_eq!(synthetic_balance(), amount);
 				})
 			})
-			.then_regex(r"synthetic liquidity is (\$?[\W\d]+)", |world, matches, _step| {
+			.then_regex(r"synthetic liquidity is (\$?[\W\d_]+)", |world, matches, _step| {
 				world.execute_with(|| {
 					let amount = parse_dollar(matches.get(1));
 					assert_eq!(synthetic_liquidity(), amount);

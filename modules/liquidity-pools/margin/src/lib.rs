@@ -395,20 +395,9 @@ impl<T: Trait> Module<T> {
 			let short_rate = Self::get_swap_rate(pool_id, pair, false);
 
 			let mut accumulated = Self::accumulated_swap_rate(pool_id, pair);
-			let one = Fixed128::from_natural(1);
-			// acc_long_rate = 1 - ((accumulated - 1) * (-1 + rate))
-			accumulated.long = one.saturating_sub(
-				accumulated
-					.long
-					.saturating_sub(one)
-					.saturating_mul(long_rate.saturating_sub(one)),
-			);
-			// acc_short_rate = (accumulated + 1) * (1 + rate) - 1
-			accumulated.short = accumulated
-				.short
-				.saturating_add(one)
-				.saturating_mul(one.saturating_add(short_rate))
-				.saturating_sub(one);
+			accumulated.long = accumulated.long.saturating_add(long_rate);
+			accumulated.short = accumulated.short.saturating_add(short_rate);
+
 			AccumulatedSwapRates::insert(pool_id, pair, accumulated.clone());
 			Self::deposit_event(RawEvent::AccumulatedSwapRateUpdated(pool_id, pair, accumulated))
 		}

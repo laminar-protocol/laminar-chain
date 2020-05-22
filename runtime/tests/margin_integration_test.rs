@@ -854,7 +854,7 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(
 					margin_balance(&ALICE::get()),
-					Fixed128::from_parts(4548500000000000000000)
+					Fixed128::from_parts(4548_500000000000000000)
 				);
 
 				margin_execute_block(9..22);
@@ -869,11 +869,11 @@ mod tests {
 				// 304.515 = 5000 * (0.030301 - 0.01) * 3
 				assert_eq!(
 					margin_balance(&ALICE::get()),
-					Fixed128::from_parts(4549969850000000000000)
+					Fixed128::from_parts(4545_500000000000000000)
 				);
-				assert_eq!(margin_liquidity(), 10450030150000000000000);
-				assert_ok!(margin_withdraw(&ALICE::get(), 4549969850000000000000));
-				assert_eq!(collateral_balance(&ALICE::get()), 9549969850000000000000);
+				assert_eq!(margin_liquidity(), 10454_500000000000000000);
+				assert_ok!(margin_withdraw(&ALICE::get(), 4545_500000000000000000));
+				assert_eq!(collateral_balance(&ALICE::get()), 9545_500000000000000000);
 			});
 	}
 
