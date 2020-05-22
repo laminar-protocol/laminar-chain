@@ -497,8 +497,7 @@ parameter_types! {
 
 impl orml_oracle::Trait for Runtime {
 	type Event = Event;
-	type Call = Call;
-	type OnNewData = (); // TODO: update this
+	type OnNewData = ();
 	type CombineData = orml_oracle::DefaultCombineData<Runtime, MinimumCount, ExpiresIn>;
 	type Time = Timestamp;
 	type OracleKey = CurrencyId;
@@ -652,7 +651,6 @@ where
 			frame_system::CheckEra::<Runtime>::from(generic::Era::mortal(period, current_block)),
 			frame_system::CheckNonce::<Runtime>::from(nonce),
 			frame_system::CheckWeight::<Runtime>::new(),
-			orml_oracle::CheckOperator::<Runtime>::new(),
 			pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
 			pallet_grandpa::ValidateEquivocationReport::<Runtime>::new(),
 		);
@@ -727,8 +725,9 @@ construct_runtime!(
 		GeneralCouncilMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
 		FinancialCouncil: pallet_collective::<Instance2>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		FinancialCouncilMembership: pallet_membership::<Instance2>::{Module, Call, Storage, Event<T>, Config<T>},
+		Oracle: orml_oracle::{Module, Storage, Call, Config<T>, Event<T>, ValidateUnsigned},
+		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
 		OperatorMembership: pallet_membership::<Instance3>::{Module, Call, Storage, Event<T>, Config<T>},
-		Oracle: orml_oracle::{Module, Storage, Call, Config<T>, Event<T>},
 		Utility: pallet_utility::{Module, Call, Storage, Event<T>},
 		PalletTreasury: pallet_treasury::{Module, Call, Storage, Config, Event<T>},
 		Staking: pallet_staking::{Module, Call, Config<T>, Storage, Event<T>},
@@ -737,7 +736,7 @@ construct_runtime!(
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		SyntheticTokens: synthetic_tokens::{Module, Storage, Call, Event},
 		SyntheticProtocol: synthetic_protocol::{Module, Call, Event<T>},
-		MarginProtocol: margin_protocol::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned },
+		MarginProtocol: margin_protocol::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
 		BaseLiquidityPoolsForMargin: base_liquidity_pools::<Instance1>::{Module, Storage, Call, Event<T>},
 		MarginLiquidityPools: margin_liquidity_pools::{Module, Storage, Call, Event<T>, Config<T>},
 		BaseLiquidityPoolsForSynthetic: base_liquidity_pools::<Instance2>::{Module, Storage, Call, Event<T>},
@@ -763,7 +762,6 @@ pub type SignedExtra = (
 	system::CheckEra<Runtime>,
 	system::CheckNonce<Runtime>,
 	system::CheckWeight<Runtime>,
-	orml_oracle::CheckOperator<Runtime>,
 	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 	pallet_grandpa::ValidateEquivocationReport<Runtime>,
 );
