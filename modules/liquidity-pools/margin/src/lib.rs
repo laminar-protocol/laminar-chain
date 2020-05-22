@@ -324,9 +324,6 @@ impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
 		let swap_rate = if is_long { swap_rate.long } else { swap_rate.short };
 		// adjust_swap = swap - abs(swap) * additional_swap_rate
 		let adjust_swap = swap_rate.saturating_sub(swap_rate.saturating_abs().saturating_mul(additional_swap_rate));
-		//if additional_swap_rate > Fixed128::zero() {
-		//panic!("{:?}, {:?}, {:?}, {:?}", adjust_swap, swap_rate, swap_rate.saturating_abs(), swap_rate.saturating_abs().saturating_mul(additional_swap_rate));
-		//}
 
 		if adjust_swap.saturating_abs() <= max_swap {
 			adjust_swap
