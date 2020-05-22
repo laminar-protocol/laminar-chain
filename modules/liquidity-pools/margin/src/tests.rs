@@ -352,14 +352,22 @@ fn should_get_accumulated_swap() {
 			0,
 			rate
 		));
-		<ModuleLiquidityPools as OnInitialize<u64>>::on_initialize(1);
 		assert_eq!(
 			accumulated_rate(pair, true),
-			Fixed128::from_rational(-221, NonZeroI128::new(1000).unwrap())
+			Fixed128::from_rational(-1, NonZeroI128::new(10).unwrap())
 		);
 		assert_eq!(
 			accumulated_rate(pair, false),
-			Fixed128::from_rational(199, NonZeroI128::new(1000).unwrap())
+			Fixed128::from_rational(1, NonZeroI128::new(10).unwrap())
+		);
+		<ModuleLiquidityPools as OnInitialize<u64>>::on_initialize(1);
+		assert_eq!(
+			accumulated_rate(pair, true),
+			Fixed128::from_rational(-21, NonZeroI128::new(100).unwrap())
+		);
+		assert_eq!(
+			accumulated_rate(pair, false),
+			Fixed128::from_rational(19, NonZeroI128::new(100).unwrap())
 		);
 	});
 }
@@ -443,20 +451,20 @@ fn should_update_accumulated_rate() {
 		assert_eq!(accumulated_rate(pair, false), short_acc);
 
 		<ModuleLiquidityPools as OnInitialize<u64>>::on_initialize(2);
-		let long_acc = Fixed128::from_rational(-46529, NonZeroI128::new(1000000).unwrap()); // -4.6529%
-		let short_acc = Fixed128::from_rational(46529, NonZeroI128::new(1000000).unwrap()); // 4.6529%
+		let long_acc = Fixed128::from_rational(-46, NonZeroI128::new(1000).unwrap()); // -4.6%
+		let short_acc = Fixed128::from_rational(46, NonZeroI128::new(1000).unwrap()); // 4.6%
 		assert_eq!(accumulated_rate(pair, true), long_acc);
 		assert_eq!(accumulated_rate(pair, false), short_acc);
 
 		<ModuleLiquidityPools as OnInitialize<u64>>::on_initialize(3);
-		let long_acc = Fixed128::from_rational(-70599167i128, NonZeroI128::new(1000000000).unwrap()); // -7.0599%
-		let short_acc = Fixed128::from_rational(70599167i128, NonZeroI128::new(1000000000).unwrap()); // 7.0599%
+		let long_acc = Fixed128::from_rational(-69, NonZeroI128::new(1000).unwrap()); // -6.9%
+		let short_acc = Fixed128::from_rational(69, NonZeroI128::new(1000).unwrap()); // 6.9%
 		assert_eq!(accumulated_rate(pair, true), long_acc);
 		assert_eq!(accumulated_rate(pair, false), short_acc);
 
 		<ModuleLiquidityPools as OnInitialize<u64>>::on_initialize(4);
-		let long_acc = Fixed128::from_rational(-95222947841i128, NonZeroI128::new(1000000000000).unwrap()); // -9.5223%
-		let short_acc = Fixed128::from_rational(95222947841i128, NonZeroI128::new(1000000000000).unwrap()); // 9.5223%
+		let long_acc = Fixed128::from_rational(-92, NonZeroI128::new(1000).unwrap()); // 9.2%
+		let short_acc = Fixed128::from_rational(92, NonZeroI128::new(1000).unwrap()); // 9.2%
 		assert_eq!(accumulated_rate(pair, true), long_acc);
 		assert_eq!(accumulated_rate(pair, false), short_acc);
 	});

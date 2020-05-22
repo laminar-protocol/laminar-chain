@@ -2388,6 +2388,7 @@ dependencies = [
  "module-synthetic-protocol",
  "module-synthetic-tokens",
  "module-traits",
+ "orml-benchmarking",
  "orml-currencies",
  "orml-oracle",
  "orml-oracle-rpc-runtime-api",
@@ -3495,6 +3496,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "orml-benchmarking"
+version = "0.1.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "linregress",
+ "parity-scale-codec",
+ "paste",
+ "sp-api",
+ "sp-io",
+ "sp-runtime",
+ "sp-runtime-interface",
+ "sp-std",
+]
+
+[[package]]
 name = "orml-currencies"
 version = "0.1.0"
 dependencies = [
@@ -3735,6 +3753,7 @@ version = "2.0.0-alpha.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f596a5208d11de9629d8528b180472ef8a6e023b69aed7a1cd1b422804d885d5"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",

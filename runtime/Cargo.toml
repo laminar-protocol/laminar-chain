@@ -53,6 +53,7 @@ orml-prices = { path = "../orml/prices", default-features = false }
 orml-tokens = { path = "../orml/tokens", default-features = false }
 orml-traits = { path = "../orml/traits", default-features = false }
 orml-utilities = { path = "../orml/utilities", default-features = false }
+orml-benchmarking = { path = "../orml/benchmarking", default-features = false }
 
 synthetic-tokens = { package = "module-synthetic-tokens", path = "../modules/synthetic-tokens", default-features = false }
 synthetic-protocol = { package = "module-synthetic-protocol", path = "../modules/synthetic-protocol", default-features = false }
@@ -85,6 +86,7 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 	"frame-system-rpc-runtime-api/std",
+	"frame-benchmarking/std",
 	"pallet-babe/std",
 	"pallet-balances/std",
 	"pallet-collective/std",
@@ -116,6 +118,7 @@ std = [
 	"orml-tokens/std",
 	"orml-traits/std",
 	"orml-utilities/std",
+	"orml-benchmarking/std",
 
 	"margin-liquidity-pools/std",
 	"synthetic-liquidity-pools/std",
@@ -129,5 +132,9 @@ std = [
 ]
 
 runtime-benchmarks = [
-    "frame-benchmarking",
+	"sp-runtime/runtime-benchmarks",
+	"frame-benchmarking",
+	"frame-system/runtime-benchmarks",
+	"frame-support/runtime-benchmarks",
+	"pallet-collective/runtime-benchmarks",
 ]

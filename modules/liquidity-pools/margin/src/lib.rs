@@ -320,20 +320,18 @@ impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
 		let max_swap = T::MaxSwap::get();
 		let swap_rate = Self::swap_rate(pair).unwrap_or_default();
 		let additional_swap_rate = Self::additional_swap_rate(pool_id).unwrap_or_default();
-		let one = Fixed128::from_natural(1);
-		let adjust_rate = {
-			if is_long {
-				// swap_rate = long_rate * (1 + additional_swap_rate)
-				swap_rate.long.saturating_mul(one.saturating_add(additional_swap_rate))
-			} else {
-				// swap_rate = short_rate * (1 - additional_swap_rate)
-				swap_rate.short.saturating_mul(one.saturating_sub(additional_swap_rate))
-			}
-		};
-		if adjust_rate.saturating_abs() <= max_swap {
-			adjust_rate
+
+		let swap_rate = if is_long { swap_rate.long } else { swap_rate.short };
+		// adjust_swap = swap - abs(swap) * additional_swap_rate
+		let adjust_swap = swap_rate.saturating_sub(swap_rate.saturating_abs().saturating_mul(additional_swap_rate));
+		//if additional_swap_rate > Fixed128::zero() {
+		//panic!("{:?}, {:?}, {:?}, {:?}", adjust_swap, swap_rate, swap_rate.saturating_abs(), swap_rate.saturating_abs().saturating_mul(additional_swap_rate));
+		//}
+
+		if adjust_swap.saturating_abs() <= max_swap {
+			adjust_swap
 		} else {
-			if adjust_rate.is_positive() {
+			if adjust_swap.is_positive() {
 				max_swap
 			} else {
 				fixed_128_mul_signum(max_swap, -1)
@@ -401,20 +399,9 @@ impl<T: Trait> Module<T> {
 			let short_rate = Self::get_swap_rate(pool_id, pair, false);
 
 			let mut accumulated = Self::accumulated_swap_rate(pool_id, pair);
-			let one = Fixed128::from_natural(1);
-			// acc_long_rate = 1 - ((accumulated - 1) * (-1 + rate))
-			accumulated.long = one.saturating_sub(
-				accumulated
-					.long
-					.saturating_sub(one)
-					.saturating_mul(long_rate.saturating_sub(one)),
-			);
-			// acc_short_rate = (accumulated + 1) * (1 + rate) - 1
-			accumulated.short = accumulated
-				.short
-				.saturating_add(one)
-				.saturating_mul(one.saturating_add(short_rate))
-				.saturating_sub(one);
+			accumulated.long = accumulated.long.saturating_add(long_rate);
+			accumulated.short = accumulated.short.saturating_add(short_rate);
+
 			AccumulatedSwapRates::insert(pool_id, pair, accumulated.clone());
 			Self::deposit_event(RawEvent::AccumulatedSwapRateUpdated(pool_id, pair, accumulated))
 		}

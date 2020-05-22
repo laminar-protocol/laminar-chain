@@ -854,7 +854,7 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(
 					margin_balance(&ALICE::get()),
-					Fixed128::from_parts(4548500000000000000000)
+					Fixed128::from_parts(4548_500000000000000000)
 				);
 
 				margin_execute_block(9..22);
@@ -865,15 +865,15 @@ mod tests {
 				// close_price = 3 - 0.03 = 2.97
 				// profit = leveraged_held * (close_price - open_price)
 				// -300 = 5000 * (2.97 - 3.03)
-				// accumulated_swap_use_value = leveraged_debits * (accumulated_swap_rate - open_accumulated_swap_rate)
-				// 304.515 = 5000 * (0.030301 - 0.01) * 2.97
+				// accumulated_swap_usd_value = leveraged_debits * (accumulated_swap_rate - open_accumulated_swap_rate)
+				// 304.515 = 5000 * 2.97 * (0.03 - 0.01)
 				assert_eq!(
 					margin_balance(&ALICE::get()),
-					Fixed128::from_parts(4549969850000000000000)
+					Fixed128::from_parts(4545_500000000000000000)
 				);
-				assert_eq!(margin_liquidity(), 10450030150000000000000);
-				assert_ok!(margin_withdraw(&ALICE::get(), 4549969850000000000000));
-				assert_eq!(collateral_balance(&ALICE::get()), 9549969850000000000000);
+				assert_eq!(margin_liquidity(), 10454_500000000000000000);
+				assert_ok!(margin_withdraw(&ALICE::get(), 4545_500000000000000000));
+				assert_eq!(collateral_balance(&ALICE::get()), 9545_500000000000000000);
 			});
 	}
 
@@ -963,13 +963,13 @@ mod tests {
 				// close_price = 3 - 0.03 = 2.97
 				// profit = leveraged_held * (close_price - open_price)
 				// -300 = 5000 * (2.97 - 3.03)
-				// accumulated_swap_usd_value = leveraged_debits * (accumulated_swap_rate - open_accumulated_swap_rate) * price
-				// 298.41075444015 = 5000 * 2.97 * (0.029995000299 - 0.0099)
+				// accumulated_swap_usd_value = leveraged_debits * (accumulated_swap_rate - open_accumulated_swap_rate)
+				// 294.03 = 5000 * 2.97 * (0.0297 - 0.0099)
 				assert_eq!(
 					margin_balance(&ALICE::get()),
-					Fixed128::from_parts(4545_395754440150000000)
+					Fixed128::from_parts(4541_015000000000000000)
 				);
-				assert_eq!(margin_liquidity(), 10454_604245559850000000);
+				assert_eq!(margin_liquidity(), 10458_985000000000000000);
 			});
 	}
 }
