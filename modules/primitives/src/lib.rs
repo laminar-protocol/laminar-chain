@@ -25,6 +25,11 @@ pub enum CurrencyId {
 	FJPY,
 	FBTC,
 	FETH,
+	FAUD,
+	FCAD,
+	FCHF,
+	FXAU,
+	FOIL,
 }
 
 pub type Balance = u128;

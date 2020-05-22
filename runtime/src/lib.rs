@@ -98,7 +98,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("laminar"),
 	impl_name: create_runtime_str!("laminar"),
 	authoring_version: 1,
-	spec_version: 101,
+	spec_version: 102,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -521,10 +521,15 @@ parameter_types! {
 	pub const SyntheticCurrencyIds: Vec<CurrencyId> = vec![
 		CurrencyId::FEUR,
 		CurrencyId::FJPY,
+		CurrencyId::FAUD,
+		CurrencyId::FCAD,
+		CurrencyId::FCHF,
+		CurrencyId::FXAU,
+		CurrencyId::FOIL,
 		CurrencyId::FBTC,
 		CurrencyId::FETH,
 	];
-	pub const DefaultExtremeRatio: Permill = Permill::from_percent(2);
+	pub const DefaultExtremeRatio: Permill = Permill::from_percent(1);
 	pub const DefaultLiquidationRatio: Permill = Permill::from_percent(5);
 	pub const DefaultCollateralRatio: Permill = Permill::from_percent(10);
 }
@@ -734,7 +739,7 @@ construct_runtime!(
 		Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
-		SyntheticTokens: synthetic_tokens::{Module, Storage, Call, Event},
+		SyntheticTokens: synthetic_tokens::{Module, Storage, Call, Event, Config},
 		SyntheticProtocol: synthetic_protocol::{Module, Call, Event<T>},
 		MarginProtocol: margin_protocol::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
 		BaseLiquidityPoolsForMargin: base_liquidity_pools::<Instance1>::{Module, Storage, Call, Event<T>},

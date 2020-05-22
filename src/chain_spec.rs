@@ -6,8 +6,8 @@ use runtime::{
 	opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, Block, BlockNumber, CurrencyId,
 	FinancialCouncilMembershipConfig, GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, IndicesConfig,
 	MarginLiquidityPoolsConfig, MarginProtocolConfig, OperatorMembershipConfig, OracleConfig, OracleId, SessionConfig,
-	Signature, StakerStatus, StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SystemConfig, TokensConfig,
-	CENTS, DOLLARS, HOURS, WASM_BINARY,
+	Signature, StakerStatus, StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SyntheticTokensConfig,
+	SystemConfig, TokensConfig, CENTS, DOLLARS, HOURS, WASM_BINARY,
 };
 use sc_chain_spec::ChainSpecExtension;
 use sc_service;
@@ -202,13 +202,13 @@ pub fn laminar_turbulence_latest_config() -> ChainSpec {
 				vec![
 					// 5FySxAHYXDzgDY8BTVnbZ6dygkXJwG27pKmgCLeSRSFEG2dy
 					hex!["acee87f3026e9ef8cf334fe94bc9eb9e9e689318611eca21e5aef919e3e5bc30"].into(),
-					// 5FrJvwPu7hGaEvD5josFPSxp3uVgQiDZRavEYUL76Wbn58Ss
-					hex!["a77ccfd77b70b2a6c52ed5d713ce1f8482d013a8727e64793101ab458adf2f96"].into(),
+					// 5DyXntuH5dBcf2dpjTojzfV6GDypx8CyTuVFm84qB7a4BkYT
+					hex!["54865b9eff8c291658e3fbda202f4260536618c31a0056372d121a5206010d53"].into(),
 				],
 				vec![
 					(
-						// 5FySxAHYXDzgDY8BTVnbZ6dygkXJwG27pKmgCLeSRSFEG2dy
-						hex!["acee87f3026e9ef8cf334fe94bc9eb9e9e689318611eca21e5aef919e3e5bc30"].into(),
+						// 5DyXntuH5dBcf2dpjTojzfV6GDypx8CyTuVFm84qB7a4BkYT
+						hex!["54865b9eff8c291658e3fbda202f4260536618c31a0056372d121a5206010d53"].into(),
 						hex!["54865b9eff8c291658e3fbda202f4260536618c31a0056372d121a5206010d53"].unchecked_into(),
 					)
 				]
@@ -235,6 +235,26 @@ const EUR_USD: TradingPair = TradingPair {
 const USD_JPY: TradingPair = TradingPair {
 	base: CurrencyId::AUSD,
 	quote: CurrencyId::FJPY,
+};
+const AUD_USD: TradingPair = TradingPair {
+	base: CurrencyId::FAUD,
+	quote: CurrencyId::AUSD,
+};
+const USD_CAD: TradingPair = TradingPair {
+	base: CurrencyId::AUSD,
+	quote: CurrencyId::FCAD,
+};
+const USD_CHF: TradingPair = TradingPair {
+	base: CurrencyId::AUSD,
+	quote: CurrencyId::FCHF,
+};
+const XAU_USD: TradingPair = TradingPair {
+	base: CurrencyId::FXAU,
+	quote: CurrencyId::AUSD,
+};
+const USD_OIL: TradingPair = TradingPair {
+	base: CurrencyId::AUSD,
+	quote: CurrencyId::FOIL,
 };
 const BTC_USD: TradingPair = TradingPair {
 	base: CurrencyId::FBTC,
@@ -318,9 +338,25 @@ fn dev_genesis(
 		synthetic_liquidity_pools: Some(SyntheticLiquidityPoolsConfig {
 			min_additional_collateral_ratio: Permill::from_percent(10), // default min additional collateral ratio
 		}),
-		// TODO: update chain spec
+		synthetic_tokens: Some(SyntheticTokensConfig {
+			extreme_ratio: vec![
+				(CurrencyId::FOIL, Permill::from_percent(5)),
+				(CurrencyId::FBTC, Permill::from_percent(5)),
+				(CurrencyId::FETH, Permill::from_percent(5)),
+			],
+			liquidation_ratio: vec![
+				(CurrencyId::FOIL, Permill::from_percent(10)),
+				(CurrencyId::FBTC, Permill::from_percent(10)),
+				(CurrencyId::FETH, Permill::from_percent(10)),
+			],
+			collateral_ratio: vec![
+				(CurrencyId::FOIL, Permill::from_percent(50)),
+				(CurrencyId::FBTC, Permill::from_percent(50)),
+				(CurrencyId::FETH, Permill::from_percent(50)),
+			],
+		}),
 		margin_liquidity_pools: Some(MarginLiquidityPoolsConfig {
-			default_min_leveraged_amount: 1000,
+			default_min_leveraged_amount: 1 * DOLLARS,
 			margin_liquidity_config: vec![
 				(
 					// TradingPair
@@ -328,50 +364,115 @@ fn dev_genesis(
 					// MaxSpread
 					1 * CENTS,
 					// Accumulates
-					accumulate_config(100, 10),
+					accumulate_config(100, 0),
 					// SwapRates
 					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
+						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
 					},
 				),
 				(
 					// TradingPair
 					USD_JPY,
 					// MaxSpread
-					1 * DOLLARS,
+					1 * CENTS,
 					// Accumulates
-					accumulate_config(100, 20),
+					accumulate_config(100, 0),
 					// SwapRates
 					SwapRate {
-						long: Fixed128::from_rational(-1, NonZeroI128::new(1000).unwrap()),
-						short: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
+						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
+					},
+				),
+				(
+					// TradingPair
+					AUD_USD,
+					// MaxSpread
+					1 * CENTS,
+					// Accumulates
+					accumulate_config(100, 0),
+					// SwapRates
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
+					},
+				),
+				(
+					// TradingPair
+					USD_CAD,
+					// MaxSpread
+					1 * CENTS,
+					// Accumulates
+					accumulate_config(100, 0),
+					// SwapRates
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
+					},
+				),
+				(
+					// TradingPair
+					USD_CHF,
+					// MaxSpread
+					1 * CENTS,
+					// Accumulates
+					accumulate_config(100, 0),
+					// SwapRates
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
+					},
+				),
+				(
+					// TradingPair
+					XAU_USD,
+					// MaxSpread
+					1 * CENTS,
+					// Accumulates
+					accumulate_config(100, 0),
+					// SwapRates
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
+					},
+				),
+				(
+					// TradingPair
+					USD_OIL,
+					// MaxSpread
+					1 * CENTS,
+					// Accumulates
+					accumulate_config(100, 0),
+					// SwapRates
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
 					},
 				),
 				(
 					// TradingPair
 					BTC_USD,
 					// MaxSpread
-					100 * DOLLARS,
+					20 * DOLLARS,
 					// Accumulates
-					accumulate_config(100, 30),
+					accumulate_config(80, 0),
 					// SwapRates
 					SwapRate {
 						long: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
-						short: Fixed128::from_rational(2, NonZeroI128::new(1000).unwrap()),
+						short: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
 					},
 				),
 				(
 					// TradingPair
 					ETH_USD,
 					// MaxSpread
-					20 * DOLLARS,
+					1 * DOLLARS,
 					// Accumulates
-					accumulate_config(100, 30),
+					accumulate_config(80, 0),
 					// SwapRates
 					SwapRate {
 						long: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
-						short: Fixed128::from_rational(2, NonZeroI128::new(1000).unwrap()),
+						short: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
 					},
 				),
 			],
@@ -380,27 +481,60 @@ fn dev_genesis(
 			risk_thresholds: vec![
 				(
 					EUR_USD,
-					risk_threshold(3, 1),
-					risk_threshold(30, 10),
-					risk_threshold(30, 10),
+					// TraderRiskThreshold
+					risk_threshold(7, 4),
+					// LiquidityPoolENPThreshold
+					risk_threshold(60, 30),
+					// LiquidityPoolELLThreshold
+					risk_threshold(20, 5),
 				),
 				(
 					USD_JPY,
-					risk_threshold(3, 1),
-					risk_threshold(30, 10),
-					risk_threshold(30, 10),
+					risk_threshold(7, 4),
+					risk_threshold(60, 30),
+					risk_threshold(20, 5),
+				),
+				(
+					AUD_USD,
+					risk_threshold(7, 4),
+					risk_threshold(60, 30),
+					risk_threshold(20, 5),
+				),
+				(
+					USD_CAD,
+					risk_threshold(7, 4),
+					risk_threshold(60, 30),
+					risk_threshold(20, 5),
+				),
+				(
+					USD_CHF,
+					risk_threshold(7, 4),
+					risk_threshold(60, 30),
+					risk_threshold(20, 5),
+				),
+				(
+					XAU_USD,
+					risk_threshold(7, 4),
+					risk_threshold(60, 30),
+					risk_threshold(20, 5),
+				),
+				(
+					USD_OIL,
+					risk_threshold(7, 4),
+					risk_threshold(60, 30),
+					risk_threshold(20, 5),
 				),
 				(
 					BTC_USD,
-					risk_threshold(3, 1),
-					risk_threshold(30, 10),
-					risk_threshold(30, 10),
+					risk_threshold(15, 7),
+					risk_threshold(80, 40),
+					risk_threshold(40, 12),
 				),
 				(
 					ETH_USD,
-					risk_threshold(3, 1),
-					risk_threshold(30, 10),
-					risk_threshold(30, 10),
+					risk_threshold(15, 7),
+					risk_threshold(80, 40),
+					risk_threshold(40, 12),
 				),
 			],
 		}),
@@ -474,6 +608,23 @@ fn turbulence_genesis(
 		synthetic_liquidity_pools: Some(SyntheticLiquidityPoolsConfig {
 			min_additional_collateral_ratio: Permill::from_percent(10), // default min additional collateral ratio
 		}),
+		synthetic_tokens: Some(SyntheticTokensConfig {
+			extreme_ratio: vec![
+				(CurrencyId::FOIL, Permill::from_percent(5)),
+				(CurrencyId::FBTC, Permill::from_percent(5)),
+				(CurrencyId::FETH, Permill::from_percent(5)),
+			],
+			liquidation_ratio: vec![
+				(CurrencyId::FOIL, Permill::from_percent(10)),
+				(CurrencyId::FBTC, Permill::from_percent(10)),
+				(CurrencyId::FETH, Permill::from_percent(10)),
+			],
+			collateral_ratio: vec![
+				(CurrencyId::FOIL, Permill::from_percent(50)),
+				(CurrencyId::FBTC, Permill::from_percent(50)),
+				(CurrencyId::FETH, Permill::from_percent(50)),
+			],
+		}),
 		margin_liquidity_pools: Some(MarginLiquidityPoolsConfig {
 			default_min_leveraged_amount: 1 * DOLLARS,
 			margin_liquidity_config: vec![
@@ -486,39 +637,91 @@ fn turbulence_genesis(
 					accumulate_config(24 * HOURS, 0),
 					// SwapRates
 					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(100).unwrap()),
+						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
 					},
 				),
 				(
 					// TradingPair
 					USD_JPY,
 					// MaxSpread
-					1 * DOLLARS,
+					1 * CENTS,
 					// Accumulates
 					accumulate_config(24 * HOURS, 0),
 					// SwapRates
 					SwapRate {
-						long: Fixed128::from_rational(-1, NonZeroI128::new(1000).unwrap()),
-						short: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
+						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
+					},
+				),
+				(
+					// TradingPair
+					AUD_USD,
+					// MaxSpread
+					1 * CENTS,
+					// Accumulates
+					accumulate_config(24 * HOURS, 0),
+					// SwapRates
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
+					},
+				),
+				(
+					// TradingPair
+					USD_CAD,
+					// MaxSpread
+					1 * CENTS,
+					// Accumulates
+					accumulate_config(24 * HOURS, 0),
+					// SwapRates
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
+					},
+				),
+				(
+					// TradingPair
+					USD_CHF,
+					// MaxSpread
+					1 * CENTS,
+					// Accumulates
+					accumulate_config(24 * HOURS, 0),
+					// SwapRates
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
+					},
+				),
+				(
+					// TradingPair
+					XAU_USD,
+					// MaxSpread
+					1 * CENTS,
+					// Accumulates
+					accumulate_config(24 * HOURS, 0),
+					// SwapRates
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
+					},
+				),
+				(
+					// TradingPair
+					USD_OIL,
+					// MaxSpread
+					1 * CENTS,
+					// Accumulates
+					accumulate_config(24 * HOURS, 0),
+					// SwapRates
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
+						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
 					},
 				),
 				(
 					// TradingPair
 					BTC_USD,
-					// MaxSpread
-					100 * DOLLARS,
-					// Accumulates
-					accumulate_config(8 * HOURS, 0),
-					// SwapRates
-					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
-						short: Fixed128::from_rational(2, NonZeroI128::new(1000).unwrap()),
-					},
-				),
-				(
-					// TradingPair
-					ETH_USD,
 					// MaxSpread
 					20 * DOLLARS,
 					// Accumulates
@@ -526,7 +729,20 @@ fn turbulence_genesis(
 					// SwapRates
 					SwapRate {
 						long: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
-						short: Fixed128::from_rational(2, NonZeroI128::new(1000).unwrap()),
+						short: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
+					},
+				),
+				(
+					// TradingPair
+					ETH_USD,
+					// MaxSpread
+					1 * DOLLARS,
+					// Accumulates
+					accumulate_config(8 * HOURS, 0),
+					// SwapRates
+					SwapRate {
+						long: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
+						short: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
 					},
 				),
 			],
@@ -536,29 +752,59 @@ fn turbulence_genesis(
 				(
 					EUR_USD,
 					// TraderRiskThreshold
-					risk_threshold(2, 1),
+					risk_threshold(7, 4),
 					// LiquidityPoolENPThreshold
-					risk_threshold(80, 50),
+					risk_threshold(60, 30),
 					// LiquidityPoolELLThreshold
-					risk_threshold(50, 30),
+					risk_threshold(20, 5),
 				),
 				(
 					USD_JPY,
-					risk_threshold(2, 1),
-					risk_threshold(80, 50),
-					risk_threshold(50, 30),
+					risk_threshold(7, 4),
+					risk_threshold(60, 30),
+					risk_threshold(20, 5),
+				),
+				(
+					AUD_USD,
+					risk_threshold(7, 4),
+					risk_threshold(60, 30),
+					risk_threshold(20, 5),
+				),
+				(
+					USD_CAD,
+					risk_threshold(7, 4),
+					risk_threshold(60, 30),
+					risk_threshold(20, 5),
+				),
+				(
+					USD_CHF,
+					risk_threshold(7, 4),
+					risk_threshold(60, 30),
+					risk_threshold(20, 5),
+				),
+				(
+					XAU_USD,
+					risk_threshold(7, 4),
+					risk_threshold(60, 30),
+					risk_threshold(20, 5),
+				),
+				(
+					USD_OIL,
+					risk_threshold(7, 4),
+					risk_threshold(60, 30),
+					risk_threshold(20, 5),
 				),
 				(
 					BTC_USD,
-					risk_threshold(10, 5),
-					risk_threshold(100, 80),
-					risk_threshold(60, 40),
+					risk_threshold(15, 7),
+					risk_threshold(80, 40),
+					risk_threshold(40, 12),
 				),
 				(
 					ETH_USD,
-					risk_threshold(10, 5),
-					risk_threshold(100, 80),
-					risk_threshold(60, 40),
+					risk_threshold(15, 7),
+					risk_threshold(80, 40),
+					risk_threshold(40, 12),
 				),
 			],
 		}),
