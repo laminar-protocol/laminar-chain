@@ -202,13 +202,13 @@ pub fn laminar_turbulence_latest_config() -> ChainSpec {
 				vec![
 					// 5FySxAHYXDzgDY8BTVnbZ6dygkXJwG27pKmgCLeSRSFEG2dy
 					hex!["acee87f3026e9ef8cf334fe94bc9eb9e9e689318611eca21e5aef919e3e5bc30"].into(),
-					// 5FrJvwPu7hGaEvD5josFPSxp3uVgQiDZRavEYUL76Wbn58Ss
-					hex!["a77ccfd77b70b2a6c52ed5d713ce1f8482d013a8727e64793101ab458adf2f96"].into(),
+					// 5DyXntuH5dBcf2dpjTojzfV6GDypx8CyTuVFm84qB7a4BkYT
+					hex!["54865b9eff8c291658e3fbda202f4260536618c31a0056372d121a5206010d53"].into(),
 				],
 				vec![
 					(
-						// 5FySxAHYXDzgDY8BTVnbZ6dygkXJwG27pKmgCLeSRSFEG2dy
-						hex!["acee87f3026e9ef8cf334fe94bc9eb9e9e689318611eca21e5aef919e3e5bc30"].into(),
+						// 5DyXntuH5dBcf2dpjTojzfV6GDypx8CyTuVFm84qB7a4BkYT
+						hex!["54865b9eff8c291658e3fbda202f4260536618c31a0056372d121a5206010d53"].into(),
 						hex!["54865b9eff8c291658e3fbda202f4260536618c31a0056372d121a5206010d53"].unchecked_into(),
 					)
 				]
