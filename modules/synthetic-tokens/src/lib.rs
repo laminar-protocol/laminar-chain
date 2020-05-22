@@ -44,9 +44,9 @@ impl Default for Position {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as SyntheticTokens {
-		ExtremeRatio get(fn extreme_ratio): map hasher(twox_64_concat) CurrencyId => Option<Permill>;
-		LiquidationRatio get(fn liquidation_ratio): map hasher(twox_64_concat) CurrencyId => Option<Permill>;
-		CollateralRatio get(fn collateral_ratio): map hasher(twox_64_concat) CurrencyId => Option<Permill>;
+		ExtremeRatio get(fn extreme_ratio) config(): map hasher(twox_64_concat) CurrencyId => Option<Permill>;
+		LiquidationRatio get(fn liquidation_ratio) config(): map hasher(twox_64_concat) CurrencyId => Option<Permill>;
+		CollateralRatio get(fn collateral_ratio) config(): map hasher(twox_64_concat) CurrencyId => Option<Permill>;
 		Positions get(fn positions): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) CurrencyId => Position;
 	}
 }

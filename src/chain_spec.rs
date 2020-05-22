@@ -6,8 +6,8 @@ use runtime::{
 	opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, Block, BlockNumber, CurrencyId,
 	FinancialCouncilMembershipConfig, GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, IndicesConfig,
 	MarginLiquidityPoolsConfig, MarginProtocolConfig, OperatorMembershipConfig, OracleConfig, OracleId, SessionConfig,
-	Signature, StakerStatus, StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SystemConfig, TokensConfig,
-	CENTS, DOLLARS, HOURS, WASM_BINARY,
+	Signature, StakerStatus, StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SyntheticTokensConfig,
+	SystemConfig, TokensConfig, CENTS, DOLLARS, HOURS, WASM_BINARY,
 };
 use sc_chain_spec::ChainSpecExtension;
 use sc_service;
@@ -338,6 +338,23 @@ fn dev_genesis(
 		synthetic_liquidity_pools: Some(SyntheticLiquidityPoolsConfig {
 			min_additional_collateral_ratio: Permill::from_percent(10), // default min additional collateral ratio
 		}),
+		synthetic_tokens: Some(SyntheticTokensConfig {
+			extreme_ratio: vec![
+				(CurrencyId::FOIL, Permill::from_percent(5)),
+				(CurrencyId::FBTC, Permill::from_percent(5)),
+				(CurrencyId::FETH, Permill::from_percent(5)),
+			],
+			liquidation_ratio: vec![
+				(CurrencyId::FOIL, Permill::from_percent(10)),
+				(CurrencyId::FBTC, Permill::from_percent(10)),
+				(CurrencyId::FETH, Permill::from_percent(10)),
+			],
+			collateral_ratio: vec![
+				(CurrencyId::FOIL, Permill::from_percent(50)),
+				(CurrencyId::FBTC, Permill::from_percent(50)),
+				(CurrencyId::FETH, Permill::from_percent(50)),
+			],
+		}),
 		margin_liquidity_pools: Some(MarginLiquidityPoolsConfig {
 			default_min_leveraged_amount: 1 * DOLLARS,
 			margin_liquidity_config: vec![
@@ -590,6 +607,23 @@ fn turbulence_genesis(
 		}),
 		synthetic_liquidity_pools: Some(SyntheticLiquidityPoolsConfig {
 			min_additional_collateral_ratio: Permill::from_percent(10), // default min additional collateral ratio
+		}),
+		synthetic_tokens: Some(SyntheticTokensConfig {
+			extreme_ratio: vec![
+				(CurrencyId::FOIL, Permill::from_percent(5)),
+				(CurrencyId::FBTC, Permill::from_percent(5)),
+				(CurrencyId::FETH, Permill::from_percent(5)),
+			],
+			liquidation_ratio: vec![
+				(CurrencyId::FOIL, Permill::from_percent(10)),
+				(CurrencyId::FBTC, Permill::from_percent(10)),
+				(CurrencyId::FETH, Permill::from_percent(10)),
+			],
+			collateral_ratio: vec![
+				(CurrencyId::FOIL, Permill::from_percent(50)),
+				(CurrencyId::FBTC, Permill::from_percent(50)),
+				(CurrencyId::FETH, Permill::from_percent(50)),
+			],
 		}),
 		margin_liquidity_pools: Some(MarginLiquidityPoolsConfig {
 			default_min_leveraged_amount: 1 * DOLLARS,
