@@ -1,4 +1,4 @@
-use super::utils::{dollars, set_ausd_balance, set_price};
+use super::utils::{dollars, lookup_of_account, set_ausd_balance, set_price};
 use crate::{AccountId, BaseLiquidityPoolsForMargin, MarginLiquidityPools, MarginProtocol, Oracle, Price, Runtime};
 
 use frame_support::{assert_ok, traits::ChangeMembers};
@@ -16,6 +16,7 @@ const SEED: u32 = 0;
 const MAX_TRADER_INDEX: u32 = 1000;
 const MAX_POOL_OWNER_INDEX: u32 = 1000;
 const MAX_DOLLARS: u32 = 1000;
+const MAX_THRESHOLD: u32 = 100;
 
 const EUR_USD: TradingPair = TradingPair {
 	base: CurrencyId::FEUR,
@@ -92,6 +93,7 @@ runtime_benchmarks! {
 		let t in 1 .. MAX_TRADER_INDEX => ();
 		let p in 1 .. MAX_POOL_OWNER_INDEX => ();
 		let d in 1 .. MAX_DOLLARS => ();
+		let h in 1 .. MAX_THRESHOLD => ();
 	}
 
 	deposit {
@@ -228,6 +230,234 @@ runtime_benchmarks! {
 			));
 		}
 	}: close_position(RawOrigin::Signed(trader), 0, Price::zero())
+
+	trader_margin_call {
+		let t in ...;
+		let p in ...;
+		let d in ...;
+
+		let pool_owner = create_pool(p);
+
+		let trader: AccountId = account("trader", t, SEED);
+		let balance = dollars(d);
+		deposit_balance(&trader, balance);
+
+		let liquidity = balance;
+		add_liquidity(&pool_owner, liquidity);
+
+		set_up_oracle();
+		set_price(vec![(CurrencyId::FEUR, Price::from_natural(2))]);
+
+		assert_ok!(MarginProtocol::open_position(
+			RawOrigin::Signed(trader.clone()).into(),
+			0,
+			EUR_USD,
+			Leverage::LongTwo,
+			balance,
+			Price::from_natural(3)
+		));
+
+		set_price(vec![(CurrencyId::FEUR, Price::from_natural(1))]);
+	}: _(RawOrigin::None, lookup_of_account(trader.clone()), 0)
+	verify {
+		assert_eq!(MarginProtocol::margin_called_traders(&trader, 0), Some(true));
+	}
+
+	trader_become_safe {
+		let t in ...;
+		let p in ...;
+		let d in ...;
+
+		let pool_owner = create_pool(p);
+
+		let trader: AccountId = account("trader", t, SEED);
+		let balance = dollars(d);
+		deposit_balance(&trader, balance);
+
+		let liquidity = balance;
+		add_liquidity(&pool_owner, liquidity);
+
+		set_up_oracle();
+		set_price(vec![(CurrencyId::FEUR, Price::from_natural(2))]);
+
+		assert_ok!(MarginProtocol::open_position(
+			RawOrigin::Signed(trader.clone()).into(),
+			0,
+			EUR_USD,
+			Leverage::LongTwo,
+			balance,
+			Price::from_natural(3)
+		));
+
+		set_price(vec![(CurrencyId::FEUR, Price::from_natural(1))]);
+		assert_ok!(MarginProtocol::trader_margin_call(
+			RawOrigin::None.into(),
+			lookup_of_account(trader.clone()),
+			0
+		));
+
+		assert_eq!(MarginProtocol::margin_called_traders(&trader, 0), Some(true));
+
+		set_price(vec![(CurrencyId::FEUR, Price::from_natural(2))]);
+	}: _(RawOrigin::None, lookup_of_account(trader.clone()), 0)
+	verify {
+		assert_eq!(MarginProtocol::margin_called_traders(&trader, 0), None);
+	}
+
+	trader_stop_out {
+		let t in ...;
+		let p in ...;
+		let d in ...;
+
+		let pool_owner = create_pool(p);
+
+		let trader: AccountId = account("trader", t, SEED);
+		let balance = dollars(d);
+		deposit_balance(&trader, balance);
+
+		let liquidity = balance;
+		add_liquidity(&pool_owner, liquidity);
+
+		set_up_oracle();
+		set_price(vec![(CurrencyId::FEUR, Price::from_natural(2))]);
+
+		assert_ok!(MarginProtocol::open_position(
+			RawOrigin::Signed(trader.clone()).into(),
+			0,
+			EUR_USD,
+			Leverage::LongTwo,
+			balance,
+			Price::from_natural(3)
+		));
+		assert_eq!(MarginProtocol::positions_by_trader(&trader, (0, 0)), Some(true));
+
+		set_price(vec![(CurrencyId::FEUR, Price::from_natural(1))]);
+	}: _(RawOrigin::None, lookup_of_account(trader.clone()), 0)
+	verify {
+		assert_eq!(MarginProtocol::positions_by_trader(&trader, (0, 0)), None);
+	}
+
+	liquidity_pool_margin_call {
+		let t in ...;
+		let p in ...;
+		let d in ...;
+
+		let pool_owner = create_pool(p);
+
+		let trader: AccountId = account("trader", t, SEED);
+		let balance = dollars(d);
+		deposit_balance(&trader, balance);
+
+		let liquidity = balance;
+		add_liquidity(&pool_owner, liquidity);
+
+		set_up_oracle();
+		set_price(vec![(CurrencyId::FEUR, Price::from_natural(1))]);
+
+		assert_ok!(MarginProtocol::open_position(
+			RawOrigin::Signed(trader.clone()).into(),
+			0,
+			EUR_USD,
+			Leverage::LongTwo,
+			balance,
+			Price::from_natural(2)
+		));
+
+		set_price(vec![(CurrencyId::FEUR, Price::from_natural(2))]);
+	}: _(RawOrigin::None, 0)
+	verify {
+		assert_eq!(MarginProtocol::margin_called_pools(0), Some(true))
+	}
+
+	liquidity_pool_become_safe {
+		let t in ...;
+		let p in ...;
+		let d in ...;
+
+		let pool_owner = create_pool(p);
+
+		let trader: AccountId = account("trader", t, SEED);
+		let balance = dollars(d);
+		deposit_balance(&trader, balance);
+
+		let liquidity = balance;
+		add_liquidity(&pool_owner, liquidity);
+
+		set_up_oracle();
+		set_price(vec![(CurrencyId::FEUR, Price::from_natural(1))]);
+
+		assert_ok!(MarginProtocol::open_position(
+			RawOrigin::Signed(trader.clone()).into(),
+			0,
+			EUR_USD,
+			Leverage::LongTwo,
+			balance,
+			Price::from_natural(2)
+		));
+
+		set_price(vec![(CurrencyId::FEUR, Price::from_natural(2))]);
+		assert_ok!(MarginProtocol::liquidity_pool_margin_call(RawOrigin::None.into(), 0));
+		assert_eq!(MarginProtocol::margin_called_pools(0), Some(true));
+
+		set_price(vec![(CurrencyId::FEUR, Price::from_natural(1))]);
+	}: _(RawOrigin::None, 0)
+	verify {
+		assert_eq!(MarginProtocol::margin_called_pools(0), None)
+	}
+
+	liquidity_pool_force_close {
+		let t in ...;
+		let p in ...;
+		let d in ...;
+
+		let pool_owner = create_pool(p);
+
+		let trader: AccountId = account("trader", t, SEED);
+		let balance = dollars(d);
+		deposit_balance(&trader, balance);
+
+		let liquidity = balance;
+		add_liquidity(&pool_owner, liquidity);
+
+		set_up_oracle();
+		set_price(vec![(CurrencyId::FEUR, Price::from_natural(1))]);
+
+		assert_ok!(MarginProtocol::open_position(
+			RawOrigin::Signed(trader.clone()).into(),
+			0,
+			EUR_USD,
+			Leverage::LongTwo,
+			balance,
+			Price::from_natural(2)
+		));
+		assert_eq!(MarginProtocol::positions_by_pool(0, (EUR_USD, 0)), Some(true));
+
+		set_price(vec![(CurrencyId::FEUR, Price::from_natural(2))]);
+	}: _(RawOrigin::None, 0)
+	verify {
+		assert_eq!(MarginProtocol::positions_by_pool(0, (EUR_USD, 0)), None);
+	}
+
+	set_trading_pair_risk_threshold {
+		let p in ...;
+		let h in ...;
+
+
+		let pool_owner: AccountId = account("owner", p, SEED);
+		assert_ok!(BaseLiquidityPoolsForMargin::create_pool(
+			RawOrigin::Signed(pool_owner.clone()).into()
+		));
+
+		let threshold = RiskThreshold {
+			margin_call: Permill::from_percent(h),
+			stop_out: Permill::from_percent(h),
+		};
+	}: _(RawOrigin::Root, EUR_USD, Some(threshold.clone()), Some(threshold.clone()), Some(threshold.clone()))
+	verify {
+		assert_eq!(MarginProtocol::trader_risk_threshold(EUR_USD), Some(threshold.clone()));
+		assert_eq!(MarginProtocol::liquidity_pool_enp_threshold(EUR_USD), Some(threshold.clone()));
+		assert_eq!(MarginProtocol::liquidity_pool_ell_threshold(EUR_USD), Some(threshold));
+	}
 }
 
 #[cfg(test)]
@@ -288,6 +518,55 @@ mod tests {
 	fn close_position_with_ten_in_pool() {
 		new_test_ext().execute_with(|| {
 			assert_ok!(test_benchmark_close_position_with_ten_in_pool());
+		});
+	}
+
+	#[test]
+	fn trader_margin_call() {
+		new_test_ext().execute_with(|| {
+			assert_ok!(test_benchmark_trader_margin_call());
+		});
+	}
+
+	#[test]
+	fn trader_become_safe() {
+		new_test_ext().execute_with(|| {
+			assert_ok!(test_benchmark_trader_become_safe());
+		});
+	}
+
+	#[test]
+	fn trader_stop_out() {
+		new_test_ext().execute_with(|| {
+			assert_ok!(test_benchmark_trader_stop_out());
+		});
+	}
+
+	#[test]
+	fn liquidity_pool_margin_call() {
+		new_test_ext().execute_with(|| {
+			assert_ok!(test_benchmark_liquidity_pool_margin_call());
+		});
+	}
+
+	#[test]
+	fn liquidity_pool_become_safe() {
+		new_test_ext().execute_with(|| {
+			assert_ok!(test_benchmark_liquidity_pool_become_safe());
+		});
+	}
+
+	#[test]
+	fn liquidity_pool_force_close() {
+		new_test_ext().execute_with(|| {
+			assert_ok!(test_benchmark_liquidity_pool_force_close());
+		});
+	}
+
+	#[test]
+	fn set_trading_pair_risk_threshold() {
+		new_test_ext().execute_with(|| {
+			assert_ok!(test_benchmark_set_trading_pair_risk_threshold());
 		});
 	}
 }
