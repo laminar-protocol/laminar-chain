@@ -2,7 +2,7 @@
 
 use super::*;
 
-use frame_support::{impl_outer_origin, ord_parameter_types, parameter_types, weights::Weight};
+use frame_support::{impl_outer_origin, ord_parameter_types, parameter_types, traits::OnInitialize, weights::Weight};
 use frame_system::EnsureSignedBy;
 use sp_core::H256;
 use sp_runtime::{
@@ -64,6 +64,8 @@ impl system::Trait for Runtime {
 	type OnKilledAccount = ();
 }
 
+pub type System = system::Module<Runtime>;
+
 parameter_types! {
 	pub const ExistentialDeposit: u128 = 50;
 	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::LAMI;
@@ -124,6 +126,16 @@ impl MarginProtocolLiquidityPoolsManager for DummyPoolManager {
 	}
 }
 
+parameter_types! {
+	pub const MinimumPeriod: u64 = 5;
+}
+impl pallet_timestamp::Trait for Runtime {
+	type Moment = u64;
+	type OnTimestampSet = ();
+	type MinimumPeriod = MinimumPeriod;
+}
+pub type Timestamp = pallet_timestamp::Module<Runtime>;
+
 impl Trait for Runtime {
 	type Event = ();
 	type BaseLiquidityPools = module_base_liquidity_pools::Module<Runtime, MarginInstance>;
@@ -131,6 +143,8 @@ impl Trait for Runtime {
 	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
 	type MaxSwap = MaxSwap;
+	type UnixTime = Timestamp;
+	type Moment = u64;
 }
 pub type ModuleLiquidityPools = Module<Runtime>;
 
@@ -153,3 +167,9 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 
 pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
+
+pub fn execute_time(sec: u64) {
+	System::set_block_number(sec);
+	Timestamp::set_timestamp(sec * 1000);
+	<ModuleLiquidityPools as OnInitialize<u64>>::on_initialize(sec);
+}
