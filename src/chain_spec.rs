@@ -365,7 +365,7 @@ fn dev_genesis(
 					// MaxSpread
 					1 * CENTS,
 					// Accumulates
-					accumulate_config(1 * HOURS, 0),
+					accumulate_config(1 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
@@ -378,7 +378,7 @@ fn dev_genesis(
 					// MaxSpread
 					1 * CENTS,
 					// Accumulates
-					accumulate_config(1 * HOURS, 0),
+					accumulate_config(1 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
@@ -391,7 +391,7 @@ fn dev_genesis(
 					// MaxSpread
 					1 * CENTS,
 					// Accumulates
-					accumulate_config(1 * HOURS, 0),
+					accumulate_config(1 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
@@ -404,7 +404,7 @@ fn dev_genesis(
 					// MaxSpread
 					1 * CENTS,
 					// Accumulates
-					accumulate_config(1 * HOURS, 0),
+					accumulate_config(1 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
@@ -417,7 +417,7 @@ fn dev_genesis(
 					// MaxSpread
 					1 * CENTS,
 					// Accumulates
-					accumulate_config(1 * HOURS, 0),
+					accumulate_config(1 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
@@ -430,7 +430,7 @@ fn dev_genesis(
 					// MaxSpread
 					1 * CENTS,
 					// Accumulates
-					accumulate_config(1 * HOURS, 0),
+					accumulate_config(1 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
@@ -443,7 +443,7 @@ fn dev_genesis(
 					// MaxSpread
 					1 * CENTS,
 					// Accumulates
-					accumulate_config(1 * HOURS, 0),
+					accumulate_config(1 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
@@ -456,7 +456,7 @@ fn dev_genesis(
 					// MaxSpread
 					20 * DOLLARS,
 					// Accumulates
-					accumulate_config(1 * HOURS, 0),
+					accumulate_config(1 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
@@ -469,7 +469,7 @@ fn dev_genesis(
 					// MaxSpread
 					1 * DOLLARS,
 					// Accumulates
-					accumulate_config(1 * HOURS, 0),
+					accumulate_config(1 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
@@ -635,7 +635,7 @@ fn turbulence_genesis(
 					// MaxSpread
 					1 * CENTS,
 					// Accumulates
-					accumulate_config(24 * HOURS, 0),
+					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
@@ -648,7 +648,7 @@ fn turbulence_genesis(
 					// MaxSpread
 					1 * CENTS,
 					// Accumulates
-					accumulate_config(24 * HOURS, 0),
+					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
@@ -661,7 +661,7 @@ fn turbulence_genesis(
 					// MaxSpread
 					1 * CENTS,
 					// Accumulates
-					accumulate_config(24 * HOURS, 0),
+					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
@@ -674,7 +674,7 @@ fn turbulence_genesis(
 					// MaxSpread
 					1 * CENTS,
 					// Accumulates
-					accumulate_config(24 * HOURS, 0),
+					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
@@ -687,7 +687,7 @@ fn turbulence_genesis(
 					// MaxSpread
 					1 * CENTS,
 					// Accumulates
-					accumulate_config(24 * HOURS, 0),
+					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
@@ -700,7 +700,7 @@ fn turbulence_genesis(
 					// MaxSpread
 					1 * CENTS,
 					// Accumulates
-					accumulate_config(24 * HOURS, 0),
+					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
@@ -713,7 +713,7 @@ fn turbulence_genesis(
 					// MaxSpread
 					1 * CENTS,
 					// Accumulates
-					accumulate_config(24 * HOURS, 0),
+					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
@@ -726,7 +726,7 @@ fn turbulence_genesis(
 					// MaxSpread
 					20 * DOLLARS,
 					// Accumulates
-					accumulate_config(8 * HOURS, 0),
+					accumulate_config(8 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
@@ -739,7 +739,7 @@ fn turbulence_genesis(
 					// MaxSpread
 					1 * DOLLARS,
 					// Accumulates
-					accumulate_config(8 * HOURS, 0),
+					accumulate_config(8 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
