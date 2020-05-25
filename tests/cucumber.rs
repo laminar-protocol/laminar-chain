@@ -158,14 +158,14 @@ fn parse_time_range(value: Option<&String>) -> Range<Moment> {
 		let start = start[..start.len() - 1].parse::<u64>().expect("Invalid time");
 		let end = end[..end.len() - 1].parse::<u64>().expect("Invalid time");
 		Range { start: start, end: end }
-	} else if range[0].ends_with("min") {
+	} else if start.ends_with("min") {
 		let start = start[..start.len() - 3].parse::<u64>().expect("Invalid time");
 		let end = end[..end.len() - 3].parse::<u64>().expect("Invalid time");
 		Range {
 			start: start * 60,
 			end: end * 60,
 		}
-	} else if range[0].ends_with("h") {
+	} else if start.ends_with("h") {
 		let start = start[..start.len() - 1].parse::<u64>().expect("Invalid time");
 		let end = end[..end.len() - 1].parse::<u64>().expect("Invalid time");
 		Range {
@@ -326,7 +326,7 @@ mod steps {
 						.iter()
 						.map(|x| (parse_pair(x.get(0)), parse_time(x.get(1)), parse_time(x.get(2))));
 					for (pair, frequency, offset) in iter {
-						assert_ok!(margin_set_accumulate(pair, frequency as u64, offset as u64));
+						assert_ok!(margin_set_accumulate(pair, frequency, offset));
 					}
 				})
 			})
