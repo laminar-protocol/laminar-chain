@@ -92,7 +92,7 @@ runtime_benchmarks! {
 	_ {
 		let t in 1 .. MAX_TRADER_INDEX => ();
 		let p in 1 .. MAX_POOL_OWNER_INDEX => ();
-		let d in 1 .. MAX_DOLLARS => ();
+		let d in 100 .. MAX_DOLLARS => ();
 		let h in 1 .. MAX_THRESHOLD => ();
 	}
 
@@ -196,7 +196,7 @@ runtime_benchmarks! {
 			0,
 			EUR_USD,
 			Leverage::LongTwo,
-			balance / 10,
+			balance,
 			Price::from_natural(2)
 		));
 	}: _(RawOrigin::Signed(trader), 0, Price::zero())
