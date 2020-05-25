@@ -91,7 +91,7 @@ decl_storage! {
 decl_event!(
 	pub enum Event<T> where
 		<T as system::Trait>::AccountId,
-	<T as Trait>::Moment,
+		<T as Trait>::Moment,
 	{
 		/// Set spread (who, pool_id, pair, bid, ask)
 		SetSpread(AccountId, LiquidityPoolId, TradingPair, Balance, Balance),

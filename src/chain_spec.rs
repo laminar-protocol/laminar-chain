@@ -227,7 +227,7 @@ pub fn laminar_turbulence_latest_config() -> ChainSpec {
 
 const INITIAL_BALANCE: u128 = 1_000_000 * DOLLARS;
 const INITIAL_STAKING: u128 = 100_000 * DOLLARS;
-const HOURS: u64 = 60 * 60;
+const HOURS_IN_SECONDS: u64 = 60 * 60;
 
 const EUR_USD: TradingPair = TradingPair {
 	base: CurrencyId::FEUR,
