@@ -4,9 +4,9 @@
 use super::*;
 
 use crate::{
-	AccountId, BlockNumber,
+	AccountId,
 	CurrencyId::{self, AUSD, FEUR},
-	LiquidityPoolId, MinimumCount, Runtime,
+	LiquidityPoolId, MinimumCount, Moment, Runtime,
 };
 use frame_support::{assert_ok, parameter_types, traits::OnFinalize, traits::OnInitialize};
 
@@ -14,7 +14,7 @@ use margin_liquidity_pools::SwapRate;
 use margin_protocol::RiskThreshold;
 use margin_protocol_rpc_runtime_api::runtime_decl_for_MarginProtocolApi::MarginProtocolApi;
 use module_primitives::{Balance, Leverage, Leverages, TradingPair};
-use module_traits::{MarginProtocolLiquidityPools, Treasury};
+use module_traits::Treasury;
 use orml_prices::Price;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
 use pallet_indices::address::Address;
@@ -31,8 +31,10 @@ pub type ModuleOracle = orml_oracle::Module<Runtime>;
 pub type ModulePrices = orml_prices::DefaultPriceProvider<CurrencyId, ModuleOracle>;
 pub type MarginLiquidityPools = margin_liquidity_pools::Module<Runtime>;
 pub type SyntheticLiquidityPools = synthetic_liquidity_pools::Module<Runtime>;
+pub type Timestamp = pallet_timestamp::Module<Runtime>;
 
 pub const LIQUIDITY_POOL_ID_0: LiquidityPoolId = 0;
+pub const ONE_MINUTE: u64 = 60;
 
 pub const EUR_USD: TradingPair = TradingPair {
 	base: CurrencyId::FEUR,
@@ -310,7 +312,7 @@ pub fn margin_set_spread(pair: TradingPair, spread: Balance) -> DispatchResult {
 	MarginLiquidityPools::set_spread(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, pair, spread, spread)
 }
 
-pub fn margin_set_accumulate(pair: TradingPair, frequency: BlockNumber, offset: BlockNumber) -> DispatchResult {
+pub fn margin_set_accumulate(pair: TradingPair, frequency: Moment, offset: Moment) -> DispatchResult {
 	MarginLiquidityPools::set_accumulate(<Runtime as system::Trait>::Origin::ROOT, pair, frequency, offset)
 }
 
@@ -445,16 +447,19 @@ pub fn margin_equity(who: &AccountId) -> Fixed128 {
 	ModuleMarginProtocol::equity_of_trader(who, LIQUIDITY_POOL_ID_0).unwrap()
 }
 
-pub fn margin_execute_block(range: Range<BlockNumber>) {
+pub fn margin_execute_time(range: Range<Moment>) {
 	for i in range {
-		System::set_block_number(i);
-		MarginLiquidityPools::on_initialize(i);
-		println!(
-			"execute_block {:?}, accumulated_long_rate = {:?}, accumulated_short_rate = {:?}",
-			i,
-			MarginLiquidityPools::get_accumulated_swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD, true),
-			MarginLiquidityPools::get_accumulated_swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD, false)
-		);
+		System::set_block_number(i as u32);
+		Timestamp::set_timestamp(i * 1000);
+		MarginLiquidityPools::on_initialize(i as u32);
+
+		//use module_traits::MarginProtocolLiquidityPools;
+		//println!(
+		//	"execute_block {:?}, accumulated_long_rate = {:?}, accumulated_short_rate = {:?}",
+		//	i,
+		//	MarginLiquidityPools::get_accumulated_swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD, true),
+		//	MarginLiquidityPools::get_accumulated_swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD, false)
+		//);
 	}
 }
 
