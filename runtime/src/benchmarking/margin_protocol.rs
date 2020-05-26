@@ -441,6 +441,7 @@ runtime_benchmarks! {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use frame_support::assert_ok;
 
 	fn new_test_ext() -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default()
