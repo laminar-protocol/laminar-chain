@@ -157,9 +157,7 @@ decl_module! {
 
 			ensure!(<IdentityInfos<I>>::contains_key(&pool_id), Error::<T, I>::IdentityNotFound);
 
-			let (identity_info, _) = Self::identity_infos(&pool_id);
-
-			<IdentityInfos<I>>::insert(&pool_id, (identity_info, verify_status));
+			<IdentityInfos<I>>::mutate(pool_id, |(_, status)| *status = verify_status);
 			Self::deposit_event(RawEvent::VerifyIdentity(pool_id, verify_status));
 		}
 	}
