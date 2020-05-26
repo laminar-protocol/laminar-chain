@@ -3195,6 +3195,7 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
+ "pallet-timestamp",
  "parity-scale-codec",
  "serde",
  "sp-arithmetic",

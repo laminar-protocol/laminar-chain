@@ -7,7 +7,7 @@ use margin_protocol::RiskThreshold;
 use margin_protocol_rpc_runtime_api::{PoolInfo, TraderInfo};
 use module_primitives::{Balance, Leverage, TradingPair};
 use orml_utilities::FixedU128;
-use runtime::{tests::*, AccountId, BlockNumber, CurrencyId};
+use runtime::{tests::*, AccountId, CurrencyId, Moment};
 use sp_runtime::{traits::Bounded, DispatchResult, Fixed128, FixedPointNumber, Permill};
 use std::ops::Range;
 use synthetic_protocol_rpc_runtime_api::PoolInfo as SyntheticProtocolPoolInfo;
@@ -134,17 +134,46 @@ fn parse_pair(name: Option<&String>) -> TradingPair {
 	}
 }
 
-fn parse_block_number(value: Option<&String>) -> BlockNumber {
-	let value = value.expect("Missing block number");
-	value.trim().parse().expect("Invalid block number")
+fn parse_time(value: Option<&String>) -> Moment {
+	let value = value.expect("Missing time");
+	if value.ends_with("s") {
+		value[..value.len() - 1].parse::<u64>().expect("Invalid time")
+	} else if value.ends_with("min") {
+		value[..value.len() - 3].parse::<u64>().expect("Invalid time") * 60
+	} else if value.ends_with("h") {
+		value[..value.len() - 1].parse::<u64>().expect("Invalid time") * 60 * 60
+	} else {
+		panic!("Invalid time format");
+	}
 }
 
-fn parse_block_number_range(value: Option<&String>) -> Range<BlockNumber> {
-	let value = value.expect("Missing block number");
+fn parse_time_range(value: Option<&String>) -> Range<Moment> {
+	let value = value.expect("Missing time");
 	let range: Vec<&str> = value.trim().split("..").collect();
-	let start = range[0].parse().expect("Invalid block number");
-	let end = range[1].parse().expect("Invalid block number");
-	Range { start: start, end: end }
+	let start = range[0];
+	let end = range[1];
+
+	if start.ends_with("s") {
+		let start = start[..start.len() - 1].parse::<u64>().expect("Invalid time");
+		let end = end[..end.len() - 1].parse::<u64>().expect("Invalid time");
+		Range { start: start, end: end }
+	} else if start.ends_with("min") {
+		let start = start[..start.len() - 3].parse::<u64>().expect("Invalid time");
+		let end = end[..end.len() - 3].parse::<u64>().expect("Invalid time");
+		Range {
+			start: start * 60,
+			end: end * 60,
+		}
+	} else if start.ends_with("h") {
+		let start = start[..start.len() - 1].parse::<u64>().expect("Invalid time");
+		let end = end[..end.len() - 1].parse::<u64>().expect("Invalid time");
+		Range {
+			start: start * 60 * 60,
+			end: end * 60 * 60,
+		}
+	} else {
+		panic!("Invalid time format");
+	}
 }
 
 fn parse_leverage(leverage: Option<&String>) -> Leverage {
@@ -292,13 +321,9 @@ mod steps {
 			})
 			.given("margin set accumulate", |world, step| {
 				world.execute_with(|| {
-					let iter = get_rows(step).iter().map(|x| {
-						(
-							parse_pair(x.get(0)),
-							parse_block_number(x.get(1)),
-							parse_block_number(x.get(2)),
-						)
-					});
+					let iter = get_rows(step)
+						.iter()
+						.map(|x| (parse_pair(x.get(0)), parse_time(x.get(1)), parse_time(x.get(2))));
 					for (pair, frequency, offset) in iter {
 						assert_ok!(margin_set_accumulate(pair, frequency, offset));
 					}
@@ -494,10 +519,10 @@ mod steps {
 					assert_eq!(margin_liquidity(), amount);
 				})
 			})
-			.then_regex(r"margin execute block ([\d]+..[\d]+)", |world, matches, _step| {
+			.then_regex(r"margin execute time ([\d\w]+..[\d\w]+)", |world, matches, _step| {
 				world.execute_with(|| {
-					let block_range = parse_block_number_range(matches.get(1));
-					margin_execute_block(block_range);
+					let time_range = parse_time_range(matches.get(1));
+					margin_execute_time(time_range);
 				})
 			})
 			.then_regex(r"margin set additional swap (.+)", |world, matches, _step| {

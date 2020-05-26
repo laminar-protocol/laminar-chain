@@ -7,8 +7,9 @@ use codec::{Decode, Encode};
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage, ensure,
 	storage::IterableStorageMap,
-	traits::{EnsureOrigin, Get},
+	traits::{EnsureOrigin, Get, UnixTime},
 	weights::Weight,
+	Parameter,
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
 use orml_traits::MultiCurrency;
@@ -17,7 +18,10 @@ use primitives::{
 	TradingPair,
 };
 use sp_arithmetic::Fixed128;
-use sp_runtime::{traits::Saturating, DispatchResult, FixedPointNumber, ModuleId, RuntimeDebug};
+use sp_runtime::{
+	traits::{AtLeast32Bit, Saturating},
+	DispatchResult, FixedPointNumber, ModuleId, RuntimeDebug,
+};
 use sp_std::{cmp::max, prelude::*};
 use traits::{
 	LiquidityPools, MarginProtocolLiquidityPools, MarginProtocolLiquidityPoolsManager, OnDisableLiquidityPool,
@@ -42,6 +46,7 @@ pub struct SwapRate {
 }
 
 pub const MODULE_ID: ModuleId = ModuleId(*b"lami/mlp");
+pub const ONE_MINUTE: u64 = 60;
 
 pub trait Trait: frame_system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
@@ -50,6 +55,8 @@ pub trait Trait: frame_system::Trait {
 	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
 	type UpdateOrigin: EnsureOrigin<Self::Origin>;
 	type MaxSwap: Get<Fixed128>;
+	type UnixTime: UnixTime;
+	type Moment: AtLeast32Bit + Parameter + Default + Copy + From<u64>;
 }
 
 decl_storage! {
@@ -59,15 +66,16 @@ decl_storage! {
 		pub AccumulatedSwapRates get(fn accumulated_swap_rate): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => SwapRate;
 		pub AdditionalSwapRate get(fn additional_swap_rate): map hasher(twox_64_concat) LiquidityPoolId => Option<Fixed128>;
 		pub MaxSpread get(fn max_spread): map hasher(twox_64_concat) TradingPair => Option<Balance>;
-		pub Accumulates get(fn accumulate): map hasher(twox_64_concat) TradingPair => Option<(AccumulateConfig<T::BlockNumber>, TradingPair)>;
+		pub Accumulates get(fn accumulate): map hasher(twox_64_concat) TradingPair => Option<(AccumulateConfig<T::Moment>, TradingPair)>;
 		pub EnabledTradingPairs get(fn enabled_trading_pair): map hasher(twox_64_concat) TradingPair => Option<bool>;
 		pub LiquidityPoolEnabledTradingPairs get(fn liquidity_pool_enabled_trading_pair): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => Option<bool>;
 		pub DefaultMinLeveragedAmount get(fn default_min_leveraged_amount) config(): Balance;
 		pub MinLeveragedAmount get(fn min_leveraged_amount): map hasher(twox_64_concat) LiquidityPoolId => Option<Balance>;
+		pub LastAccumulateTime get(fn last_accumulate_time): T::Moment;
 	}
 
 	add_extra_genesis {
-		config(margin_liquidity_config): Vec<(TradingPair, Balance, AccumulateConfig<T::BlockNumber>, SwapRate)>;
+		config(margin_liquidity_config): Vec<(TradingPair, Balance, AccumulateConfig<T::Moment>, SwapRate)>;
 
 		build(|config: &GenesisConfig<T>| {
 			config.margin_liquidity_config.iter().for_each(|(pair, spread, accumulate, swap_rate)| {
@@ -83,7 +91,7 @@ decl_storage! {
 decl_event!(
 	pub enum Event<T> where
 		<T as system::Trait>::AccountId,
-		<T as system::Trait>::BlockNumber,
+		<T as Trait>::Moment,
 	{
 		/// Set spread (who, pool_id, pair, bid, ask)
 		SetSpread(AccountId, LiquidityPoolId, TradingPair, Balance, Balance),
@@ -98,7 +106,7 @@ decl_event!(
 		/// Max spread updated (pair, spread)
 		MaxSpreadUpdated(TradingPair, Balance),
 		/// Set accumulate (pair, frequency, offset)
-		SetAccumulate(TradingPair, BlockNumber, BlockNumber),
+		SetAccumulate(TradingPair, Moment, Moment),
 		/// Trading pair enabled (pair)
 		TradingPairEnabled(TradingPair),
 		/// Trading pair disabled (pair)
@@ -165,10 +173,13 @@ decl_module! {
 		}
 
 		#[weight = 10_000]
-		pub fn set_accumulate(origin, pair: TradingPair, frequency: T::BlockNumber, offset: T::BlockNumber) {
+		pub fn set_accumulate(origin, pair: TradingPair, frequency: T::Moment, offset: T::Moment) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
+
+			ensure!(frequency >= ONE_MINUTE.into(), Error::<T>::FrequencyTooLow);
+
 			let accumulate = AccumulateConfig { frequency, offset };
 			<Accumulates<T>>::insert(pair, (accumulate, pair));
 			Self::deposit_event(RawEvent::SetAccumulate(pair, frequency, offset));
@@ -229,9 +240,17 @@ decl_module! {
 			Self::deposit_event(RawEvent::SetMinLeveragedAmount(pool_id, amount))
 		}
 
-		fn on_initialize(n: T::BlockNumber) -> Weight {
+		fn on_initialize() -> Weight {
+			let now_as_mins: T::Moment = (T::UnixTime::now().as_secs() / ONE_MINUTE).into();
+			// Truncate seconds, keep minutes
+			let now_as_secs: T::Moment = now_as_mins * ONE_MINUTE.into();
+
 			for (_, (accumulate_config, pair)) in <Accumulates<T>>::iter() {
-				if n % accumulate_config.frequency == accumulate_config.offset {
+				let frequency_as_mins = accumulate_config.frequency / ONE_MINUTE.into();
+				let offset_as_mins = accumulate_config.offset / ONE_MINUTE.into();
+
+				if now_as_mins > 0.into() && frequency_as_mins > 0.into() && now_as_mins % frequency_as_mins == offset_as_mins && <LastAccumulateTime<T>>::get() != now_as_secs {
+					<LastAccumulateTime<T>>::set(now_as_secs);
 					Self::_accumulate_rates(pair);
 				}
 			};
@@ -249,6 +268,7 @@ decl_error! {
 		SpreadTooHigh,
 		TradingPairNotEnabled,
 		NumOutOfBound,
+		FrequencyTooLow,
 	}
 }
 

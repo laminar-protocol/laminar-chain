@@ -1,8 +1,7 @@
-#![cfg(feature = "runtime-benchmarks")]
 use super::utils::dollars;
 use crate::{AccountId, BaseLiquidityPoolsForMargin, BlockNumber, MarginLiquidityPools, MarginProtocol, Runtime};
 
-use frame_system::{self as frame_system, RawOrigin};
+use frame_system::RawOrigin;
 use sp_runtime::{Fixed128, Permill};
 use sp_std::prelude::*;
 

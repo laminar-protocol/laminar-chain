@@ -51,7 +51,7 @@ mod tests {
 
 				assert_ok!(margin_set_enabled_trades());
 
-				assert_ok!(margin_set_accumulate(EUR_USD, 10, 1));
+				assert_ok!(margin_set_accumulate(EUR_USD, 10 * ONE_MINUTE, 1 * ONE_MINUTE));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
 				assert_ok!(margin_set_default_min_leveraged_amount(dollar(1000)));
 				assert_ok!(margin_set_mock_swap_rate(EUR_USD));
@@ -98,7 +98,7 @@ mod tests {
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
 				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
-				assert_ok!(margin_set_accumulate(EUR_USD, 10, 1));
+				assert_ok!(margin_set_accumulate(EUR_USD, 10 * ONE_MINUTE, 1 * ONE_MINUTE));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
 				assert_ok!(margin_set_default_min_leveraged_amount(dollar(1000)));
 				assert_ok!(margin_set_mock_swap_rate(EUR_USD));
@@ -204,7 +204,7 @@ mod tests {
 				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
 
-				assert_ok!(margin_set_accumulate(EUR_USD, 10, 1));
+				assert_ok!(margin_set_accumulate(EUR_USD, 10 * ONE_MINUTE, 1 * ONE_MINUTE));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
 				assert_ok!(margin_set_default_min_leveraged_amount(dollar(1000)));
 				assert_ok!(margin_set_mock_swap_rate(EUR_USD));
@@ -252,7 +252,7 @@ mod tests {
 				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
 
-				assert_ok!(margin_set_accumulate(EUR_USD, 10, 1));
+				assert_ok!(margin_set_accumulate(EUR_USD, 10 * ONE_MINUTE, 1 * ONE_MINUTE));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
 				assert_ok!(margin_set_default_min_leveraged_amount(dollar(1000)));
 				assert_ok!(margin_set_mock_swap_rate(EUR_USD));
@@ -304,7 +304,7 @@ mod tests {
 				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
 
-				assert_ok!(margin_set_accumulate(EUR_USD, 10, 1));
+				assert_ok!(margin_set_accumulate(EUR_USD, 10 * ONE_MINUTE, 1 * ONE_MINUTE));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
 				assert_ok!(margin_set_default_min_leveraged_amount(dollar(1000)));
 				assert_ok!(margin_set_mock_swap_rate(EUR_USD));
@@ -387,7 +387,7 @@ mod tests {
 				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
 
-				assert_ok!(margin_set_accumulate(EUR_USD, 10, 1));
+				assert_ok!(margin_set_accumulate(EUR_USD, 10 * ONE_MINUTE, 1 * ONE_MINUTE));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
 				assert_ok!(margin_set_default_min_leveraged_amount(dollar(1000)));
 				assert_ok!(margin_set_mock_swap_rate(EUR_USD));
@@ -478,7 +478,7 @@ mod tests {
 				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
 
-				assert_ok!(margin_set_accumulate(EUR_USD, 10, 1));
+				assert_ok!(margin_set_accumulate(EUR_USD, 10 * ONE_MINUTE, 1 * ONE_MINUTE));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
 				assert_ok!(margin_set_default_min_leveraged_amount(dollar(1000)));
 				assert_ok!(margin_set_mock_swap_rate(EUR_USD));
@@ -574,8 +574,8 @@ mod tests {
 				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
 				assert_ok!(margin_set_spread(JPY_EUR, cent(3)));
 
-				assert_ok!(margin_set_accumulate(EUR_USD, 10, 1));
-				assert_ok!(margin_set_accumulate(JPY_EUR, 10, 1));
+				assert_ok!(margin_set_accumulate(EUR_USD, 10 * ONE_MINUTE, 1 * ONE_MINUTE));
+				assert_ok!(margin_set_accumulate(JPY_EUR, 10 * ONE_MINUTE, 1 * ONE_MINUTE));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
 				assert_ok!(margin_set_default_min_leveraged_amount(dollar(1000)));
 				assert_ok!(margin_set_mock_swap_rate(EUR_USD));
@@ -803,7 +803,7 @@ mod tests {
 				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
 
-				assert_ok!(margin_set_accumulate(EUR_USD, 10, 1));
+				assert_ok!(margin_set_accumulate(EUR_USD, 10 * ONE_MINUTE, 1 * ONE_MINUTE));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
 				assert_ok!(margin_set_default_min_leveraged_amount(dollar(1000)));
 				assert_ok!(margin_set_mock_swap_rate(EUR_USD));
@@ -822,7 +822,7 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
 
-				margin_execute_block(1..9);
+				margin_execute_time(1 * ONE_MINUTE..9 * ONE_MINUTE);
 
 				assert_ok!(margin_close_position(&ALICE::get(), 0, Price::from_rational(2, 1)));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
@@ -852,7 +852,7 @@ mod tests {
 					Fixed128::from_inner(4548_500000000000000000)
 				);
 
-				margin_execute_block(9..22);
+				margin_execute_time(9 * ONE_MINUTE..22 * ONE_MINUTE);
 
 				assert_ok!(margin_close_position(&ALICE::get(), 1, Price::from_rational(4, 1)));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
@@ -894,7 +894,7 @@ mod tests {
 				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
 
-				assert_ok!(margin_set_accumulate(EUR_USD, 10, 1));
+				assert_ok!(margin_set_accumulate(EUR_USD, 10 * ONE_MINUTE, 1 * ONE_MINUTE));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
 				assert_ok!(margin_set_default_min_leveraged_amount(dollar(1000)));
 				assert_ok!(margin_set_mock_swap_rate(EUR_USD));
@@ -920,7 +920,7 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
 
-				margin_execute_block(1..9);
+				margin_execute_time(1 * ONE_MINUTE..9 * ONE_MINUTE);
 
 				assert_ok!(margin_close_position(&ALICE::get(), 0, Price::from_rational(2, 1)));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
@@ -950,7 +950,7 @@ mod tests {
 					Fixed128::from_inner(4546_985000000000000000)
 				);
 
-				margin_execute_block(9..22);
+				margin_execute_time(9 * ONE_MINUTE..22 * ONE_MINUTE);
 
 				assert_ok!(margin_close_position(&ALICE::get(), 1, Price::from_rational(4, 1)));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
