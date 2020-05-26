@@ -110,6 +110,68 @@ fn should_fail_withdraw_liquidity() {
 }
 
 #[test]
+fn should_set_identity() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Instance1Module::create_pool(Origin::signed(ALICE)));
+
+		let mut identity = IdentityInfo {
+			legal: "laminar".as_bytes().to_vec(),
+			display: vec![0; 201],
+			web: "https://laminar.one".as_bytes().to_vec(),
+			email: vec![],
+			image_url: vec![],
+		};
+		assert_noop!(
+			Instance1Module::set_identity(Origin::signed(ALICE), 0, identity.clone()),
+			Error::<Runtime, Instance1>::IdentityInfoTooLong
+		);
+
+		identity.display = vec![];
+
+		assert_ok!(Instance1Module::set_identity(
+			Origin::signed(ALICE),
+			0,
+			identity.clone()
+		));
+
+		identity.display = "Open finance platform".as_bytes().to_vec();
+		assert_ok!(Instance1Module::set_identity(Origin::signed(ALICE), 0, identity));
+	})
+}
+
+#[test]
+fn should_verify_identity() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Instance1Module::create_pool(Origin::signed(ALICE)));
+
+		let identity = IdentityInfo {
+			legal: "laminar".as_bytes().to_vec(),
+			display: vec![],
+			web: "https://laminar.one".as_bytes().to_vec(),
+			email: vec![],
+			image_url: vec![],
+		};
+		assert_ok!(Instance1Module::set_identity(
+			Origin::signed(ALICE),
+			0,
+			identity.clone()
+		));
+
+		assert_ok!(Instance1Module::verify_identity(Origin::ROOT, 0, false));
+		assert_ok!(Instance1Module::verify_identity(Origin::ROOT, 0, true));
+
+		assert_noop!(
+			Instance1Module::set_identity(Origin::signed(ALICE), 0, identity.clone()),
+			Error::<Runtime, Instance1>::CannotModifyIdentity
+		);
+
+		assert_ok!(Instance1Module::verify_identity(Origin::ROOT, 0, false));
+		assert_ok!(Instance1Module::set_identity(Origin::signed(ALICE), 0, identity));
+		assert_ok!(Instance1Module::verify_identity(Origin::ROOT, 0, true));
+	})
+}
+
+#[test]
 fn multi_instances_have_independent_storage() {
 	new_test_ext().execute_with(|| {
 		// owners storage

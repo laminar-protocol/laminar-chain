@@ -151,6 +151,16 @@ pub struct TradingPair {
 	pub quote: CurrencyId,
 }
 
+#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default, Clone)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct IdentityInfo {
+	pub legal: Vec<u8>,
+	pub display: Vec<u8>,
+	pub web: Vec<u8>,
+	pub email: Vec<u8>,
+	pub image_url: Vec<u8>,
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;

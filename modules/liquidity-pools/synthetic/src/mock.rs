@@ -113,6 +113,7 @@ impl module_base_liquidity_pools::Trait<SyntheticInstance> for Runtime {
 	type ModuleId = SyntheticLiquidityPoolsModuleId;
 	type OnDisableLiquidityPool = ModuleLiquidityPools;
 	type OnRemoveLiquidityPool = ModuleLiquidityPools;
+	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
 }
 pub type BaseLiquidityPools = module_base_liquidity_pools::Module<Runtime, SyntheticInstance>;
 

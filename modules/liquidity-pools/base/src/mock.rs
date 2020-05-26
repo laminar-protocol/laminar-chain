@@ -3,6 +3,7 @@
 use super::*;
 
 use frame_support::{impl_outer_origin, ord_parameter_types, parameter_types, weights::Weight};
+use frame_system::EnsureSignedBy;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -119,6 +120,7 @@ impl Trait<Instance1> for Runtime {
 	type ModuleId = Instance1ModuleId;
 	type OnDisableLiquidityPool = DummyOnDisable;
 	type OnRemoveLiquidityPool = DummyOnRemove;
+	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
 }
 pub type Instance1Module = Module<Runtime, Instance1>;
 
@@ -134,6 +136,7 @@ impl Trait<Instance2> for Runtime {
 	type ModuleId = Instance2ModuleId;
 	type OnDisableLiquidityPool = DummyOnDisable;
 	type OnRemoveLiquidityPool = DummyOnRemove;
+	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
 }
 pub type Instance2Module = Module<Runtime, Instance2>;
 

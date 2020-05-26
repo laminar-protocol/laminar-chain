@@ -1,12 +1,14 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{
-	decl_error, decl_event, decl_module, decl_storage, ensure, storage::IterableStorageMap, traits::Get,
+	decl_error, decl_event, decl_module, decl_storage, ensure,
+	storage::IterableStorageMap,
+	traits::{EnsureOrigin, Get},
 	weights::DispatchClass,
 };
-use frame_system::{self as system, ensure_signed};
+use frame_system::{self as system, ensure_root, ensure_signed};
 use orml_traits::BasicCurrency;
-use primitives::{Balance, LiquidityPoolId};
+use primitives::{Balance, IdentityInfo, LiquidityPoolId};
 use sp_runtime::{
 	traits::{AccountIdConversion, One},
 	DispatchResult, ModuleId,
@@ -25,6 +27,7 @@ pub trait Trait<I: Instance = DefaultInstance>: system::Trait {
 	type ModuleId: Get<ModuleId>;
 	type OnDisableLiquidityPool: OnDisableLiquidityPool;
 	type OnRemoveLiquidityPool: OnRemoveLiquidityPool;
+	type UpdateOrigin: EnsureOrigin<Self::Origin>;
 }
 
 decl_storage! {
@@ -32,6 +35,7 @@ decl_storage! {
 		pub NextPoolId get(fn next_pool_id): LiquidityPoolId;
 		pub Owners get(fn owners): map hasher(twox_64_concat) LiquidityPoolId => Option<(T::AccountId, LiquidityPoolId)>;
 		pub Balances get(fn balances): map hasher(twox_64_concat) LiquidityPoolId => Balance;
+		pub IdentityInfos get(fn identity_infos): map hasher(twox_64_concat) LiquidityPoolId => (IdentityInfo, bool);
 	}
 }
 
@@ -49,6 +53,10 @@ decl_event!(
 		DepositLiquidity(AccountId, LiquidityPoolId, Balance),
 		/// Withdraw liquidity (who, pool_id, amount)
 		WithdrawLiquidity(AccountId, LiquidityPoolId, Balance),
+		/// Set identity (who, pool_id)
+		SetIdentity(AccountId, LiquidityPoolId),
+		/// Verify identity (pool_id, verify_status)
+		VerifyIdentity(LiquidityPoolId, bool),
 	}
 );
 
@@ -61,6 +69,9 @@ decl_error! {
 		CannotWithdrawAmount,
 		CannotWithdrawExistentialDeposit,
 		PoolNotFound,
+		CannotModifyIdentity,
+		IdentityInfoTooLong,
+		IdentityNotFound,
 	}
 }
 
@@ -116,6 +127,40 @@ decl_module! {
 
 			Self::_withdraw_liquidity(&who, pool_id, amount)?;
 			Self::deposit_event(RawEvent::WithdrawLiquidity(who, pool_id, amount));
+		}
+
+		#[weight = 10_000]
+		pub fn set_identity(origin, #[compact] pool_id: LiquidityPoolId, identity_info: IdentityInfo) {
+			let who = ensure_signed(origin)?;
+			ensure!(Self::is_owner(pool_id, &who), Error::<T, I>::NoPermission);
+
+			if <IdentityInfos<I>>::contains_key(&pool_id) {
+				let (_, verify_status) = Self::identity_infos(&pool_id);
+				ensure!(!verify_status, Error::<T, I>::CannotModifyIdentity);
+			}
+
+			ensure!(identity_info.legal.len() <= 100, Error::<T, I>::IdentityInfoTooLong);
+			ensure!(identity_info.display.len() <= 200, Error::<T, I>::IdentityInfoTooLong);
+			ensure!(identity_info.web.len() <= 100, Error::<T, I>::IdentityInfoTooLong);
+			ensure!(identity_info.email.len() <= 50, Error::<T, I>::IdentityInfoTooLong);
+			ensure!(identity_info.image_url.len() <= 100, Error::<T, I>::IdentityInfoTooLong);
+
+			<IdentityInfos<I>>::insert(&pool_id, (identity_info, false));
+			Self::deposit_event(RawEvent::SetIdentity(who, pool_id));
+		}
+
+		#[weight = 10_000]
+		pub fn verify_identity(origin, #[compact] pool_id: LiquidityPoolId, verify_status: bool) {
+			T::UpdateOrigin::try_origin(origin)
+				.map(|_| ())
+				.or_else(ensure_root)?;
+
+			ensure!(<IdentityInfos<I>>::contains_key(&pool_id), Error::<T, I>::IdentityNotFound);
+
+			let (identity_info, _) = Self::identity_infos(&pool_id);
+
+			<IdentityInfos<I>>::insert(&pool_id, (identity_info, verify_status));
+			Self::deposit_event(RawEvent::VerifyIdentity(pool_id, verify_status));
 		}
 	}
 }
@@ -192,6 +237,7 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 
 		<Balances<I>>::remove(&pool_id);
 		<Owners<T, I>>::remove(&pool_id);
+		<IdentityInfos<I>>::remove(&pool_id);
 
 		T::OnRemoveLiquidityPool::on_remove(pool_id);
 

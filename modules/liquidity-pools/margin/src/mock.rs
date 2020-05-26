@@ -116,6 +116,7 @@ impl module_base_liquidity_pools::Trait<MarginInstance> for Runtime {
 	type ModuleId = MarginLiquidityPoolsModuleId;
 	type OnDisableLiquidityPool = ModuleLiquidityPools;
 	type OnRemoveLiquidityPool = ModuleLiquidityPools;
+	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
 }
 pub type BaseLiquidityPools = module_base_liquidity_pools::Module<Runtime, MarginInstance>;
 
