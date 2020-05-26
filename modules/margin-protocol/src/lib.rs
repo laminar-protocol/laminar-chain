@@ -13,11 +13,11 @@ use sp_arithmetic::{
 };
 use sp_runtime::{
 	offchain::{storage::StorageValueRef, Duration, Timestamp},
-	traits::{AccountIdConversion, StaticLookup},
+	traits::{AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, StaticLookup},
 	transaction_validity::{
 		InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity, ValidTransaction,
 	},
-	DispatchError, DispatchResult, ModuleId, RuntimeDebug,
+	DispatchError, DispatchResult, FixedPointNumber, ModuleId, RuntimeDebug,
 };
 // FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
 // would cause compiling error in `decl_module!` and `construct_runtime!`
@@ -356,7 +356,7 @@ impl<T: Trait> Module<T> {
 		);
 
 		let margin_held = {
-			let leverage_value = Fixed128::from_natural(leverage.value().into());
+			let leverage_value = Fixed128::saturating_from_integer(leverage.value());
 			leveraged_held_in_usd
 				.checked_div(&leverage_value)
 				.expect("leveraged value cannot be zero; qed")

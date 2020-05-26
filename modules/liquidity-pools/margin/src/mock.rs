@@ -55,6 +55,7 @@ impl system::Trait for Runtime {
 	type DbWeight = ();
 	type BlockExecutionWeight = ();
 	type ExtrinsicBaseWeight = ();
+	type MaximumExtrinsicWeight = ();
 	type MaximumBlockLength = MaximumBlockLength;
 	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
@@ -68,7 +69,7 @@ parameter_types! {
 	pub const ExistentialDeposit: u128 = 50;
 	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::LAMI;
 	pub const GetLiquidityCurrencyId: CurrencyId = CurrencyId::AUSD;
-	pub const MaxSwap: Fixed128 = Fixed128::from_natural(2);
+	pub const MaxSwap: Fixed128 = Fixed128::saturating_from_integer(2);
 }
 
 type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;

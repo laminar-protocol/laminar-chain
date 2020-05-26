@@ -8,8 +8,7 @@ use margin_protocol_rpc_runtime_api::{PoolInfo, TraderInfo};
 use module_primitives::{Balance, Leverage, TradingPair};
 use orml_utilities::FixedU128;
 use runtime::{tests::*, AccountId, BlockNumber, CurrencyId};
-use sp_arithmetic::Fixed128;
-use sp_runtime::{traits::Bounded, DispatchResult, Permill};
+use sp_runtime::{traits::Bounded, DispatchResult, Fixed128, FixedPointNumber, Permill};
 use std::ops::Range;
 use synthetic_protocol_rpc_runtime_api::PoolInfo as SyntheticProtocolPoolInfo;
 
@@ -56,7 +55,7 @@ fn parse_fixed_128_dollar(value: Option<&String>) -> Fixed128 {
 	} else {
 		value.parse::<i128>().expect("invalid dollar value")
 	};
-	Fixed128::from_parts(dollar)
+	Fixed128::from_inner(dollar)
 }
 
 fn parse_price(value: Option<&String>) -> FixedU128 {
@@ -88,11 +87,11 @@ fn parse_fixed128(value: Option<&String>) -> Fixed128 {
 	let value = value.replace(" ", "").replace("_", "");
 	if value.ends_with("%") {
 		let num = value[..value.len() - 1].parse::<f64>().expect("Invalid dollar value");
-		Fixed128::from_parts((num / 100f64 * (10u64.pow(18) as f64)) as i128)
+		Fixed128::from_inner((num / 100f64 * (10u64.pow(18) as f64)) as i128)
 	} else if value == "MaxValue" {
 		Fixed128::max_value()
 	} else {
-		Fixed128::from_parts(value.parse::<i128>().expect("invalid dollar value"))
+		Fixed128::from_inner(value.parse::<i128>().expect("invalid dollar value"))
 	}
 }
 

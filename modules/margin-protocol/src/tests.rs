@@ -5,7 +5,6 @@
 use super::*;
 use mock::*;
 
-use core::num::NonZeroI128;
 use frame_support::{assert_noop, assert_ok};
 use primitives::Leverage;
 use sp_core::offchain::{
@@ -15,7 +14,7 @@ use sp_core::offchain::{
 
 // `n` is a natural currency amount by cent, with 2 fractional digits precision
 fn fixed128_from_natural_currency_cent(n: i128) -> Fixed128 {
-	Fixed128::from_parts(n * 1_000_000_000_000_000_0)
+	Fixed128::from_inner(n * 1_000_000_000_000_000_0)
 }
 
 // `b` is a natural currency amount by cent, with 2 fractional digits precision
@@ -36,10 +35,10 @@ fn eur_jpy_long() -> Position<Runtime> {
 		pool: MOCK_POOL,
 		pair: EUR_JPY_PAIR,
 		leverage: Leverage::LongTwenty,
-		leveraged_held: Fixed128::from_natural(100_000),
-		leveraged_debits: Fixed128::from_natural(-14_104_090),
+		leveraged_held: Fixed128::saturating_from_integer(100_000),
+		leveraged_debits: Fixed128::saturating_from_integer(-14_104_090),
 		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(-131_813_93),
-		open_accumulated_swap_rate: Fixed128::from_natural(1),
+		open_accumulated_swap_rate: Fixed128::saturating_from_integer(1),
 		margin_held: fixed128_from_natural_currency_cent(6_591_00),
 	}
 }
@@ -50,10 +49,10 @@ fn eur_jpy_short() -> Position<Runtime> {
 		pool: MOCK_POOL,
 		pair: EUR_JPY_PAIR,
 		leverage: Leverage::ShortTwenty,
-		leveraged_held: Fixed128::from_natural(-100_000),
-		leveraged_debits: Fixed128::from_natural(14_175_810),
+		leveraged_held: Fixed128::saturating_from_integer(-100_000),
+		leveraged_debits: Fixed128::saturating_from_integer(14_175_810),
 		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(133_734_06),
-		open_accumulated_swap_rate: Fixed128::from_natural(1),
+		open_accumulated_swap_rate: Fixed128::saturating_from_integer(1),
 		margin_held: fixed128_from_natural_currency_cent(6_687_00),
 	}
 }
@@ -69,7 +68,7 @@ fn unrealized_pl_of_long_position_works() {
 		.execute_with(|| {
 			assert_eq!(
 				MarginProtocol::_unrealized_pl_of_position(&eur_jpy_long()),
-				Ok(Fixed128::from_parts(-1073545454545441750827)),
+				Ok(Fixed128::from_inner(-1073545454545441750827)),
 			);
 		});
 }
@@ -85,7 +84,7 @@ fn unrealized_pl_of_short_position_works() {
 		.execute_with(|| {
 			assert_eq!(
 				MarginProtocol::_unrealized_pl_of_position(&eur_jpy_short()),
-				Ok(Fixed128::from_parts(1470999999999987140172)),
+				Ok(Fixed128::from_inner(1470999999999987140172)),
 			);
 		});
 }
@@ -105,7 +104,7 @@ fn unrealized_pl_of_trader_sums_all_positions() {
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 1), true);
 			assert_eq!(
 				MarginProtocol::unrealized_pl_of_trader(&ALICE, MOCK_POOL),
-				Ok(Fixed128::from_parts(397454545454545389345))
+				Ok(Fixed128::from_inner(397454545454545389345))
 			);
 		});
 }
@@ -126,13 +125,13 @@ fn margin_held_sums_all_margin_held() {
 
 fn eur_usd_long_1() -> Position<Runtime> {
 	let open_rate =
-		Fixed128::from_natural(1).saturating_add(Fixed128::from_rational(36_87, NonZeroI128::new(100_000_00).unwrap()));
+		Fixed128::saturating_from_integer(1).saturating_add(Fixed128::saturating_from_rational(36_87, 100_000_00));
 	Position {
 		owner: ALICE,
 		pool: MOCK_POOL,
 		pair: EUR_USD_PAIR,
 		leverage: Leverage::LongFive,
-		leveraged_held: Fixed128::from_natural(100_000),
+		leveraged_held: Fixed128::saturating_from_integer(100_000),
 		leveraged_debits: fixed128_from_natural_currency_cent(-120_420_30),
 		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(-120_420_30),
 		open_accumulated_swap_rate: open_rate,
@@ -142,13 +141,13 @@ fn eur_usd_long_1() -> Position<Runtime> {
 
 fn eur_usd_long_2() -> Position<Runtime> {
 	let open_rate =
-		Fixed128::from_natural(1).saturating_add(Fixed128::from_rational(18_43, NonZeroI128::new(100_000_00).unwrap()));
+		Fixed128::saturating_from_integer(1).saturating_add(Fixed128::saturating_from_rational(18_43, 100_000_00));
 	Position {
 		owner: ALICE,
 		pool: MOCK_POOL,
 		pair: EUR_USD_PAIR,
 		leverage: Leverage::LongTwenty,
-		leveraged_held: Fixed128::from_natural(100_000),
+		leveraged_held: Fixed128::saturating_from_integer(100_000),
 		leveraged_debits: fixed128_from_natural_currency_cent(-119_419_30),
 		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(-119_419_30),
 		open_accumulated_swap_rate: open_rate,
@@ -158,13 +157,13 @@ fn eur_usd_long_2() -> Position<Runtime> {
 
 fn eur_usd_short_1() -> Position<Runtime> {
 	let open_rate =
-		Fixed128::from_natural(1).saturating_add(Fixed128::from_rational(10_96, NonZeroI128::new(100_000_00).unwrap()));
+		Fixed128::saturating_from_integer(1).saturating_add(Fixed128::saturating_from_rational(10_96, 100_000_00));
 	Position {
 		owner: ALICE,
 		pool: MOCK_POOL,
 		pair: EUR_USD_PAIR,
 		leverage: Leverage::ShortTen,
-		leveraged_held: Fixed128::from_natural(-100_000),
+		leveraged_held: Fixed128::saturating_from_integer(-100_000),
 		leveraged_debits: fixed128_from_natural_currency_cent(119_780_10),
 		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(119_780_10),
 		open_accumulated_swap_rate: open_rate,
@@ -174,13 +173,13 @@ fn eur_usd_short_1() -> Position<Runtime> {
 
 fn eur_usd_short_2() -> Position<Runtime> {
 	let open_rate =
-		Fixed128::from_natural(1).saturating_add(Fixed128::from_rational(3_65, NonZeroI128::new(100_000_00).unwrap()));
+		Fixed128::saturating_from_integer(1).saturating_add(Fixed128::saturating_from_rational(3_65, 100_000_00));
 	Position {
 		owner: ALICE,
 		pool: MOCK_POOL,
 		pair: EUR_USD_PAIR,
 		leverage: Leverage::ShortFifty,
-		leveraged_held: Fixed128::from_natural(-200_000),
+		leveraged_held: Fixed128::saturating_from_integer(-200_000),
 		leveraged_debits: fixed128_from_natural_currency_cent(237_362_40),
 		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(237_362_40),
 		open_accumulated_swap_rate: open_rate,
@@ -190,13 +189,13 @@ fn eur_usd_short_2() -> Position<Runtime> {
 
 fn jpy_usd_long_1() -> Position<Runtime> {
 	let open_rate =
-		Fixed128::from_natural(1).saturating_add(Fixed128::from_rational(36_87, NonZeroI128::new(100_000_00).unwrap()));
+		Fixed128::saturating_from_integer(1).saturating_add(Fixed128::saturating_from_rational(36_87, 100_000_00));
 	Position {
 		owner: ALICE,
 		pool: MOCK_POOL,
 		pair: JPY_USD_PAIR,
 		leverage: Leverage::LongFive,
-		leveraged_held: Fixed128::from_natural(100_000),
+		leveraged_held: Fixed128::saturating_from_integer(100_000),
 		leveraged_debits: fixed128_from_natural_currency_cent(-120_420_30),
 		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(-120_420_30),
 		open_accumulated_swap_rate: open_rate,
@@ -208,12 +207,12 @@ fn jpy_usd_long_1() -> Position<Runtime> {
 fn accumulated_swap_rate_of_long_position_works() {
 	ExtBuilder::default()
 		.price(CurrencyId::FEUR, (1, 1))
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.build()
 		.execute_with(|| {
 			assert_eq!(
 				MarginProtocol::_accumulated_swap_rate_of_position(&eur_usd_long_1()),
-				Ok(Fixed128::from_parts(-44398964610000000000))
+				Ok(Fixed128::from_inner(-44398964610000000000))
 			);
 		});
 }
@@ -222,12 +221,12 @@ fn accumulated_swap_rate_of_long_position_works() {
 fn accumulated_swap_rate_of_short_position_works() {
 	ExtBuilder::default()
 		.price(CurrencyId::FEUR, (1, 1))
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.build()
 		.execute_with(|| {
 			assert_eq!(
 				MarginProtocol::_accumulated_swap_rate_of_position(&eur_usd_short_1()),
-				Ok(Fixed128::from_parts(-13127898960000000000))
+				Ok(Fixed128::from_inner(-13127898960000000000))
 			);
 		});
 }
@@ -236,7 +235,7 @@ fn accumulated_swap_rate_of_short_position_works() {
 fn accumulated_swap_rate_of_trader_sums_all_positions() {
 	ExtBuilder::default()
 		.price(CurrencyId::FEUR, (1, 1))
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.build()
 		.execute_with(|| {
 			<Positions<Runtime>>::insert(0, eur_usd_long_1());
@@ -245,7 +244,7 @@ fn accumulated_swap_rate_of_trader_sums_all_positions() {
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 1), true);
 			assert_eq!(
 				MarginProtocol::_accumulated_swap_rate_of_trader(&ALICE, MOCK_POOL),
-				Ok(Fixed128::from_parts(-57526863570000000000))
+				Ok(Fixed128::from_inner(-57526863570000000000))
 			);
 		});
 }
@@ -254,7 +253,7 @@ fn accumulated_swap_rate_of_trader_sums_all_positions() {
 fn equity_of_trader_works() {
 	ExtBuilder::default()
 		.price(CurrencyId::FEUR, (12, 10))
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.build()
 		.execute_with(|| {
 			<Balances<Runtime>>::insert(ALICE, MOCK_POOL, fixed128_from_natural_currency_cent(120_000_00));
@@ -268,7 +267,7 @@ fn equity_of_trader_works() {
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 3), true);
 			assert_eq!(
 				MarginProtocol::equity_of_trader(&ALICE, MOCK_POOL),
-				Ok(Fixed128::from_parts(116614700431840000000000))
+				Ok(Fixed128::from_inner(116614700431840000000000))
 			);
 		});
 }
@@ -277,7 +276,7 @@ fn equity_of_trader_works() {
 fn margin_level_works() {
 	ExtBuilder::default()
 		.price(CurrencyId::FEUR, (12, 10))
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.build()
 		.execute_with(|| {
 			<Balances<Runtime>>::insert(ALICE, MOCK_POOL, fixed128_from_natural_currency_cent(120_000_00));
@@ -292,7 +291,7 @@ fn margin_level_works() {
 			assert_eq!(
 				MarginProtocol::margin_level(&ALICE, MOCK_POOL),
 				// 19.54%
-				Ok(Fixed128::from_parts(195340363524869506))
+				Ok(Fixed128::from_inner(195340363524869506))
 			);
 		});
 }
@@ -300,7 +299,7 @@ fn margin_level_works() {
 #[test]
 fn margin_level_without_any_opened_position_is_max() {
 	ExtBuilder::default().build().execute_with(|| {
-		<Balances<Runtime>>::insert(ALICE, MOCK_POOL, Fixed128::from_parts(1));
+		<Balances<Runtime>>::insert(ALICE, MOCK_POOL, Fixed128::from_inner(1));
 		assert_eq!(
 			MarginProtocol::margin_level(&ALICE, MOCK_POOL),
 			Ok(Fixed128::max_value())
@@ -312,7 +311,7 @@ fn margin_level_without_any_opened_position_is_max() {
 fn ensure_trader_safe_works() {
 	ExtBuilder::default()
 		.spread(Permill::zero())
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.build()
 		.execute_with(|| {
@@ -326,14 +325,14 @@ fn ensure_trader_safe_works() {
 				leveraged_held: fixed128_from_natural_currency_cent(100),
 				leveraged_debits: fixed128_from_natural_currency_cent(100),
 				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
-				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				open_accumulated_swap_rate: Fixed128::saturating_from_integer(1),
 				margin_held: fixed128_from_natural_currency_cent(100),
 			};
 			<Positions<Runtime>>::insert(0, position);
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), true);
 			assert_eq!(
 				MarginProtocol::margin_level(&ALICE, MOCK_POOL),
-				Ok(Fixed128::from_natural(1))
+				Ok(Fixed128::saturating_from_integer(1))
 			);
 
 			// 100% == 100%, unsafe
@@ -353,7 +352,7 @@ fn equity_of_pool_works() {
 	ExtBuilder::default()
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.price(CurrencyId::FEUR, (12, 10))
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.build()
 		.execute_with(|| {
 			<Positions<Runtime>>::insert(0, eur_usd_long_1());
@@ -366,7 +365,7 @@ fn equity_of_pool_works() {
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 3), true);
 			assert_eq!(
 				MarginProtocol::_equity_of_pool(MOCK_POOL),
-				Ok(Fixed128::from_parts(103385299568160000000000))
+				Ok(Fixed128::from_inner(103385299568160000000000))
 			);
 		});
 }
@@ -376,7 +375,7 @@ fn enp_and_ell_without_new_position_works() {
 	ExtBuilder::default()
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.price(CurrencyId::FEUR, (12, 10))
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.build()
 		.execute_with(|| {
 			<Positions<Runtime>>::insert(0, eur_usd_long_1());
@@ -391,8 +390,8 @@ fn enp_and_ell_without_new_position_works() {
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::None),
 				Ok((
-					Fixed128::from_parts(881353313244259093),
-					Fixed128::from_parts(289479128269976269)
+					Fixed128::from_inner(881353313244259093),
+					Fixed128::from_inner(289479128269976269)
 				))
 			);
 		});
@@ -408,8 +407,8 @@ fn enp_and_ell_with_new_position_works() {
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::OpenPosition(eur_usd_long_1())),
 				Ok((
-					Fixed128::from_parts(830424770574396509),
-					Fixed128::from_parts(830424770574396509)
+					Fixed128::from_inner(830424770574396509),
+					Fixed128::from_inner(830424770574396509)
 				))
 			);
 		});
@@ -420,7 +419,7 @@ fn enp_and_ell_without_position_with_liquidity_works() {
 	ExtBuilder::default()
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.price(CurrencyId::FEUR, (12, 10))
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.build()
 		.execute_with(|| {
 			<Positions<Runtime>>::insert(0, eur_usd_long_1());
@@ -435,8 +434,8 @@ fn enp_and_ell_without_position_with_liquidity_works() {
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::Withdraw(balance_from_natural_currency_cent(10))),
 				Ok((
-					Fixed128::from_parts(881352460750416230),
-					Fixed128::from_parts(289478848269696269)
+					Fixed128::from_inner(881352460750416230),
+					Fixed128::from_inner(289478848269696269)
 				))
 			);
 		});
@@ -446,7 +445,7 @@ fn enp_and_ell_without_position_with_liquidity_works() {
 fn ensure_liquidity_works() {
 	ExtBuilder::default()
 		.spread(Permill::zero())
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100))
 		.build()
@@ -461,7 +460,7 @@ fn ensure_liquidity_works() {
 				leveraged_held: fixed128_from_natural_currency_cent(100),
 				leveraged_debits: fixed128_from_natural_currency_cent(100),
 				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
-				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				open_accumulated_swap_rate: Fixed128::saturating_from_integer(1),
 				margin_held: fixed128_from_natural_currency_cent(100),
 			};
 
@@ -483,7 +482,7 @@ fn ensure_liquidity_works() {
 fn ensure_pool_safe_works() {
 	ExtBuilder::default()
 		.spread(Permill::zero())
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100))
 		.build()
@@ -498,14 +497,17 @@ fn ensure_pool_safe_works() {
 				leveraged_held: fixed128_from_natural_currency_cent(100),
 				leveraged_debits: fixed128_from_natural_currency_cent(100),
 				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
-				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				open_accumulated_swap_rate: Fixed128::saturating_from_integer(1),
 				margin_held: fixed128_from_natural_currency_cent(100),
 			};
 
 			// with new position
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::OpenPosition(position.clone())),
-				Ok((Fixed128::from_natural(1), Fixed128::from_natural(1)))
+				Ok((
+					Fixed128::saturating_from_integer(1),
+					Fixed128::saturating_from_integer(1)
+				))
 			);
 
 			// ENP 100% > 99%, ELL 100% > 99%, safe
@@ -535,7 +537,10 @@ fn ensure_pool_safe_works() {
 			LiquidityPoolELLThreshold::insert(EUR_USD_PAIR, risk_threshold(99, 0));
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::None),
-				Ok((Fixed128::from_natural(1), Fixed128::from_natural(1)))
+				Ok((
+					Fixed128::saturating_from_integer(1),
+					Fixed128::saturating_from_integer(1)
+				))
 			);
 
 			// ENP 100% > 99%, ELL 100% > 99%, safe
@@ -562,7 +567,7 @@ fn ensure_pool_safe_works() {
 fn trader_margin_call_should_work() {
 	ExtBuilder::default()
 		.spread(Permill::zero())
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.build()
 		.execute_with(|| {
@@ -576,7 +581,7 @@ fn trader_margin_call_should_work() {
 				leveraged_held: fixed128_from_natural_currency_cent(100),
 				leveraged_debits: fixed128_from_natural_currency_cent(100),
 				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
-				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				open_accumulated_swap_rate: Fixed128::saturating_from_integer(1),
 				margin_held: fixed128_from_natural_currency_cent(100),
 			};
 
@@ -595,13 +600,13 @@ fn trader_margin_call_should_work() {
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), true);
 			assert_eq!(
 				MarginProtocol::margin_level(&ALICE, MOCK_POOL),
-				Ok(Fixed128::from_natural(1))
+				Ok(Fixed128::saturating_from_integer(1))
 			);
 
 			MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(1, 20)));
 			assert_eq!(
 				MarginProtocol::margin_level(&ALICE, MOCK_POOL),
-				Ok(Fixed128::from_rational(5, NonZeroI128::new(100).unwrap()))
+				Ok(Fixed128::saturating_from_rational(5, 100))
 			);
 
 			assert_ok!(MarginProtocol::trader_margin_call(Origin::NONE, ALICE, MOCK_POOL));
@@ -612,7 +617,7 @@ fn trader_margin_call_should_work() {
 fn trader_become_safe_should_work() {
 	ExtBuilder::default()
 		.spread(Permill::zero())
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.build()
 		.execute_with(|| {
@@ -626,7 +631,7 @@ fn trader_become_safe_should_work() {
 				leveraged_held: fixed128_from_natural_currency_cent(100),
 				leveraged_debits: fixed128_from_natural_currency_cent(100),
 				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
-				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				open_accumulated_swap_rate: Fixed128::saturating_from_integer(1),
 				margin_held: fixed128_from_natural_currency_cent(100),
 			};
 
@@ -637,13 +642,13 @@ fn trader_become_safe_should_work() {
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), true);
 			assert_eq!(
 				MarginProtocol::margin_level(&ALICE, MOCK_POOL),
-				Ok(Fixed128::from_natural(1))
+				Ok(Fixed128::saturating_from_integer(1))
 			);
 
 			MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(4, 100)));
 			assert_eq!(
 				MarginProtocol::margin_level(&ALICE, MOCK_POOL),
-				Ok(Fixed128::from_rational(4, NonZeroI128::new(100).unwrap()))
+				Ok(Fixed128::saturating_from_rational(4, 100))
 			);
 			assert_ok!(MarginProtocol::trader_margin_call(Origin::NONE, ALICE, MOCK_POOL));
 			assert_noop!(
@@ -654,7 +659,7 @@ fn trader_become_safe_should_work() {
 			MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(5, 100)));
 			assert_eq!(
 				MarginProtocol::margin_level(&ALICE, MOCK_POOL),
-				Ok(Fixed128::from_rational(5, NonZeroI128::new(100).unwrap()))
+				Ok(Fixed128::saturating_from_rational(5, 100))
 			);
 			assert_noop!(
 				MarginProtocol::trader_become_safe(Origin::NONE, ALICE, MOCK_POOL),
@@ -664,7 +669,7 @@ fn trader_become_safe_should_work() {
 			MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(6, 100)));
 			assert_eq!(
 				MarginProtocol::margin_level(&ALICE, MOCK_POOL),
-				Ok(Fixed128::from_rational(6, NonZeroI128::new(100).unwrap()))
+				Ok(Fixed128::saturating_from_rational(6, 100))
 			);
 			assert_ok!(MarginProtocol::trader_become_safe(Origin::NONE, ALICE, MOCK_POOL));
 		});
@@ -674,7 +679,7 @@ fn trader_stop_out_should_work() {
 	ExtBuilder::default()
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100))
 		.spread(Permill::zero())
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.build()
 		.execute_with(|| {
@@ -688,7 +693,7 @@ fn trader_stop_out_should_work() {
 				leveraged_held: fixed128_from_natural_currency_cent(100),
 				leveraged_debits: fixed128_from_natural_currency_cent(100),
 				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
-				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				open_accumulated_swap_rate: Fixed128::saturating_from_integer(1),
 				margin_held: fixed128_from_natural_currency_cent(100),
 			};
 
@@ -702,14 +707,14 @@ fn trader_stop_out_should_work() {
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), true);
 			assert_eq!(
 				MarginProtocol::margin_level(&ALICE, MOCK_POOL),
-				Ok(Fixed128::from_natural(1))
+				Ok(Fixed128::saturating_from_integer(1))
 			);
 
 			// trader_stop_out without trader_margin_call
 			MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::from_rational(3, 100)));
 			assert_eq!(
 				MarginProtocol::margin_level(&ALICE, MOCK_POOL),
-				Ok(Fixed128::from_rational(3, NonZeroI128::new(100).unwrap()))
+				Ok(Fixed128::saturating_from_rational(3, 100))
 			);
 
 			assert_ok!(MarginProtocol::trader_stop_out(Origin::NONE, ALICE, MOCK_POOL));
@@ -724,7 +729,7 @@ fn trader_stop_out_close_bigger_loss_position() {
 	ExtBuilder::default()
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100))
 		.spread(Permill::zero())
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.build()
 		.execute_with(|| {
@@ -738,7 +743,7 @@ fn trader_stop_out_close_bigger_loss_position() {
 				leveraged_held: fixed128_from_natural_currency_cent(100),
 				leveraged_debits: fixed128_from_natural_currency_cent(100),
 				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
-				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				open_accumulated_swap_rate: Fixed128::saturating_from_integer(1),
 				margin_held: fixed128_from_natural_currency_cent(100),
 			};
 
@@ -750,7 +755,7 @@ fn trader_stop_out_close_bigger_loss_position() {
 				leveraged_held: fixed128_from_natural_currency_cent(100),
 				leveraged_debits: fixed128_from_natural_currency_cent(100),
 				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
-				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				open_accumulated_swap_rate: Fixed128::saturating_from_integer(1),
 				margin_held: fixed128_from_natural_currency_cent(150),
 			};
 
@@ -771,7 +776,7 @@ fn trader_stop_out_close_bigger_loss_position() {
 fn liquidity_pool_margin_call_and_become_safe_work() {
 	ExtBuilder::default()
 		.spread(Permill::zero())
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100))
 		.build()
@@ -786,7 +791,7 @@ fn liquidity_pool_margin_call_and_become_safe_work() {
 				leveraged_held: fixed128_from_natural_currency_cent(100),
 				leveraged_debits: fixed128_from_natural_currency_cent(100),
 				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
-				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				open_accumulated_swap_rate: Fixed128::saturating_from_integer(1),
 				margin_held: fixed128_from_natural_currency_cent(100),
 			};
 
@@ -794,7 +799,10 @@ fn liquidity_pool_margin_call_and_become_safe_work() {
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), true);
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::None),
-				Ok((Fixed128::from_natural(1), Fixed128::from_natural(1)))
+				Ok((
+					Fixed128::saturating_from_integer(1),
+					Fixed128::saturating_from_integer(1)
+				))
 			);
 
 			// ENP 100% > 99%, ELL 100% > 99%, safe
@@ -828,7 +836,7 @@ fn liquidity_pool_margin_call_and_become_safe_work() {
 fn liquidity_pool_force_close_works() {
 	ExtBuilder::default()
 		.spread(Permill::from_rational_approximation(1, 100u32))
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(10_000_00))
 		.build()
@@ -885,7 +893,7 @@ fn open_long_position_works() {
 		.price(CurrencyId::FJPY, (1, 107))
 		// EUR/JPY = 140.9 => EUR/USD = 140.9/107
 		.price(CurrencyId::FEUR, (1409, 1070))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::saturating_from_integer(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -902,9 +910,9 @@ fn open_long_position_works() {
 			let position = {
 				let mut p = eur_jpy_long();
 				// with higher precision level
-				p.leveraged_debits = Fixed128::from_parts(-14104090000000000732600000);
-				p.leveraged_debits_in_usd = Fixed128::from_parts(-131813925233644859805488);
-				p.margin_held = Fixed128::from_parts(6590696261682242990274);
+				p.leveraged_debits = Fixed128::from_inner(-14104090000000000732600000);
+				p.leveraged_debits_in_usd = Fixed128::from_inner(-131813925233644859805488);
+				p.margin_held = Fixed128::from_inner(6590696261682242990274);
 				p
 			};
 			let id = 0;
@@ -937,7 +945,7 @@ fn open_short_position_works() {
 		.price(CurrencyId::FJPY, (1, 106))
 		// EUR/JPY = 141.9 => EUR/USD = 141.9/106
 		.price(CurrencyId::FEUR, (1419, 1060))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::saturating_from_integer(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -954,9 +962,9 @@ fn open_short_position_works() {
 			let position = {
 				let mut p = eur_jpy_short();
 				// with higher precision level
-				p.leveraged_debits = Fixed128::from_parts(14175810000000000585500000);
-				p.leveraged_debits_in_usd = Fixed128::from_parts(133734056603773584812414);
-				p.margin_held = Fixed128::from_parts(6686702830188679240620);
+				p.leveraged_debits = Fixed128::from_inner(14175810000000000585500000);
+				p.leveraged_debits_in_usd = Fixed128::from_inner(133734056603773584812414);
+				p.margin_held = Fixed128::from_inner(6686702830188679240620);
 				p
 			};
 			assert_eq!(MarginProtocol::positions(0), Some(position));
@@ -970,7 +978,7 @@ fn open_position_fails_if_trader_margin_called() {
 		.price(CurrencyId::FJPY, (1, 107))
 		// EUR/JPY = 140.9 => EUR/USD = 140.9/107
 		.price(CurrencyId::FEUR, (1409, 1070))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::saturating_from_integer(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -997,7 +1005,7 @@ fn open_position_fails_if_pool_margin_called() {
 		.price(CurrencyId::FJPY, (1, 107))
 		// EUR/JPY = 140.9 => EUR/USD = 140.9/107
 		.price(CurrencyId::FEUR, (1409, 1070))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::saturating_from_integer(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -1021,7 +1029,7 @@ fn open_position_fails_if_pool_margin_called() {
 fn open_position_fails_if_no_base_price() {
 	ExtBuilder::default()
 		.price(CurrencyId::FEUR, (1409, 1070))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::saturating_from_integer(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -1044,7 +1052,7 @@ fn open_position_fails_if_no_base_price() {
 fn open_position_fails_if_no_quote_price() {
 	ExtBuilder::default()
 		.price(CurrencyId::FJPY, (1, 107))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::saturating_from_integer(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -1070,7 +1078,7 @@ fn open_long_position_fails_if_market_price_too_high() {
 		.price(CurrencyId::FJPY, (1, 107))
 		// EUR/JPY = 140.9 => EUR/USD = 140.9/107
 		.price(CurrencyId::FEUR, (1409, 1070))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::saturating_from_integer(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -1096,7 +1104,7 @@ fn open_short_position_fails_if_market_price_too_low() {
 		.price(CurrencyId::FJPY, (1, 106))
 		// EUR/JPY = 141.9 => EUR/USD = 141.9/106
 		.price(CurrencyId::FEUR, (1419, 1060))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::saturating_from_integer(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -1120,7 +1128,7 @@ fn open_position_fails_if_leveraged_debits_out_of_bound() {
 	ExtBuilder::default()
 		.price(CurrencyId::FJPY, (1, 1))
 		.price(CurrencyId::FEUR, (2, 1))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::saturating_from_integer(1))
 		.pool_liquidity(MOCK_POOL, Balance::max_value())
 		.build()
 		.execute_with(|| {
@@ -1144,7 +1152,7 @@ fn open_position_fails_if_insufficient_free_margin() {
 	ExtBuilder::default()
 		.price(CurrencyId::FJPY, (1, 1))
 		.price(CurrencyId::FEUR, (2, 1))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::saturating_from_integer(1))
 		.pool_liquidity(MOCK_POOL, Balance::max_value())
 		.build()
 		.execute_with(|| {
@@ -1169,7 +1177,7 @@ fn open_position_fails_if_would_reach_enp_threshold() {
 		.price(CurrencyId::FJPY, (1, 107))
 		// EUR/JPY = 140.9 => EUR/USD = 140.9/107
 		.price(CurrencyId::FEUR, (1409, 1070))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::saturating_from_integer(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(659_00))
 		.build()
 		.execute_with(|| {
@@ -1196,7 +1204,7 @@ fn open_position_fails_if_would_reach_ell_threshold() {
 		.price(CurrencyId::FJPY, (1, 107))
 		// EUR/JPY = 140.9 => EUR/USD = 140.9/107
 		.price(CurrencyId::FEUR, (1409, 1070))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::saturating_from_integer(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(659_00))
 		.build()
 		.execute_with(|| {
@@ -1223,7 +1231,7 @@ fn open_position_fails_if_run_out_of_position_id() {
 		.price(CurrencyId::FJPY, (1, 107))
 		// EUR/JPY = 140.9 => EUR/USD = 140.9/107
 		.price(CurrencyId::FEUR, (1409, 1070))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::saturating_from_integer(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -1250,7 +1258,7 @@ fn free_margin_cannot_be_used_across_pool() {
 		.price(CurrencyId::FJPY, (1, 107))
 		// EUR/JPY = 140.9 => EUR/USD = 140.9/107
 		.price(CurrencyId::FEUR, (1409, 1070))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::saturating_from_integer(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -1276,7 +1284,7 @@ fn close_loss_position_works() {
 		.module_balance(alice_initial)
 		// EUR/USD = 1.2
 		.price(CurrencyId::FEUR, (12, 10))
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -1297,7 +1305,7 @@ fn close_loss_position_works() {
 			// realized math
 			assert_eq!(
 				MarginProtocol::balances(ALICE, MOCK_POOL),
-				Fixed128::from_parts(9415301035390000000000)
+				Fixed128::from_inner(9415301035390000000000)
 			);
 			assert_eq!(MockLiquidityPools::liquidity(MOCK_POOL), 100584698964610000000000);
 			assert_eq!(
@@ -1326,7 +1334,7 @@ fn close_loss_position_realizing_part_on_not_enough_equity() {
 		.module_balance(fixed128_from_natural_currency_cent(1_00))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(1_000_00))
 		.spread(Permill::zero())
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.price(CurrencyId::FEUR, (10, 1))
 		.build()
 		.execute_with(|| {
@@ -1340,7 +1348,7 @@ fn close_loss_position_realizing_part_on_not_enough_equity() {
 				leveraged_held: fixed128_from_natural_currency_cent(10_00),
 				leveraged_debits: fixed128_from_natural_currency_cent(100_00),
 				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100_00),
-				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				open_accumulated_swap_rate: Fixed128::saturating_from_integer(1),
 				margin_held: fixed128_from_natural_currency_cent(1_00),
 			};
 			<Positions<Runtime>>::insert(0, position);
@@ -1367,7 +1375,7 @@ fn close_loss_position_realizing_nothing_on_negative_equity() {
 		.module_balance(fixed128_from_natural_currency_cent(2_00))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(1_000_00))
 		.spread(Permill::zero())
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.price(CurrencyId::FEUR, (10, 1))
 		.build()
 		.execute_with(|| {
@@ -1381,7 +1389,7 @@ fn close_loss_position_realizing_nothing_on_negative_equity() {
 				leveraged_held: fixed128_from_natural_currency_cent(10_00),
 				leveraged_debits: fixed128_from_natural_currency_cent(100_00),
 				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100_00),
-				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				open_accumulated_swap_rate: Fixed128::saturating_from_integer(1),
 				margin_held: fixed128_from_natural_currency_cent(1_00),
 			};
 			<Positions<Runtime>>::insert(0, position.clone());
@@ -1401,7 +1409,10 @@ fn close_loss_position_realizing_nothing_on_negative_equity() {
 				MockLiquidityPools::liquidity(MOCK_POOL),
 				balance_from_natural_currency_cent(1_000_00)
 			);
-			assert_eq!(MarginProtocol::balances(&ALICE, MOCK_POOL), Fixed128::from_natural(-88));
+			assert_eq!(
+				MarginProtocol::balances(&ALICE, MOCK_POOL),
+				Fixed128::saturating_from_integer(-88)
+			);
 		});
 }
 
@@ -1412,7 +1423,7 @@ fn close_profit_position_works() {
 		.module_balance(alice_initial)
 		// EUR/USD = 1.2
 		.price(CurrencyId::FEUR, (12, 10))
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -1432,7 +1443,7 @@ fn close_profit_position_works() {
 
 			assert_eq!(
 				MarginProtocol::balances(ALICE, MOCK_POOL),
-				Fixed128::from_parts(10438691023010000000000)
+				Fixed128::from_inner(10438691023010000000000)
 			);
 			assert_eq!(MockLiquidityPools::liquidity(MOCK_POOL), 99561308976990000000000);
 			assert_eq!(
@@ -1449,7 +1460,7 @@ fn close_position_fails_if_position_not_found() {
 		.module_balance(alice_initial)
 		// EUR/USD = 1.2
 		.price(CurrencyId::FEUR, (12, 10))
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -1469,7 +1480,7 @@ fn close_position_fails_if_position_not_opened_by_trader() {
 		.module_balance(alice_initial)
 		// EUR/USD = 1.2
 		.price(CurrencyId::FEUR, (12, 10))
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -1494,7 +1505,7 @@ fn close_position_fails_if_unrealized_out_of_bound() {
 	ExtBuilder::default()
 		.module_balance(alice_initial)
 		.price(CurrencyId::FEUR, (u128::max_value(), 1))
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -1519,7 +1530,7 @@ fn close_position_fails_if_no_base_price() {
 	ExtBuilder::default()
 		.module_balance(alice_initial)
 		.price(CurrencyId::FEUR, (1409, 1070))
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -1544,7 +1555,7 @@ fn close_position_fails_if_no_quote_price() {
 	ExtBuilder::default()
 		.module_balance(alice_initial)
 		.price(CurrencyId::FJPY, (1, 107))
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -1570,7 +1581,7 @@ fn close_long_position_fails_if_market_price_too_low() {
 		.module_balance(alice_initial)
 		// EUR/USD = 1.2
 		.price(CurrencyId::FEUR, (12, 10))
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -1596,7 +1607,7 @@ fn close_short_position_fails_if_market_price_too_high() {
 		.module_balance(alice_initial)
 		// EUR/USD = 1.2
 		.price(CurrencyId::FEUR, (12, 10))
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
@@ -1631,7 +1642,7 @@ fn deposit_works() {
 			OrmlTokens::free_balance(CurrencyId::AUSD, &MarginProtocol::account_id()),
 			500
 		);
-		assert_eq!(MarginProtocol::balances(&ALICE, MOCK_POOL), Fixed128::from_parts(500));
+		assert_eq!(MarginProtocol::balances(&ALICE, MOCK_POOL), Fixed128::from_inner(500));
 
 		let event = TestEvent::margin_protocol(RawEvent::Deposited(ALICE, MOCK_POOL, 500));
 		assert!(System::events().iter().any(|record| record.event == event));
@@ -1651,10 +1662,10 @@ fn deposit_fails_if_transfer_err() {
 #[test]
 fn withdraw_works() {
 	ExtBuilder::default()
-		.module_balance(Fixed128::from_parts(1000))
+		.module_balance(Fixed128::from_inner(1000))
 		.build()
 		.execute_with(|| {
-			<Balances<Runtime>>::insert(ALICE, MOCK_POOL, Fixed128::from_parts(1000));
+			<Balances<Runtime>>::insert(ALICE, MOCK_POOL, Fixed128::from_inner(1000));
 			assert_ok!(MarginProtocol::withdraw(Origin::signed(ALICE), MOCK_POOL, 500));
 
 			let event = TestEvent::margin_protocol(RawEvent::Withdrew(ALICE, MOCK_POOL, 500));
@@ -1667,7 +1678,7 @@ fn trader_can_withdraw_unrealized_profit() {
 	ExtBuilder::default()
 		.module_balance(fixed128_from_natural_currency_cent(10_00))
 		.spread(Permill::zero())
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.build()
 		.execute_with(|| {
@@ -1681,7 +1692,7 @@ fn trader_can_withdraw_unrealized_profit() {
 				leveraged_held: fixed128_from_natural_currency_cent(10_00),
 				leveraged_debits: fixed128_from_natural_currency_cent(100),
 				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
-				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				open_accumulated_swap_rate: Fixed128::saturating_from_integer(1),
 				margin_held: fixed128_from_natural_currency_cent(50),
 			};
 			<Positions<Runtime>>::insert(0, position);
@@ -1703,7 +1714,7 @@ fn trader_can_withdraw_unrealized_profit() {
 fn withdraw_fails_if_insufficient_free_margin() {
 	ExtBuilder::default()
 		.spread(Permill::zero())
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.build()
 		.execute_with(|| {
@@ -1717,7 +1728,7 @@ fn withdraw_fails_if_insufficient_free_margin() {
 				leveraged_held: fixed128_from_natural_currency_cent(100),
 				leveraged_debits: fixed128_from_natural_currency_cent(100),
 				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
-				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				open_accumulated_swap_rate: Fixed128::saturating_from_integer(1),
 				margin_held: fixed128_from_natural_currency_cent(100),
 			};
 			<Positions<Runtime>>::insert(0, position);
@@ -1738,7 +1749,7 @@ fn withdraw_fails_if_insufficient_free_margin() {
 fn offchain_worker_should_work() {
 	let mut ext = ExtBuilder::default()
 		.spread(Permill::zero())
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(200_00))
 		.build();
@@ -1769,7 +1780,7 @@ fn offchain_worker_should_work() {
 
 		assert_eq!(
 			MarginProtocol::margin_level(&ALICE, MOCK_POOL).ok().unwrap(),
-			Fixed128::from_rational(5, NonZeroI128::new(100).unwrap()) // 5%
+			Fixed128::saturating_from_rational(5, 100) // 5%
 		);
 
 		// price goes down EUR/USD 0.97/1
@@ -1777,7 +1788,7 @@ fn offchain_worker_should_work() {
 
 		assert_eq!(
 			MarginProtocol::margin_level(&ALICE, MOCK_POOL).ok().unwrap(),
-			Fixed128::from_rational(2, NonZeroI128::new(100).unwrap()) // 2%
+			Fixed128::saturating_from_rational(2, 100) // 2%
 		);
 
 		assert_ok!(MarginProtocol::_offchain_worker(1));
@@ -1799,7 +1810,7 @@ fn offchain_worker_should_work() {
 
 		assert_eq!(
 			MarginProtocol::margin_level(&ALICE, MOCK_POOL).ok().unwrap(),
-			Fixed128::from_rational(1, NonZeroI128::new(100).unwrap()) // 1%
+			Fixed128::saturating_from_rational(1, 100) // 1%
 		);
 
 		assert_ok!(MarginProtocol::_offchain_worker(1));
@@ -1912,7 +1923,7 @@ fn liquidity_pool_manager_can_remove_works() {
 fn liquidity_pool_manager_get_required_deposit_works() {
 	ExtBuilder::default()
 		.spread(Permill::zero())
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(0))
 		.build()
@@ -1927,7 +1938,7 @@ fn liquidity_pool_manager_get_required_deposit_works() {
 				leveraged_held: fixed128_from_natural_currency_cent(100),
 				leveraged_debits: fixed128_from_natural_currency_cent(100),
 				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
-				open_accumulated_swap_rate: Fixed128::from_natural(1),
+				open_accumulated_swap_rate: Fixed128::saturating_from_integer(1),
 				margin_held: fixed128_from_natural_currency_cent(100),
 			};
 			let id = 0;
@@ -1960,7 +1971,7 @@ fn liquidity_pool_manager_get_required_deposit_works() {
 fn trader_open_positions_limit() {
 	ExtBuilder::default()
 		.spread(Permill::zero())
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(1000_00))
 		.build()
@@ -2010,7 +2021,7 @@ fn trader_open_positions_limit() {
 fn pool_open_positions_limit() {
 	ExtBuilder::default()
 		.spread(Permill::zero())
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(1000_00))
 		.build()
@@ -2060,7 +2071,7 @@ fn pool_open_positions_limit() {
 fn set_trading_pair_risk_threshold_works() {
 	ExtBuilder::default()
 		.spread(Permill::zero())
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(1000_00))
 		.build()
@@ -2176,7 +2187,7 @@ fn set_trading_pair_risk_threshold_works() {
 fn ensure_can_enable_trading_pair_works() {
 	ExtBuilder::default()
 		.spread(Permill::zero())
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(1000_00))
 		.build()
@@ -2191,8 +2202,8 @@ fn ensure_can_enable_trading_pair_works() {
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::OpenPosition(eur_usd_long_1())),
 				Ok((
-					Fixed128::from_parts(89124088565673727),
-					Fixed128::from_parts(89124088565673727)
+					Fixed128::from_inner(89124088565673727),
+					Fixed128::from_inner(89124088565673727)
 				))
 			);
 
@@ -2211,8 +2222,8 @@ fn ensure_can_enable_trading_pair_works() {
 fn open_position_check_trader_works() {
 	ExtBuilder::default()
 		.spread(Permill::zero())
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
+		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::saturating_from_integer(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.price(CurrencyId::FJPY, (1, 105))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(1000_00))
@@ -2245,8 +2256,8 @@ fn open_position_check_trader_works() {
 fn open_position_check_pool_works() {
 	ExtBuilder::default()
 		.spread(Permill::zero())
-		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::from_natural(1))
-		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::from_natural(1))
+		.accumulated_swap_rate(EUR_USD_PAIR, Fixed128::saturating_from_integer(1))
+		.accumulated_swap_rate(EUR_JPY_PAIR, Fixed128::saturating_from_integer(1))
 		.price(CurrencyId::FEUR, (1, 1))
 		.price(CurrencyId::FJPY, (70589, 10000))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_000_00))

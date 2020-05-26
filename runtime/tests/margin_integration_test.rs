@@ -15,8 +15,7 @@ mod tests {
 	use module_primitives::Leverage::*;
 	use module_traits::{MarginProtocolLiquidityPools, Treasury};
 	use orml_prices::Price;
-	use sp_arithmetic::Fixed128;
-	use sp_runtime::traits::Bounded;
+	use sp_runtime::{traits::Bounded, Fixed128, FixedPointNumber};
 
 	#[test]
 	fn test_margin_liquidity_pools() {
@@ -57,11 +56,7 @@ mod tests {
 				assert_ok!(margin_set_default_min_leveraged_amount(dollar(1000)));
 				assert_ok!(margin_set_mock_swap_rate(EUR_USD));
 				assert_noop!(
-					margin_set_swap_rate(
-						EUR_USD,
-						negative_one_percent(),
-						MaxSwap::get().checked_add(&one_percent()).unwrap()
-					),
+					margin_set_swap_rate(EUR_USD, negative_one_percent(), MaxSwap::get() + one_percent()),
 					margin_liquidity_pools::Error::<Runtime>::SwapRateTooHigh
 				);
 
@@ -121,10 +116,10 @@ mod tests {
 				assert_eq!(
 					margin_trader_info(&ALICE::get()),
 					TraderInfo {
-						equity: Fixed128::from_natural(5000),
+						equity: Fixed128::saturating_from_integer(5000),
 						margin_held: Fixed128::zero(),
 						margin_level: Fixed128::max_value(),
-						free_margin: Fixed128::from_natural(5000),
+						free_margin: Fixed128::saturating_from_integer(5000),
 						unrealized_pl: Fixed128::zero()
 					}
 				);
@@ -140,19 +135,19 @@ mod tests {
 				assert_eq!(
 					margin_pool_info(),
 					Some(PoolInfo {
-						enp: Fixed128::from_parts(679867986798679867),
-						ell: Fixed128::from_parts(679867986798679867),
+						enp: Fixed128::from_inner(679867986798679867),
+						ell: Fixed128::from_inner(679867986798679867),
 						required_deposit: Fixed128::zero()
 					})
 				);
 				assert_eq!(
 					margin_trader_info(&ALICE::get()),
 					TraderInfo {
-						equity: Fixed128::from_natural(4700),
-						margin_held: Fixed128::from_natural(1515),
-						margin_level: Fixed128::from_parts(310231023102310231),
-						free_margin: Fixed128::from_natural(3185),
-						unrealized_pl: Fixed128::from_natural(-300)
+						equity: Fixed128::saturating_from_integer(4700),
+						margin_held: Fixed128::saturating_from_integer(1515),
+						margin_level: Fixed128::from_inner(310231023102310231),
+						free_margin: Fixed128::saturating_from_integer(3185),
+						unrealized_pl: Fixed128::saturating_from_integer(-300)
 					}
 				);
 
@@ -175,10 +170,10 @@ mod tests {
 				assert_eq!(
 					margin_trader_info(&ALICE::get()),
 					TraderInfo {
-						equity: Fixed128::from_natural(4700),
+						equity: Fixed128::saturating_from_integer(4700),
 						margin_held: Fixed128::zero(),
 						margin_level: Fixed128::max_value(),
-						free_margin: Fixed128::from_natural(4700),
+						free_margin: Fixed128::saturating_from_integer(4700),
 						unrealized_pl: Fixed128::zero()
 					}
 				);
@@ -365,7 +360,7 @@ mod tests {
 				assert_ok!(margin_trader_stop_out(&ALICE::get()));
 
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(4500));
-				assert_eq!(margin_balance(&ALICE::get()), Fixed128::from_natural(0));
+				assert_eq!(margin_balance(&ALICE::get()), Fixed128::saturating_from_integer(0));
 				assert_eq!(margin_liquidity(), dollar(15_500));
 			});
 	}
@@ -602,20 +597,20 @@ mod tests {
 				assert_eq!(
 					margin_trader_info(&ALICE::get()),
 					TraderInfo {
-						equity: Fixed128::from_natural(9000),
+						equity: Fixed128::saturating_from_integer(9000),
 						margin_held: Fixed128::zero(),
 						margin_level: Fixed128::max_value(),
-						free_margin: Fixed128::from_natural(9000),
+						free_margin: Fixed128::saturating_from_integer(9000),
 						unrealized_pl: Fixed128::zero()
 					}
 				);
 				assert_eq!(
 					margin_trader_info(&BOB::get()),
 					TraderInfo {
-						equity: Fixed128::from_natural(9000),
+						equity: Fixed128::saturating_from_integer(9000),
 						margin_held: Fixed128::zero(),
 						margin_level: Fixed128::max_value(),
-						free_margin: Fixed128::from_natural(9000),
+						free_margin: Fixed128::saturating_from_integer(9000),
 						unrealized_pl: Fixed128::zero()
 					}
 				);
@@ -631,11 +626,11 @@ mod tests {
 				assert_eq!(
 					margin_trader_info(&ALICE::get()),
 					TraderInfo {
-						equity: Fixed128::from_natural(8700),
-						margin_held: Fixed128::from_natural(1515),
-						margin_level: Fixed128::from_parts(574257425742574257),
-						free_margin: Fixed128::from_natural(7185),
-						unrealized_pl: Fixed128::from_natural(-300)
+						equity: Fixed128::saturating_from_integer(8700),
+						margin_held: Fixed128::saturating_from_integer(1515),
+						margin_level: Fixed128::from_inner(574257425742574257),
+						free_margin: Fixed128::saturating_from_integer(7185),
+						unrealized_pl: Fixed128::saturating_from_integer(-300)
 					}
 				);
 
@@ -651,11 +646,11 @@ mod tests {
 				assert_eq!(
 					margin_trader_info(&BOB::get()),
 					TraderInfo {
-						equity: Fixed128::from_natural(7920),
-						margin_held: Fixed128::from_parts(2945999999999999998800),
-						margin_level: Fixed128::from_parts(268839103869653767),
-						free_margin: Fixed128::from_parts(4974000000000000001200),
-						unrealized_pl: Fixed128::from_natural(-1080)
+						equity: Fixed128::saturating_from_integer(7920),
+						margin_held: Fixed128::from_inner(2945999999999999998800),
+						margin_level: Fixed128::from_inner(268839103869653767),
+						free_margin: Fixed128::from_inner(4974000000000000001200),
+						unrealized_pl: Fixed128::saturating_from_integer(-1080)
 					}
 				);
 
@@ -675,25 +670,25 @@ mod tests {
 				assert_ok!(margin_close_position(&BOB::get(), 1, Price::from_rational(4, 1)));
 				assert_eq!(
 					margin_balance(&BOB::get()),
-					Fixed128::from_parts(9483999999999999999600)
+					Fixed128::from_inner(9483999999999999999600)
 				);
 				assert_eq!(
 					margin_trader_info(&ALICE::get()),
 					TraderInfo {
-						equity: Fixed128::from_natural(9014),
-						margin_held: Fixed128::from_parts(1764649999999999999900),
-						margin_level: Fixed128::from_parts(447500372337784838),
-						free_margin: Fixed128::from_parts(7249350000000000000100),
-						unrealized_pl: Fixed128::from_natural(14)
+						equity: Fixed128::saturating_from_integer(9014),
+						margin_held: Fixed128::from_inner(1764649999999999999900),
+						margin_level: Fixed128::from_inner(447500372337784838),
+						free_margin: Fixed128::from_inner(7249350000000000000100),
+						unrealized_pl: Fixed128::saturating_from_integer(14)
 					}
 				);
 				assert_eq!(
 					margin_trader_info(&BOB::get()),
 					TraderInfo {
-						equity: Fixed128::from_parts(9483999999999999999600),
+						equity: Fixed128::from_inner(9483999999999999999600),
 						margin_held: Fixed128::zero(),
 						margin_level: Fixed128::max_value(),
-						free_margin: Fixed128::from_parts(9483999999999999999600),
+						free_margin: Fixed128::from_inner(9483999999999999999600),
 						unrealized_pl: Fixed128::zero()
 					}
 				);
@@ -714,26 +709,26 @@ mod tests {
 				));
 				assert_eq!(
 					margin_balance(&BOB::get()),
-					Fixed128::from_parts(9483999999999999999600)
+					Fixed128::from_inner(9483999999999999999600)
 				);
 				assert_eq!(
 					margin_trader_info(&ALICE::get()),
 					TraderInfo {
-						equity: Fixed128::from_parts(8542129032258064515700),
-						margin_held: Fixed128::from_parts(249649999999999999900),
-						margin_level: Fixed128::from_parts(1710820955789718509),
-						free_margin: Fixed128::from_parts(8292479032258064515800),
-						unrealized_pl: Fixed128::from_parts(342129032258064515700)
+						equity: Fixed128::from_inner(8542129032258064515700),
+						margin_held: Fixed128::from_inner(249649999999999999900),
+						margin_level: Fixed128::from_inner(1710820955789718509),
+						free_margin: Fixed128::from_inner(8292479032258064515800),
+						unrealized_pl: Fixed128::from_inner(342129032258064515700)
 					}
 				);
 				assert_eq!(
 					margin_trader_info(&BOB::get()),
 					TraderInfo {
-						equity: Fixed128::from_parts(9363999999999999999600),
-						margin_held: Fixed128::from_natural(287),
-						margin_level: Fixed128::from_parts(1631358885017421602),
-						free_margin: Fixed128::from_parts(9076999999999999999600),
-						unrealized_pl: Fixed128::from_natural(-120)
+						equity: Fixed128::from_inner(9363999999999999999600),
+						margin_held: Fixed128::saturating_from_integer(287),
+						margin_level: Fixed128::from_inner(1631358885017421602),
+						free_margin: Fixed128::from_inner(9076999999999999999600),
+						unrealized_pl: Fixed128::saturating_from_integer(-120)
 					}
 				);
 
@@ -745,12 +740,12 @@ mod tests {
 				assert_ok!(margin_close_position(&ALICE::get(), 2, Price::from_rational(1, 1)));
 				assert_eq!(
 					margin_balance(&ALICE::get()),
-					Fixed128::from_parts(8806193548387096773600)
+					Fixed128::from_inner(8806193548387096773600)
 				);
 				assert_ok!(margin_close_position(&BOB::get(), 3, Price::from_rational(4, 1)));
 				assert_eq!(
 					margin_balance(&BOB::get()),
-					Fixed128::from_parts(9563999999999999999600)
+					Fixed128::from_inner(9563999999999999999600)
 				);
 				assert_eq!(margin_liquidity(), 19629806451612903226800);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(1000));
@@ -766,20 +761,20 @@ mod tests {
 				assert_eq!(
 					margin_trader_info(&ALICE::get()),
 					TraderInfo {
-						equity: Fixed128::from_parts(8806193548387096773600),
+						equity: Fixed128::from_inner(8806193548387096773600),
 						margin_held: Fixed128::zero(),
 						margin_level: Fixed128::max_value(),
-						free_margin: Fixed128::from_parts(8806193548387096773600),
+						free_margin: Fixed128::from_inner(8806193548387096773600),
 						unrealized_pl: Fixed128::zero()
 					}
 				);
 				assert_eq!(
 					margin_trader_info(&BOB::get()),
 					TraderInfo {
-						equity: Fixed128::from_parts(9563999999999999999600),
+						equity: Fixed128::from_inner(9563999999999999999600),
 						margin_held: Fixed128::zero(),
 						margin_level: Fixed128::max_value(),
-						free_margin: Fixed128::from_parts(9563999999999999999600),
+						free_margin: Fixed128::from_inner(9563999999999999999600),
 						unrealized_pl: Fixed128::zero()
 					}
 				);
@@ -839,7 +834,7 @@ mod tests {
 				// -151.5 = 5000 * 3.03 * (-0.01 - 0)
 				assert_eq!(
 					margin_balance(&ALICE::get()),
-					Fixed128::from_parts(4548500000000000000000)
+					Fixed128::from_inner(4548500000000000000000)
 				);
 				assert_eq!(margin_liquidity(), 10451500000000000000000);
 
@@ -854,7 +849,7 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(
 					margin_balance(&ALICE::get()),
-					Fixed128::from_parts(4548_500000000000000000)
+					Fixed128::from_inner(4548_500000000000000000)
 				);
 
 				margin_execute_block(9..22);
@@ -869,7 +864,7 @@ mod tests {
 				// 304.515 = 5000 * 2.97 * (0.03 - 0.01)
 				assert_eq!(
 					margin_balance(&ALICE::get()),
-					Fixed128::from_parts(4545_500000000000000000)
+					Fixed128::from_inner(4545_500000000000000000)
 				);
 				assert_eq!(margin_liquidity(), 10454_500000000000000000);
 				assert_ok!(margin_withdraw(&ALICE::get(), 4545_500000000000000000));
@@ -937,7 +932,7 @@ mod tests {
 				// -153.015 = 5000 * 3.03 * (-0.0101 - 0)
 				assert_eq!(
 					margin_balance(&ALICE::get()),
-					Fixed128::from_parts(4546_985000000000000000)
+					Fixed128::from_inner(4546_985000000000000000)
 				);
 				assert_eq!(margin_liquidity(), 10453_015000000000000000);
 
@@ -952,7 +947,7 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(
 					margin_balance(&ALICE::get()),
-					Fixed128::from_parts(4546_985000000000000000)
+					Fixed128::from_inner(4546_985000000000000000)
 				);
 
 				margin_execute_block(9..22);
@@ -967,7 +962,7 @@ mod tests {
 				// 294.03 = 5000 * 2.97 * (0.0297 - 0.0099)
 				assert_eq!(
 					margin_balance(&ALICE::get()),
-					Fixed128::from_parts(4541_015000000000000000)
+					Fixed128::from_inner(4541_015000000000000000)
 				);
 				assert_eq!(margin_liquidity(), 10458_985000000000000000);
 			});

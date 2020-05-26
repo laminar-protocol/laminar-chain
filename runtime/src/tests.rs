@@ -170,15 +170,15 @@ pub fn cent(amount: u128) -> u128 {
 }
 
 pub fn fixed_128_dollar(amount: i128) -> Fixed128 {
-	Fixed128::from_natural(amount)
+	Fixed128::saturating_from_integer(amount)
 }
 
 pub fn one_percent() -> Fixed128 {
-	Fixed128::recip(&Fixed128::from_natural(100)).unwrap()
+	Fixed128::reciprocal(Fixed128::saturating_from_integer(100)).unwrap()
 }
 
 pub fn negative_one_percent() -> Fixed128 {
-	Fixed128::recip(&Fixed128::from_natural(-100)).unwrap()
+	Fixed128::reciprocal(Fixed128::saturating_from_integer(-100)).unwrap()
 }
 
 pub fn multi_currency_balance(who: &AccountId, currency_id: CurrencyId) -> Balance {
@@ -332,8 +332,8 @@ pub fn margin_liquidity_pool_disable_trading_pair(pair: TradingPair) -> Dispatch
 
 pub fn margin_set_mock_swap_rate(pair: TradingPair) -> DispatchResult {
 	let mock_swap_rate: SwapRate = SwapRate {
-		long: Fixed128::recip(&Fixed128::from_natural(-100)).unwrap(),
-		short: Fixed128::recip(&Fixed128::from_natural(100)).unwrap(),
+		long: Fixed128::reciprocal(Fixed128::saturating_from_integer(-100)).unwrap(),
+		short: Fixed128::reciprocal(Fixed128::saturating_from_integer(100)).unwrap(),
 	};
 
 	MarginLiquidityPools::set_swap_rate(<Runtime as system::Trait>::Origin::ROOT, pair, mock_swap_rate)

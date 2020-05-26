@@ -6,16 +6,18 @@ use runtime::{
 	opaque::Block, AccountId, Balance, BlockNumber, CurrencyId, Hash, Index, TimeStampedPrice, UncheckedExtrinsic,
 };
 use sc_consensus_babe::{Config, Epoch};
-use sc_consensus_babe_rpc::BabeRPCHandler;
+use sc_consensus_babe_rpc::BabeRpcHandler;
 use sc_consensus_epochs::SharedEpochChanges;
 use sc_finality_grandpa::{SharedAuthoritySet, SharedVoterState};
 use sc_finality_grandpa_rpc::GrandpaRpcHandler;
 use sc_keystore::KeyStorePtr;
+use sc_rpc_api::DenyUnsafe;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sp_consensus::SelectChain;
 use sp_consensus_babe::BabeApi;
 use sp_transaction_pool::TransactionPool;
+use substrate_frame_rpc_system::AccountNonceApi;
 
 /// Light client extra dependencies.
 pub struct LightDeps<C, F, P> {
@@ -55,6 +57,8 @@ pub struct FullDeps<C, P, SC> {
 	pub pool: Arc<P>,
 	/// The SelectChain Strategy
 	pub select_chain: SC,
+	/// Whether to deny unsafe calls
+	pub deny_unsafe: DenyUnsafe,
 	/// BABE specific dependencies.
 	pub babe: BabeDeps,
 	/// GRANDPA specific dependencies.
@@ -67,9 +71,9 @@ where
 	C: ProvideRuntimeApi<Block>,
 	C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError> + 'static,
 	C: Send + Sync + 'static,
-	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
-	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance, UncheckedExtrinsic>,
+	C::Api: AccountNonceApi<Block, AccountId, Index>,
 	C::Api: BabeApi<Block>,
+	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance, UncheckedExtrinsic>,
 	C::Api: orml_oracle_rpc::OracleRuntimeApi<Block, CurrencyId, TimeStampedPrice>,
 	C::Api: margin_protocol_rpc::MarginProtocolRuntimeApi<Block, AccountId>,
 	C::Api: synthetic_protocol_rpc::SyntheticProtocolRuntimeApi<Block, AccountId>,
@@ -89,6 +93,7 @@ where
 		client,
 		pool,
 		select_chain,
+		deny_unsafe,
 		babe,
 		grandpa,
 	} = deps;
@@ -103,19 +108,20 @@ where
 	} = grandpa;
 
 	io.extend_with(SystemApi::to_delegate(FullSystem::new(client.clone(), pool)));
+	io.extend_with(sc_finality_grandpa_rpc::GrandpaApi::to_delegate(
+		GrandpaRpcHandler::new(shared_authority_set, shared_voter_state),
+	));
 	io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(
 		client.clone(),
 	)));
-	io.extend_with(sc_consensus_babe_rpc::BabeApi::to_delegate(BabeRPCHandler::new(
+	io.extend_with(sc_consensus_babe_rpc::BabeApi::to_delegate(BabeRpcHandler::new(
 		client.clone(),
 		shared_epoch_changes,
 		keystore,
 		babe_config,
 		select_chain,
+		deny_unsafe,
 	)));
-	io.extend_with(sc_finality_grandpa_rpc::GrandpaApi::to_delegate(
-		GrandpaRpcHandler::new(shared_authority_set, shared_voter_state),
-	));
 	io.extend_with(OracleApi::to_delegate(Oracle::new(client.clone())));
 	io.extend_with(MarginProtocolApi::to_delegate(MarginProtocol::new(client.clone())));
 	io.extend_with(SyntheticProtocolApi::to_delegate(SyntheticProtocol::new(client)));
@@ -126,7 +132,7 @@ where
 /// Instantiate all Light RPC extensions.
 pub fn create_light<C, P, M, F>(deps: LightDeps<C, F, P>) -> jsonrpc_core::IoHandler<M>
 where
-	C: sp_blockchain::HeaderBackend<Block>,
+	C: HeaderBackend<Block>,
 	C: Send + Sync + 'static,
 	F: sc_client_api::light::Fetcher<Block> + 'static,
 	P: TransactionPool + 'static,

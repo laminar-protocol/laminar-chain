@@ -17,7 +17,7 @@ use primitives::{
 	TradingPair,
 };
 use sp_arithmetic::Fixed128;
-use sp_runtime::{traits::Saturating, DispatchResult, ModuleId, RuntimeDebug};
+use sp_runtime::{traits::Saturating, DispatchResult, FixedPointNumber, ModuleId, RuntimeDebug};
 use sp_std::{cmp::max, prelude::*};
 use traits::{
 	LiquidityPools, MarginProtocolLiquidityPools, MarginProtocolLiquidityPoolsManager, OnDisableLiquidityPool,

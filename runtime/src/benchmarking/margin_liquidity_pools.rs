@@ -57,8 +57,8 @@ runtime_benchmarks! {
 		let r in ...;
 		let _ = create_pool(p);
 		let swap_rate = SwapRate {
-			long: Fixed128::from_parts(r.into()),
-			short: Fixed128::from_parts(r.into()),
+			long: Fixed128::from_inner(r.into()),
+			short: Fixed128::from_inner(r.into()),
 		};
 	}: _(RawOrigin::Root, EUR_USD, swap_rate)
 
@@ -66,7 +66,7 @@ runtime_benchmarks! {
 		let p in ...;
 		let r in ...;
 		let caller = create_pool(p);
-		let rate = Fixed128::from_parts(r.into());
+		let rate = Fixed128::from_inner(r.into());
 	}: _(RawOrigin::Signed(caller), 0, rate)
 
 	set_max_spread {
