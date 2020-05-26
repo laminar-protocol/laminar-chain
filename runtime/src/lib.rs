@@ -991,7 +991,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, b"margin-liquidity-pools", benchmarking::margin_liquidity_pools);
 			add_benchmark!(params, batches, b"synthetic-liquidity-pools", benchmarking::synthetic_liquidity_pools);
 			add_benchmark!(params, batches, b"margin-protocol", benchmarking::margin_protocol);
-			//add_benchmark!(params, batches, b"synthetic-protocol", SyntheticProtocol);
+			add_benchmark!(params, batches, b"synthetic-protocol", benchmarking::synthetic_protocol);
 
 			if batches.is_empty() { return Err("Benchmark not found for this module.".into()) }
 			Ok(batches)
