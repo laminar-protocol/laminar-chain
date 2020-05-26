@@ -2,7 +2,7 @@ use super::utils::dollars;
 use crate::{AccountId, BaseLiquidityPoolsForMargin, BlockNumber, MarginLiquidityPools, MarginProtocol, Runtime};
 
 use frame_system::RawOrigin;
-use sp_runtime::{Fixed128, Permill};
+use sp_runtime::{DispatchError, Fixed128, Permill};
 use sp_std::prelude::*;
 
 use frame_benchmarking::account;
@@ -23,11 +23,11 @@ const EUR_USD: TradingPair = TradingPair {
 	quote: CurrencyId::AUSD,
 };
 
-fn create_pool(p: u32) -> AccountId {
+fn create_pool(p: u32) -> Result<AccountId, DispatchError> {
 	let caller: AccountId = account("caller", p, SEED);
-	let _ = BaseLiquidityPoolsForMargin::create_pool(RawOrigin::Signed(caller.clone()).into());
+	BaseLiquidityPoolsForMargin::create_pool(RawOrigin::Signed(caller.clone()).into())?;
 
-	caller
+	Ok(caller)
 }
 
 runtime_benchmarks! {
@@ -43,18 +43,18 @@ runtime_benchmarks! {
 	set_spread {
 		let p in ...;
 		let s in ...;
-		let caller = create_pool(p);
+		let caller = create_pool(p)?;
 	}: _(RawOrigin::Signed(caller), 0, EUR_USD, s.into(), s.into())
 
 	set_enabled_trades {
 		let p in ...;
-		let caller = create_pool(p);
+		let caller = create_pool(p)?;
 	}: _(RawOrigin::Signed(caller), 0, EUR_USD, Leverages::all())
 
 	set_swap_rate {
 		let p in ...;
 		let r in ...;
-		let _ = create_pool(p);
+		let _ = create_pool(p)?;
 		let swap_rate = SwapRate {
 			long: Fixed128::from_parts(r.into()),
 			short: Fixed128::from_parts(r.into()),
@@ -64,7 +64,7 @@ runtime_benchmarks! {
 	set_additional_swap {
 		let p in ...;
 		let r in ...;
-		let caller = create_pool(p);
+		let caller = create_pool(p)?;
 		let rate = Fixed128::from_parts(r.into());
 	}: _(RawOrigin::Signed(caller), 0, rate)
 
@@ -85,30 +85,30 @@ runtime_benchmarks! {
 
 	liquidity_pool_enable_trading_pair {
 		let p in ...;
-		let caller = create_pool(p);
+		let caller = create_pool(p)?;
 		let threshold = RiskThreshold {
 			margin_call: Permill::from_percent(5),
 			stop_out: Permill::from_percent(2),
 		};
-		let _ = MarginProtocol::set_trading_pair_risk_threshold(
+		MarginProtocol::set_trading_pair_risk_threshold(
 			RawOrigin::Root.into(),
 			EUR_USD,
 			Some(threshold.clone()),
 			Some(threshold.clone()),
 			Some(threshold.clone()),
-		);
-		let _ = MarginLiquidityPools::enable_trading_pair(RawOrigin::Root.into(), EUR_USD);
+		)?;
+		MarginLiquidityPools::enable_trading_pair(RawOrigin::Root.into(), EUR_USD)?;
 	}: _(RawOrigin::Signed(caller), 0, EUR_USD)
 
 	liquidity_pool_disable_trading_pair {
 		let p in ...;
-		let caller = create_pool(p);
-		let _ = MarginLiquidityPools::enable_trading_pair(RawOrigin::Root.into(), EUR_USD);
-		let _ = MarginLiquidityPools::liquidity_pool_enable_trading_pair(
+		let caller = create_pool(p)?;
+		MarginLiquidityPools::enable_trading_pair(RawOrigin::Root.into(), EUR_USD)?;
+		MarginLiquidityPools::liquidity_pool_enable_trading_pair(
 			RawOrigin::Signed(caller.clone()).into(),
 			0,
 			EUR_USD,
-		);
+		)?;
 	}: _(RawOrigin::Signed(caller), 0, EUR_USD)
 
 	set_default_min_leveraged_amount {
@@ -118,11 +118,11 @@ runtime_benchmarks! {
 	set_min_leveraged_amount {
 		let p in ...;
 		let a in ...;
-		let caller = create_pool(p);
-		let _ = MarginLiquidityPools::set_default_min_leveraged_amount(
+		let caller = create_pool(p)?;
+		MarginLiquidityPools::set_default_min_leveraged_amount(
 			RawOrigin::Root.into(),
 			a.into(),
-		);
+		)?;
 	}: _(RawOrigin::Signed(caller), 0, a.into())
 }
 
