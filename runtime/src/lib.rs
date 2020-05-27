@@ -572,6 +572,7 @@ pub type BaseLiquidityPoolsMarginInstance = base_liquidity_pools::Instance1;
 parameter_types! {
 	pub const MarginLiquidityPoolsModuleId: ModuleId = margin_liquidity_pools::MODULE_ID;
 	pub const LiquidityPoolExistentialDeposit: Balance = 10 * DOLLARS;
+	pub const IdentityDeposit: Balance = 100_000 * DOLLARS;
 }
 
 impl base_liquidity_pools::Trait<BaseLiquidityPoolsMarginInstance> for Runtime {
@@ -583,6 +584,7 @@ impl base_liquidity_pools::Trait<BaseLiquidityPoolsMarginInstance> for Runtime {
 	type OnDisableLiquidityPool = MarginLiquidityPools;
 	type OnRemoveLiquidityPool = MarginLiquidityPools;
 	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
+	type Deposit = IdentityDeposit;
 }
 
 pub type BaseLiquidityPoolsSyntheticInstance = base_liquidity_pools::Instance2;
@@ -598,6 +600,7 @@ impl base_liquidity_pools::Trait<BaseLiquidityPoolsSyntheticInstance> for Runtim
 	type OnDisableLiquidityPool = SyntheticLiquidityPools;
 	type OnRemoveLiquidityPool = SyntheticLiquidityPools;
 	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
+	type Deposit = IdentityDeposit;
 }
 
 impl margin_liquidity_pools::Trait for Runtime {

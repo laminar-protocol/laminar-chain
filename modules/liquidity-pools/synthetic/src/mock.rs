@@ -101,6 +101,7 @@ impl BaseLiquidityPoolManager<LiquidityPoolId, Balance> for PoolManager {
 
 parameter_types! {
 	pub const SyntheticLiquidityPoolsModuleId: ModuleId = MODULE_ID;
+	pub const IdentityDeposit: Balance = 1000;
 }
 
 pub type SyntheticInstance = module_base_liquidity_pools::Instance1;
@@ -114,6 +115,7 @@ impl module_base_liquidity_pools::Trait<SyntheticInstance> for Runtime {
 	type OnDisableLiquidityPool = ModuleLiquidityPools;
 	type OnRemoveLiquidityPool = ModuleLiquidityPools;
 	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
+	type Deposit = IdentityDeposit;
 }
 pub type BaseLiquidityPools = module_base_liquidity_pools::Module<Runtime, SyntheticInstance>;
 

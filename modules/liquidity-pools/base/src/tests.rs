@@ -114,7 +114,7 @@ fn should_set_identity() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Instance1Module::create_pool(Origin::signed(ALICE)));
 
-		let mut identity = IdentityInfo {
+		let mut identity = IdentityRequest {
 			legal: "laminar".as_bytes().to_vec(),
 			display: vec![0; 201],
 			web: "https://laminar.one".as_bytes().to_vec(),
@@ -144,7 +144,7 @@ fn should_verify_identity() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Instance1Module::create_pool(Origin::signed(ALICE)));
 
-		let identity = IdentityInfo {
+		let identity = IdentityRequest {
 			legal: "laminar".as_bytes().to_vec(),
 			display: vec![],
 			web: "https://laminar.one".as_bytes().to_vec(),
@@ -157,17 +157,79 @@ fn should_verify_identity() {
 			identity.clone()
 		));
 
-		assert_ok!(Instance1Module::verify_identity(Origin::ROOT, 0, false));
-		assert_ok!(Instance1Module::verify_identity(Origin::ROOT, 0, true));
+		// verify
+		assert_eq!(Instance1Module::identity_infos(0).unwrap().verify_status, false);
+		assert_eq!(Instance1Module::balances(&0), 0);
+		assert_ok!(Instance1Module::verify_identity(Origin::ROOT, 0));
+		assert_eq!(Instance1Module::balances(&0), 1000);
+		assert_eq!(Instance1Module::identity_infos(0).unwrap().deposit_status, true);
+		assert_eq!(Instance1Module::identity_infos(0).unwrap().verify_status, true);
+		// verify then modify
+		assert_ok!(Instance1Module::set_identity(
+			Origin::signed(ALICE),
+			0,
+			identity.clone()
+		));
+		assert_eq!(Instance1Module::identity_infos(0).unwrap().verify_status, false);
+		assert_eq!(Instance1Module::identity_infos(0).unwrap().deposit_status, true);
+		assert_ok!(Instance1Module::verify_identity(Origin::ROOT, 0));
+		assert_eq!(Instance1Module::balances(&0), 1000);
+		assert_eq!(Instance1Module::identity_infos(0).unwrap().verify_status, true);
+	})
+}
 
+#[test]
+fn should_clear_identity() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Instance1Module::create_pool(Origin::signed(ALICE)));
+
+		let identity = IdentityRequest {
+			legal: "laminar".as_bytes().to_vec(),
+			display: vec![],
+			web: "https://laminar.one".as_bytes().to_vec(),
+			email: vec![],
+			image_url: vec![],
+		};
+
+		// clear without verify
+		assert_ok!(Instance1Module::set_identity(
+			Origin::signed(ALICE),
+			0,
+			identity.clone()
+		));
+		assert_eq!(Instance1Module::identity_infos(0).unwrap().verify_status, false);
+		assert_ok!(Instance1Module::clear_identity(Origin::ROOT, 0));
 		assert_noop!(
-			Instance1Module::set_identity(Origin::signed(ALICE), 0, identity.clone()),
-			Error::<Runtime, Instance1>::CannotModifyIdentity
+			Instance1Module::clear_identity(Origin::ROOT, 0),
+			Error::<Runtime, Instance1>::IdentityNotFound
 		);
+		assert_eq!(Instance1Module::identity_infos(0), None);
 
-		assert_ok!(Instance1Module::verify_identity(Origin::ROOT, 0, false));
-		assert_ok!(Instance1Module::set_identity(Origin::signed(ALICE), 0, identity));
-		assert_ok!(Instance1Module::verify_identity(Origin::ROOT, 0, true));
+		// verify then clear
+		assert_ok!(Instance1Module::set_identity(
+			Origin::signed(ALICE),
+			0,
+			identity.clone()
+		));
+		assert_eq!(Instance1Module::balances(&0), 0);
+		assert_ok!(Instance1Module::verify_identity(Origin::ROOT, 0));
+		assert_eq!(Instance1Module::balances(&0), 1000);
+		assert_eq!(Instance1Module::identity_infos(0).unwrap().verify_status, true);
+		assert_ok!(Instance1Module::clear_identity(Origin::ROOT, 0));
+		assert_eq!(Instance1Module::balances(&0), 0);
+
+		// verify then remove
+		assert_ok!(Instance1Module::set_identity(
+			Origin::signed(ALICE),
+			0,
+			identity.clone()
+		));
+		assert_eq!(Instance1Module::balances(&0), 0);
+		assert_ok!(Instance1Module::verify_identity(Origin::ROOT, 0));
+		assert_eq!(Instance1Module::balances(&0), 1000);
+		assert_eq!(Instance1Module::identity_infos(0).unwrap().verify_status, true);
+		assert_ok!(Instance1Module::remove_pool(Origin::signed(ALICE), 0));
+		assert_eq!(Instance1Module::balances(&0), 0);
 	})
 }
 

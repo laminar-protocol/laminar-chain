@@ -2,7 +2,8 @@
 
 use super::*;
 
-use frame_support::{impl_outer_origin, ord_parameter_types, parameter_types, weights::Weight};
+use frame_support::{impl_outer_event, impl_outer_origin, ord_parameter_types, parameter_types, weights::Weight};
+use frame_system as system;
 use frame_system::EnsureSignedBy;
 use sp_core::H256;
 use sp_runtime::{
@@ -24,6 +25,16 @@ ord_parameter_types! {
 
 impl_outer_origin! {
 	pub enum Origin for Runtime {}
+}
+
+mod base_liquidity_pool {
+	pub use crate::Event;
+}
+
+impl_outer_event! {
+	pub enum TestEvent for Runtime {
+		frame_system<T>, orml_tokens<T>, orml_currencies<T>, base_liquidity_pool<T>,
+	}
 }
 
 // For testing the module, we construct most of a mock runtime. This means
@@ -67,6 +78,7 @@ parameter_types! {
 	pub const ExistentialDeposit: u128 = 50;
 	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::LAMI;
 	pub const GetLiquidityCurrencyId: CurrencyId = CurrencyId::AUSD;
+	pub const IdentityDeposit: u128 = 1000;
 }
 
 type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
@@ -112,6 +124,18 @@ parameter_types! {
 	pub const Instance1ModuleId: ModuleId = ModuleId(*b"test/lp1");
 }
 
+impl Trait for Runtime {
+	type Event = ();
+	type LiquidityCurrency = LiquidityCurrency;
+	type PoolManager = PoolManager;
+	type ExistentialDeposit = ExistentialDeposit;
+	type ModuleId = Instance1ModuleId;
+	type OnDisableLiquidityPool = DummyOnDisable;
+	type OnRemoveLiquidityPool = DummyOnRemove;
+	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
+	type Deposit = IdentityDeposit;
+}
+
 impl Trait<Instance1> for Runtime {
 	type Event = ();
 	type LiquidityCurrency = LiquidityCurrency;
@@ -121,6 +145,7 @@ impl Trait<Instance1> for Runtime {
 	type OnDisableLiquidityPool = DummyOnDisable;
 	type OnRemoveLiquidityPool = DummyOnRemove;
 	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
+	type Deposit = IdentityDeposit;
 }
 pub type Instance1Module = Module<Runtime, Instance1>;
 
@@ -137,6 +162,7 @@ impl Trait<Instance2> for Runtime {
 	type OnDisableLiquidityPool = DummyOnDisable;
 	type OnRemoveLiquidityPool = DummyOnRemove;
 	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
+	type Deposit = IdentityDeposit;
 }
 pub type Instance2Module = Module<Runtime, Instance2>;
 
