@@ -7,8 +7,8 @@ use frame_support::{
 	weights::DispatchClass,
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
-use orml_traits::BasicCurrency;
-use primitives::{Balance, IdentityInfo, IdentityRequest, LiquidityPoolId};
+use orml_traits::{BasicCurrency, BasicReservableCurrency};
+use primitives::{Balance, IdentityInfo, LiquidityPoolId};
 use sp_runtime::{
 	traits::{AccountIdConversion, One},
 	DispatchResult, ModuleId,
@@ -21,7 +21,7 @@ mod tests;
 
 pub trait Trait<I: Instance = DefaultInstance>: system::Trait {
 	type Event: From<Event<Self, I>> + Into<<Self as frame_system::Trait>::Event>;
-	type LiquidityCurrency: BasicCurrency<Self::AccountId, Balance = Balance>;
+	type LiquidityCurrency: BasicCurrency<Self::AccountId, Balance = Balance> + BasicReservableCurrency<Self::AccountId>;
 	type PoolManager: BaseLiquidityPoolManager<LiquidityPoolId, Balance>;
 	type ExistentialDeposit: Get<Balance>;
 	type ModuleId: Get<ModuleId>;
@@ -36,7 +36,8 @@ decl_storage! {
 		pub NextPoolId get(fn next_pool_id): LiquidityPoolId;
 		pub Owners get(fn owners): map hasher(twox_64_concat) LiquidityPoolId => Option<(T::AccountId, LiquidityPoolId)>;
 		pub Balances get(fn balances): map hasher(twox_64_concat) LiquidityPoolId => Balance;
-		pub IdentityInfos get(fn identity_infos): map hasher(twox_64_concat) LiquidityPoolId => Option<IdentityInfo>;
+		/// Store identity info of liquidity pool LiquidityPoolId => Option<(IdentityInfo, IdentityDeposit, VerifyStatus)>
+		pub IdentityInfos get(fn identity_infos): map hasher(twox_64_concat) LiquidityPoolId => Option<(IdentityInfo, Balance, bool)>;
 	}
 }
 
@@ -58,8 +59,8 @@ decl_event!(
 		SetIdentity(AccountId, LiquidityPoolId),
 		/// Verify identity (pool_id)
 		VerifyIdentity(LiquidityPoolId),
-		/// Clear identity (pool_id)
-		ClearIdentity(LiquidityPoolId),
+		/// Clear identity (who, pool_id)
+		ClearIdentity(AccountId, LiquidityPoolId),
 	}
 );
 
@@ -84,6 +85,7 @@ decl_module! {
 		fn deposit_event() = default;
 
 		const ExistentialDeposit: Balance = T::ExistentialDeposit::get();
+		const Deposit: Balance = T::Deposit::get();
 
 		#[weight = 10_000]
 		pub fn create_pool(origin) {
@@ -132,9 +134,9 @@ decl_module! {
 		}
 
 		#[weight = 10_000]
-		pub fn set_identity(origin, #[compact] pool_id: LiquidityPoolId, identity_info: IdentityRequest) {
+		pub fn set_identity(origin, #[compact] pool_id: LiquidityPoolId, identity_info: IdentityInfo) {
 			let who = ensure_signed(origin)?;
-			Self::_set_identity(&who, pool_id, &identity_info)?;
+			Self::_set_identity(&who, pool_id, identity_info)?;
 			Self::deposit_event(RawEvent::SetIdentity(who, pool_id));
 		}
 
@@ -150,17 +152,15 @@ decl_module! {
 
 		#[weight = 10_000]
 		pub fn clear_identity(origin, #[compact] pool_id: LiquidityPoolId) {
-			T::UpdateOrigin::try_origin(origin)
-				.map(|_| ())
-				.or_else(ensure_root)?;
+			let who = ensure_signed(origin)?;
 
 			ensure!(
 				<IdentityInfos<I>>::contains_key(&pool_id),
 				Error::<T, I>::IdentityNotFound
 			);
 
-			Self::_clear_identity(pool_id)?;
-			Self::deposit_event(RawEvent::ClearIdentity(pool_id));
+			Self::_clear_identity(&who, pool_id)?;
+			Self::deposit_event(RawEvent::ClearIdentity(who, pool_id));
 		}
 	}
 }
@@ -232,7 +232,7 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 		ensure!(T::PoolManager::can_remove(pool_id), Error::<T, I>::CannotRemovePool);
 
 		// clear_identity
-		Self::_clear_identity(pool_id)?;
+		Self::_clear_identity(who, pool_id)?;
 
 		let balance = Self::balances(&pool_id);
 		// transfer balance to pool owner
@@ -276,73 +276,43 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 		Ok(())
 	}
 
-	fn _set_identity(who: &T::AccountId, pool_id: LiquidityPoolId, identity_req: &IdentityRequest) -> DispatchResult {
+	fn _set_identity(who: &T::AccountId, pool_id: LiquidityPoolId, identity_info: IdentityInfo) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, &who), Error::<T, I>::NoPermission);
 		ensure!(
-			identity_req.legal.len() <= 100
-				&& identity_req.display.len() <= 200
-				&& identity_req.web.len() <= 100
-				&& identity_req.email.len() <= 50
-				&& identity_req.image_url.len() <= 100,
+			identity_info.legal.len() <= 100
+				&& identity_info.display.len() <= 200
+				&& identity_info.web.len() <= 100
+				&& identity_info.email.len() <= 50
+				&& identity_info.image_url.len() <= 100,
 			Error::<T, I>::IdentityInfoTooLong
 		);
 
-		let mut new_identity = IdentityInfo {
-			legal: identity_req.legal.clone(),
-			display: identity_req.display.clone(),
-			web: identity_req.web.clone(),
-			email: identity_req.email.clone(),
-			image_url: identity_req.image_url.clone(),
-			deposit: 0,
-			deposit_status: false,
-			verify_status: false,
-		};
-
-		if let Some(identity) = Self::identity_infos(pool_id) {
-			// modify identity
-			new_identity.deposit = identity.deposit;
-			new_identity.deposit_status = identity.deposit_status;
+		if let Some((_, deposit_amount, _)) = Self::identity_infos(pool_id) {
+			<IdentityInfos<I>>::insert(&pool_id, (identity_info, deposit_amount, false));
 		} else {
-			// add identity
-			new_identity.deposit = T::Deposit::get();
-		}
+			let deposit_amount = T::Deposit::get();
+			// reserve deposit from owner
+			T::LiquidityCurrency::reserve(who, deposit_amount)?;
 
-		<IdentityInfos<I>>::insert(&pool_id, new_identity);
+			<IdentityInfos<I>>::insert(&pool_id, (identity_info, deposit_amount, false));
+		}
 
 		Ok(())
 	}
 
 	fn _verify_identity(pool_id: LiquidityPoolId) -> DispatchResult {
-		let mut identity = Self::identity_infos(pool_id).ok_or(Error::<T, I>::IdentityNotFound)?;
-
-		if !identity.deposit_status {
-			let balance = Self::balances(&pool_id);
-			let new_balance = balance
-				.checked_add(identity.deposit)
-				.ok_or(Error::<T, I>::CannotDepositAmount)?;
-
-			// update balance
-			<Balances<I>>::insert(&pool_id, new_balance);
-			identity.deposit_status = true;
-		}
-
-		identity.verify_status = true;
-		<IdentityInfos<I>>::insert(pool_id, identity);
+		let (identity_info, deposit_amount, _) =
+			Self::identity_infos(pool_id).ok_or(Error::<T, I>::IdentityNotFound)?;
+		<IdentityInfos<I>>::insert(&pool_id, (identity_info, deposit_amount, true));
 
 		Ok(())
 	}
 
-	fn _clear_identity(pool_id: LiquidityPoolId) -> DispatchResult {
-		if let Some(identity) = Self::identity_infos(pool_id) {
-			if identity.deposit_status {
-				let balance = Self::balances(&pool_id);
-				let new_balance = balance
-					.checked_sub(identity.deposit)
-					.ok_or(Error::<T, I>::CannotWithdrawAmount)?;
+	fn _clear_identity(who: &T::AccountId, pool_id: LiquidityPoolId) -> DispatchResult {
+		ensure!(Self::is_owner(pool_id, &who), Error::<T, I>::NoPermission);
 
-				// update balance
-				<Balances<I>>::insert(&pool_id, new_balance);
-			}
+		if let Some((_, deposit_amount, _)) = Self::identity_infos(pool_id) {
+			T::LiquidityCurrency::unreserve(who, deposit_amount);
 
 			<IdentityInfos<I>>::remove(&pool_id);
 		}

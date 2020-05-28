@@ -6,6 +6,18 @@ use mock::*;
 use frame_support::{assert_noop, assert_ok};
 use traits::LiquidityPools;
 
+fn get_identity_deposit() -> Balance {
+	<Runtime as Trait>::Deposit::get()
+}
+
+fn get_free_balance(who: &AccountId) -> Balance {
+	<Runtime as Trait>::LiquidityCurrency::free_balance(who)
+}
+
+fn get_reserved_balance(who: &AccountId) -> Balance {
+	<Runtime as Trait>::LiquidityCurrency::reserved_balance(who)
+}
+
 #[test]
 fn is_owner_should_work() {
 	new_test_ext().execute_with(|| {
@@ -114,7 +126,7 @@ fn should_set_identity() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Instance1Module::create_pool(Origin::signed(ALICE)));
 
-		let mut identity = IdentityRequest {
+		let mut identity = IdentityInfo {
 			legal: "laminar".as_bytes().to_vec(),
 			display: vec![0; 201],
 			web: "https://laminar.one".as_bytes().to_vec(),
@@ -128,6 +140,7 @@ fn should_set_identity() {
 
 		identity.display = vec![];
 
+		assert_eq!(get_free_balance(&ALICE), 100000);
 		assert_ok!(Instance1Module::set_identity(
 			Origin::signed(ALICE),
 			0,
@@ -136,6 +149,10 @@ fn should_set_identity() {
 
 		identity.display = "Open finance platform".as_bytes().to_vec();
 		assert_ok!(Instance1Module::set_identity(Origin::signed(ALICE), 0, identity));
+		assert_eq!(get_free_balance(&ALICE), 99000);
+
+		let event = mock::Event::base_liquidity_pools_Instance1(RawEvent::SetIdentity(ALICE, 0));
+		assert!(System::events().iter().any(|record| record.event == event));
 	})
 }
 
@@ -144,37 +161,55 @@ fn should_verify_identity() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Instance1Module::create_pool(Origin::signed(ALICE)));
 
-		let identity = IdentityRequest {
+		let identity = IdentityInfo {
 			legal: "laminar".as_bytes().to_vec(),
 			display: vec![],
 			web: "https://laminar.one".as_bytes().to_vec(),
 			email: vec![],
 			image_url: vec![],
 		};
+
+		assert_eq!(get_free_balance(&ALICE), 100000);
+		assert_eq!(get_reserved_balance(&ALICE), 0);
 		assert_ok!(Instance1Module::set_identity(
 			Origin::signed(ALICE),
 			0,
 			identity.clone()
 		));
+		assert_eq!(get_free_balance(&ALICE), 99000);
+		assert_eq!(get_reserved_balance(&ALICE), 1000);
 
 		// verify
-		assert_eq!(Instance1Module::identity_infos(0).unwrap().verify_status, false);
-		assert_eq!(Instance1Module::balances(&0), 0);
+		assert_eq!(
+			Instance1Module::identity_infos(0),
+			Some((identity.clone(), get_identity_deposit(), false))
+		);
 		assert_ok!(Instance1Module::verify_identity(Origin::ROOT, 0));
-		assert_eq!(Instance1Module::balances(&0), 1000);
-		assert_eq!(Instance1Module::identity_infos(0).unwrap().deposit_status, true);
-		assert_eq!(Instance1Module::identity_infos(0).unwrap().verify_status, true);
+		assert_eq!(
+			Instance1Module::identity_infos(0),
+			Some((identity.clone(), get_identity_deposit(), true))
+		);
+		assert_eq!(get_reserved_balance(&ALICE), 1000);
 		// verify then modify
 		assert_ok!(Instance1Module::set_identity(
 			Origin::signed(ALICE),
 			0,
 			identity.clone()
 		));
-		assert_eq!(Instance1Module::identity_infos(0).unwrap().verify_status, false);
-		assert_eq!(Instance1Module::identity_infos(0).unwrap().deposit_status, true);
+		assert_eq!(
+			Instance1Module::identity_infos(0),
+			Some((identity.clone(), get_identity_deposit(), false))
+		);
 		assert_ok!(Instance1Module::verify_identity(Origin::ROOT, 0));
-		assert_eq!(Instance1Module::balances(&0), 1000);
-		assert_eq!(Instance1Module::identity_infos(0).unwrap().verify_status, true);
+		assert_eq!(get_reserved_balance(&ALICE), 1000);
+		assert_eq!(
+			Instance1Module::identity_infos(0),
+			Some((identity.clone(), get_identity_deposit(), true))
+		);
+		assert_eq!(get_free_balance(&ALICE), 99000);
+
+		let event = mock::Event::base_liquidity_pools_Instance1(RawEvent::VerifyIdentity(0));
+		assert!(System::events().iter().any(|record| record.event == event));
 	})
 }
 
@@ -183,7 +218,7 @@ fn should_clear_identity() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Instance1Module::create_pool(Origin::signed(ALICE)));
 
-		let identity = IdentityRequest {
+		let identity = IdentityInfo {
 			legal: "laminar".as_bytes().to_vec(),
 			display: vec![],
 			web: "https://laminar.one".as_bytes().to_vec(),
@@ -192,15 +227,23 @@ fn should_clear_identity() {
 		};
 
 		// clear without verify
+		assert_eq!(get_free_balance(&ALICE), 100000);
+		assert_eq!(get_reserved_balance(&ALICE), 0);
 		assert_ok!(Instance1Module::set_identity(
 			Origin::signed(ALICE),
 			0,
 			identity.clone()
 		));
-		assert_eq!(Instance1Module::identity_infos(0).unwrap().verify_status, false);
-		assert_ok!(Instance1Module::clear_identity(Origin::ROOT, 0));
+
+		assert_eq!(get_reserved_balance(&ALICE), 1000);
+		assert_eq!(
+			Instance1Module::identity_infos(0),
+			Some((identity.clone(), get_identity_deposit(), false))
+		);
+		assert_ok!(Instance1Module::clear_identity(Origin::signed(ALICE), 0));
+		assert_eq!(get_reserved_balance(&ALICE), 0);
 		assert_noop!(
-			Instance1Module::clear_identity(Origin::ROOT, 0),
+			Instance1Module::clear_identity(Origin::signed(ALICE), 0),
 			Error::<Runtime, Instance1>::IdentityNotFound
 		);
 		assert_eq!(Instance1Module::identity_infos(0), None);
@@ -211,12 +254,14 @@ fn should_clear_identity() {
 			0,
 			identity.clone()
 		));
-		assert_eq!(Instance1Module::balances(&0), 0);
+		assert_eq!(get_reserved_balance(&ALICE), 1000);
 		assert_ok!(Instance1Module::verify_identity(Origin::ROOT, 0));
-		assert_eq!(Instance1Module::balances(&0), 1000);
-		assert_eq!(Instance1Module::identity_infos(0).unwrap().verify_status, true);
-		assert_ok!(Instance1Module::clear_identity(Origin::ROOT, 0));
-		assert_eq!(Instance1Module::balances(&0), 0);
+		assert_eq!(
+			Instance1Module::identity_infos(0),
+			Some((identity.clone(), get_identity_deposit(), true))
+		);
+		assert_ok!(Instance1Module::clear_identity(Origin::signed(ALICE), 0));
+		assert_eq!(get_reserved_balance(&ALICE), 0);
 
 		// verify then remove
 		assert_ok!(Instance1Module::set_identity(
@@ -224,12 +269,18 @@ fn should_clear_identity() {
 			0,
 			identity.clone()
 		));
-		assert_eq!(Instance1Module::balances(&0), 0);
+		assert_eq!(get_reserved_balance(&ALICE), 1000);
 		assert_ok!(Instance1Module::verify_identity(Origin::ROOT, 0));
-		assert_eq!(Instance1Module::balances(&0), 1000);
-		assert_eq!(Instance1Module::identity_infos(0).unwrap().verify_status, true);
+		assert_eq!(
+			Instance1Module::identity_infos(0),
+			Some((identity.clone(), get_identity_deposit(), true))
+		);
 		assert_ok!(Instance1Module::remove_pool(Origin::signed(ALICE), 0));
-		assert_eq!(Instance1Module::balances(&0), 0);
+		assert_eq!(get_reserved_balance(&ALICE), 0);
+		assert_eq!(get_free_balance(&ALICE), 100000);
+
+		let event = mock::Event::base_liquidity_pools_Instance1(RawEvent::VerifyIdentity(0));
+		assert!(System::events().iter().any(|record| record.event == event));
 	})
 }
 
@@ -238,6 +289,9 @@ fn multi_instances_have_independent_storage() {
 	new_test_ext().execute_with(|| {
 		// owners storage
 		assert_ok!(Instance1Module::create_pool(Origin::signed(ALICE)));
+		let event = mock::Event::base_liquidity_pools_Instance1(RawEvent::LiquidityPoolCreated(ALICE, 0));
+		assert!(System::events().iter().any(|record| record.event == event));
+
 		assert_eq!(Instance1Module::all(), vec![0]);
 		assert_eq!(Instance2Module::all(), vec![]);
 		// pool id storage
@@ -245,6 +299,8 @@ fn multi_instances_have_independent_storage() {
 		assert_eq!(Instance2Module::next_pool_id(), 0);
 
 		assert_ok!(Instance2Module::create_pool(Origin::signed(ALICE)));
+		let event = mock::Event::base_liquidity_pools_Instance2(RawEvent::LiquidityPoolCreated(ALICE, 0));
+		assert!(System::events().iter().any(|record| record.event == event));
 
 		// balances storage
 		assert_ok!(Instance1Module::deposit_liquidity(Origin::signed(ALICE), 0, 1000));

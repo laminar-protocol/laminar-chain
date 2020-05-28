@@ -3091,6 +3091,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "parity-scale-codec",
+ "serde",
  "sp-core",
  "sp-io",
  "sp-runtime",

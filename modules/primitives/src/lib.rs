@@ -153,25 +153,12 @@ pub struct TradingPair {
 
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default, Clone)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct IdentityRequest {
-	pub legal: Vec<u8>,
-	pub display: Vec<u8>,
-	pub web: Vec<u8>,
-	pub email: Vec<u8>,
-	pub image_url: Vec<u8>,
-}
-
-#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default, Clone)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct IdentityInfo {
 	pub legal: Vec<u8>,
 	pub display: Vec<u8>,
 	pub web: Vec<u8>,
 	pub email: Vec<u8>,
 	pub image_url: Vec<u8>,
-	pub deposit: Balance,
-	pub deposit_status: bool,
-	pub verify_status: bool,
 }
 
 #[cfg(test)]

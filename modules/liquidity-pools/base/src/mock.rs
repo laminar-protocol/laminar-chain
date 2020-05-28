@@ -2,13 +2,12 @@
 
 use super::*;
 
-use frame_support::{impl_outer_event, impl_outer_origin, ord_parameter_types, parameter_types, weights::Weight};
-use frame_system as system;
+use frame_support::{ord_parameter_types, parameter_types, weights::Weight};
 use frame_system::EnsureSignedBy;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup},
+	traits::{BlakeTwo256, Block as BlockT, IdentityLookup},
 	Perbill,
 };
 
@@ -23,25 +22,11 @@ ord_parameter_types! {
 	pub const One: AccountId = 0;
 }
 
-impl_outer_origin! {
-	pub enum Origin for Runtime {}
-}
-
-mod base_liquidity_pool {
-	pub use crate::Event;
-}
-
-impl_outer_event! {
-	pub enum TestEvent for Runtime {
-		frame_system<T>, orml_tokens<T>, orml_currencies<T>, base_liquidity_pool<T>,
-	}
-}
+pub use crate as base_liquidity_pools;
 
 // For testing the module, we construct most of a mock runtime. This means
 // first constructing a configuration type (`Runtime`) which `impl`s each of the
 // configuration traits of modules we want to use.
-#[derive(Clone, Eq, PartialEq)]
-pub struct Runtime;
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 	pub const MaximumBlockWeight: Weight = 1024;
@@ -59,7 +44,7 @@ impl system::Trait for Runtime {
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = ();
+	type Event = Event;
 	type BlockHashCount = BlockHashCount;
 	type MaximumBlockWeight = MaximumBlockWeight;
 	type DbWeight = ();
@@ -85,7 +70,7 @@ type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
 pub type LiquidityCurrency = orml_currencies::Currency<Runtime, GetLiquidityCurrencyId>;
 
 impl orml_currencies::Trait for Runtime {
-	type Event = ();
+	type Event = Event;
 	type MultiCurrency = orml_tokens::Module<Runtime>;
 	type NativeCurrency = NativeCurrency;
 	type GetNativeCurrencyId = GetNativeCurrencyId;
@@ -93,7 +78,7 @@ impl orml_currencies::Trait for Runtime {
 
 type Amount = i128;
 impl orml_tokens::Trait for Runtime {
-	type Event = ();
+	type Event = Event;
 	type Balance = Balance;
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
@@ -125,7 +110,7 @@ parameter_types! {
 }
 
 impl Trait for Runtime {
-	type Event = ();
+	type Event = Event;
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = PoolManager;
 	type ExistentialDeposit = ExistentialDeposit;
@@ -137,7 +122,7 @@ impl Trait for Runtime {
 }
 
 impl Trait<Instance1> for Runtime {
-	type Event = ();
+	type Event = Event;
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = PoolManager;
 	type ExistentialDeposit = ExistentialDeposit;
@@ -154,7 +139,7 @@ parameter_types! {
 }
 
 impl Trait<Instance2> for Runtime {
-	type Event = ();
+	type Event = Event;
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = PoolManager;
 	type ExistentialDeposit = ExistentialDeposit;
@@ -165,6 +150,23 @@ impl Trait<Instance2> for Runtime {
 	type Deposit = IdentityDeposit;
 }
 pub type Instance2Module = Module<Runtime, Instance2>;
+
+pub type Block = sp_runtime::generic::Block<Header, UncheckedExtrinsic>;
+pub type UncheckedExtrinsic = sp_runtime::generic::UncheckedExtrinsic<u32, u64, Call, ()>;
+frame_support::construct_runtime!(
+	pub enum Runtime where
+		Block = Block,
+	NodeBlock = Block,
+	UncheckedExtrinsic = UncheckedExtrinsic
+	{
+		System: system::{Module, Call, Event<T>},
+		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
+		Currencies: orml_currencies::{Module, Call, Event<T>},
+		BaseLiquidityPoolsForMargin: base_liquidity_pools::<Instance1>::{Module, Storage, Call, Event<T>},
+		BaseLiquidityPoolsForSynthetic: base_liquidity_pools::<Instance2>::{Module, Storage, Call, Event<T>},
+		DefaultBaseLiquidityPools: base_liquidity_pools::{Module, Storage, Call, Event<T>},
+	}
+);
 
 // This function basically just builds a genesis storage key/value store according to
 // our desired mockup.
@@ -180,7 +182,9 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	.assimilate_storage(&mut t)
 	.unwrap();
 
-	t.into()
+	let mut ext = sp_io::TestExternalities::new(t);
+	ext.execute_with(|| System::set_block_number(1));
+	ext
 }
 
 pub const ALICE: AccountId = 1;
