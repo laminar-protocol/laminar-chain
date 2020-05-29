@@ -40,8 +40,8 @@ decl_storage! {
 		pub NextPoolId get(fn next_pool_id): LiquidityPoolId;
 		pub Owners get(fn owners): map hasher(twox_64_concat) LiquidityPoolId => Option<(T::AccountId, LiquidityPoolId)>;
 		pub Balances get(fn balances): map hasher(twox_64_concat) LiquidityPoolId => Balance;
-		/// Store identity info of liquidity pool LiquidityPoolId => Option<(IdentityInfo, VerifyStatus)>
-		pub IdentityInfos get(fn identity_infos): map hasher(twox_64_concat) LiquidityPoolId => Option<(IdentityInfo, bool)>;
+		/// Store identity info of liquidity pool LiquidityPoolId => Option<(IdentityInfo, DepositAmount, VerifyStatus)>
+		pub IdentityInfos get(fn identity_infos): map hasher(twox_64_concat) LiquidityPoolId => Option<(IdentityInfo, DepositBalanceOf<T, I>, bool)>;
 	}
 }
 
@@ -159,7 +159,7 @@ decl_module! {
 			let who = ensure_signed(origin)?;
 
 			ensure!(
-				<IdentityInfos<I>>::contains_key(&pool_id),
+				<IdentityInfos<T, I>>::contains_key(&pool_id),
 				Error::<T, I>::IdentityNotFound
 			);
 
@@ -291,21 +291,22 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 			Error::<T, I>::IdentityInfoTooLong
 		);
 
-		if <IdentityInfos<I>>::contains_key(&pool_id) {
-			<IdentityInfos<I>>::insert(&pool_id, (identity_info, false));
+		if let Some((_, deposit_amount, _)) = Self::identity_infos(pool_id) {
+			<IdentityInfos<T, I>>::insert(&pool_id, (identity_info, deposit_amount, false));
 		} else {
 			// reserve deposit from owner
 			T::DepositCurrency::reserve(who, T::Deposit::get())?;
 
-			<IdentityInfos<I>>::insert(&pool_id, (identity_info, false));
+			<IdentityInfos<T, I>>::insert(&pool_id, (identity_info, T::Deposit::get(), false));
 		}
 
 		Ok(())
 	}
 
 	fn _verify_identity(pool_id: LiquidityPoolId) -> DispatchResult {
-		let (identity_info, _) = Self::identity_infos(pool_id).ok_or(Error::<T, I>::IdentityNotFound)?;
-		<IdentityInfos<I>>::insert(&pool_id, (identity_info, true));
+		let (identity_info, deposit_amount, _) =
+			Self::identity_infos(pool_id).ok_or(Error::<T, I>::IdentityNotFound)?;
+		<IdentityInfos<T, I>>::insert(&pool_id, (identity_info, deposit_amount, true));
 
 		Ok(())
 	}
@@ -313,9 +314,9 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 	fn _clear_identity(who: &T::AccountId, pool_id: LiquidityPoolId) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, &who), Error::<T, I>::NoPermission);
 
-		if <IdentityInfos<I>>::contains_key(&pool_id) {
-			T::DepositCurrency::unreserve(who, T::Deposit::get());
-			<IdentityInfos<I>>::remove(&pool_id);
+		if let Some((_, deposit_amount, _)) = Self::identity_infos(pool_id) {
+			T::DepositCurrency::unreserve(who, deposit_amount);
+			<IdentityInfos<T, I>>::remove(&pool_id);
 		}
 
 		Ok(())

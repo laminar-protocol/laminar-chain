@@ -176,9 +176,12 @@ fn should_verify_identity() {
 		assert_eq!(get_reserved_balance(&ALICE), 1000);
 
 		// verify
-		assert_eq!(Instance1Module::identity_infos(0), Some((identity.clone(), false)));
+		assert_eq!(
+			Instance1Module::identity_infos(0),
+			Some((identity.clone(), 1000, false))
+		);
 		assert_ok!(Instance1Module::verify_identity(Origin::ROOT, 0));
-		assert_eq!(Instance1Module::identity_infos(0), Some((identity.clone(), true)));
+		assert_eq!(Instance1Module::identity_infos(0), Some((identity.clone(), 1000, true)));
 		assert_eq!(get_reserved_balance(&ALICE), 1000);
 		// verify then modify
 		assert_ok!(Instance1Module::set_identity(
@@ -186,10 +189,13 @@ fn should_verify_identity() {
 			0,
 			identity.clone()
 		));
-		assert_eq!(Instance1Module::identity_infos(0), Some((identity.clone(), false)));
+		assert_eq!(
+			Instance1Module::identity_infos(0),
+			Some((identity.clone(), 1000, false))
+		);
 		assert_ok!(Instance1Module::verify_identity(Origin::ROOT, 0));
 		assert_eq!(get_reserved_balance(&ALICE), 1000);
-		assert_eq!(Instance1Module::identity_infos(0), Some((identity.clone(), true)));
+		assert_eq!(Instance1Module::identity_infos(0), Some((identity.clone(), 1000, true)));
 		assert_eq!(get_free_balance(&ALICE), 99000);
 
 		let event = mock::Event::base_liquidity_pools_Instance1(RawEvent::VerifyIdentity(0));
@@ -220,7 +226,10 @@ fn should_clear_identity() {
 		));
 
 		assert_eq!(get_reserved_balance(&ALICE), 1000);
-		assert_eq!(Instance1Module::identity_infos(0), Some((identity.clone(), false)));
+		assert_eq!(
+			Instance1Module::identity_infos(0),
+			Some((identity.clone(), 1000, false))
+		);
 		assert_ok!(Instance1Module::clear_identity(Origin::signed(ALICE), 0));
 		assert_eq!(get_reserved_balance(&ALICE), 0);
 		assert_noop!(
@@ -237,7 +246,7 @@ fn should_clear_identity() {
 		));
 		assert_eq!(get_reserved_balance(&ALICE), 1000);
 		assert_ok!(Instance1Module::verify_identity(Origin::ROOT, 0));
-		assert_eq!(Instance1Module::identity_infos(0), Some((identity.clone(), true)));
+		assert_eq!(Instance1Module::identity_infos(0), Some((identity.clone(), 1000, true)));
 		assert_ok!(Instance1Module::clear_identity(Origin::signed(ALICE), 0));
 		assert_eq!(get_reserved_balance(&ALICE), 0);
 
@@ -249,7 +258,7 @@ fn should_clear_identity() {
 		));
 		assert_eq!(get_reserved_balance(&ALICE), 1000);
 		assert_ok!(Instance1Module::verify_identity(Origin::ROOT, 0));
-		assert_eq!(Instance1Module::identity_infos(0), Some((identity.clone(), true)));
+		assert_eq!(Instance1Module::identity_infos(0), Some((identity.clone(), 1000, true)));
 		assert_ok!(Instance1Module::remove_pool(Origin::signed(ALICE), 0));
 		assert_eq!(get_reserved_balance(&ALICE), 0);
 		assert_eq!(get_free_balance(&ALICE), 100000);

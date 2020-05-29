@@ -14,7 +14,6 @@ sp-arithmetic = { version = "2.0.0-alpha.8", default-features = false }
 
 frame-support = { version = "2.0.0-alpha.8", default-features = false }
 frame-system = { version = "2.0.0-alpha.8", default-features = false }
-pallet-balances = { version = "2.0.0-alpha.8", default-features = false }
 
 traits = { package = "module-traits", path = "../../traits", default-features = false }
 primitives = { package = "module-primitives", path = "../../primitives", default-features = false }
@@ -24,7 +23,8 @@ orml-traits = { path = "../../../orml/traits", default-features = false }
 orml-tokens = { path = "../../../orml/tokens", default-features = false }
 
 [dev-dependencies]
-pallet-timestamp = { version = "2.0.0-alpha.8" }
+pallet-timestamp = { version = "2.0.0-alpha.8", default-features = false }
+pallet-balances = { version = "2.0.0-alpha.8", default-features = false }
 sp-core = { version = "2.0.0-alpha.8", default-features = false }
 module-base-liquidity-pools = { path = "../base", default-features = false }
 
@@ -40,6 +40,7 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 	"pallet-balances/std",
+	"pallet-timestamp/std",
 	"traits/std",
 	"primitives/std",
 	"orml-currencies/std",
