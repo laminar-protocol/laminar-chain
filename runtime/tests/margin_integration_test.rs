@@ -8,7 +8,7 @@ mod tests {
 		tests::*,
 		BaseLiquidityPoolsMarginInstance,
 		CurrencyId::{AUSD, FEUR, FJPY},
-		MaxSwap, MockLaminarTreasury, Runtime,
+		MaxSwap, MockLaminarTreasury, Runtime, DOLLARS,
 	};
 
 	use margin_protocol_rpc_runtime_api::{PoolInfo, TraderInfo};
@@ -971,5 +971,40 @@ mod tests {
 				);
 				assert_eq!(margin_liquidity(), 10458_985000000000000000);
 			});
+	}
+
+	#[test]
+	fn test_margin_identity() {
+		ExtBuilder::default().build().execute_with(|| {
+			assert_ok!(margin_create_pool());
+			assert_eq!(native_currency_balance(&POOL::get()), 100_000 * DOLLARS);
+
+			// set identity
+			assert_ok!(margin_set_identity());
+			assert_eq!(native_currency_balance(&POOL::get()), 90_000 * DOLLARS);
+
+			// modify identity
+			assert_ok!(margin_set_identity());
+			assert_eq!(native_currency_balance(&POOL::get()), 90_000 * DOLLARS);
+			assert_ok!(margin_verify_identity());
+			assert_eq!(native_currency_balance(&POOL::get()), 90_000 * DOLLARS);
+
+			// clear identity
+			assert_ok!(margin_clear_identity());
+			assert_eq!(native_currency_balance(&POOL::get()), 100_000 * DOLLARS);
+
+			assert_ok!(margin_set_identity());
+			assert_eq!(native_currency_balance(&POOL::get()), 90_000 * DOLLARS);
+			// synthetic
+			assert_ok!(synthetic_create_pool());
+			assert_ok!(synthetic_set_identity());
+			assert_eq!(native_currency_balance(&POOL::get()), 80_000 * DOLLARS);
+
+			// remove identity
+			assert_ok!(margin_remove_pool(&POOL::get()));
+			assert_eq!(native_currency_balance(&POOL::get()), 90_000 * DOLLARS);
+			assert_ok!(synthetic_remove_pool(&POOL::get()));
+			assert_eq!(native_currency_balance(&POOL::get()), 100_000 * DOLLARS);
+		});
 	}
 }

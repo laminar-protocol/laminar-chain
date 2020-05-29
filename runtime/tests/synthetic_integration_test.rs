@@ -8,7 +8,7 @@ mod tests {
 		tests::*,
 		BaseLiquidityPoolsSyntheticInstance,
 		CurrencyId::{AUSD, FEUR, FJPY},
-		Runtime,
+		Runtime, DOLLARS,
 	};
 	use orml_prices::Price;
 	use orml_utilities::FixedU128;
@@ -784,5 +784,33 @@ mod tests {
 				assert_ok!(synthetic_disable_pool(&POOL::get()));
 				assert_ok!(synthetic_remove_pool(&POOL::get()));
 			});
+	}
+
+	#[test]
+	fn test_synthetic_identity() {
+		ExtBuilder::default().build().execute_with(|| {
+			assert_ok!(synthetic_create_pool());
+			assert_eq!(native_currency_balance(&POOL::get()), 100_000 * DOLLARS);
+
+			// set identity
+			assert_ok!(synthetic_set_identity());
+			assert_eq!(native_currency_balance(&POOL::get()), 90_000 * DOLLARS);
+
+			// modify identity
+			assert_ok!(synthetic_set_identity());
+			assert_eq!(native_currency_balance(&POOL::get()), 90_000 * DOLLARS);
+			assert_ok!(synthetic_verify_identity());
+			assert_eq!(native_currency_balance(&POOL::get()), 90_000 * DOLLARS);
+
+			// clear identity
+			assert_ok!(synthetic_clear_identity());
+			assert_eq!(native_currency_balance(&POOL::get()), 100_000 * DOLLARS);
+
+			// remove identity
+			assert_ok!(synthetic_set_identity());
+			assert_eq!(native_currency_balance(&POOL::get()), 90_000 * DOLLARS);
+			assert_ok!(synthetic_remove_pool(&POOL::get()));
+			assert_eq!(native_currency_balance(&POOL::get()), 100_000 * DOLLARS);
+		});
 	}
 }

@@ -6,14 +6,14 @@ use super::*;
 use crate::{
 	AccountId,
 	CurrencyId::{self, AUSD, FEUR},
-	LiquidityPoolId, MinimumCount, Moment, Runtime,
+	LiquidityPoolId, MinimumCount, Moment, Runtime, DOLLARS,
 };
 use frame_support::{assert_ok, parameter_types, traits::OnFinalize, traits::OnInitialize};
 
 use margin_liquidity_pools::SwapRate;
 use margin_protocol::RiskThreshold;
 use margin_protocol_rpc_runtime_api::runtime_decl_for_MarginProtocolApi::MarginProtocolApi;
-use module_primitives::{Balance, Leverage, Leverages, TradingPair};
+use module_primitives::{Balance, IdentityInfo, Leverage, Leverages, TradingPair};
 use module_traits::Treasury;
 use orml_prices::Price;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
@@ -102,6 +102,12 @@ impl ExtBuilder {
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 
+		pallet_balances::GenesisConfig::<Runtime> {
+			balances: vec![(POOL::get(), 100_000 * DOLLARS)],
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
 		orml_tokens::GenesisConfig::<Runtime> {
 			endowed_accounts: self.endowed_accounts,
 		}
@@ -187,6 +193,10 @@ pub fn multi_currency_balance(who: &AccountId, currency_id: CurrencyId) -> Balan
 	<Runtime as synthetic_protocol::Trait>::MultiCurrency::free_balance(currency_id, &who)
 }
 
+pub fn native_currency_balance(who: &AccountId) -> Balance {
+	Balances::free_balance(who)
+}
+
 pub fn synthetic_create_pool() -> DispatchResult {
 	BaseLiquidityPoolsForSynthetic::create_pool(origin_of(&POOL::get()))?;
 	BaseLiquidityPoolsForSynthetic::create_pool(origin_of(&POOL::get()))
@@ -198,6 +208,26 @@ pub fn synthetic_disable_pool(who: &AccountId) -> DispatchResult {
 
 pub fn synthetic_remove_pool(who: &AccountId) -> DispatchResult {
 	BaseLiquidityPoolsForSynthetic::remove_pool(origin_of(who), LIQUIDITY_POOL_ID_0)
+}
+
+pub fn synthetic_set_identity() -> DispatchResult {
+	let identity = IdentityInfo {
+		legal: "laminar".as_bytes().to_vec(),
+		display: vec![],
+		web: vec![],
+		email: vec![],
+		image_url: vec![],
+	};
+
+	BaseLiquidityPoolsForSynthetic::set_identity(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, identity)
+}
+
+pub fn synthetic_verify_identity() -> DispatchResult {
+	BaseLiquidityPoolsForSynthetic::verify_identity(<Runtime as system::Trait>::Origin::ROOT, LIQUIDITY_POOL_ID_0)
+}
+
+pub fn synthetic_clear_identity() -> DispatchResult {
+	BaseLiquidityPoolsForSynthetic::clear_identity(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0)
 }
 
 pub fn synthetic_set_enabled_trades() -> DispatchResult {
@@ -280,6 +310,10 @@ pub fn synthetic_add_collateral(who: &AccountId, currency_id: CurrencyId, amount
 
 pub fn synthetic_liquidate(who: &AccountId, currency_id: CurrencyId, amount: Balance) -> DispatchResult {
 	ModuleSyntheticProtocol::liquidate(origin_of(who), LIQUIDITY_POOL_ID_0, currency_id, amount)
+}
+
+pub fn synthetic_pool_info(currency_id: CurrencyId) -> Option<SyntheticProtocolPoolInfo> {
+	<Runtime as SyntheticProtocolApi<Block, AccountId>>::pool_info(LIQUIDITY_POOL_ID_0, currency_id)
 }
 
 pub fn margin_create_pool() -> DispatchResult {
@@ -491,6 +525,22 @@ pub fn margin_pool_info() -> Option<PoolInfo> {
 	<Runtime as MarginProtocolApi<Block, AccountId>>::pool_info(LIQUIDITY_POOL_ID_0)
 }
 
-pub fn synthetic_pool_info(currency_id: CurrencyId) -> Option<SyntheticProtocolPoolInfo> {
-	<Runtime as SyntheticProtocolApi<Block, AccountId>>::pool_info(LIQUIDITY_POOL_ID_0, currency_id)
+pub fn margin_set_identity() -> DispatchResult {
+	let identity = IdentityInfo {
+		legal: "laminar".as_bytes().to_vec(),
+		display: vec![],
+		web: vec![],
+		email: vec![],
+		image_url: vec![],
+	};
+
+	BaseLiquidityPoolsForMargin::set_identity(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, identity)
+}
+
+pub fn margin_verify_identity() -> DispatchResult {
+	BaseLiquidityPoolsForMargin::verify_identity(<Runtime as system::Trait>::Origin::ROOT, LIQUIDITY_POOL_ID_0)
+}
+
+pub fn margin_clear_identity() -> DispatchResult {
+	BaseLiquidityPoolsForMargin::clear_identity(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0)
 }
