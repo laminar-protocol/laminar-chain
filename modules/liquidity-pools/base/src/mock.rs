@@ -11,8 +11,6 @@ use sp_runtime::{
 	Perbill,
 };
 
-use orml_currencies::Currency;
-
 use primitives::{Balance, CurrencyId, LiquidityPoolId};
 
 pub type BlockNumber = u64;
@@ -54,7 +52,7 @@ impl system::Trait for Runtime {
 	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
 	type ModuleToIndex = ();
-	type AccountData = ();
+	type AccountData = pallet_balances::AccountData<Balance>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 }
@@ -66,12 +64,20 @@ parameter_types! {
 	pub const IdentityDeposit: u128 = 1000;
 }
 
-type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
+impl pallet_balances::Trait for Runtime {
+	type Balance = Balance;
+	type DustRemoval = ();
+	type Event = Event;
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = frame_system::Module<Runtime>;
+}
+
+pub type NativeCurrency = orml_currencies::BasicCurrencyAdapter<Runtime, Balances, Balance>;
 pub type LiquidityCurrency = orml_currencies::Currency<Runtime, GetLiquidityCurrencyId>;
 
 impl orml_currencies::Trait for Runtime {
 	type Event = Event;
-	type MultiCurrency = orml_tokens::Module<Runtime>;
+	type MultiCurrency = Tokens;
 	type NativeCurrency = NativeCurrency;
 	type GetNativeCurrencyId = GetNativeCurrencyId;
 }
@@ -114,11 +120,12 @@ impl Trait for Runtime {
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = PoolManager;
 	type ExistentialDeposit = ExistentialDeposit;
+	type Deposit = IdentityDeposit;
+	type DepositCurrency = Balances;
 	type ModuleId = Instance1ModuleId;
 	type OnDisableLiquidityPool = DummyOnDisable;
 	type OnRemoveLiquidityPool = DummyOnRemove;
 	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
-	type Deposit = IdentityDeposit;
 }
 
 impl Trait<Instance1> for Runtime {
@@ -126,11 +133,12 @@ impl Trait<Instance1> for Runtime {
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = PoolManager;
 	type ExistentialDeposit = ExistentialDeposit;
+	type Deposit = IdentityDeposit;
+	type DepositCurrency = Balances;
 	type ModuleId = Instance1ModuleId;
 	type OnDisableLiquidityPool = DummyOnDisable;
 	type OnRemoveLiquidityPool = DummyOnRemove;
 	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
-	type Deposit = IdentityDeposit;
 }
 pub type Instance1Module = Module<Runtime, Instance1>;
 
@@ -143,11 +151,12 @@ impl Trait<Instance2> for Runtime {
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = PoolManager;
 	type ExistentialDeposit = ExistentialDeposit;
+	type Deposit = IdentityDeposit;
+	type DepositCurrency = Balances;
 	type ModuleId = Instance2ModuleId;
 	type OnDisableLiquidityPool = DummyOnDisable;
 	type OnRemoveLiquidityPool = DummyOnRemove;
 	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
-	type Deposit = IdentityDeposit;
 }
 pub type Instance2Module = Module<Runtime, Instance2>;
 
@@ -161,6 +170,7 @@ frame_support::construct_runtime!(
 	{
 		System: system::{Module, Call, Event<T>},
 		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
+		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
 		BaseLiquidityPoolsForMargin: base_liquidity_pools::<Instance1>::{Module, Storage, Call, Event<T>},
 		BaseLiquidityPoolsForSynthetic: base_liquidity_pools::<Instance2>::{Module, Storage, Call, Event<T>},
@@ -175,6 +185,12 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 		.build_storage::<Runtime>()
 		.unwrap()
 		.into();
+
+	pallet_balances::GenesisConfig::<Runtime> {
+		balances: vec![(ALICE, 100_000)],
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
 
 	orml_tokens::GenesisConfig::<Runtime> {
 		endowed_accounts: vec![(ALICE, CurrencyId::AUSD, 100_000), (BOB, CurrencyId::AUSD, 100_000)],
