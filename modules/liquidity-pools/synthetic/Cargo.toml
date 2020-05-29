@@ -23,7 +23,7 @@ orml-tokens = { path = "../../../orml/tokens", default-features = false }
 
 [dev-dependencies]
 sp-core = { version = "2.0.0-alpha.8", default-features = false }
-pallet-balances = { version = "2.0.0-alpha.8", default-features = false }
+pallet-balances = { version = "2.0.0-alpha.8" }
 module-base-liquidity-pools = { path = "../base", default-features = false }
 
 [features]
@@ -36,7 +36,6 @@ std = [
 	"sp-std/std",
 	"frame-support/std",
 	"frame-system/std",
-	"pallet-balances/std",
 	"traits/std",
 	"primitives/std",
 	"orml-currencies/std",
