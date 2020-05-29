@@ -13,6 +13,7 @@ sp-std = { version = "2.0.0-alpha.8", default-features = false }
 
 frame-support = { version = "2.0.0-alpha.8", default-features = false }
 frame-system = { version = "2.0.0-alpha.8", default-features = false }
+pallet-balances = { version = "2.0.0-alpha.8", default-features = false }
 
 traits = { package = "module-traits", path = "../../traits", default-features = false }
 primitives = { package = "module-primitives", path = "../../primitives", default-features = false }
@@ -35,6 +36,7 @@ std = [
 	"sp-std/std",
 	"frame-support/std",
 	"frame-system/std",
+	"pallet-balances/std",
 	"traits/std",
 	"primitives/std",
 	"orml-currencies/std",

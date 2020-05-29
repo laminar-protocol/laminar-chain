@@ -59,7 +59,7 @@ impl system::Trait for Runtime {
 	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
 	type ModuleToIndex = ();
-	type AccountData = ();
+	type AccountData = pallet_balances::AccountData<Balance>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 }
@@ -71,6 +71,14 @@ parameter_types! {
 	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::LAMI;
 	pub const GetLiquidityCurrencyId: CurrencyId = CurrencyId::AUSD;
 	pub const MaxSwap: Fixed128 = Fixed128::from_natural(2);
+}
+
+impl pallet_balances::Trait for Runtime {
+	type Balance = Balance;
+	type DustRemoval = ();
+	type Event = ();
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = frame_system::Module<Runtime>;
 }
 
 type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
@@ -114,11 +122,12 @@ impl module_base_liquidity_pools::Trait<MarginInstance> for Runtime {
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = PoolManager;
 	type ExistentialDeposit = ExistentialDeposit;
+	type Deposit = IdentityDeposit;
+	type DepositCurrency = pallet_balances::Module<Self>;
 	type ModuleId = MarginLiquidityPoolsModuleId;
 	type OnDisableLiquidityPool = ModuleLiquidityPools;
 	type OnRemoveLiquidityPool = ModuleLiquidityPools;
 	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
-	type Deposit = IdentityDeposit;
 }
 pub type BaseLiquidityPools = module_base_liquidity_pools::Module<Runtime, MarginInstance>;
 
