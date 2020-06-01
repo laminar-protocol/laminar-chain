@@ -269,6 +269,50 @@ fn should_clear_identity() {
 }
 
 #[test]
+fn should_transfer_liquidity_pool() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Instance1Module::create_pool(Origin::signed(ALICE)));
+		assert_ok!(Instance1Module::deposit_liquidity(Origin::signed(ALICE), 0, 1000));
+		assert_eq!(Instance1Module::balances(&0), 1000);
+
+		let identity = IdentityInfo {
+			legal: "laminar".as_bytes().to_vec(),
+			display: vec![],
+			web: "https://laminar.one".as_bytes().to_vec(),
+			email: vec![],
+			image_url: vec![],
+		};
+
+		assert_eq!(get_free_balance(&ALICE), 100000);
+		assert_ok!(Instance1Module::set_identity(
+			Origin::signed(ALICE),
+			0,
+			identity.clone()
+		));
+		assert_eq!(get_free_balance(&ALICE), 99000);
+
+		assert_ok!(Instance1Module::transfer_liquidity_pool(Origin::signed(ALICE), 0, BOB));
+		assert_eq!(get_free_balance(&ALICE), 100000);
+
+		let event = mock::Event::base_liquidity_pools_Instance1(RawEvent::TransferLiquidityPool(ALICE, 0, BOB));
+		assert!(System::events().iter().any(|record| record.event == event));
+
+		// remove pool
+		assert_eq!(Instance1Module::balances(&0), 1000);
+		assert_noop!(
+			Instance1Module::remove_pool(Origin::signed(ALICE), 0),
+			Error::<Runtime, Instance1>::NoPermission
+		);
+		assert_ok!(Instance1Module::remove_pool(Origin::signed(BOB), 0),);
+		assert_eq!(Instance1Module::owners(0), None);
+		assert_eq!(Instance1Module::balances(&0), 0);
+		assert_eq!(<Instance1Module as LiquidityPools<AccountId>>::liquidity(0), 0);
+		assert_eq!(LiquidityCurrency::free_balance(&ALICE), 99000);
+		assert_eq!(LiquidityCurrency::free_balance(&BOB), 101000);
+	})
+}
+
+#[test]
 fn multi_instances_have_independent_storage() {
 	new_test_ext().execute_with(|| {
 		// owners storage

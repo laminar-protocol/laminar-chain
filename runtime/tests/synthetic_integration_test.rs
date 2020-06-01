@@ -813,4 +813,58 @@ mod tests {
 			assert_eq!(native_currency_balance(&POOL::get()), 100_000 * DOLLARS);
 		});
 	}
+
+	#[test]
+	fn test_synthetic_transfer_liquidity_pool() {
+		ExtBuilder::default()
+			.balances(vec![
+				(POOL::get(), AUSD, dollar(20_000)),
+				(ALICE::get(), AUSD, dollar(10_000)),
+			])
+			.build()
+			.execute_with(|| {
+				assert_ok!(synthetic_create_pool());
+				assert_eq!(native_currency_balance(&POOL::get()), 100_000 * DOLLARS);
+
+				assert_ok!(synthetic_deposit_liquidity(&POOL::get(), dollar(10_000)));
+				assert_ok!(synthetic_deposit_liquidity(&ALICE::get(), dollar(5000)));
+				assert_eq!(synthetic_liquidity(), dollar(15_000));
+
+				// set identity
+				assert_ok!(synthetic_set_identity());
+				assert_eq!(native_currency_balance(&POOL::get()), 90_000 * DOLLARS);
+
+				// transfer liquidity pool to ALICE
+				assert_ok!(synthetic_transfer_liquidity_pool(
+					&POOL::get(),
+					LIQUIDITY_POOL_ID_0,
+					ALICE::get()
+				));
+				assert_eq!(native_currency_balance(&POOL::get()), 100_000 * DOLLARS);
+
+				assert_noop!(
+					synthetic_withdraw_liquidity(&POOL::get(), dollar(1000)),
+					base_liquidity_pools::Error::<Runtime, BaseLiquidityPoolsSyntheticInstance>::NoPermission
+				);
+				assert_ok!(synthetic_withdraw_liquidity(&ALICE::get(), dollar(1000)));
+				assert_eq!(collateral_balance(&ALICE::get()), dollar(6_000));
+				assert_eq!(synthetic_liquidity(), dollar(14_000));
+
+				// transfer liquidity pool to BOB
+				assert_ok!(synthetic_transfer_liquidity_pool(
+					&ALICE::get(),
+					LIQUIDITY_POOL_ID_0,
+					BOB::get()
+				));
+				assert_eq!(collateral_balance(&BOB::get()), 0);
+				assert_ok!(synthetic_withdraw_liquidity(&BOB::get(), dollar(1000)));
+				assert_eq!(synthetic_liquidity(), dollar(13_000));
+				assert_eq!(collateral_balance(&BOB::get()), dollar(1000));
+
+				// remove pool
+				assert_ok!(synthetic_remove_pool(&BOB::get()));
+				assert_eq!(collateral_balance(&ALICE::get()), dollar(6_000));
+				assert_eq!(collateral_balance(&BOB::get()), dollar(14_000));
+			});
+	}
 }
