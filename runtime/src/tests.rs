@@ -230,6 +230,10 @@ pub fn synthetic_clear_identity() -> DispatchResult {
 	BaseLiquidityPoolsForSynthetic::clear_identity(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0)
 }
 
+pub fn synthetic_transfer_liquidity_pool(who: &AccountId, pool_id: LiquidityPoolId, to: AccountId) -> DispatchResult {
+	BaseLiquidityPoolsForSynthetic::transfer_liquidity_pool(origin_of(who), pool_id, to)
+}
+
 pub fn synthetic_set_enabled_trades() -> DispatchResult {
 	SyntheticLiquidityPools::set_synthetic_enabled(
 		origin_of(&POOL::get()),
@@ -543,4 +547,8 @@ pub fn margin_verify_identity() -> DispatchResult {
 
 pub fn margin_clear_identity() -> DispatchResult {
 	BaseLiquidityPoolsForMargin::clear_identity(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0)
+}
+
+pub fn margin_transfer_liquidity_pool(who: &AccountId, pool_id: LiquidityPoolId, to: AccountId) -> DispatchResult {
+	BaseLiquidityPoolsForMargin::transfer_liquidity_pool(origin_of(who), pool_id, to)
 }

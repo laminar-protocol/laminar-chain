@@ -65,6 +65,8 @@ decl_event!(
 		VerifyIdentity(LiquidityPoolId),
 		/// Clear identity (who, pool_id)
 		ClearIdentity(AccountId, LiquidityPoolId),
+		/// Transfer liquidity pool (who, pool_id, to)
+		TransferLiquidityPool(AccountId, LiquidityPoolId, AccountId),
 	}
 );
 
@@ -165,6 +167,13 @@ decl_module! {
 
 			Self::_clear_identity(&who, pool_id)?;
 			Self::deposit_event(RawEvent::ClearIdentity(who, pool_id));
+		}
+
+		#[weight = 10_000]
+		pub fn transfer_liquidity_pool(origin, #[compact] pool_id: LiquidityPoolId, to: T::AccountId) {
+			let who = ensure_signed(origin)?;
+			Self::_transfer_liquidity_pool(&who, pool_id, &to)?;
+			Self::deposit_event(RawEvent::TransferLiquidityPool(who, pool_id, to));
 		}
 	}
 }
@@ -318,6 +327,14 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 			T::DepositCurrency::unreserve(who, deposit_amount);
 			<IdentityInfos<T, I>>::remove(&pool_id);
 		}
+
+		Ok(())
+	}
+
+	pub fn _transfer_liquidity_pool(who: &T::AccountId, pool_id: LiquidityPoolId, to: &T::AccountId) -> DispatchResult {
+		ensure!(Self::is_owner(pool_id, &who), Error::<T, I>::NoPermission);
+		Self::_clear_identity(&who, pool_id)?;
+		<Owners<T, I>>::insert(&pool_id, (to, pool_id));
 
 		Ok(())
 	}

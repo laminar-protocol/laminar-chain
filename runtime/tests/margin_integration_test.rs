@@ -1007,4 +1007,63 @@ mod tests {
 			assert_eq!(native_currency_balance(&POOL::get()), 100_000 * DOLLARS);
 		});
 	}
+
+	#[test]
+	fn test_margin_transfer_liquidity_pool() {
+		ExtBuilder::default()
+			.balances(vec![
+				(POOL::get(), AUSD, dollar(20_000)),
+				(ALICE::get(), AUSD, dollar(10_000)),
+			])
+			.build()
+			.execute_with(|| {
+				assert_ok!(margin_create_pool());
+				assert_eq!(native_currency_balance(&POOL::get()), 100_000 * DOLLARS);
+
+				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(10_000)));
+				assert_ok!(margin_deposit_liquidity(&ALICE::get(), dollar(5000)));
+				assert_ok!(margin_deposit(&ALICE::get(), dollar(4000)));
+				assert_eq!(margin_liquidity(), dollar(15_000));
+
+				// set identity
+				assert_ok!(margin_set_identity());
+				assert_eq!(native_currency_balance(&POOL::get()), 90_000 * DOLLARS);
+
+				// transfer liquidity pool to ALICE
+				assert_ok!(margin_transfer_liquidity_pool(
+					&POOL::get(),
+					LIQUIDITY_POOL_ID_0,
+					ALICE::get()
+				));
+				assert_eq!(native_currency_balance(&POOL::get()), 100_000 * DOLLARS);
+
+				assert_noop!(
+					margin_withdraw_liquidity(&POOL::get(), dollar(1000)),
+					base_liquidity_pools::Error::<Runtime, BaseLiquidityPoolsMarginInstance>::NoPermission
+				);
+				assert_ok!(margin_withdraw_liquidity(&ALICE::get(), dollar(1000)));
+				assert_ok!(margin_withdraw(&ALICE::get(), dollar(1000)));
+				assert_eq!(collateral_balance(&ALICE::get()), dollar(3_000));
+				assert_eq!(margin_liquidity(), dollar(14_000));
+
+				// transfer liquidity pool to BOB
+				assert_ok!(margin_transfer_liquidity_pool(
+					&ALICE::get(),
+					LIQUIDITY_POOL_ID_0,
+					BOB::get()
+				));
+				assert_eq!(collateral_balance(&BOB::get()), 0);
+				assert_ok!(margin_withdraw_liquidity(&BOB::get(), dollar(1000)));
+				assert_ok!(margin_withdraw(&ALICE::get(), dollar(1000)));
+				assert_eq!(margin_liquidity(), dollar(13_000));
+				assert_eq!(collateral_balance(&BOB::get()), dollar(1000));
+
+				// remove pool
+				assert_ok!(margin_remove_pool(&BOB::get()));
+				assert_eq!(collateral_balance(&ALICE::get()), dollar(4_000));
+				assert_eq!(collateral_balance(&BOB::get()), dollar(14_000));
+				assert_ok!(margin_withdraw(&ALICE::get(), dollar(1000)));
+				assert_eq!(collateral_balance(&ALICE::get()), dollar(5_000));
+			});
+	}
 }
