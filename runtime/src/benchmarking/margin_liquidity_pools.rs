@@ -1,5 +1,5 @@
 use super::utils::dollars;
-use crate::{AccountId, BaseLiquidityPoolsForMargin, BlockNumber, MarginLiquidityPools, MarginProtocol, Runtime};
+use crate::{AccountId, BaseLiquidityPoolsForMargin, MarginLiquidityPools, MarginProtocol, Runtime};
 
 use frame_system::RawOrigin;
 use sp_runtime::{DispatchError, Fixed128, Permill};
@@ -73,8 +73,8 @@ runtime_benchmarks! {
 	}: _(RawOrigin::Root, EUR_USD, s.into())
 
 	set_accumulate {
-		let frequency: BlockNumber = 10u32;
-		let offset: BlockNumber = 1u32;
+		let frequency = 10u64;
+		let offset = 1u64;
 	}: _(RawOrigin::Root, EUR_USD, frequency, offset)
 
 	enable_trading_pair {
@@ -104,6 +104,17 @@ runtime_benchmarks! {
 		let p in ...;
 		let caller = create_pool(p)?;
 		MarginLiquidityPools::enable_trading_pair(RawOrigin::Root.into(), EUR_USD)?;
+		let threshold = RiskThreshold {
+			margin_call: Permill::from_percent(5),
+			stop_out: Permill::from_percent(2),
+		};
+		MarginProtocol::set_trading_pair_risk_threshold(
+			RawOrigin::Root.into(),
+			EUR_USD,
+			Some(threshold.clone()),
+			Some(threshold.clone()),
+			Some(threshold.clone()),
+		)?;
 		MarginLiquidityPools::liquidity_pool_enable_trading_pair(
 			RawOrigin::Signed(caller.clone()).into(),
 			0,
