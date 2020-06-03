@@ -140,8 +140,8 @@ mod tests {
 				assert_eq!(
 					margin_pool_info(),
 					Some(PoolInfo {
-						enp: Fixed128::from_parts(679867986798679867),
-						ell: Fixed128::from_parts(679867986798679867),
+						enp: Fixed128::from_parts(0_686666666666666666),
+						ell: Fixed128::from_parts(0_686666666666666666),
 						required_deposit: Fixed128::zero()
 					})
 				);
@@ -416,7 +416,7 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
 				// 4.4 = 3 * (1 + 10000 * 70% / 3.01 / 5000)
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(41, 10))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(38, 10))]));
 				assert_noop!(
 					margin_liquidity_pool_margin_call(),
 					margin_protocol::Error::<Runtime>::SafePool
@@ -433,13 +433,13 @@ mod tests {
 					margin_protocol::Error::<Runtime>::UnsafePool
 				);
 				// Price up become safe
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(41, 10))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(38, 10))]));
 				assert_ok!(margin_liquidity_pool_become_safe());
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(42, 10))]));
 				assert_ok!(margin_liquidity_pool_margin_call());
 
 				// Deposit become safe
-				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(500)));
+				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(2200)));
 				assert_ok!(margin_liquidity_pool_become_safe());
 
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(50, 10))]));
@@ -449,7 +449,7 @@ mod tests {
 
 				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(14700));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_eq!(margin_liquidity(), 799940000000000000000);
+				assert_eq!(margin_liquidity(), 2499940000000000000000);
 				assert_eq!(
 					collateral_balance(&MockLaminarTreasury::account_id()),
 					60000000000000000
