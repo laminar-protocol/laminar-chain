@@ -70,7 +70,6 @@ pub struct Position<T: Trait> {
 	leveraged_held: Fixed128,
 	leveraged_debits: Fixed128,
 	/// USD value of leveraged debits on open position.
-	leveraged_debits_in_usd: Fixed128,
 	open_accumulated_swap_rate: Fixed128,
 	margin_held: Fixed128,
 }
@@ -384,7 +383,6 @@ impl<T: Trait> Module<T> {
 			leverage,
 			leveraged_held: fixed_128_mul_signum(leveraged_held, held_signum),
 			leveraged_debits: fixed_128_mul_signum(leveraged_debits, debit_signum),
-			leveraged_debits_in_usd: fixed_128_mul_signum(leveraged_held_in_usd, debit_signum),
 			open_accumulated_swap_rate,
 			margin_held,
 		};
