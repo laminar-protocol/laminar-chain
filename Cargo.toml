@@ -124,6 +124,9 @@ exclude = [ "runtime/wasm" ]
 # probably concerns this list.
 #
 # This list is ordered alphabetically.
+#
+# This list is a fork from https://github.com/paritytech/substrate/blob/master/Cargo.toml, with
+# evm related crates removed
 [profile.dev.package]
 aes-ctr = { opt-level = 3 }
 aes-soft = { opt-level = 3 }
