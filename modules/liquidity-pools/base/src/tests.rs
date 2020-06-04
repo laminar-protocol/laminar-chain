@@ -39,7 +39,7 @@ fn pool_exits_should_work() {
 fn should_create_pool() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Instance1Module::create_pool(Origin::signed(ALICE)));
-		assert_eq!(Instance1Module::owners(0), Some((ALICE, 0)));
+		assert_eq!(Instance1Module::pools(0), Some(Pool::new(ALICE, 0)));
 		assert_eq!(Instance1Module::next_pool_id(), 1);
 	});
 }
@@ -57,10 +57,10 @@ fn should_remove_pool() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Instance1Module::create_pool(Origin::signed(ALICE)));
 		assert_ok!(Instance1Module::deposit_liquidity(Origin::signed(ALICE), 0, 1000));
-		assert_eq!(Instance1Module::balances(&0), 1000);
+		assert_eq!(Instance1Module::liquidity(0), 1000);
 		assert_ok!(Instance1Module::remove_pool(Origin::signed(ALICE), 0));
-		assert_eq!(Instance1Module::owners(0), None);
-		assert_eq!(Instance1Module::balances(&0), 0);
+		assert_eq!(Instance1Module::pools(0), None);
+		assert_eq!(Instance1Module::liquidity(0), 0);
 		assert_eq!(<Instance1Module as LiquidityPools<AccountId>>::liquidity(0), 0);
 	})
 }
@@ -69,9 +69,9 @@ fn should_remove_pool() {
 fn should_deposit_liquidity() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Instance1Module::create_pool(Origin::signed(ALICE)));
-		assert_eq!(Instance1Module::balances(&0), 0);
+		assert_eq!(Instance1Module::liquidity(0), 0);
 		assert_ok!(Instance1Module::deposit_liquidity(Origin::signed(ALICE), 0, 1000));
-		assert_eq!(Instance1Module::balances(&0), 1000);
+		assert_eq!(Instance1Module::liquidity(0), 1000);
 		assert_eq!(<Instance1Module as LiquidityPools<AccountId>>::liquidity(0), 1000);
 		assert_noop!(
 			Instance1Module::deposit_liquidity(Origin::signed(ALICE), 1, 1000),
@@ -84,16 +84,16 @@ fn should_deposit_liquidity() {
 fn should_withdraw_liquidity() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Instance1Module::create_pool(Origin::signed(ALICE)));
-		assert_eq!(Instance1Module::owners(0), Some((ALICE, 0)));
-		assert_eq!(Instance1Module::balances(&0), 0);
+		assert_eq!(Instance1Module::pools(0), Some(Pool::new(ALICE, 0)));
+		assert_eq!(Instance1Module::liquidity(0), 0);
 		assert_ok!(Instance1Module::deposit_liquidity(Origin::signed(ALICE), 0, 1000));
-		assert_eq!(Instance1Module::balances(&0), 1000);
+		assert_eq!(Instance1Module::liquidity(0), 1000);
 		assert_ok!(Instance1Module::withdraw_liquidity(Origin::signed(ALICE), 0, 500));
-		assert_eq!(Instance1Module::balances(&0), 500);
+		assert_eq!(Instance1Module::liquidity(0), 500);
 		assert_ok!(<Instance1Module as LiquidityPools<AccountId>>::withdraw_liquidity(
 			&BOB, 0, 100
 		));
-		assert_eq!(Instance1Module::balances(&0), 400);
+		assert_eq!(Instance1Module::liquidity(0), 400);
 	})
 }
 
@@ -102,7 +102,7 @@ fn should_fail_withdraw_liquidity() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Instance1Module::create_pool(Origin::signed(ALICE)));
 		assert_ok!(Instance1Module::deposit_liquidity(Origin::signed(ALICE), 0, 1000));
-		assert_eq!(Instance1Module::balances(&0), 1000);
+		assert_eq!(Instance1Module::liquidity(0), 1000);
 		assert_eq!(
 			Instance1Module::withdraw_liquidity(Origin::signed(ALICE), 0, 5000),
 			Err(Error::<Runtime, Instance1>::CannotWithdrawAmount.into()),
@@ -113,7 +113,7 @@ fn should_fail_withdraw_liquidity() {
 			Err(Error::<Runtime, Instance1>::CannotWithdrawExistentialDeposit.into()),
 		);
 
-		assert_eq!(Instance1Module::balances(&0), 1000);
+		assert_eq!(Instance1Module::liquidity(0), 1000);
 	})
 }
 
@@ -273,7 +273,7 @@ fn should_transfer_liquidity_pool() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Instance1Module::create_pool(Origin::signed(ALICE)));
 		assert_ok!(Instance1Module::deposit_liquidity(Origin::signed(ALICE), 0, 1000));
-		assert_eq!(Instance1Module::balances(&0), 1000);
+		assert_eq!(Instance1Module::liquidity(0), 1000);
 
 		let identity = IdentityInfo {
 			legal: "laminar".as_bytes().to_vec(),
@@ -298,14 +298,14 @@ fn should_transfer_liquidity_pool() {
 		assert!(System::events().iter().any(|record| record.event == event));
 
 		// remove pool
-		assert_eq!(Instance1Module::balances(&0), 1000);
+		assert_eq!(Instance1Module::liquidity(0), 1000);
 		assert_noop!(
 			Instance1Module::remove_pool(Origin::signed(ALICE), 0),
 			Error::<Runtime, Instance1>::NoPermission
 		);
 		assert_ok!(Instance1Module::remove_pool(Origin::signed(BOB), 0),);
-		assert_eq!(Instance1Module::owners(0), None);
-		assert_eq!(Instance1Module::balances(&0), 0);
+		assert_eq!(Instance1Module::pools(0), None);
+		assert_eq!(Instance1Module::liquidity(0), 0);
 		assert_eq!(<Instance1Module as LiquidityPools<AccountId>>::liquidity(0), 0);
 		assert_eq!(LiquidityCurrency::free_balance(&ALICE), 99000);
 		assert_eq!(LiquidityCurrency::free_balance(&BOB), 101000);
@@ -332,9 +332,9 @@ fn multi_instances_have_independent_storage() {
 
 		// balances storage
 		assert_ok!(Instance1Module::deposit_liquidity(Origin::signed(ALICE), 0, 1000));
-		assert_eq!(Instance1Module::balances(&0), 1000);
+		assert_eq!(Instance1Module::liquidity(0), 1000);
 		assert_eq!(LiquidityCurrency::free_balance(&Instance1Module::account_id()), 1000);
-		assert_eq!(Instance2Module::balances(&0), 0);
+		assert_eq!(Instance2Module::liquidity(0), 0);
 		assert_eq!(LiquidityCurrency::free_balance(&Instance2Module::account_id()), 0);
 	})
 }
