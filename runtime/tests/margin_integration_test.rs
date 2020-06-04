@@ -766,11 +766,11 @@ mod tests {
 				assert_eq!(
 					margin_trader_info(&ALICE::get()),
 					TraderInfo {
-						equity: Fixed128::from_parts(8542129032258064515700),
-						margin_held: Fixed128::from_parts(249649999999999999900),
-						margin_level: Fixed128::from_parts(1710820955789718509),
-						free_margin: Fixed128::from_parts(8292479032258064515800),
-						unrealized_pl: Fixed128::from_parts(342129032258064515700)
+						equity: Fixed128::from_parts(8542_129032258064515700),
+						margin_held: Fixed128::from_parts(249_649999999999999900),
+						margin_level: Fixed128::from_parts(1_828808607913147372),
+						free_margin: Fixed128::from_parts(8292_479032258064515800),
+						unrealized_pl: Fixed128::from_parts(342_129032258064515700)
 					}
 				);
 				assert_eq!(

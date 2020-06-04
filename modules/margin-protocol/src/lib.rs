@@ -923,9 +923,9 @@ impl<T: Trait> Module<T> {
 		let leveraged_debits_in_usd = <PositionsByTrader<T>>::iter_prefix(who)
 			.filter_map(|((_, position_id), _)| Self::positions(position_id))
 			.filter(|p| p.pool == pool_id)
-			.try_fold(Fixed128::zero(), |acc, p| {
-				acc.checked_add(&p.leveraged_debits_in_usd.saturating_abs())
-					.ok_or(Error::<T>::NumOutOfBound)
+			.try_fold::<_, _, Fixed128Result>(Fixed128::zero(), |acc, p| {
+				let debits_in_usd = Self::_usd_value(p.pair.quote, p.leveraged_debits.saturating_abs())?;
+				acc.checked_add(&debits_in_usd).ok_or(Error::<T>::NumOutOfBound.into())
 			})?;
 
 		Ok(equity
