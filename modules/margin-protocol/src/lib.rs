@@ -69,7 +69,6 @@ pub struct Position<T: Trait> {
 	leverage: Leverage,
 	leveraged_held: Fixed128,
 	leveraged_debits: Fixed128,
-	/// USD value of leveraged debits on open position.
 	open_accumulated_swap_rate: Fixed128,
 	margin_held: Fixed128,
 }
