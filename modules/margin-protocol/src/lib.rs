@@ -828,7 +828,6 @@ impl<T: Trait> Module<T> {
 					.base_amount
 					.checked_mul(&curr_price)
 					.ok_or(Error::<T>::NumOutOfBound)?;
-				//let profit_in_quote = pool.short.quote_amount.checked_add(&base_in_quote).ok_or(Error::<T>::NumOutOfBound)?;
 				let profit_in_quote = base_in_quote
 					.checked_add(&pool.short.quote_amount)
 					.ok_or(Error::<T>::NumOutOfBound)?;
