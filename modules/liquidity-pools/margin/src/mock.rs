@@ -17,7 +17,7 @@ use primitives::{Balance, CurrencyId, LiquidityPoolId};
 use traits::{BaseLiquidityPoolManager, MarginProtocolLiquidityPoolsManager};
 
 pub type BlockNumber = u64;
-pub type AccountId = u32;
+pub type AccountId = u64;
 
 ord_parameter_types! {
 	pub const One: AccountId = 0;
