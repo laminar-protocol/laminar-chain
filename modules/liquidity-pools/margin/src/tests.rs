@@ -504,11 +504,11 @@ fn should_enable_disable_trading_pairs() {
 			base: CurrencyId::AUSD,
 			quote: CurrencyId::FEUR,
 		};
-		assert_eq!(ModuleLiquidityPools::enabled_trading_pair(pair), None);
+		assert!(!ModuleLiquidityPools::is_trading_pair_enabled(pair));
 		assert_ok!(ModuleLiquidityPools::enable_trading_pair(Origin::ROOT, pair));
-		assert_eq!(ModuleLiquidityPools::enabled_trading_pair(pair), Some(true));
+		assert!(ModuleLiquidityPools::is_trading_pair_enabled(pair));
 		assert_ok!(ModuleLiquidityPools::disable_trading_pair(Origin::ROOT, pair));
-		assert_eq!(ModuleLiquidityPools::enabled_trading_pair(pair), None);
+		assert!(!ModuleLiquidityPools::is_trading_pair_enabled(pair));
 	})
 }
 

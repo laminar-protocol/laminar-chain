@@ -137,7 +137,7 @@ pub struct SwapPeriod<Moment> {
 	pub start: Moment,
 }
 
-#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
+#[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct AccumulateConfig<Moment> {
 	pub frequency: Moment,

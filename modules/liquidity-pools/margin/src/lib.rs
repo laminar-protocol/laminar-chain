@@ -45,6 +45,18 @@ pub struct SwapRate {
 	pub short: Fixed128,
 }
 
+#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct TradingPairOption<Moment> {
+	/// Is enabled for trading.
+	pub enabled: bool,
+	/// The max spread. The minimum of max spread and pool's spread would be used in trading.
+	pub max_spread: Option<Balance>,
+	/// Swap rate.
+	pub swap_rate: SwapRate,
+	/// The accumulate config.
+	pub accumulate_config: Option<AccumulateConfig<Moment>>,
+}
+
 pub const MODULE_ID: ModuleId = ModuleId(*b"lami/mlp");
 pub const ONE_MINUTE: u64 = 60;
 
@@ -62,15 +74,15 @@ pub trait Trait: frame_system::Trait {
 decl_storage! {
 	trait Store for Module<T: Trait> as MarginLiquidityPools {
 		pub LiquidityPoolOptions: double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => Option<MarginLiquidityPoolOption>;
-		pub SwapRates get(fn swap_rate): map hasher(twox_64_concat) TradingPair => Option<SwapRate>;
-		pub AccumulatedSwapRates get(fn accumulated_swap_rate): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => SwapRate;
-		pub AdditionalSwapRate get(fn additional_swap_rate): map hasher(twox_64_concat) LiquidityPoolId => Option<Fixed128>;
-		pub MaxSpread get(fn max_spread): map hasher(twox_64_concat) TradingPair => Option<Balance>;
-		pub Accumulates get(fn accumulate): map hasher(twox_64_concat) TradingPair => Option<(AccumulateConfig<T::Moment>, TradingPair)>;
-		pub EnabledTradingPairs get(fn enabled_trading_pair): map hasher(twox_64_concat) TradingPair => Option<bool>;
 		pub LiquidityPoolEnabledTradingPairs get(fn liquidity_pool_enabled_trading_pair): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => Option<bool>;
-		pub DefaultMinLeveragedAmount get(fn default_min_leveraged_amount) config(): Balance;
+		pub AccumulatedSwapRates get(fn accumulated_swap_rate): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => SwapRate;
+
+		pub TradingPairOptions get(fn trading_pair_options): map hasher(twox_64_concat) TradingPair => Option<TradingPairOption<T::Moment>>;
+
+		pub AdditionalSwapRate get(fn additional_swap_rate): map hasher(twox_64_concat) LiquidityPoolId => Option<Fixed128>;
 		pub MinLeveragedAmount get(fn min_leveraged_amount): map hasher(twox_64_concat) LiquidityPoolId => Option<Balance>;
+
+		pub DefaultMinLeveragedAmount get(fn default_min_leveraged_amount) config(): Balance;
 		pub LastAccumulateTime get(fn last_accumulate_time): T::Moment;
 	}
 
@@ -78,11 +90,13 @@ decl_storage! {
 		config(margin_liquidity_config): Vec<(TradingPair, Balance, AccumulateConfig<T::Moment>, SwapRate)>;
 
 		build(|config: &GenesisConfig<T>| {
-			config.margin_liquidity_config.iter().for_each(|(pair, spread, accumulate, swap_rate)| {
-				EnabledTradingPairs::insert(pair, true);
-				SwapRates::insert(pair, swap_rate);
-				MaxSpread::insert(pair, spread);
-				<Accumulates<T>>::insert(pair, (accumulate, pair));
+			config.margin_liquidity_config.iter().for_each(|(pair, max_spread, accumulate_config, swap_rate)| {
+				<TradingPairOptions<T>>::insert(&pair, TradingPairOption {
+					enabled: true,
+					swap_rate: swap_rate.clone(),
+					max_spread: Some(max_spread.clone()),
+					accumulate_config: Some(accumulate_config.clone()),
+				});
 			})
 		})
 	}
@@ -150,7 +164,11 @@ decl_module! {
 
 			ensure!(rate.long.saturating_abs() <= T::MaxSwap::get(), Error::<T>::SwapRateTooHigh);
 			ensure!(rate.short.saturating_abs() <= T::MaxSwap::get(), Error::<T>::SwapRateTooHigh);
-			SwapRates::insert(pair, rate.clone());
+
+			let mut option = Self::trading_pair_options(&pair).unwrap_or_default();
+			option.swap_rate = rate.clone();
+			<TradingPairOptions<T>>::insert(&pair, option);
+
 			Self::deposit_event(RawEvent::SwapRateUpdated(pair, rate));
 		}
 
@@ -168,7 +186,11 @@ decl_module! {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
-			MaxSpread::insert(pair, max_spread);
+
+			let mut option = Self::trading_pair_options(&pair).unwrap_or_default();
+			option.max_spread = Some(max_spread);
+			<TradingPairOptions<T>>::insert(&pair, option);
+
 			Self::deposit_event(RawEvent::MaxSpreadUpdated(pair, max_spread));
 		}
 
@@ -180,8 +202,10 @@ decl_module! {
 
 			ensure!(frequency >= ONE_MINUTE.into(), Error::<T>::FrequencyTooLow);
 
-			let accumulate = AccumulateConfig { frequency, offset };
-			<Accumulates<T>>::insert(pair, (accumulate, pair));
+			let mut option = Self::trading_pair_options(&pair).unwrap_or_default();
+			option.accumulate_config = Some(AccumulateConfig { frequency, offset });
+			<TradingPairOptions<T>>::insert(&pair, option);
+
 			Self::deposit_event(RawEvent::SetAccumulate(pair, frequency, offset));
 		}
 
@@ -190,7 +214,11 @@ decl_module! {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
-			EnabledTradingPairs::insert(&pair, true);
+
+			let mut option = Self::trading_pair_options(&pair).unwrap_or_default();
+			option.enabled = true;
+			<TradingPairOptions<T>>::insert(&pair, option);
+
 			Self::deposit_event(RawEvent::TradingPairEnabled(pair))
 		}
 
@@ -199,7 +227,11 @@ decl_module! {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
-			EnabledTradingPairs::remove(&pair);
+
+			let mut option = Self::trading_pair_options(&pair).unwrap_or_default();
+			option.enabled = false;
+			<TradingPairOptions<T>>::insert(&pair, option);
+
 			Self::deposit_event(RawEvent::TradingPairDisabled(pair))
 		}
 
@@ -207,7 +239,7 @@ decl_module! {
 		pub fn liquidity_pool_enable_trading_pair(origin, #[compact] pool_id: LiquidityPoolId, pair: TradingPair) {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
-			ensure!(Self::enabled_trading_pair(&pair).is_some(), Error::<T>::TradingPairNotEnabled);
+			ensure!(Self::is_trading_pair_enabled(pair), Error::<T>::TradingPairNotEnabled);
 
 			<T::PoolManager as MarginProtocolLiquidityPoolsManager>::ensure_can_enable_trading_pair(pool_id, pair)?;
 
@@ -245,15 +277,20 @@ decl_module! {
 			// Truncate seconds, keep minutes
 			let now_as_secs: T::Moment = now_as_mins * ONE_MINUTE.into();
 
-			for (_, (accumulate_config, pair)) in <Accumulates<T>>::iter() {
-				let frequency_as_mins = accumulate_config.frequency / ONE_MINUTE.into();
-				let offset_as_mins = accumulate_config.offset / ONE_MINUTE.into();
+			<TradingPairOptions<T>>::iter().for_each(|(pair, option)| {
+				if let Some(accumulate_config) = option.accumulate_config {
+					let frequency_as_mins = accumulate_config.frequency / ONE_MINUTE.into();
+					let offset_as_mins = accumulate_config.offset / ONE_MINUTE.into();
 
-				if now_as_mins > 0.into() && frequency_as_mins > 0.into() && now_as_mins % frequency_as_mins == offset_as_mins && <LastAccumulateTime<T>>::get() != now_as_secs {
-					<LastAccumulateTime<T>>::set(now_as_secs);
-					Self::_accumulate_rates(pair);
+					if now_as_mins > 0.into() && frequency_as_mins > 0.into()
+						&& now_as_mins % frequency_as_mins == offset_as_mins
+						&& <LastAccumulateTime<T>>::get() != now_as_secs
+					{
+						<LastAccumulateTime<T>>::set(now_as_secs);
+						Self::_accumulate_rates(pair);
+					}
 				}
-			};
+			});
 			10_000
 		}
 	}
@@ -290,6 +327,25 @@ impl<T: Trait> Module<T> {
 	pub fn get_min_leveraged_amount(pool_id: LiquidityPoolId) -> Balance {
 		let min_leveraged_amount = Self::min_leveraged_amount(pool_id).unwrap_or(0);
 		max(min_leveraged_amount, Self::default_min_leveraged_amount())
+	}
+}
+
+// Getters
+impl<T: Trait> Module<T> {
+	pub fn max_spread(pair: TradingPair) -> Option<Balance> {
+		Self::trading_pair_options(pair).map_or(None, |o| o.max_spread)
+	}
+
+	pub fn accumulate_config(pair: TradingPair) -> Option<AccumulateConfig<T::Moment>> {
+		Self::trading_pair_options(pair).map_or(None, |o| o.accumulate_config)
+	}
+
+	pub fn swap_rate(pair: TradingPair) -> Option<SwapRate> {
+		Self::trading_pair_options(pair).map(|o| o.swap_rate)
+	}
+
+	pub fn is_trading_pair_enabled(pair: TradingPair) -> bool {
+		Self::trading_pair_options(pair).map_or(false, |o| o.enabled)
 	}
 }
 
@@ -372,7 +428,7 @@ impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
 		leveraged_amount: Balance,
 	) -> bool {
 		Self::is_enabled(pool_id, pair, leverage)
-			&& Self::enabled_trading_pair(&pair).is_some()
+			&& Self::is_trading_pair_enabled(pair)
 			&& Self::liquidity_pool_enabled_trading_pair(&pool_id, &pair).is_some()
 			&& leveraged_amount >= Self::get_min_leveraged_amount(pool_id)
 	}
