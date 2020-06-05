@@ -140,8 +140,8 @@ mod tests {
 				assert_eq!(
 					margin_pool_info(),
 					Some(PoolInfo {
-						enp: Fixed128::from_parts(679867986798679867),
-						ell: Fixed128::from_parts(679867986798679867),
+						enp: Fixed128::from_parts(0_686666666666666666),
+						ell: Fixed128::from_parts(0_686666666666666666),
 						required_deposit: Fixed128::zero()
 					})
 				);
@@ -332,15 +332,44 @@ mod tests {
 				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
+				// equity= Fixed128(10300.000000000000000000), net_position =Fixed128(15000.000000000000000000)
+				assert_eq!(
+					margin_pool_info(),
+					Some(PoolInfo {
+						enp: Fixed128::from_parts(0_686666666666666666),
+						ell: Fixed128::from_parts(0_686666666666666666),
+						required_deposit: Fixed128::zero()
+					})
+				);
 				// margin = leveraged_amount * price / leverage
-				// 1505 = 5000 * 3.01 / 10
-				// 2.12409 = 3 * (1 - 1505 * 97% / 5000)
+				// 1515 = 5000 * 3.03 / 10
+				// 2.11827 = 3 * (1 - 1515 * 97% / 5000)
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(22, 10))]));
 				assert_noop!(
 					margin_trader_margin_call(&ALICE::get()),
 					margin_protocol::Error::<Runtime>::SafeTrader
 				);
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(21, 10))]));
+				assert_eq!(
+					margin_trader_info(&ALICE::get()),
+					TraderInfo {
+						equity: Fixed128::from_natural(200),
+						margin_held: Fixed128::from_natural(1515),
+						margin_level: Fixed128::from_parts(0_013201320132013201),
+						free_margin: Fixed128::from_natural(-1315),
+						unrealized_pl: Fixed128::from_natural(-4800),
+					}
+				);
+				// equity= Fixed128(14800.000000000000000000), net_position =Fixed128(10500.000000000000000000)
+				// net_position = base_amount * curr_price_usd = 5000 * 2.1 = 10500
+				assert_eq!(
+					margin_pool_info(),
+					Some(PoolInfo {
+						enp: Fixed128::from_parts(1_409523809523809523),
+						ell: Fixed128::from_parts(1_409523809523809523),
+						required_deposit: Fixed128::zero()
+					})
+				);
 				assert_ok!(margin_trader_margin_call(&ALICE::get()));
 				assert_noop!(
 					margin_trader_stop_out(&ALICE::get()),
@@ -355,6 +384,24 @@ mod tests {
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(22, 10))]));
 				assert_ok!(margin_trader_become_safe(&ALICE::get()));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(21, 10))]));
+				assert_eq!(
+					margin_trader_info(&ALICE::get()),
+					TraderInfo {
+						equity: Fixed128::from_natural(200),
+						margin_held: Fixed128::from_natural(1515),
+						margin_level: Fixed128::from_parts(0_013201320132013201),
+						free_margin: Fixed128::from_natural(-1315),
+						unrealized_pl: Fixed128::from_natural(-4800),
+					}
+				);
+				assert_eq!(
+					margin_pool_info(),
+					Some(PoolInfo {
+						enp: Fixed128::from_parts(1_409523809523809523),
+						ell: Fixed128::from_parts(1_409523809523809523),
+						required_deposit: Fixed128::zero()
+					})
+				);
 				assert_ok!(margin_trader_margin_call(&ALICE::get()));
 
 				// Deposit become safe
@@ -416,7 +463,7 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
 				// 4.4 = 3 * (1 + 10000 * 70% / 3.01 / 5000)
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(41, 10))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(38, 10))]));
 				assert_noop!(
 					margin_liquidity_pool_margin_call(),
 					margin_protocol::Error::<Runtime>::SafePool
@@ -433,13 +480,13 @@ mod tests {
 					margin_protocol::Error::<Runtime>::UnsafePool
 				);
 				// Price up become safe
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(41, 10))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(38, 10))]));
 				assert_ok!(margin_liquidity_pool_become_safe());
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(42, 10))]));
 				assert_ok!(margin_liquidity_pool_margin_call());
 
 				// Deposit become safe
-				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(500)));
+				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(2200)));
 				assert_ok!(margin_liquidity_pool_become_safe());
 
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(50, 10))]));
@@ -449,7 +496,7 @@ mod tests {
 
 				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(14700));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_eq!(margin_liquidity(), 799940000000000000000);
+				assert_eq!(margin_liquidity(), 2499940000000000000000);
 				assert_eq!(
 					collateral_balance(&MockLaminarTreasury::account_id()),
 					60000000000000000
@@ -719,11 +766,11 @@ mod tests {
 				assert_eq!(
 					margin_trader_info(&ALICE::get()),
 					TraderInfo {
-						equity: Fixed128::from_parts(8542129032258064515700),
-						margin_held: Fixed128::from_parts(249649999999999999900),
-						margin_level: Fixed128::from_parts(1710820955789718509),
-						free_margin: Fixed128::from_parts(8292479032258064515800),
-						unrealized_pl: Fixed128::from_parts(342129032258064515700)
+						equity: Fixed128::from_parts(8542_129032258064515700),
+						margin_held: Fixed128::from_parts(249_649999999999999900),
+						margin_level: Fixed128::from_parts(1_828808607913147372),
+						free_margin: Fixed128::from_parts(8292_479032258064515800),
+						unrealized_pl: Fixed128::from_parts(342_129032258064515700)
 					}
 				);
 				assert_eq!(
