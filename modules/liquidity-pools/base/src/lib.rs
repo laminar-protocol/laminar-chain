@@ -139,7 +139,7 @@ decl_module! {
 
 			T::PoolManager::ensure_can_withdraw(pool_id, amount)?;
 
-			let new_balance = Self::_balance(pool_id).checked_sub(amount).ok_or(Error::<T, I>::CannotWithdrawAmount)?;
+			let new_balance = Self::balance(pool_id).checked_sub(amount).ok_or(Error::<T, I>::CannotWithdrawAmount)?;
 
 			// check minimum balance
 			if new_balance < T::ExistentialDeposit::get() {
@@ -195,7 +195,7 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 	}
 
 	pub fn is_owner(pool_id: LiquidityPoolId, who: &T::AccountId) -> bool {
-		Self::pools(pool_id).map_or(false, |pool| &pool.owner == who)
+		Self::owner(pool_id).map_or(false, |ref owner| owner == who)
 	}
 }
 
@@ -216,7 +216,7 @@ impl<T: Trait<I>, I: Instance> LiquidityPools<T::AccountId> for Module<T, I> {
 
 	/// Check collateral balance of `pool_id`.
 	fn liquidity(pool_id: LiquidityPoolId) -> Balance {
-		Self::_balance(pool_id)
+		Self::balance(pool_id)
 	}
 
 	/// Deposit some amount of collateral to `pool_id`, from `source`.
@@ -230,12 +230,19 @@ impl<T: Trait<I>, I: Instance> LiquidityPools<T::AccountId> for Module<T, I> {
 	}
 }
 
-// Private methods
+// Storage getters
 impl<T: Trait<I>, I: Instance> Module<T, I> {
-	fn _balance(pool_id: LiquidityPoolId) -> Balance {
+	pub fn balance(pool_id: LiquidityPoolId) -> Balance {
 		Self::pools(&pool_id).map_or(Default::default(), |pool| pool.balance)
 	}
 
+	pub fn owner(pool_id: LiquidityPoolId) -> Option<T::AccountId> {
+		Self::pools(&pool_id).map(|pool| pool.owner)
+	}
+}
+
+// Private methods
+impl<T: Trait<I>, I: Instance> Module<T, I> {
 	fn _set_balance(pool_id: LiquidityPoolId, balance: Balance) {
 		if let Some(mut pool) = Self::pools(pool_id) {
 			pool.balance = balance;
@@ -270,7 +277,7 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 		// clear_identity
 		Self::_clear_identity(who, pool_id)?;
 
-		let balance = Self::_balance(pool_id);
+		let balance = Self::balance(pool_id);
 		// transfer balance to pool owner
 		T::LiquidityCurrency::transfer(&Self::account_id(), who, balance)?;
 
@@ -284,7 +291,7 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 	fn _deposit_liquidity(who: &T::AccountId, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
 		ensure!(Self::pool_exists(pool_id), Error::<T, I>::PoolNotFound);
 
-		let new_balance = Self::_balance(pool_id)
+		let new_balance = Self::balance(pool_id)
 			.checked_add(amount)
 			.ok_or(Error::<T, I>::CannotDepositAmount)?;
 
@@ -299,7 +306,7 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 	fn _withdraw_liquidity(who: &T::AccountId, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
 		ensure!(Self::pool_exists(pool_id), Error::<T, I>::PoolNotFound);
 
-		let new_balance = Self::_balance(pool_id)
+		let new_balance = Self::balance(pool_id)
 			.checked_sub(amount)
 			.ok_or(Error::<T, I>::CannotWithdrawAmount)?;
 

@@ -85,7 +85,6 @@ fn should_withdraw_liquidity() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Instance1Module::create_pool(Origin::signed(ALICE)));
 		assert_eq!(Instance1Module::pools(0), Some(Pool::new(ALICE, 0)));
-		assert_eq!(Instance1Module::liquidity(0), 0);
 		assert_ok!(Instance1Module::deposit_liquidity(Origin::signed(ALICE), 0, 1000));
 		assert_eq!(Instance1Module::liquidity(0), 1000);
 		assert_ok!(Instance1Module::withdraw_liquidity(Origin::signed(ALICE), 0, 500));

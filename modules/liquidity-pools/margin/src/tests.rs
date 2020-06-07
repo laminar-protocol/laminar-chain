@@ -17,10 +17,6 @@ fn accumulated_rate(pair: TradingPair, is_long: bool) -> Fixed128 {
 	<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_accumulated_swap_rate(0, pair, is_long)
 }
 
-fn owner_of_pool(pool_id: LiquidityPoolId) -> Option<u64> {
-	BaseLiquidityPools::pools(pool_id).map(|pool| pool.owner)
-}
-
 #[test]
 fn is_enabled_should_work() {
 	new_test_ext().execute_with(|| {
@@ -90,7 +86,7 @@ fn should_remove_pool() {
 		assert_eq!(BaseLiquidityPools::liquidity(0), 1000);
 		assert_ok!(BaseLiquidityPools::remove_pool(Origin::signed(ALICE), 0));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, pair), None);
-		assert_eq!(owner_of_pool(0), None);
+		assert_eq!(BaseLiquidityPools::owner(0), None);
 		assert_eq!(BaseLiquidityPools::liquidity(0), 0);
 		assert_eq!(<ModuleLiquidityPools as LiquidityPools<AccountId>>::liquidity(0), 0);
 	})
@@ -104,7 +100,7 @@ fn should_set_spread() {
 			quote: CurrencyId::FEUR,
 		};
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(owner_of_pool(0), Some(ALICE));
+		assert_eq!(BaseLiquidityPools::owner(0), Some(ALICE));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, pair), None);
 		assert_ok!(ModuleLiquidityPools::set_spread(Origin::signed(ALICE), 0, pair, 80, 60));
 
@@ -135,7 +131,7 @@ fn should_set_max_spread() {
 			quote: CurrencyId::FEUR,
 		};
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(owner_of_pool(0), Some(ALICE));
+		assert_eq!(BaseLiquidityPools::owner(0), Some(ALICE));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, pair), None);
 		// no max spread
 		assert_ok!(ModuleLiquidityPools::set_spread(
@@ -201,7 +197,7 @@ fn should_set_enabled_trades() {
 			quote: CurrencyId::FEUR,
 		};
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(owner_of_pool(0), Some(ALICE));
+		assert_eq!(BaseLiquidityPools::owner(0), Some(ALICE));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, pair), None);
 		assert_ok!(ModuleLiquidityPools::set_enabled_trades(
 			Origin::signed(ALICE),
