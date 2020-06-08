@@ -69,10 +69,21 @@ pub struct Position<T: Trait> {
 	leverage: Leverage,
 	leveraged_held: Fixed128,
 	leveraged_debits: Fixed128,
-	/// USD value of leveraged debits on open position.
-	leveraged_debits_in_usd: Fixed128,
 	open_accumulated_swap_rate: Fixed128,
 	margin_held: Fixed128,
+}
+
+#[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct PoolTraderInfo {
+	position_num: PositionId,
+	long: PairInfo,
+	short: PairInfo,
+}
+
+#[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct PairInfo {
+	base_amount: Fixed128,
+	quote_amount: Fixed128,
 }
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -88,6 +99,7 @@ decl_storage! {
 		Positions get(fn positions): map hasher(twox_64_concat) PositionId => Option<Position<T>>;
 		PositionsByTrader get(fn positions_by_trader): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) (LiquidityPoolId, PositionId) => Option<bool>;
 		PositionsByPool get(fn positions_by_pool): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) (TradingPair, PositionId) => Option<bool>;
+		PoolTraderInfos get(fn pool_trader_infos): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => PoolTraderInfo;
 		Balances get(fn balances): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) LiquidityPoolId => Fixed128;
 		MarginCalledTraders get(fn margin_called_traders): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) LiquidityPoolId => Option<bool>;
 		MarginCalledPools get(fn margin_called_pools): map hasher(twox_64_concat) LiquidityPoolId => Option<bool>;
@@ -370,7 +382,6 @@ impl<T: Trait> Module<T> {
 			leverage,
 			leveraged_held: fixed_128_mul_signum(leveraged_held, held_signum),
 			leveraged_debits: fixed_128_mul_signum(leveraged_debits, debit_signum),
-			leveraged_debits_in_usd: fixed_128_mul_signum(leveraged_held_in_usd, debit_signum),
 			open_accumulated_swap_rate,
 			margin_held,
 		};
@@ -440,16 +451,7 @@ impl<T: Trait> Module<T> {
 		}
 
 		// remove position
-		<Positions<T>>::remove(position_id);
-		<PositionsByTrader<T>>::remove(who, (position.pool, position_id));
-		PositionsByPool::remove(position.pool, (position.pair, position_id));
-
-		// reset trader's equity to $0
-		let has_position = <PositionsByTrader<T>>::iter_prefix(who).any(|((p, _), _)| p == position.pool);
-
-		if !has_position && Self::balances(who, position.pool).is_negative() {
-			<Balances<T>>::remove(who, position.pool);
-		}
+		Self::_remove_position(who, position_id, &position)?;
 
 		Self::deposit_event(RawEvent::PositionClosed(
 			who.clone(),
@@ -591,19 +593,96 @@ impl<T: Trait> Module<T> {
 
 	fn _insert_position(
 		who: &T::AccountId,
-		pool: LiquidityPoolId,
+		pool_id: LiquidityPoolId,
 		pair: TradingPair,
 		position: Position<T>,
 	) -> result::Result<PositionId, DispatchError> {
 		let id = Self::next_position_id();
 		ensure!(id != PositionId::max_value(), Error::<T>::NoAvailablePositionId);
+
+		PoolTraderInfos::try_mutate(pool_id, pair, |pool_info| -> DispatchResult {
+			if position.leverage.is_long() {
+				pool_info.position_num = pool_info.position_num + 1;
+				pool_info.long.base_amount = pool_info
+					.long
+					.base_amount
+					.checked_add(&position.leveraged_held)
+					.ok_or(Error::<T>::NumOutOfBound)?;
+				pool_info.long.quote_amount = pool_info
+					.long
+					.quote_amount
+					.checked_add(&position.leveraged_debits)
+					.ok_or(Error::<T>::NumOutOfBound)?;
+			} else {
+				pool_info.position_num = pool_info.position_num + 1;
+				pool_info.short.base_amount = pool_info
+					.long
+					.base_amount
+					.checked_add(&position.leveraged_held)
+					.ok_or(Error::<T>::NumOutOfBound)?;
+				pool_info.short.quote_amount = pool_info
+					.long
+					.quote_amount
+					.checked_add(&position.leveraged_debits)
+					.ok_or(Error::<T>::NumOutOfBound)?;
+			}
+			Ok(())
+		})?;
+
 		NextPositionId::mutate(|id| *id += 1);
 
 		<Positions<T>>::insert(id, position);
-		<PositionsByTrader<T>>::insert(who, (pool, id), true);
-		PositionsByPool::insert(pool, (pair, id), true);
+		<PositionsByTrader<T>>::insert(who, (pool_id, id), true);
+		PositionsByPool::insert(pool_id, (pair, id), true);
 
 		Ok(id)
+	}
+
+	fn _remove_position(
+		who: &T::AccountId,
+		position_id: PositionId,
+		position: &Position<T>,
+	) -> result::Result<(), DispatchError> {
+		<Positions<T>>::remove(position_id);
+		<PositionsByTrader<T>>::remove(who, (position.pool, position_id));
+		PositionsByPool::remove(position.pool, (position.pair, position_id));
+
+		PoolTraderInfos::mutate(position.pool, position.pair, |pool_info| {
+			if position.leverage.is_long() {
+				pool_info.position_num = pool_info.position_num - 1;
+				pool_info.long.base_amount = pool_info
+					.long
+					.base_amount
+					.checked_sub(&position.leveraged_held)
+					.expect("pool amount can't overflow; qed");
+				pool_info.long.quote_amount = pool_info
+					.long
+					.quote_amount
+					.checked_sub(&position.leveraged_debits)
+					.expect("pool amount can't overflow; qed");
+			} else {
+				pool_info.position_num = pool_info.position_num - 1;
+				pool_info.short.base_amount = pool_info
+					.short
+					.base_amount
+					.checked_sub(&position.leveraged_held)
+					.expect("pool amount can't overflow; qed");
+				pool_info.short.quote_amount = pool_info
+					.short
+					.quote_amount
+					.checked_sub(&position.leveraged_debits)
+					.expect("pool amount can't overflow; qed");
+			}
+		});
+
+		// reset trader's equity to $0
+		let has_position = <PositionsByTrader<T>>::iter_prefix(who).any(|((p, _), _)| p == position.pool);
+
+		if !has_position && Self::balances(who, position.pool).is_negative() {
+			<Balances<T>>::remove(who, position.pool);
+		}
+
+		Ok(())
 	}
 
 	/// Update `who` balance in `pool_id` by `amount`.
@@ -615,11 +694,8 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _ensure_can_open_more_position(who: &T::AccountId, pool: LiquidityPoolId, pair: TradingPair) -> DispatchResult {
-		let count = PositionsByPool::iter_prefix(pool)
-			.filter(|((p, _), _)| *p == pair)
-			.count();
 		ensure!(
-			count < T::GetPoolMaxOpenPositions::get(),
+			(Self::pool_trader_infos(pool, pair).position_num as usize) < T::GetPoolMaxOpenPositions::get(),
 			Error::<T>::CannotOpenMorePosition
 		);
 		let count = <PositionsByTrader<T>>::iter_prefix(who)
@@ -635,6 +711,7 @@ impl<T: Trait> Module<T> {
 
 type PriceResult = result::Result<Price, DispatchError>;
 type Fixed128Result = result::Result<Fixed128, DispatchError>;
+type DoubleFixed128Result = result::Result<(Fixed128, Fixed128), DispatchError>;
 
 // Price helpers
 impl<T: Trait> Module<T> {
@@ -728,6 +805,43 @@ impl<T: Trait> Module<T> {
 		Ok((usd_value, curr_price))
 	}
 
+	/// unrealized_pl_of_pool = pool_per_pair_long_unrelaized + pool_per_pair_short_unrelaized
+	fn _unrealized_pl_of_pool(pool_id: LiquidityPoolId) -> Fixed128Result {
+		PoolTraderInfos::iter_prefix(pool_id).try_fold(Fixed128::zero(), |unrelized, (pair, pool)| {
+			let long_unrelaized = {
+				let curr_price = Self::_bid_price(pool_id, pair, None)?;
+				let base_in_quote = pool
+					.long
+					.base_amount
+					.checked_mul(&curr_price)
+					.ok_or(Error::<T>::NumOutOfBound)?;
+				let profit_in_quote = base_in_quote
+					.checked_add(&pool.long.quote_amount)
+					.ok_or(Error::<T>::NumOutOfBound)?;
+				Self::_usd_value(pair.quote, profit_in_quote)
+			}?;
+
+			let short_unrelaized = {
+				let curr_price = Self::_ask_price(pool_id, pair, None)?;
+				let base_in_quote = pool
+					.short
+					.base_amount
+					.checked_mul(&curr_price)
+					.ok_or(Error::<T>::NumOutOfBound)?;
+				let profit_in_quote = base_in_quote
+					.checked_add(&pool.short.quote_amount)
+					.ok_or(Error::<T>::NumOutOfBound)?;
+				Self::_usd_value(pair.quote, profit_in_quote)
+			}?;
+
+			let sum = long_unrelaized
+				.checked_add(&short_unrelaized)
+				.ok_or(Error::<T>::NumOutOfBound)?;
+			let new_unrelized = unrelized.checked_add(&sum).ok_or(Error::<T>::NumOutOfBound)?;
+			Ok(new_unrelized)
+		})
+	}
+
 	/// Unrealized profit and loss of a given trader in a pool(USD value). It is the sum of unrealized profit and loss
 	/// of all positions opened by a trader.
 	pub fn unrealized_pl_of_trader(who: &T::AccountId, pool_id: LiquidityPoolId) -> Fixed128Result {
@@ -805,9 +919,9 @@ impl<T: Trait> Module<T> {
 		let leveraged_debits_in_usd = <PositionsByTrader<T>>::iter_prefix(who)
 			.filter_map(|((_, position_id), _)| Self::positions(position_id))
 			.filter(|p| p.pool == pool_id)
-			.try_fold(Fixed128::zero(), |acc, p| {
-				acc.checked_add(&p.leveraged_debits_in_usd.saturating_abs())
-					.ok_or(Error::<T>::NumOutOfBound)
+			.try_fold::<_, _, Fixed128Result>(Fixed128::zero(), |acc, p| {
+				let debits_in_usd = Self::_usd_value(p.pair.quote, p.leveraged_debits.saturating_abs())?;
+				acc.checked_add(&debits_in_usd).ok_or(Error::<T>::NumOutOfBound.into())
 			})?;
 
 		Ok(equity
@@ -870,75 +984,80 @@ enum Risk {
 // Liquidity pool helpers
 impl<T: Trait> Module<T> {
 	/// equity_of_pool = liquidity - all_unrealized_pl - all_accumulated_swap_rate
+	/// In order to optimize the algorithm, ignore all_accumulated_swap_rate
 	fn _equity_of_pool(pool: LiquidityPoolId) -> Fixed128Result {
 		let liquidity = {
 			let l = <T::LiquidityPools as LiquidityPools<T::AccountId>>::liquidity(pool);
 			fixed_128_from_u128(l)
 		};
 
-		// all_unrealized_pl + all_accumulated_swap_rate
-		let unrealized_pl_and_rate = PositionsByPool::iter_prefix(pool)
-			.filter_map(|((_, position_id), _)| Self::positions(position_id))
-			.try_fold::<_, _, Fixed128Result>(Fixed128::zero(), |acc, p| {
-				let rate = Self::_accumulated_swap_rate_of_position(&p)?;
-				let unrealized = Self::_unrealized_pl_of_position(&p)?;
-				let sum = rate.checked_add(&unrealized).ok_or(Error::<T>::NumOutOfBound)?;
-				acc.checked_add(&sum).ok_or(Error::<T>::NumOutOfBound.into())
-			})?;
+		let unrealized_pl = Self::_unrealized_pl_of_pool(pool)?;
 
 		liquidity
-			.checked_sub(&unrealized_pl_and_rate)
+			.checked_sub(&unrealized_pl)
 			.ok_or(Error::<T>::NumOutOfBound.into())
 	}
 
 	/// Returns `(net_position, longest_leg)` of a liquidity pool.
-	fn _net_position_and_longest_leg(pool: LiquidityPoolId, new_position: Option<Position<T>>) -> (Fixed128, Fixed128) {
-		let (net, positive, non_positive) = PositionsByPool::iter_prefix(pool)
-			.filter_map(|((_, position_id), _)| Self::positions(position_id))
-			.chain(new_position.map_or(vec![], |p| vec![p]))
-			.fold(
-				(Fixed128::zero(), Fixed128::zero(), Fixed128::zero()),
-				|(net, positive, non_positive), p| {
-					let new_net = net
-						.checked_add(&p.leveraged_debits_in_usd)
-						.expect("ensured safe on open position; qed");
-					if p.leveraged_debits_in_usd.is_positive() {
-						(
-							new_net,
-							positive
-								.checked_add(&p.leveraged_debits_in_usd)
-								.expect("ensured safe on open position; qed"),
-							non_positive,
-						)
-					} else {
-						(
-							new_net,
-							positive,
-							non_positive
-								.checked_add(&p.leveraged_debits_in_usd)
-								.expect("ensured safe on open position; qed"),
-						)
+	fn _net_position_and_longest_leg(pool: LiquidityPoolId, new_position: Option<Position<T>>) -> DoubleFixed128Result {
+		PoolTraderInfos::iter_prefix(pool)
+			.map(|(pair, pool)| (pair, pool))
+			.chain(new_position.map_or(vec![], |p| {
+				let info = if p.leverage.is_long() {
+					PoolTraderInfo {
+						position_num: 1,
+						long: PairInfo {
+							base_amount: p.leveraged_held,
+							quote_amount: p.leveraged_debits,
+						},
+						short: PairInfo {
+							base_amount: Fixed128::zero(),
+							quote_amount: Fixed128::zero(),
+						},
 					}
-				},
-			);
+				} else {
+					PoolTraderInfo {
+						position_num: 1,
+						long: PairInfo {
+							base_amount: Fixed128::zero(),
+							quote_amount: Fixed128::zero(),
+						},
+						short: PairInfo {
+							base_amount: p.leveraged_held,
+							quote_amount: p.leveraged_debits,
+						},
+					}
+				};
+				vec![(p.pair, info)]
+			}))
+			.try_fold((Fixed128::zero(), Fixed128::zero()), |(net, max), (pair, pool)| {
+				let new_net = pool
+					.long
+					.base_amount
+					.checked_add(&pool.short.base_amount)
+					.ok_or(Error::<T>::NumOutOfBound)?;
+				let net_in_usd = Self::_usd_value(pair.base, new_net.saturating_abs())?;
 
-		let net = net.saturating_abs();
-		let longest_leg = cmp::max(positive, non_positive.saturating_abs());
+				let new_max = cmp::max(pool.long.base_amount, pool.short.base_amount.saturating_abs());
+				let max_in_usd = Self::_usd_value(pair.base, new_max.saturating_abs())?;
 
-		(net, longest_leg)
+				let new_net = net.checked_add(&net_in_usd).ok_or(Error::<T>::NumOutOfBound)?;
+				let new_max = max.checked_add(&max_in_usd).ok_or(Error::<T>::NumOutOfBound)?;
+				Ok((new_net, new_max))
+			})
 	}
 
 	/// ENP and ELL after performing action.
 	///
 	/// ENP - Equity to Net Position ratio of a liquidity pool.
 	/// ELL - Equity to Longest Leg ratio of a liquidity pool.
-	fn _enp_and_ell(pool: LiquidityPoolId, action: Action<T>) -> result::Result<(Fixed128, Fixed128), DispatchError> {
+	fn _enp_and_ell(pool: LiquidityPoolId, action: Action<T>) -> DoubleFixed128Result {
 		let equity = Self::_equity_of_pool(pool)?;
 		let new_position = match action.clone() {
 			Action::OpenPosition(p) => Some(p),
 			_ => None,
 		};
-		let (net_position, longest_leg) = Self::_net_position_and_longest_leg(pool, new_position);
+		let (net_position, longest_leg) = Self::_net_position_and_longest_leg(pool, new_position)?;
 
 		let equity = match action {
 			Action::Withdraw(amount) => equity
@@ -1067,8 +1186,8 @@ impl<T: Trait> Module<T> {
 	///
 	/// Return `RiskThreshold` or `Default` value.
 	fn _enp_and_ell_risk_threshold_of_pool(pool_id: LiquidityPoolId) -> (RiskThreshold, RiskThreshold) {
-		let (enp_margin_call, enp_stop_out, ell_margin_call, ell_stop_out) = PositionsByPool::iter_prefix(pool_id)
-			.fold(vec![], |mut v, ((pair, _), _)| {
+		let (enp_margin_call, enp_stop_out, ell_margin_call, ell_stop_out) = PoolTraderInfos::iter_prefix(pool_id)
+			.fold(vec![], |mut v, (pair, _)| {
 				if !v.contains(&pair) {
 					v.push(pair);
 				}
@@ -1114,7 +1233,7 @@ impl<T: Trait> Module<T> {
 
 	/// Returns required deposit amount to make pool safe.
 	pub fn pool_required_deposit(pool: LiquidityPoolId) -> Option<Fixed128> {
-		let (net_position, longest_leg) = Self::_net_position_and_longest_leg(pool, None);
+		let (net_position, longest_leg) = Self::_net_position_and_longest_leg(pool, None).ok()?;
 		let (enp_threshold, ell_threshold) = Self::_enp_and_ell_risk_threshold_of_pool(pool);
 		let required_equity = {
 			let for_enp = net_position
@@ -1139,7 +1258,7 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> BaseLiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
 	/// Returns if `pool` has liability in margin protocol.
 	fn can_remove(pool: LiquidityPoolId) -> bool {
-		PositionsByPool::iter_prefix(pool).count() == 0
+		PoolTraderInfos::iter_prefix(pool).fold(0, |num, (_, pool_info)| num + pool_info.position_num) == 0
 	}
 
 	fn ensure_can_withdraw(pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {

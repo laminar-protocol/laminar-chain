@@ -30,6 +30,26 @@ fn risk_threshold(margin_call_percent: u32, stop_out_percent: u32) -> RiskThresh
 	}
 }
 
+fn pool_trader_info(
+	position_num: u64,
+	long_base_amount: Fixed128,
+	long_quote_amount: Fixed128,
+	short_base_amount: Fixed128,
+	short_quote_amount: Fixed128,
+) -> PoolTraderInfo {
+	PoolTraderInfo {
+		position_num: position_num,
+		long: PairInfo {
+			base_amount: long_base_amount,
+			quote_amount: long_quote_amount,
+		},
+		short: PairInfo {
+			base_amount: short_base_amount,
+			quote_amount: short_quote_amount,
+		},
+	}
+}
+
 fn eur_jpy_long() -> Position<Runtime> {
 	Position {
 		owner: ALICE,
@@ -38,7 +58,6 @@ fn eur_jpy_long() -> Position<Runtime> {
 		leverage: Leverage::LongTwenty,
 		leveraged_held: Fixed128::from_natural(100_000),
 		leveraged_debits: Fixed128::from_natural(-14_104_090),
-		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(-131_813_93),
 		open_accumulated_swap_rate: Fixed128::from_natural(1),
 		margin_held: fixed128_from_natural_currency_cent(6_591_00),
 	}
@@ -52,7 +71,6 @@ fn eur_jpy_short() -> Position<Runtime> {
 		leverage: Leverage::ShortTwenty,
 		leveraged_held: Fixed128::from_natural(-100_000),
 		leveraged_debits: Fixed128::from_natural(14_175_810),
-		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(133_734_06),
 		open_accumulated_swap_rate: Fixed128::from_natural(1),
 		margin_held: fixed128_from_natural_currency_cent(6_687_00),
 	}
@@ -134,7 +152,6 @@ fn eur_usd_long_1() -> Position<Runtime> {
 		leverage: Leverage::LongFive,
 		leveraged_held: Fixed128::from_natural(100_000),
 		leveraged_debits: fixed128_from_natural_currency_cent(-120_420_30),
-		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(-120_420_30),
 		open_accumulated_swap_rate: open_rate,
 		margin_held: fixed128_from_natural_currency_cent(24_084_00),
 	}
@@ -150,7 +167,6 @@ fn eur_usd_long_2() -> Position<Runtime> {
 		leverage: Leverage::LongTwenty,
 		leveraged_held: Fixed128::from_natural(100_000),
 		leveraged_debits: fixed128_from_natural_currency_cent(-119_419_30),
-		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(-119_419_30),
 		open_accumulated_swap_rate: open_rate,
 		margin_held: fixed128_from_natural_currency_cent(5_971_00),
 	}
@@ -166,7 +182,6 @@ fn eur_usd_short_1() -> Position<Runtime> {
 		leverage: Leverage::ShortTen,
 		leveraged_held: Fixed128::from_natural(-100_000),
 		leveraged_debits: fixed128_from_natural_currency_cent(119_780_10),
-		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(119_780_10),
 		open_accumulated_swap_rate: open_rate,
 		margin_held: fixed128_from_natural_currency_cent(11_978_00),
 	}
@@ -182,7 +197,6 @@ fn eur_usd_short_2() -> Position<Runtime> {
 		leverage: Leverage::ShortFifty,
 		leveraged_held: Fixed128::from_natural(-200_000),
 		leveraged_debits: fixed128_from_natural_currency_cent(237_362_40),
-		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(237_362_40),
 		open_accumulated_swap_rate: open_rate,
 		margin_held: fixed128_from_natural_currency_cent(4_747_00),
 	}
@@ -198,7 +212,6 @@ fn jpy_usd_long_1() -> Position<Runtime> {
 		leverage: Leverage::LongFive,
 		leveraged_held: Fixed128::from_natural(100_000),
 		leveraged_debits: fixed128_from_natural_currency_cent(-120_420_30),
-		leveraged_debits_in_usd: fixed128_from_natural_currency_cent(-120_420_30),
 		open_accumulated_swap_rate: open_rate,
 		margin_held: fixed128_from_natural_currency_cent(24_084_00),
 	}
@@ -324,8 +337,7 @@ fn ensure_trader_safe_works() {
 				pair: EUR_USD_PAIR,
 				leverage: Leverage::LongTwo,
 				leveraged_held: fixed128_from_natural_currency_cent(100),
-				leveraged_debits: fixed128_from_natural_currency_cent(100),
-				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
+				leveraged_debits: fixed128_from_natural_currency_cent(-100),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
 				margin_held: fixed128_from_natural_currency_cent(100),
 			};
@@ -364,9 +376,29 @@ fn equity_of_pool_works() {
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 1), true);
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 2), true);
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 3), true);
+			let pool_info = pool_trader_info(
+				4,
+				eur_usd_long_1()
+					.leveraged_held
+					.checked_add(&eur_usd_long_2().leveraged_held)
+					.unwrap(),
+				eur_usd_long_1()
+					.leveraged_debits
+					.checked_add(&eur_usd_long_2().leveraged_debits)
+					.unwrap(),
+				eur_usd_short_1()
+					.leveraged_held
+					.checked_add(&eur_usd_short_2().leveraged_held)
+					.unwrap(),
+				eur_usd_short_1()
+					.leveraged_debits
+					.checked_add(&eur_usd_short_2().leveraged_debits)
+					.unwrap(),
+			);
+			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info);
 			assert_eq!(
 				MarginProtocol::_equity_of_pool(MOCK_POOL),
-				Ok(Fixed128::from_parts(103385299568160000000000))
+				Ok(Fixed128::from_parts(103297_100000000000000000))
 			);
 		});
 }
@@ -388,11 +420,32 @@ fn enp_and_ell_without_new_position_works() {
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 2), true);
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 3), true);
 
+			let pool_info = pool_trader_info(
+				4,
+				eur_usd_long_1()
+					.leveraged_held
+					.checked_add(&eur_usd_long_2().leveraged_held)
+					.unwrap(),
+				eur_usd_long_1()
+					.leveraged_debits
+					.checked_add(&eur_usd_long_2().leveraged_debits)
+					.unwrap(),
+				eur_usd_short_1()
+					.leveraged_held
+					.checked_add(&eur_usd_short_2().leveraged_held)
+					.unwrap(),
+				eur_usd_short_1()
+					.leveraged_debits
+					.checked_add(&eur_usd_short_2().leveraged_debits)
+					.unwrap(),
+			);
+			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info);
+
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::None),
 				Ok((
-					Fixed128::from_parts(881353313244259093),
-					Fixed128::from_parts(289479128269976269)
+					Fixed128::from_parts(0_860809166666666666),
+					Fixed128::from_parts(0_286936388888888888)
 				))
 			);
 		});
@@ -401,15 +454,16 @@ fn enp_and_ell_without_new_position_works() {
 #[test]
 fn enp_and_ell_with_new_position_works() {
 	ExtBuilder::default()
+		.price(CurrencyId::FEUR, (12, 10))
 		.pool_liquidity(MOCK_POOL, balance_from_natural_currency_cent(100_000_00))
 		.build()
 		.execute_with(|| {
-			// enp = ell = 100_000_00 / 120_420_30
+			// enp = ell = 100_000_00 / 120_000_00
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::OpenPosition(eur_usd_long_1())),
 				Ok((
-					Fixed128::from_parts(830424770574396509),
-					Fixed128::from_parts(830424770574396509)
+					Fixed128::from_parts(833333333333333333),
+					Fixed128::from_parts(833333333333333333)
 				))
 			);
 		});
@@ -431,12 +485,32 @@ fn enp_and_ell_without_position_with_liquidity_works() {
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 1), true);
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 2), true);
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 3), true);
+			let pool_info = pool_trader_info(
+				4,
+				eur_usd_long_1()
+					.leveraged_held
+					.checked_add(&eur_usd_long_2().leveraged_held)
+					.unwrap(),
+				eur_usd_long_1()
+					.leveraged_debits
+					.checked_add(&eur_usd_long_2().leveraged_debits)
+					.unwrap(),
+				eur_usd_short_1()
+					.leveraged_held
+					.checked_add(&eur_usd_short_2().leveraged_held)
+					.unwrap(),
+				eur_usd_short_1()
+					.leveraged_debits
+					.checked_add(&eur_usd_short_2().leveraged_debits)
+					.unwrap(),
+			);
+			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info);
 
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::Withdraw(balance_from_natural_currency_cent(10))),
 				Ok((
-					Fixed128::from_parts(881352460750416230),
-					Fixed128::from_parts(289478848269696269)
+					Fixed128::from_parts(0_860808333333333333),
+					Fixed128::from_parts(0_286936111111111111)
 				))
 			);
 		});
@@ -459,14 +533,21 @@ fn ensure_liquidity_works() {
 				pair: EUR_USD_PAIR,
 				leverage: Leverage::LongTwo,
 				leveraged_held: fixed128_from_natural_currency_cent(100),
-				leveraged_debits: fixed128_from_natural_currency_cent(100),
-				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
+				leveraged_debits: fixed128_from_natural_currency_cent(-100),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
 				margin_held: fixed128_from_natural_currency_cent(100),
 			};
 
-			<Positions<Runtime>>::insert(0, position);
+			<Positions<Runtime>>::insert(0, position.clone());
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), true);
+			let pool_info = pool_trader_info(
+				1,
+				position.leveraged_held,
+				position.leveraged_debits,
+				Fixed128::from_natural(0),
+				Fixed128::from_natural(0),
+			);
+			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info);
 
 			assert_ok!(MarginProtocol::ensure_can_withdraw(MOCK_POOL, 10));
 
@@ -496,8 +577,7 @@ fn ensure_pool_safe_works() {
 				pair: EUR_USD_PAIR,
 				leverage: Leverage::LongTwo,
 				leveraged_held: fixed128_from_natural_currency_cent(100),
-				leveraged_debits: fixed128_from_natural_currency_cent(100),
-				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
+				leveraged_debits: fixed128_from_natural_currency_cent(-100),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
 				margin_held: fixed128_from_natural_currency_cent(100),
 			};
@@ -530,9 +610,19 @@ fn ensure_pool_safe_works() {
 			);
 
 			// without new position
-			<Positions<Runtime>>::insert(0, position);
+			<Positions<Runtime>>::insert(0, position.clone());
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), true);
 			LiquidityPoolELLThreshold::insert(EUR_USD_PAIR, risk_threshold(99, 0));
+
+			let pool_info = pool_trader_info(
+				1,
+				position.leveraged_held,
+				position.leveraged_debits,
+				Fixed128::from_natural(0),
+				Fixed128::from_natural(0),
+			);
+			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info);
+
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::None),
 				Ok((Fixed128::from_natural(1), Fixed128::from_natural(1)))
@@ -574,8 +664,7 @@ fn trader_margin_call_should_work() {
 				pair: EUR_USD_PAIR,
 				leverage: Leverage::LongTwo,
 				leveraged_held: fixed128_from_natural_currency_cent(100),
-				leveraged_debits: fixed128_from_natural_currency_cent(100),
-				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
+				leveraged_debits: fixed128_from_natural_currency_cent(-100),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
 				margin_held: fixed128_from_natural_currency_cent(100),
 			};
@@ -624,8 +713,7 @@ fn trader_become_safe_should_work() {
 				pair: EUR_USD_PAIR,
 				leverage: Leverage::LongTwo,
 				leveraged_held: fixed128_from_natural_currency_cent(100),
-				leveraged_debits: fixed128_from_natural_currency_cent(100),
-				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
+				leveraged_debits: fixed128_from_natural_currency_cent(-100),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
 				margin_held: fixed128_from_natural_currency_cent(100),
 			};
@@ -686,8 +774,7 @@ fn trader_stop_out_should_work() {
 				pair: EUR_USD_PAIR,
 				leverage: Leverage::LongTwo,
 				leveraged_held: fixed128_from_natural_currency_cent(100),
-				leveraged_debits: fixed128_from_natural_currency_cent(100),
-				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
+				leveraged_debits: fixed128_from_natural_currency_cent(-100),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
 				margin_held: fixed128_from_natural_currency_cent(100),
 			};
@@ -736,8 +823,7 @@ fn trader_stop_out_close_bigger_loss_position() {
 				pair: EUR_USD_PAIR,
 				leverage: Leverage::LongTwo,
 				leveraged_held: fixed128_from_natural_currency_cent(100),
-				leveraged_debits: fixed128_from_natural_currency_cent(100),
-				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
+				leveraged_debits: fixed128_from_natural_currency_cent(-100),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
 				margin_held: fixed128_from_natural_currency_cent(100),
 			};
@@ -748,16 +834,30 @@ fn trader_stop_out_close_bigger_loss_position() {
 				pair: EUR_USD_PAIR,
 				leverage: Leverage::LongTwo,
 				leveraged_held: fixed128_from_natural_currency_cent(100),
-				leveraged_debits: fixed128_from_natural_currency_cent(100),
-				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
+				leveraged_debits: fixed128_from_natural_currency_cent(-100),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
 				margin_held: fixed128_from_natural_currency_cent(150),
 			};
 
-			<Positions<Runtime>>::insert(0, loss_position);
-			<Positions<Runtime>>::insert(1, bigger_loss_position);
+			<Positions<Runtime>>::insert(0, loss_position.clone());
+			<Positions<Runtime>>::insert(1, bigger_loss_position.clone());
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), true);
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 1), true);
+
+			let pool_info = pool_trader_info(
+				2,
+				loss_position
+					.leveraged_held
+					.checked_add(&bigger_loss_position.leveraged_held)
+					.unwrap(),
+				loss_position
+					.leveraged_debits
+					.checked_add(&bigger_loss_position.leveraged_debits)
+					.unwrap(),
+				Fixed128::from_natural(0),
+				Fixed128::from_natural(0),
+			);
+			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info);
 
 			assert_ok!(MarginProtocol::trader_stop_out(Origin::NONE, ALICE, MOCK_POOL));
 
@@ -784,14 +884,21 @@ fn liquidity_pool_margin_call_and_become_safe_work() {
 				pair: EUR_USD_PAIR,
 				leverage: Leverage::LongTwo,
 				leveraged_held: fixed128_from_natural_currency_cent(100),
-				leveraged_debits: fixed128_from_natural_currency_cent(100),
-				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
+				leveraged_debits: fixed128_from_natural_currency_cent(-100),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
 				margin_held: fixed128_from_natural_currency_cent(100),
 			};
 
-			<Positions<Runtime>>::insert(0, position);
+			<Positions<Runtime>>::insert(0, position.clone());
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), true);
+			let pool_info = pool_trader_info(
+				1,
+				position.leveraged_held,
+				position.leveraged_debits,
+				Fixed128::from_natural(0),
+				Fixed128::from_natural(0),
+			);
+			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info);
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::None),
 				Ok((Fixed128::from_natural(1), Fixed128::from_natural(1)))
@@ -903,7 +1010,6 @@ fn open_long_position_works() {
 				let mut p = eur_jpy_long();
 				// with higher precision level
 				p.leveraged_debits = Fixed128::from_parts(-14104090000000000732600000);
-				p.leveraged_debits_in_usd = Fixed128::from_parts(-131813925233644859805488);
 				p.margin_held = Fixed128::from_parts(6590696261682242990274);
 				p
 			};
@@ -955,7 +1061,6 @@ fn open_short_position_works() {
 				let mut p = eur_jpy_short();
 				// with higher precision level
 				p.leveraged_debits = Fixed128::from_parts(14175810000000000585500000);
-				p.leveraged_debits_in_usd = Fixed128::from_parts(133734056603773584812414);
 				p.margin_held = Fixed128::from_parts(6686702830188679240620);
 				p
 			};
@@ -1284,9 +1389,18 @@ fn close_loss_position_works() {
 
 			let position = eur_usd_long_1();
 			let id = 0;
-			<Positions<Runtime>>::insert(id, position);
+			<Positions<Runtime>>::insert(id, position.clone());
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), true);
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), true);
+
+			let pool_info = pool_trader_info(
+				1,
+				position.leveraged_held,
+				position.leveraged_debits,
+				Fixed128::from_natural(0),
+				Fixed128::from_natural(0),
+			);
+			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info.clone());
 
 			assert_ok!(MarginProtocol::close_position(
 				Origin::signed(ALICE),
@@ -1338,13 +1452,20 @@ fn close_loss_position_realizing_part_on_not_enough_equity() {
 				pair: EUR_USD_PAIR,
 				leverage: Leverage::LongTen,
 				leveraged_held: fixed128_from_natural_currency_cent(10_00),
-				leveraged_debits: fixed128_from_natural_currency_cent(100_00),
-				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100_00),
+				leveraged_debits: fixed128_from_natural_currency_cent(-100_00),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
 				margin_held: fixed128_from_natural_currency_cent(1_00),
 			};
-			<Positions<Runtime>>::insert(0, position);
+			<Positions<Runtime>>::insert(0, position.clone());
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), true);
+			let pool_info = pool_trader_info(
+				1,
+				position.leveraged_held,
+				position.leveraged_debits,
+				Fixed128::from_natural(0),
+				Fixed128::from_natural(0),
+			);
+			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info.clone());
 
 			MockPrices::set_mock_price(CurrencyId::FEUR, Some(Price::from_rational(1, 1)));
 
@@ -1379,15 +1500,26 @@ fn close_loss_position_realizing_nothing_on_negative_equity() {
 				pair: EUR_USD_PAIR,
 				leverage: Leverage::LongTen,
 				leveraged_held: fixed128_from_natural_currency_cent(10_00),
-				leveraged_debits: fixed128_from_natural_currency_cent(100_00),
-				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100_00),
+				leveraged_debits: fixed128_from_natural_currency_cent(-100_00),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
 				margin_held: fixed128_from_natural_currency_cent(1_00),
 			};
 			<Positions<Runtime>>::insert(0, position.clone());
-			<Positions<Runtime>>::insert(1, position);
+			<Positions<Runtime>>::insert(1, position.clone());
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), true);
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 1), true);
+
+			let pool_info = pool_trader_info(
+				2,
+				position.leveraged_held.checked_add(&position.leveraged_held).unwrap(),
+				position
+					.leveraged_debits
+					.checked_add(&position.leveraged_debits)
+					.unwrap(),
+				Fixed128::from_natural(0),
+				Fixed128::from_natural(0),
+			);
+			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info.clone());
 
 			MockPrices::set_mock_price(CurrencyId::FEUR, Some(Price::from_rational(1, 1)));
 			assert!(MarginProtocol::equity_of_trader(&ALICE, MOCK_POOL).unwrap() < Fixed128::zero());
@@ -1420,9 +1552,18 @@ fn close_profit_position_works() {
 
 			let position = eur_usd_long_2();
 			let id = 0;
-			<Positions<Runtime>>::insert(id, position);
+			<Positions<Runtime>>::insert(id, position.clone());
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), true);
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), true);
+			let pool_info = pool_trader_info(
+				1,
+				position.leveraged_held,
+				position.leveraged_debits,
+				Fixed128::from_natural(0),
+				Fixed128::from_natural(0),
+			);
+			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info.clone());
+			assert_eq!(MarginProtocol::pool_trader_infos(MOCK_POOL, EUR_USD_PAIR), pool_info);
 
 			assert_ok!(MarginProtocol::close_position(
 				Origin::signed(ALICE),
@@ -1430,6 +1571,18 @@ fn close_profit_position_works() {
 				Price::from_rational(11, 10)
 			));
 
+			let pool_info = pool_trader_info(
+				0,
+				Fixed128::from_natural(0),
+				Fixed128::from_natural(0),
+				Fixed128::from_natural(0),
+				Fixed128::from_natural(0),
+			);
+			assert_eq!(MarginProtocol::pool_trader_infos(MOCK_POOL, EUR_USD_PAIR), pool_info);
+			assert_eq!(
+				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::None),
+				Ok((Fixed128::max_value(), Fixed128::max_value(),))
+			);
 			assert_eq!(
 				MarginProtocol::balances(ALICE, MOCK_POOL),
 				Fixed128::from_parts(10438691023010000000000)
@@ -1679,8 +1832,7 @@ fn trader_can_withdraw_unrealized_profit() {
 				pair: EUR_USD_PAIR,
 				leverage: Leverage::LongTwo,
 				leveraged_held: fixed128_from_natural_currency_cent(10_00),
-				leveraged_debits: fixed128_from_natural_currency_cent(100),
-				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
+				leveraged_debits: fixed128_from_natural_currency_cent(-100),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
 				margin_held: fixed128_from_natural_currency_cent(50),
 			};
@@ -1715,8 +1867,7 @@ fn withdraw_fails_if_insufficient_free_margin() {
 				pair: EUR_USD_PAIR,
 				leverage: Leverage::LongTwo,
 				leveraged_held: fixed128_from_natural_currency_cent(100),
-				leveraged_debits: fixed128_from_natural_currency_cent(100),
-				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
+				leveraged_debits: fixed128_from_natural_currency_cent(-100),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
 				margin_held: fixed128_from_natural_currency_cent(100),
 			};
@@ -1901,6 +2052,14 @@ fn liquidity_pool_manager_can_remove_works() {
 
 		<Positions<Runtime>>::insert(0, eur_jpy_long());
 		PositionsByPool::insert(MOCK_POOL, (EUR_JPY_PAIR, 0), true);
+		let pool_info = pool_trader_info(
+			1,
+			eur_jpy_long().leveraged_held,
+			eur_jpy_long().leveraged_debits,
+			Fixed128::from_natural(0),
+			Fixed128::from_natural(0),
+		);
+		PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info);
 		assert!(!<MarginProtocol as BaseLiquidityPoolManager<
 			LiquidityPoolId,
 			Balance,
@@ -1925,14 +2084,21 @@ fn liquidity_pool_manager_get_required_deposit_works() {
 				pair: EUR_USD_PAIR,
 				leverage: Leverage::LongTwo,
 				leveraged_held: fixed128_from_natural_currency_cent(100),
-				leveraged_debits: fixed128_from_natural_currency_cent(100),
-				leveraged_debits_in_usd: fixed128_from_natural_currency_cent(100),
+				leveraged_debits: fixed128_from_natural_currency_cent(-100),
 				open_accumulated_swap_rate: Fixed128::from_natural(1),
 				margin_held: fixed128_from_natural_currency_cent(100),
 			};
 			let id = 0;
-			<Positions<Runtime>>::insert(id, position);
+			<Positions<Runtime>>::insert(id, position.clone());
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, id), true);
+			let pool_info = pool_trader_info(
+				1,
+				position.leveraged_held,
+				position.leveraged_debits,
+				Fixed128::from_natural(0),
+				Fixed128::from_natural(0),
+			);
+			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info);
 
 			// need deposit because of ENP
 			assert_eq!(
@@ -1988,7 +2154,7 @@ fn trader_open_positions_limit() {
 				<PositionsByTrader<Runtime>>::iter_prefix(&ALICE)
 					.filter(|((p, _), _)| *p == MOCK_POOL)
 					.count(),
-				200
+				<Runtime as Trait>::GetTraderMaxOpenPositions::get()
 			);
 
 			// try open another position
@@ -2028,17 +2194,29 @@ fn pool_open_positions_limit() {
 				0
 			);
 
-			// reach the limit of 1000 open positions for a pool & pair
-			(0..1000u64).for_each(|position_id| {
-				PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, position_id), true);
-			});
+			// reach the limit of 300 open positions for a pool & pair
+			for _ in 0..300u64 {
+				let _ = MarginProtocol::open_position(
+					Origin::signed(ALICE),
+					MOCK_POOL,
+					EUR_USD_PAIR,
+					Leverage::LongTen,
+					balance_from_natural_currency_cent(1_00),
+					Price::from_natural(100),
+				);
+			}
 
 			// pool & pair has 1000 open positions
 			assert_eq!(
 				PositionsByPool::iter_prefix(MOCK_POOL)
 					.filter(|((p, _), _)| *p == EUR_USD_PAIR)
 					.count(),
-				1000
+				<Runtime as Trait>::GetTraderMaxOpenPositions::get()
+			);
+
+			assert_eq!(
+				PoolTraderInfos::get(MOCK_POOL, EUR_USD_PAIR).position_num as usize,
+				<Runtime as Trait>::GetTraderMaxOpenPositions::get()
 			);
 
 			// try open another position
@@ -2188,11 +2366,20 @@ fn ensure_can_enable_trading_pair_works() {
 
 			<Positions<Runtime>>::insert(0, eur_usd_long_1());
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), true);
+			let pool_info = pool_trader_info(
+				1,
+				eur_usd_long_1().leveraged_held,
+				eur_usd_long_1().leveraged_debits,
+				Fixed128::from_natural(0),
+				Fixed128::from_natural(0),
+			);
+			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info);
+
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::OpenPosition(eur_usd_long_1())),
 				Ok((
-					Fixed128::from_parts(89124088565673727),
-					Fixed128::from_parts(89124088565673727)
+					Fixed128::from_parts(0_107101500000000000),
+					Fixed128::from_parts(0_107101500000000000)
 				))
 			);
 
@@ -2262,6 +2449,22 @@ fn open_position_check_pool_works() {
 			<Positions<Runtime>>::insert(1, eur_jpy_short());
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), true);
 			PositionsByPool::insert(MOCK_POOL, (EUR_JPY_PAIR, 1), true);
+			let pool_info = pool_trader_info(
+				1,
+				eur_usd_long_1().leveraged_held,
+				eur_usd_long_1().leveraged_debits,
+				Fixed128::from_natural(0),
+				Fixed128::from_natural(0),
+			);
+			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info);
+			let pool_info = pool_trader_info(
+				1,
+				Fixed128::from_natural(0),
+				Fixed128::from_natural(0),
+				eur_jpy_short().leveraged_held,
+				eur_jpy_short().leveraged_debits,
+			);
+			PoolTraderInfos::insert(MOCK_POOL, EUR_JPY_PAIR, pool_info);
 
 			assert_eq!(
 				MarginProtocol::_enp_and_ell_risk_threshold_of_pool(MOCK_POOL),
@@ -2269,8 +2472,24 @@ fn open_position_check_pool_works() {
 			);
 
 			assert_eq!(
-				MarginProtocol::_check_pool(MOCK_POOL, Action::OpenPosition(eur_usd_long_1())),
-				Ok(Risk::None)
+				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::OpenPosition(eur_usd_short_1())),
+				Ok((
+					Fixed128::from_parts(0_182650303333333331),
+					Fixed128::from_parts(0_182650303333333331)
+				))
+			);
+
+			assert_eq!(
+				MarginProtocol::_check_pool(MOCK_POOL, Action::OpenPosition(eur_usd_short_1())),
+				Ok(Risk::StopOut)
+			);
+
+			assert_eq!(
+				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::OpenPosition(jpy_usd_long_1())),
+				Ok((
+					Fixed128::from_parts(0_060487576858117430),
+					Fixed128::from_parts(0_060487576858117430)
+				))
 			);
 
 			assert_eq!(
