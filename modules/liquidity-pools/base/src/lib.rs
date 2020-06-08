@@ -1,5 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use codec::{Decode, Encode};
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage, ensure,
 	storage::IterableStorageMap,
@@ -11,7 +12,7 @@ use orml_traits::BasicCurrency;
 use primitives::{Balance, IdentityInfo, LiquidityPoolId};
 use sp_runtime::{
 	traits::{AccountIdConversion, One},
-	DispatchResult, ModuleId,
+	DispatchResult, ModuleId, RuntimeDebug,
 };
 use sp_std::{prelude::*, result};
 use traits::{BaseLiquidityPoolManager, LiquidityPools, OnDisableLiquidityPool, OnRemoveLiquidityPool};
@@ -35,11 +36,21 @@ pub trait Trait<I: Instance = DefaultInstance>: system::Trait {
 	type UpdateOrigin: EnsureOrigin<Self::Origin>;
 }
 
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
+pub struct Pool<AccountId> {
+	pub owner: AccountId,
+	pub balance: Balance,
+}
+impl<AccountId> Pool<AccountId> {
+	fn new(owner: AccountId, balance: Balance) -> Self {
+		Pool { owner, balance }
+	}
+}
+
 decl_storage! {
 	trait Store for Module<T: Trait<I>, I: Instance=DefaultInstance> as BaseLiquidityPools {
 		pub NextPoolId get(fn next_pool_id): LiquidityPoolId;
-		pub Owners get(fn owners): map hasher(twox_64_concat) LiquidityPoolId => Option<(T::AccountId, LiquidityPoolId)>;
-		pub Balances get(fn balances): map hasher(twox_64_concat) LiquidityPoolId => Balance;
+		pub Pools get(fn pools): map hasher(twox_64_concat) LiquidityPoolId => Option<Pool<T::AccountId>>;
 		/// Store identity info of liquidity pool LiquidityPoolId => Option<(IdentityInfo, DepositAmount, VerifyStatus)>
 		pub IdentityInfos get(fn identity_infos): map hasher(twox_64_concat) LiquidityPoolId => Option<(IdentityInfo, DepositBalanceOf<T, I>, bool)>;
 	}
@@ -128,7 +139,7 @@ decl_module! {
 
 			T::PoolManager::ensure_can_withdraw(pool_id, amount)?;
 
-			let new_balance = Self::balances(&pool_id).checked_sub(amount).ok_or(Error::<T, I>::CannotWithdrawAmount)?;
+			let new_balance = Self::balance(pool_id).checked_sub(amount).ok_or(Error::<T, I>::CannotWithdrawAmount)?;
 
 			// check minimum balance
 			if new_balance < T::ExistentialDeposit::get() {
@@ -184,13 +195,14 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 	}
 
 	pub fn is_owner(pool_id: LiquidityPoolId, who: &T::AccountId) -> bool {
-		Self::owners(pool_id).map_or(false, |(id, _)| &id == who)
+		Self::owner(pool_id).map_or(false, |ref owner| owner == who)
 	}
 }
 
 impl<T: Trait<I>, I: Instance> LiquidityPools<T::AccountId> for Module<T, I> {
 	fn all() -> Vec<LiquidityPoolId> {
-		<Owners<T, I>>::iter().map(|(_, (_, pool_id))| pool_id).collect()
+		// TODO: optimize once `iter_first_key` is ready
+		<Pools<T, I>>::iter().map(|(pool_id, _)| pool_id).collect()
 	}
 
 	fn is_owner(pool_id: LiquidityPoolId, who: &T::AccountId) -> bool {
@@ -199,12 +211,12 @@ impl<T: Trait<I>, I: Instance> LiquidityPools<T::AccountId> for Module<T, I> {
 
 	/// Check if pool exists
 	fn pool_exists(pool_id: LiquidityPoolId) -> bool {
-		<Owners<T, I>>::contains_key(&pool_id)
+		<Pools<T, I>>::contains_key(&pool_id)
 	}
 
 	/// Check collateral balance of `pool_id`.
 	fn liquidity(pool_id: LiquidityPoolId) -> Balance {
-		Self::balances(&pool_id)
+		Self::balance(pool_id)
 	}
 
 	/// Deposit some amount of collateral to `pool_id`, from `source`.
@@ -218,8 +230,26 @@ impl<T: Trait<I>, I: Instance> LiquidityPools<T::AccountId> for Module<T, I> {
 	}
 }
 
+// Storage getters
+impl<T: Trait<I>, I: Instance> Module<T, I> {
+	pub fn balance(pool_id: LiquidityPoolId) -> Balance {
+		Self::pools(&pool_id).map_or(Default::default(), |pool| pool.balance)
+	}
+
+	pub fn owner(pool_id: LiquidityPoolId) -> Option<T::AccountId> {
+		Self::pools(&pool_id).map(|pool| pool.owner)
+	}
+}
+
 // Private methods
 impl<T: Trait<I>, I: Instance> Module<T, I> {
+	fn _set_balance(pool_id: LiquidityPoolId, balance: Balance) {
+		if let Some(mut pool) = Self::pools(pool_id) {
+			pool.balance = balance;
+			<Pools<T, I>>::insert(&pool_id, pool);
+		}
+	}
+
 	fn _create_pool(who: &T::AccountId) -> result::Result<LiquidityPoolId, Error<T, I>> {
 		let pool_id = Self::next_pool_id();
 		// increment next pool id
@@ -228,7 +258,7 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 			.ok_or(Error::<T, I>::CannotCreateMorePool)?;
 		<NextPoolId<I>>::put(next_pool_id);
 		// owner reference
-		<Owners<T, I>>::insert(&pool_id, (who, pool_id));
+		<Pools<T, I>>::insert(&pool_id, Pool::new(who.clone(), Default::default()));
 		Ok(pool_id)
 	}
 
@@ -247,12 +277,11 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 		// clear_identity
 		Self::_clear_identity(who, pool_id)?;
 
-		let balance = Self::balances(&pool_id);
+		let balance = Self::balance(pool_id);
 		// transfer balance to pool owner
 		T::LiquidityCurrency::transfer(&Self::account_id(), who, balance)?;
 
-		<Balances<I>>::remove(&pool_id);
-		<Owners<T, I>>::remove(&pool_id);
+		<Pools<T, I>>::remove(&pool_id);
 
 		T::OnRemoveLiquidityPool::on_remove(pool_id);
 
@@ -262,13 +291,14 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 	fn _deposit_liquidity(who: &T::AccountId, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
 		ensure!(Self::pool_exists(pool_id), Error::<T, I>::PoolNotFound);
 
-		let balance = Self::balances(&pool_id);
-		let new_balance = balance.checked_add(amount).ok_or(Error::<T, I>::CannotDepositAmount)?;
+		let new_balance = Self::balance(pool_id)
+			.checked_add(amount)
+			.ok_or(Error::<T, I>::CannotDepositAmount)?;
 
 		// transfer amount to this pool
 		T::LiquidityCurrency::transfer(who, &Self::account_id(), amount)?;
 		// update balance
-		<Balances<I>>::insert(&pool_id, new_balance);
+		Self::_set_balance(pool_id, new_balance);
 
 		Ok(())
 	}
@@ -276,7 +306,7 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 	fn _withdraw_liquidity(who: &T::AccountId, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
 		ensure!(Self::pool_exists(pool_id), Error::<T, I>::PoolNotFound);
 
-		let new_balance = Self::balances(&pool_id)
+		let new_balance = Self::balance(pool_id)
 			.checked_sub(amount)
 			.ok_or(Error::<T, I>::CannotWithdrawAmount)?;
 
@@ -284,7 +314,7 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 		T::LiquidityCurrency::transfer(&Self::account_id(), who, amount)?;
 
 		// update balance
-		<Balances<I>>::insert(&pool_id, new_balance);
+		Self::_set_balance(pool_id, new_balance);
 
 		Ok(())
 	}
@@ -334,7 +364,10 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 	pub fn _transfer_liquidity_pool(who: &T::AccountId, pool_id: LiquidityPoolId, to: &T::AccountId) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, &who), Error::<T, I>::NoPermission);
 		Self::_clear_identity(&who, pool_id)?;
-		<Owners<T, I>>::insert(&pool_id, (to, pool_id));
+
+		let mut pool = Self::pools(pool_id).expect("is owner check ensures pool exist; qed");
+		pool.owner = to.clone();
+		<Pools<T, I>>::insert(&pool_id, pool);
 
 		Ok(())
 	}

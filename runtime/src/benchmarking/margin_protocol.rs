@@ -38,6 +38,7 @@ fn create_pool(p: u32) -> Result<AccountId, DispatchError> {
 		Some(threshold.clone()),
 		Some(threshold),
 	)?;
+	MarginLiquidityPools::set_spread(RawOrigin::Signed(owner.clone()).into(), 0, EUR_USD, 0, 0)?;
 	MarginLiquidityPools::enable_trading_pair(RawOrigin::Root.into(), EUR_USD)?;
 	MarginLiquidityPools::set_enabled_trades(RawOrigin::Signed(owner.clone()).into(), 0, EUR_USD, Leverages::all())?;
 	MarginLiquidityPools::liquidity_pool_enable_trading_pair(RawOrigin::Signed(owner.clone()).into(), 0, EUR_USD)?;

@@ -21,7 +21,7 @@ macro_rules! assert_noop_root {
 #[test]
 fn root_set_extreme_ratio() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_eq!(SyntheticTokens::extreme_ratio(CurrencyId::FEUR), None);
+		assert_eq!(SyntheticTokens::ratios(CurrencyId::FEUR).extreme, None);
 
 		let ratio = Permill::from_percent(1);
 		assert_ok!(SyntheticTokens::set_extreme_ratio(
@@ -29,7 +29,7 @@ fn root_set_extreme_ratio() {
 			CurrencyId::FEUR,
 			ratio
 		));
-		assert_eq!(SyntheticTokens::extreme_ratio(CurrencyId::FEUR), Some(ratio));
+		assert_eq!(SyntheticTokens::ratios(CurrencyId::FEUR).extreme, Some(ratio));
 
 		let event = TestEvent::synthetic_tokens(Event::ExtremeRatioUpdated(CurrencyId::FEUR, ratio));
 		assert!(System::events().iter().any(|record| record.event == event));
@@ -53,7 +53,7 @@ fn non_root_set_extreme_ratio_fails() {
 #[test]
 fn root_set_liquidation_ratio() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_eq!(SyntheticTokens::liquidation_ratio(CurrencyId::FEUR), None);
+		assert_eq!(SyntheticTokens::ratios(CurrencyId::FEUR).liquidation, None);
 
 		let ratio = Permill::from_percent(1);
 		assert_ok!(SyntheticTokens::set_liquidation_ratio(
@@ -61,7 +61,7 @@ fn root_set_liquidation_ratio() {
 			CurrencyId::FEUR,
 			ratio
 		));
-		assert_eq!(SyntheticTokens::liquidation_ratio(CurrencyId::FEUR), Some(ratio));
+		assert_eq!(SyntheticTokens::ratios(CurrencyId::FEUR).liquidation, Some(ratio));
 
 		let event = TestEvent::synthetic_tokens(Event::LiquidationRatioUpdated(CurrencyId::FEUR, ratio));
 		assert!(System::events().iter().any(|record| record.event == event));
@@ -84,7 +84,7 @@ fn non_root_set_liquidation_ratio_fails() {
 #[test]
 fn root_set_collateral_ratio() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_eq!(SyntheticTokens::collateral_ratio(CurrencyId::FEUR), None);
+		assert_eq!(SyntheticTokens::ratios(CurrencyId::FEUR).collateral, None);
 
 		let ratio = Permill::from_percent(1);
 		assert_ok!(SyntheticTokens::set_collateral_ratio(
@@ -92,7 +92,7 @@ fn root_set_collateral_ratio() {
 			CurrencyId::FEUR,
 			ratio
 		));
-		assert_eq!(SyntheticTokens::collateral_ratio(CurrencyId::FEUR), Some(ratio));
+		assert_eq!(SyntheticTokens::ratios(CurrencyId::FEUR).collateral, Some(ratio));
 
 		let event = TestEvent::synthetic_tokens(Event::CollateralRatioUpdated(CurrencyId::FEUR, ratio));
 		assert!(System::events().iter().any(|record| record.event == event));

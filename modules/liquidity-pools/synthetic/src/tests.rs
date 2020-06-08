@@ -39,11 +39,11 @@ fn should_remove_pool() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_ok!(ModuleLiquidityPools::deposit_liquidity(&ALICE, 0, 1000));
-		assert_eq!(BaseLiquidityPools::balances(&0), 1000);
+		assert_eq!(BaseLiquidityPools::liquidity(0), 1000);
 		assert_ok!(BaseLiquidityPools::remove_pool(Origin::signed(ALICE), 0));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
-		assert_eq!(BaseLiquidityPools::owners(0), None);
-		assert_eq!(BaseLiquidityPools::balances(&0), 0);
+		assert_eq!(BaseLiquidityPools::owner(0), None);
+		assert_eq!(BaseLiquidityPools::liquidity(0), 0);
 		assert_eq!(<ModuleLiquidityPools as LiquidityPools<AccountId>>::liquidity(0), 0);
 	})
 }
@@ -52,7 +52,7 @@ fn should_remove_pool() {
 fn should_set_spread() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(BaseLiquidityPools::owners(0), Some((ALICE, 0)));
+		assert_eq!(BaseLiquidityPools::owner(0), Some(ALICE));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
 		assert_ok!(ModuleLiquidityPools::set_spread(
 			Origin::signed(ALICE),
@@ -89,7 +89,7 @@ fn should_set_spread() {
 fn should_set_max_spread() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(BaseLiquidityPools::owners(0), Some((ALICE, 0)));
+		assert_eq!(BaseLiquidityPools::owner(0), Some(ALICE));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
 		// no max spread
 		assert_ok!(ModuleLiquidityPools::set_spread(
@@ -132,7 +132,7 @@ fn should_set_max_spread() {
 fn should_set_additional_collateral_ratio() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(BaseLiquidityPools::owners(0), Some((ALICE, 0)));
+		assert_eq!(BaseLiquidityPools::owner(0), Some(ALICE));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
 		assert_ok!(ModuleLiquidityPools::set_min_additional_collateral_ratio(
 			Origin::ROOT,
@@ -178,7 +178,7 @@ fn should_set_additional_collateral_ratio() {
 fn should_fail_set_additional_collateral_ratio() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(BaseLiquidityPools::owners(0), Some((ALICE, 0)));
+		assert_eq!(BaseLiquidityPools::owner(0), Some(ALICE));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
 		assert_eq!(
 			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::get_additional_collateral_ratio(
@@ -258,7 +258,7 @@ fn should_fail_set_additional_collateral_ratio() {
 fn should_set_synthetic_enabled() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(BaseLiquidityPools::owners(0), Some((ALICE, 0)));
+		assert_eq!(BaseLiquidityPools::owner(0), Some(ALICE));
 		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
 		assert_eq!(
 			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::can_mint(0, CurrencyId::AUSD),

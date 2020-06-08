@@ -31,9 +31,18 @@ fn is_enabled_should_work() {
 			pair,
 			Leverage::ShortTen | Leverage::LongFive,
 		));
-		assert_eq!(ModuleLiquidityPools::is_enabled(0, pair, Leverage::ShortTen), true);
-		assert_eq!(ModuleLiquidityPools::is_enabled(0, pair, Leverage::LongFive), true);
-		assert_eq!(ModuleLiquidityPools::is_enabled(0, pair, Leverage::ShortFifty), false);
+		assert_eq!(
+			ModuleLiquidityPools::is_pool_trading_pair_leverage_enabled(0, pair, Leverage::ShortTen),
+			true
+		);
+		assert_eq!(
+			ModuleLiquidityPools::is_pool_trading_pair_leverage_enabled(0, pair, Leverage::LongFive),
+			true
+		);
+		assert_eq!(
+			ModuleLiquidityPools::is_pool_trading_pair_leverage_enabled(0, pair, Leverage::ShortFifty),
+			false
+		);
 
 		assert_eq!(
 			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::is_allowed_position(
@@ -54,7 +63,10 @@ fn should_disable_pool() {
 			quote: CurrencyId::FEUR,
 		};
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, pair), None);
+		assert_eq!(
+			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
+			Default::default()
+		);
 		assert_ok!(ModuleLiquidityPools::set_enabled_trades(
 			Origin::signed(ALICE),
 			0,
@@ -62,15 +74,19 @@ fn should_disable_pool() {
 			Leverage::ShortTen | Leverage::LongFive,
 		));
 		assert_eq!(
-			ModuleLiquidityPools::liquidity_pool_options(0, pair),
-			Some(MarginLiquidityPoolOption {
-				bid_spread: 0,
-				ask_spread: 0,
+			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
+			MarginPoolTradingPairOption {
+				enabled: false,
+				bid_spread: None,
+				ask_spread: None,
 				enabled_trades: Leverage::ShortTen | Leverage::LongFive,
-			})
+			}
 		);
 		assert_ok!(BaseLiquidityPools::disable_pool(Origin::signed(ALICE), 0));
-		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, pair), None);
+		assert_eq!(
+			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
+			Default::default()
+		);
 	})
 }
 
@@ -83,11 +99,14 @@ fn should_remove_pool() {
 		};
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_ok!(ModuleLiquidityPools::deposit_liquidity(&ALICE, 0, 1000));
-		assert_eq!(BaseLiquidityPools::balances(&0), 1000);
+		assert_eq!(BaseLiquidityPools::liquidity(0), 1000);
 		assert_ok!(BaseLiquidityPools::remove_pool(Origin::signed(ALICE), 0));
-		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, pair), None);
-		assert_eq!(BaseLiquidityPools::owners(0), None);
-		assert_eq!(BaseLiquidityPools::balances(&0), 0);
+		assert_eq!(
+			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
+			Default::default()
+		);
+		assert_eq!(BaseLiquidityPools::owner(0), None);
+		assert_eq!(BaseLiquidityPools::liquidity(0), 0);
 		assert_eq!(<ModuleLiquidityPools as LiquidityPools<AccountId>>::liquidity(0), 0);
 	})
 }
@@ -100,17 +119,21 @@ fn should_set_spread() {
 			quote: CurrencyId::FEUR,
 		};
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(BaseLiquidityPools::owners(0), Some((ALICE, 0)));
-		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, pair), None);
+		assert_eq!(BaseLiquidityPools::owner(0), Some(ALICE));
+		assert_eq!(
+			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
+			Default::default()
+		);
 		assert_ok!(ModuleLiquidityPools::set_spread(Origin::signed(ALICE), 0, pair, 80, 60));
 
-		let pool_option = MarginLiquidityPoolOption {
-			bid_spread: 80,
-			ask_spread: 60,
+		let pool_option = MarginPoolTradingPairOption {
+			enabled: false,
+			bid_spread: Some(80),
+			ask_spread: Some(60),
 			enabled_trades: Leverages::none(),
 		};
 
-		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, pair), Some(pool_option));
+		assert_eq!(ModuleLiquidityPools::pool_trading_pair_options(0, pair), pool_option);
 
 		assert_eq!(
 			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_bid_spread(0, pair),
@@ -131,8 +154,11 @@ fn should_set_max_spread() {
 			quote: CurrencyId::FEUR,
 		};
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(BaseLiquidityPools::owners(0), Some((ALICE, 0)));
-		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, pair), None);
+		assert_eq!(BaseLiquidityPools::owner(0), Some(ALICE));
+		assert_eq!(
+			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
+			Default::default()
+		);
 		// no max spread
 		assert_ok!(ModuleLiquidityPools::set_spread(
 			Origin::signed(ALICE),
@@ -146,45 +172,49 @@ fn should_set_max_spread() {
 		assert_ok!(ModuleLiquidityPools::set_max_spread(Origin::ROOT, pair, 30,));
 
 		assert_eq!(
-			ModuleLiquidityPools::liquidity_pool_options(0, pair),
-			Some(MarginLiquidityPoolOption {
-				bid_spread: 30,
-				ask_spread: 30,
+			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
+			MarginPoolTradingPairOption {
+				enabled: false,
+				bid_spread: Some(30),
+				ask_spread: Some(30),
 				enabled_trades: Leverages::none(),
-			})
+			}
 		);
 
 		assert_ok!(ModuleLiquidityPools::set_spread(Origin::signed(ALICE), 0, pair, 31, 28));
 
 		assert_eq!(
-			ModuleLiquidityPools::liquidity_pool_options(0, pair),
-			Some(MarginLiquidityPoolOption {
-				bid_spread: 30,
-				ask_spread: 28,
+			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
+			MarginPoolTradingPairOption {
+				enabled: false,
+				bid_spread: Some(30),
+				ask_spread: Some(28),
 				enabled_trades: Leverages::none(),
-			})
+			}
 		);
 
 		assert_ok!(ModuleLiquidityPools::set_spread(Origin::signed(ALICE), 0, pair, 28, 29));
 
 		assert_eq!(
-			ModuleLiquidityPools::liquidity_pool_options(0, pair),
-			Some(MarginLiquidityPoolOption {
-				bid_spread: 28,
-				ask_spread: 29,
+			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
+			MarginPoolTradingPairOption {
+				enabled: false,
+				bid_spread: Some(28),
+				ask_spread: Some(29),
 				enabled_trades: Leverages::none(),
-			})
+			}
 		);
 
 		assert_ok!(ModuleLiquidityPools::set_max_spread(Origin::ROOT, pair, 20));
 
 		assert_eq!(
-			ModuleLiquidityPools::liquidity_pool_options(0, pair),
-			Some(MarginLiquidityPoolOption {
-				bid_spread: 20,
-				ask_spread: 20,
+			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
+			MarginPoolTradingPairOption {
+				enabled: false,
+				bid_spread: Some(20),
+				ask_spread: Some(20),
 				enabled_trades: Leverages::none(),
-			})
+			}
 		);
 	});
 }
@@ -197,8 +227,11 @@ fn should_set_enabled_trades() {
 			quote: CurrencyId::FEUR,
 		};
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(BaseLiquidityPools::owners(0), Some((ALICE, 0)));
-		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, pair), None);
+		assert_eq!(BaseLiquidityPools::owner(0), Some(ALICE));
+		assert_eq!(
+			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
+			Default::default()
+		);
 		assert_ok!(ModuleLiquidityPools::set_enabled_trades(
 			Origin::signed(ALICE),
 			0,
@@ -206,13 +239,14 @@ fn should_set_enabled_trades() {
 			Leverage::ShortTen | Leverage::LongFive,
 		));
 
-		let pool_option = MarginLiquidityPoolOption {
-			bid_spread: 0,
-			ask_spread: 0,
+		let pool_option = MarginPoolTradingPairOption {
+			enabled: false,
+			bid_spread: None,
+			ask_spread: None,
 			enabled_trades: Leverage::ShortTen | Leverage::LongFive,
 		};
 
-		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, pair), Some(pool_option));
+		assert_eq!(ModuleLiquidityPools::pool_trading_pair_options(0, pair), pool_option);
 	})
 }
 
@@ -391,7 +425,7 @@ fn can_open_position() {
 		};
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_ok!(ModuleLiquidityPools::enable_trading_pair(Origin::ROOT, pair));
-		assert_eq!(ModuleLiquidityPools::liquidity_pool_enabled_trading_pair(0, pair), None);
+		assert!(!ModuleLiquidityPools::is_pool_trading_pair_enabled(0, pair));
 		assert_ok!(ModuleLiquidityPools::liquidity_pool_enable_trading_pair(
 			Origin::signed(ALICE),
 			0,
@@ -500,11 +534,11 @@ fn should_enable_disable_trading_pairs() {
 			base: CurrencyId::AUSD,
 			quote: CurrencyId::FEUR,
 		};
-		assert_eq!(ModuleLiquidityPools::enabled_trading_pair(pair), None);
+		assert!(!ModuleLiquidityPools::is_trading_pair_enabled(pair));
 		assert_ok!(ModuleLiquidityPools::enable_trading_pair(Origin::ROOT, pair));
-		assert_eq!(ModuleLiquidityPools::enabled_trading_pair(pair), Some(true));
+		assert!(ModuleLiquidityPools::is_trading_pair_enabled(pair));
 		assert_ok!(ModuleLiquidityPools::disable_trading_pair(Origin::ROOT, pair));
-		assert_eq!(ModuleLiquidityPools::enabled_trading_pair(pair), None);
+		assert!(!ModuleLiquidityPools::is_trading_pair_enabled(pair));
 	})
 }
 
@@ -517,22 +551,19 @@ fn liquidity_provider_should_enable_disable_trading_pairs() {
 		};
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_ok!(ModuleLiquidityPools::enable_trading_pair(Origin::ROOT, pair));
-		assert_eq!(ModuleLiquidityPools::liquidity_pool_enabled_trading_pair(0, pair), None);
+		assert!(!ModuleLiquidityPools::is_pool_trading_pair_enabled(0, pair));
 		assert_ok!(ModuleLiquidityPools::liquidity_pool_enable_trading_pair(
 			Origin::signed(ALICE),
 			0,
 			pair
 		));
-		assert_eq!(
-			ModuleLiquidityPools::liquidity_pool_enabled_trading_pair(0, pair),
-			Some(true)
-		);
+		assert!(ModuleLiquidityPools::is_pool_trading_pair_enabled(0, pair));
 		assert_ok!(ModuleLiquidityPools::liquidity_pool_disable_trading_pair(
 			Origin::signed(ALICE),
 			0,
 			pair
 		));
-		assert_eq!(ModuleLiquidityPools::liquidity_pool_enabled_trading_pair(0, pair), None);
+		assert!(!ModuleLiquidityPools::is_pool_trading_pair_enabled(0, pair));
 	})
 }
 
@@ -542,12 +573,12 @@ fn should_set_default_min_leveraged_amount() {
 		let pool_id = 0;
 
 		assert_eq!(ModuleLiquidityPools::default_min_leveraged_amount(), 0);
-		assert_eq!(ModuleLiquidityPools::get_min_leveraged_amount(pool_id), 0);
+		assert_eq!(ModuleLiquidityPools::min_leveraged_amount(pool_id), 0);
 
 		// set default min leveraged amount
 		assert_ok!(ModuleLiquidityPools::set_default_min_leveraged_amount(Origin::ROOT, 10));
 		assert_eq!(ModuleLiquidityPools::default_min_leveraged_amount(), 10);
-		assert_eq!(ModuleLiquidityPools::get_min_leveraged_amount(pool_id), 10);
+		assert_eq!(ModuleLiquidityPools::min_leveraged_amount(pool_id), 10);
 	})
 }
 
@@ -556,12 +587,12 @@ fn should_set_min_leveraged_amount() {
 	new_test_ext().execute_with(|| {
 		let pool_id = 0;
 
-		assert_eq!(ModuleLiquidityPools::min_leveraged_amount(pool_id), None);
-		assert_eq!(ModuleLiquidityPools::get_min_leveraged_amount(pool_id), 0);
+		assert_eq!(PoolOptions::get(pool_id).min_leveraged_amount, 0);
+		assert_eq!(ModuleLiquidityPools::min_leveraged_amount(pool_id), 0);
 
 		// set default min leveraged amount
 		assert_ok!(ModuleLiquidityPools::set_default_min_leveraged_amount(Origin::ROOT, 10));
-		assert_eq!(ModuleLiquidityPools::get_min_leveraged_amount(pool_id), 10);
+		assert_eq!(ModuleLiquidityPools::min_leveraged_amount(pool_id), 10);
 
 		// pool not created yet
 		assert_noop!(
@@ -576,8 +607,8 @@ fn should_set_min_leveraged_amount() {
 			pool_id,
 			2
 		));
-		assert_eq!(ModuleLiquidityPools::min_leveraged_amount(pool_id), Some(2));
-		assert_eq!(ModuleLiquidityPools::get_min_leveraged_amount(pool_id), 10);
+		assert_eq!(PoolOptions::get(pool_id).min_leveraged_amount, 2);
+		assert_eq!(ModuleLiquidityPools::min_leveraged_amount(pool_id), 10);
 
 		// non pool owners cannot set min leveraged amount
 		assert_noop!(

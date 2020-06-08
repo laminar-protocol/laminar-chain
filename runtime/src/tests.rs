@@ -14,7 +14,7 @@ use margin_liquidity_pools::SwapRate;
 use margin_protocol::RiskThreshold;
 use margin_protocol_rpc_runtime_api::runtime_decl_for_MarginProtocolApi::MarginProtocolApi;
 use module_primitives::{Balance, IdentityInfo, Leverage, Leverages, TradingPair};
-use module_traits::Treasury;
+use module_traits::{LiquidityPools, Treasury};
 use orml_prices::Price;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
 use pallet_indices::address::Address;
@@ -305,7 +305,7 @@ pub fn synthetic_set_spread(currency_id: CurrencyId, spread: Balance) -> Dispatc
 }
 
 pub fn synthetic_liquidity() -> Balance {
-	BaseLiquidityPoolsForSynthetic::balances(LIQUIDITY_POOL_ID_0)
+	BaseLiquidityPoolsForSynthetic::liquidity(LIQUIDITY_POOL_ID_0)
 }
 
 pub fn synthetic_add_collateral(who: &AccountId, currency_id: CurrencyId, amount: Balance) -> DispatchResult {
@@ -408,7 +408,7 @@ pub fn margin_balance(who: &AccountId) -> Fixed128 {
 }
 
 pub fn margin_liquidity() -> Balance {
-	BaseLiquidityPoolsForMargin::balances(LIQUIDITY_POOL_ID_0)
+	<BaseLiquidityPoolsForMargin as LiquidityPools<_>>::liquidity(LIQUIDITY_POOL_ID_0)
 }
 
 pub fn margin_open_position(

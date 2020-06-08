@@ -93,6 +93,18 @@ pub struct RiskThreshold {
 	pub stop_out: Permill,
 }
 
+#[derive(Encode, Decode, Copy, Clone, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct TradingPairRiskThreshold {
+	pub trader: Option<RiskThreshold>,
+	pub enp: Option<RiskThreshold>,
+	pub ell: Option<RiskThreshold>,
+}
+impl TradingPairRiskThreshold {
+	pub fn new(trader: Option<RiskThreshold>, enp: Option<RiskThreshold>, ell: Option<RiskThreshold>) -> Self {
+		Self { trader, enp, ell }
+	}
+}
+
 decl_storage! {
 	trait Store for Module<T: Trait> as MarginProtocol {
 		NextPositionId get(fn next_position_id): PositionId;
@@ -103,18 +115,20 @@ decl_storage! {
 		Balances get(fn balances): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) LiquidityPoolId => Fixed128;
 		MarginCalledTraders get(fn margin_called_traders): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) LiquidityPoolId => Option<bool>;
 		MarginCalledPools get(fn margin_called_pools): map hasher(twox_64_concat) LiquidityPoolId => Option<bool>;
-		TraderRiskThreshold get(fn trader_risk_threshold): map hasher(twox_64_concat) TradingPair => Option<RiskThreshold>;
-		LiquidityPoolENPThreshold get(fn liquidity_pool_enp_threshold): map hasher(twox_64_concat) TradingPair => Option<RiskThreshold>;
-		LiquidityPoolELLThreshold get(fn liquidity_pool_ell_threshold): map hasher(twox_64_concat) TradingPair => Option<RiskThreshold>;
+		/// Risk thresholds of a trading pair, including trader risk threshold, pool ENP and ELL.
+		///
+		/// DEFAULT-NOTE: `trader`, `enp`, and `ell` are all `None` by default.
+		RiskThresholds get(fn risk_thresholds): map hasher(twox_64_concat) TradingPair => TradingPairRiskThreshold;
 	}
 
 	add_extra_genesis {
 		config(risk_thresholds): Vec<(TradingPair, RiskThreshold, RiskThreshold, RiskThreshold)>;
 		build(|config: &GenesisConfig| {
-			config.risk_thresholds.iter().for_each(|(pair, trader_threshold, enp_threshold, ell_threshold)| {
-				TraderRiskThreshold::insert(pair, trader_threshold);
-				LiquidityPoolENPThreshold::insert(pair, enp_threshold);
-				LiquidityPoolELLThreshold::insert(pair, ell_threshold);
+			config.risk_thresholds.iter().for_each(|(pair, trader, enp, ell)| {
+				RiskThresholds::insert(
+					pair,
+					TradingPairRiskThreshold::new(Some(*trader), Some(*enp), Some(*ell)),
+				);
 			})
 		})
 	}
@@ -287,15 +301,17 @@ decl_module! {
 				.map(|_| ())
 				.or_else(ensure_root)?;
 
-			if let Some(v) = trader {
-				TraderRiskThreshold::insert(pair, v);
-			}
-			if let Some(v) = enp {
-				LiquidityPoolENPThreshold::insert(pair, v);
-			}
-			if let Some(v) = ell {
-				LiquidityPoolELLThreshold::insert(pair, v);
-			}
+			RiskThresholds::mutate(pair, |r| {
+				if trader.is_some() {
+					r.trader = trader;
+				}
+				if enp.is_some() {
+					r.enp = enp;
+				}
+				if ell.is_some() {
+					r.ell = ell;
+				}
+			});
 
 			Self::deposit_event(RawEvent::TradingPairRiskThresholdSet(pair, trader, enp, ell))
 		}
@@ -322,6 +338,21 @@ decl_module! {
 				};
 			}
 		}
+	}
+}
+
+// Storage getters
+impl<T: Trait> Module<T> {
+	pub fn trader_risk_threshold(pair: TradingPair) -> Option<RiskThreshold> {
+		Self::risk_thresholds(pair).trader
+	}
+
+	pub fn liquidity_pool_enp_threshold(pair: TradingPair) -> Option<RiskThreshold> {
+		Self::risk_thresholds(pair).enp
+	}
+
+	pub fn liquidity_pool_ell_threshold(pair: TradingPair) -> Option<RiskThreshold> {
+		Self::risk_thresholds(pair).ell
 	}
 }
 
@@ -1170,7 +1201,7 @@ impl<T: Trait> Module<T> {
 				v
 			})
 			.iter()
-			.filter_map(|pair| Self::trader_risk_threshold(pair))
+			.filter_map(|pair| Self::trader_risk_threshold(*pair))
 			.map(|v| (v.margin_call, v.stop_out))
 			.fold((Permill::zero(), Permill::zero()), |max, v| {
 				(cmp::max(max.0, v.0), cmp::max(max.1, v.1))
@@ -1195,8 +1226,8 @@ impl<T: Trait> Module<T> {
 			})
 			.iter()
 			.filter_map(|pair| {
-				let enp = Self::liquidity_pool_enp_threshold(pair)?;
-				let ell = Self::liquidity_pool_ell_threshold(pair)?;
+				let enp = Self::liquidity_pool_enp_threshold(*pair)?;
+				let ell = Self::liquidity_pool_ell_threshold(*pair)?;
 				Some((enp.margin_call, enp.stop_out, ell.margin_call, ell.stop_out))
 			})
 			.fold(

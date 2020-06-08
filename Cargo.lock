@@ -2309,6 +2309,7 @@ dependencies = [
  "module-margin-liquidity-pools",
  "module-margin-protocol",
  "module-primitives",
+ "module-synthetic-tokens",
  "orml-oracle-rpc",
  "orml-utilities",
  "pallet-transaction-payment-rpc",
