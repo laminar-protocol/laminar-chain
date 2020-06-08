@@ -39,10 +39,10 @@ pub struct SwapRate {
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
-pub struct TradingPairOption<Moment> {
+pub struct TradingPairMarginOption<Moment> {
 	/// Is enabled for trading.
 	///
-	/// DEFAULT-NOTE: default is `false` (not enabled).
+	/// DEFAULT-NOTE: default not enabled.
 	pub enabled: bool,
 
 	/// The max spread. The minimum of max spread and pool's spread would be used in trading.
@@ -58,21 +58,38 @@ pub struct TradingPairOption<Moment> {
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct PoolMarginOption {
+	/// Additional swap rate, to adjust the swap rate in `TradingPairMarginOption`.
+	///
+	/// DEFAULT-NOTE: no adjustment for this pool.
+	pub additional_swap_rate: Fixed128,
+
+	/// Min leveraged amount. A position cannot be opened if it's leveraged amount is below min.
+	///
+	/// DEFAULT-NOTE: no min requirement for this pool. (`DefaultMinLeveragedAmount` will be used)
+	pub min_leveraged_amount: Balance,
+}
+
+#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct PoolTradingPairMarginOption {
 	/// Is enabled in pool.
 	///
-	/// DEFAULT-NOTE: OK - default is `false` (not enabled)
+	/// DEFAULT-NOTE: default not enabled.
 	pub enabled: bool,
 
 	/// Bid spread.
+	///
+	/// DEFAULT-NOTE: `None`, pool owner must set spread.
 	pub bid_spread: Option<Balance>,
 
 	/// Ask spread
+	///
+	/// DEFAULT-NOTE: `None`, pool owner must set spread.
 	pub ask_spread: Option<Balance>,
 
 	/// Enabled leverages.
 	///
-	/// DEFAULT-NOTE: OK - No leverage.
+	/// DEFAULT-NOTE: No leverage.
 	pub enabled_trades: Leverages,
 }
 
@@ -92,17 +109,10 @@ pub trait Trait: frame_system::Trait {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as MarginLiquidityPools {
-		/// Trading pair options of a liquidity pool.
-		///
-		/// GETTER-NOTE: Instead of using the default getter impl, it is implemented as to cap the max spread.
+		pub TradingPairOptions get(fn trading_pair_options): map hasher(twox_64_concat) TradingPair => Option<TradingPairMarginOption<T::Moment>>;
+		pub PoolOptions get(fn pool_options): map hasher(twox_64_concat) LiquidityPoolId => PoolMarginOption;
 		pub PoolTradingPairOptions: double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => Option<PoolTradingPairMarginOption>;
 		pub AccumulatedSwapRates get(fn accumulated_swap_rate): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => SwapRate;
-
-		pub TradingPairOptions get(fn trading_pair_options): map hasher(twox_64_concat) TradingPair => Option<TradingPairOption<T::Moment>>;
-
-		pub AdditionalSwapRate get(fn additional_swap_rate): map hasher(twox_64_concat) LiquidityPoolId => Option<Fixed128>;
-		pub MinLeveragedAmount get(fn min_leveraged_amount): map hasher(twox_64_concat) LiquidityPoolId => Option<Balance>;
-
 		pub DefaultMinLeveragedAmount get(fn default_min_leveraged_amount) config(): Balance;
 		pub LastAccumulateTime get(fn last_accumulate_time): T::Moment;
 	}
@@ -112,7 +122,7 @@ decl_storage! {
 
 		build(|config: &GenesisConfig<T>| {
 			config.margin_liquidity_config.iter().for_each(|(pair, max_spread, accumulate_config, swap_rate)| {
-				<TradingPairOptions<T>>::insert(&pair, TradingPairOption {
+				<TradingPairOptions<T>>::insert(&pair, TradingPairMarginOption {
 					enabled: true,
 					swap_rate: swap_rate.clone(),
 					max_spread: Some(max_spread.clone()),
@@ -198,7 +208,10 @@ decl_module! {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
 
-			AdditionalSwapRate::insert(pool_id, rate);
+			let mut option = Self::pool_options(pool_id);
+			option.additional_swap_rate = rate;
+			PoolOptions::insert(pool_id, option);
+
 			Self::deposit_event(RawEvent::AdditionalSwapRateUpdated(who, pool_id, rate));
 		}
 
@@ -296,7 +309,11 @@ decl_module! {
 		pub fn set_min_leveraged_amount(origin, #[compact] pool_id: LiquidityPoolId, #[compact] amount: Balance) {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
-			MinLeveragedAmount::insert(pool_id, amount);
+
+			let mut option = Self::pool_options(pool_id);
+			option.min_leveraged_amount = amount;
+			PoolOptions::insert(pool_id, option);
+
 			Self::deposit_event(RawEvent::SetMinLeveragedAmount(pool_id, amount))
 		}
 
@@ -357,10 +374,22 @@ impl<T: Trait> Module<T> {
 		Self::trading_pair_options(pair).map_or(false, |o| o.enabled)
 	}
 
-	// pool trading pair option
+	// Pool margin option
+
+	pub fn additional_swap_rate(pool_id: LiquidityPoolId) -> Fixed128 {
+		Self::pool_options(pool_id).additional_swap_rate
+	}
+
+	/// Min leveraged amount. `max(min_leveraged_amount, default_min_leveraged_amount)` will be used.
+	pub fn min_leveraged_amount(pool_id: LiquidityPoolId) -> Balance {
+		let pool_min_leveraged_amount = Self::pool_options(pool_id).min_leveraged_amount;
+		max(pool_min_leveraged_amount, Self::default_min_leveraged_amount())
+	}
+
+	// Pool trading pair margin option
 
 	/// `PoolTradingPairOptions` getter. Bid/ask spread is capped by max spread.
-	pub fn pool_trading_pair_option(
+	pub fn pool_trading_pair_options(
 		pool_id: LiquidityPoolId,
 		pair: TradingPair,
 	) -> Option<PoolTradingPairMarginOption> {
@@ -376,16 +405,13 @@ impl<T: Trait> Module<T> {
 	pub fn is_pool_trading_pair_enabled(pool_id: LiquidityPoolId, pair: TradingPair) -> bool {
 		PoolTradingPairOptions::get(pool_id, pair).map_or(false, |option| option.enabled)
 	}
-}
 
-impl<T: Trait> Module<T> {
-	pub fn is_enabled(pool_id: LiquidityPoolId, pair: TradingPair, leverage: Leverage) -> bool {
-		Self::pool_trading_pair_option(pool_id, pair).map_or(false, |o| o.enabled_trades.contains(leverage))
-	}
-
-	pub fn get_min_leveraged_amount(pool_id: LiquidityPoolId) -> Balance {
-		let min_leveraged_amount = Self::min_leveraged_amount(pool_id).unwrap_or(0);
-		max(min_leveraged_amount, Self::default_min_leveraged_amount())
+	pub fn is_pool_trading_pair_leverage_enabled(
+		pool_id: LiquidityPoolId,
+		pair: TradingPair,
+		leverage: Leverage,
+	) -> bool {
+		Self::pool_trading_pair_options(pool_id, pair).map_or(false, |o| o.enabled_trades.contains(leverage))
 	}
 }
 
@@ -421,21 +447,21 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 
 impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
 	fn is_allowed_position(pool_id: LiquidityPoolId, pair: TradingPair, leverage: Leverage) -> bool {
-		Self::is_enabled(pool_id, pair, leverage)
+		Self::is_pool_trading_pair_leverage_enabled(pool_id, pair, leverage)
 	}
 
 	fn get_bid_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance> {
-		Self::pool_trading_pair_option(pool_id, pair).map_or(None, |pool| pool.bid_spread)
+		Self::pool_trading_pair_options(pool_id, pair).map_or(None, |pool| pool.bid_spread)
 	}
 
 	fn get_ask_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance> {
-		Self::pool_trading_pair_option(pool_id, pair).map_or(None, |pool| pool.ask_spread)
+		Self::pool_trading_pair_options(pool_id, pair).map_or(None, |pool| pool.ask_spread)
 	}
 
 	fn get_swap_rate(pool_id: LiquidityPoolId, pair: TradingPair, is_long: bool) -> Fixed128 {
 		let max_swap = T::MaxSwap::get();
 		let swap_rate = Self::swap_rate(pair).unwrap_or_default();
-		let additional_swap_rate = Self::additional_swap_rate(pool_id).unwrap_or_default();
+		let additional_swap_rate = Self::additional_swap_rate(pool_id);
 
 		let swap_rate = if is_long { swap_rate.long } else { swap_rate.short };
 		// adjust_swap = swap - abs(swap) * additional_swap_rate
@@ -467,10 +493,10 @@ impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
 		leverage: Leverage,
 		leveraged_amount: Balance,
 	) -> bool {
-		Self::is_enabled(pool_id, pair, leverage)
+		Self::is_pool_trading_pair_leverage_enabled(pool_id, pair, leverage)
 			&& Self::is_trading_pair_enabled(pair)
 			&& Self::is_pool_trading_pair_enabled(pool_id, pair)
-			&& leveraged_amount >= Self::get_min_leveraged_amount(pool_id)
+			&& leveraged_amount >= Self::min_leveraged_amount(pool_id)
 	}
 }
 
@@ -484,7 +510,7 @@ impl<T: Trait> Module<T> {
 		ask: Balance,
 	) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, who), Error::<T>::NoPermission);
-		// not using `Self::pool_trading_pair_option` to preserve original value
+		// not using `Self::pool_trading_pair_options` to preserve original value
 		let mut option = PoolTradingPairOptions::get(pool_id, pair).unwrap_or_default();
 		option.bid_spread = Some(bid);
 		option.ask_spread = Some(ask);
@@ -499,7 +525,7 @@ impl<T: Trait> Module<T> {
 		enabled: Leverages,
 	) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, who), Error::<T>::NoPermission);
-		// not using `Self::pool_trading_pair_option` to preserve original value
+		// not using `Self::pool_trading_pair_options` to preserve original value
 		let mut option = PoolTradingPairOptions::get(pool_id, pair).unwrap_or_default();
 		option.enabled_trades = enabled;
 		PoolTradingPairOptions::insert(&pool_id, &pair, option);
@@ -531,7 +557,6 @@ impl<T: Trait> OnRemoveLiquidityPool for Module<T> {
 	fn on_remove(pool_id: LiquidityPoolId) {
 		PoolTradingPairOptions::remove_prefix(&pool_id);
 		AccumulatedSwapRates::remove_prefix(&pool_id);
-		AdditionalSwapRate::remove(&pool_id);
-		MinLeveragedAmount::remove(pool_id);
+		PoolOptions::remove(&pool_id);
 	}
 }
