@@ -63,7 +63,10 @@ fn should_disable_pool() {
 			quote: CurrencyId::FEUR,
 		};
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(ModuleLiquidityPools::pool_trading_pair_options(0, pair), None);
+		assert_eq!(
+			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
+			Default::default()
+		);
 		assert_ok!(ModuleLiquidityPools::set_enabled_trades(
 			Origin::signed(ALICE),
 			0,
@@ -72,15 +75,18 @@ fn should_disable_pool() {
 		));
 		assert_eq!(
 			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
-			Some(MarginPoolTradingPairOption {
+			MarginPoolTradingPairOption {
 				enabled: false,
 				bid_spread: None,
 				ask_spread: None,
 				enabled_trades: Leverage::ShortTen | Leverage::LongFive,
-			})
+			}
 		);
 		assert_ok!(BaseLiquidityPools::disable_pool(Origin::signed(ALICE), 0));
-		assert_eq!(ModuleLiquidityPools::pool_trading_pair_options(0, pair), None);
+		assert_eq!(
+			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
+			Default::default()
+		);
 	})
 }
 
@@ -95,7 +101,10 @@ fn should_remove_pool() {
 		assert_ok!(ModuleLiquidityPools::deposit_liquidity(&ALICE, 0, 1000));
 		assert_eq!(BaseLiquidityPools::liquidity(0), 1000);
 		assert_ok!(BaseLiquidityPools::remove_pool(Origin::signed(ALICE), 0));
-		assert_eq!(ModuleLiquidityPools::pool_trading_pair_options(0, pair), None);
+		assert_eq!(
+			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
+			Default::default()
+		);
 		assert_eq!(BaseLiquidityPools::owner(0), None);
 		assert_eq!(BaseLiquidityPools::liquidity(0), 0);
 		assert_eq!(<ModuleLiquidityPools as LiquidityPools<AccountId>>::liquidity(0), 0);
@@ -111,7 +120,10 @@ fn should_set_spread() {
 		};
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_eq!(BaseLiquidityPools::owner(0), Some(ALICE));
-		assert_eq!(ModuleLiquidityPools::pool_trading_pair_options(0, pair), None);
+		assert_eq!(
+			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
+			Default::default()
+		);
 		assert_ok!(ModuleLiquidityPools::set_spread(Origin::signed(ALICE), 0, pair, 80, 60));
 
 		let pool_option = MarginPoolTradingPairOption {
@@ -121,10 +133,7 @@ fn should_set_spread() {
 			enabled_trades: Leverages::none(),
 		};
 
-		assert_eq!(
-			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
-			Some(pool_option)
-		);
+		assert_eq!(ModuleLiquidityPools::pool_trading_pair_options(0, pair), pool_option);
 
 		assert_eq!(
 			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_bid_spread(0, pair),
@@ -146,7 +155,10 @@ fn should_set_max_spread() {
 		};
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_eq!(BaseLiquidityPools::owner(0), Some(ALICE));
-		assert_eq!(ModuleLiquidityPools::pool_trading_pair_options(0, pair), None);
+		assert_eq!(
+			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
+			Default::default()
+		);
 		// no max spread
 		assert_ok!(ModuleLiquidityPools::set_spread(
 			Origin::signed(ALICE),
@@ -161,48 +173,48 @@ fn should_set_max_spread() {
 
 		assert_eq!(
 			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
-			Some(MarginPoolTradingPairOption {
+			MarginPoolTradingPairOption {
 				enabled: false,
 				bid_spread: Some(30),
 				ask_spread: Some(30),
 				enabled_trades: Leverages::none(),
-			})
+			}
 		);
 
 		assert_ok!(ModuleLiquidityPools::set_spread(Origin::signed(ALICE), 0, pair, 31, 28));
 
 		assert_eq!(
 			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
-			Some(MarginPoolTradingPairOption {
+			MarginPoolTradingPairOption {
 				enabled: false,
 				bid_spread: Some(30),
 				ask_spread: Some(28),
 				enabled_trades: Leverages::none(),
-			})
+			}
 		);
 
 		assert_ok!(ModuleLiquidityPools::set_spread(Origin::signed(ALICE), 0, pair, 28, 29));
 
 		assert_eq!(
 			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
-			Some(MarginPoolTradingPairOption {
+			MarginPoolTradingPairOption {
 				enabled: false,
 				bid_spread: Some(28),
 				ask_spread: Some(29),
 				enabled_trades: Leverages::none(),
-			})
+			}
 		);
 
 		assert_ok!(ModuleLiquidityPools::set_max_spread(Origin::ROOT, pair, 20));
 
 		assert_eq!(
 			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
-			Some(MarginPoolTradingPairOption {
+			MarginPoolTradingPairOption {
 				enabled: false,
 				bid_spread: Some(20),
 				ask_spread: Some(20),
 				enabled_trades: Leverages::none(),
-			})
+			}
 		);
 	});
 }
@@ -216,7 +228,10 @@ fn should_set_enabled_trades() {
 		};
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_eq!(BaseLiquidityPools::owner(0), Some(ALICE));
-		assert_eq!(ModuleLiquidityPools::pool_trading_pair_options(0, pair), None);
+		assert_eq!(
+			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
+			Default::default()
+		);
 		assert_ok!(ModuleLiquidityPools::set_enabled_trades(
 			Origin::signed(ALICE),
 			0,
@@ -231,10 +246,7 @@ fn should_set_enabled_trades() {
 			enabled_trades: Leverage::ShortTen | Leverage::LongFive,
 		};
 
-		assert_eq!(
-			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
-			Some(pool_option)
-		);
+		assert_eq!(ModuleLiquidityPools::pool_trading_pair_options(0, pair), pool_option);
 	})
 }
 

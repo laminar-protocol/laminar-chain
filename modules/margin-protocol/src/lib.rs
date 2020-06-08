@@ -115,6 +115,9 @@ decl_storage! {
 		Balances get(fn balances): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) LiquidityPoolId => Fixed128;
 		MarginCalledTraders get(fn margin_called_traders): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) LiquidityPoolId => Option<bool>;
 		MarginCalledPools get(fn margin_called_pools): map hasher(twox_64_concat) LiquidityPoolId => Option<bool>;
+		/// Risk thresholds of a trading pair, including trader risk threshold, pool ENP and ELL.
+		///
+		/// DEFAULT-NOTE: `trader`, `enp`, and `ell` are all `None` by default.
 		RiskThresholds get(fn risk_thresholds): map hasher(twox_64_concat) TradingPair => TradingPairRiskThreshold;
 	}
 
@@ -298,17 +301,17 @@ decl_module! {
 				.map(|_| ())
 				.or_else(ensure_root)?;
 
-			let mut threshold = Self::risk_thresholds(pair);
-			if trader.is_some() {
-				threshold.trader = trader;
-			}
-			if enp.is_some() {
-				threshold.enp = enp;
-			}
-			if ell.is_some() {
-				threshold.ell = ell;
-			}
-			RiskThresholds::insert(pair, threshold);
+			RiskThresholds::mutate(pair, |r| {
+				if trader.is_some() {
+					r.trader = trader;
+				}
+				if enp.is_some() {
+					r.enp = enp;
+				}
+				if ell.is_some() {
+					r.ell = ell;
+				}
+			});
 
 			Self::deposit_event(RawEvent::TradingPairRiskThresholdSet(pair, trader, enp, ell))
 		}
