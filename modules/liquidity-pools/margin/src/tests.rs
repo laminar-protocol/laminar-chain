@@ -72,7 +72,7 @@ fn should_disable_pool() {
 		));
 		assert_eq!(
 			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
-			Some(PoolTradingPairMarginOption {
+			Some(MarginPoolTradingPairOption {
 				enabled: false,
 				bid_spread: None,
 				ask_spread: None,
@@ -114,7 +114,7 @@ fn should_set_spread() {
 		assert_eq!(ModuleLiquidityPools::pool_trading_pair_options(0, pair), None);
 		assert_ok!(ModuleLiquidityPools::set_spread(Origin::signed(ALICE), 0, pair, 80, 60));
 
-		let pool_option = PoolTradingPairMarginOption {
+		let pool_option = MarginPoolTradingPairOption {
 			enabled: false,
 			bid_spread: Some(80),
 			ask_spread: Some(60),
@@ -161,7 +161,7 @@ fn should_set_max_spread() {
 
 		assert_eq!(
 			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
-			Some(PoolTradingPairMarginOption {
+			Some(MarginPoolTradingPairOption {
 				enabled: false,
 				bid_spread: Some(30),
 				ask_spread: Some(30),
@@ -173,7 +173,7 @@ fn should_set_max_spread() {
 
 		assert_eq!(
 			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
-			Some(PoolTradingPairMarginOption {
+			Some(MarginPoolTradingPairOption {
 				enabled: false,
 				bid_spread: Some(30),
 				ask_spread: Some(28),
@@ -185,7 +185,7 @@ fn should_set_max_spread() {
 
 		assert_eq!(
 			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
-			Some(PoolTradingPairMarginOption {
+			Some(MarginPoolTradingPairOption {
 				enabled: false,
 				bid_spread: Some(28),
 				ask_spread: Some(29),
@@ -197,7 +197,7 @@ fn should_set_max_spread() {
 
 		assert_eq!(
 			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
-			Some(PoolTradingPairMarginOption {
+			Some(MarginPoolTradingPairOption {
 				enabled: false,
 				bid_spread: Some(20),
 				ask_spread: Some(20),
@@ -224,7 +224,7 @@ fn should_set_enabled_trades() {
 			Leverage::ShortTen | Leverage::LongFive,
 		));
 
-		let pool_option = PoolTradingPairMarginOption {
+		let pool_option = MarginPoolTradingPairOption {
 			enabled: false,
 			bid_spread: None,
 			ask_spread: None,

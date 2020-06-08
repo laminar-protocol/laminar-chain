@@ -39,7 +39,7 @@ pub struct SwapRate {
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
-pub struct TradingPairMarginOption<Moment> {
+pub struct MarginTradingPairOption<Moment> {
 	/// Is enabled for trading.
 	///
 	/// DEFAULT-NOTE: default not enabled.
@@ -58,8 +58,8 @@ pub struct TradingPairMarginOption<Moment> {
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
-pub struct PoolMarginOption {
-	/// Additional swap rate, to adjust the swap rate in `TradingPairMarginOption`.
+pub struct MarginPoolOption {
+	/// Additional swap rate, to adjust the swap rate in `MarginTradingPairOption`.
 	///
 	/// DEFAULT-NOTE: no adjustment for this pool.
 	pub additional_swap_rate: Fixed128,
@@ -71,7 +71,7 @@ pub struct PoolMarginOption {
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
-pub struct PoolTradingPairMarginOption {
+pub struct MarginPoolTradingPairOption {
 	/// Is enabled in pool.
 	///
 	/// DEFAULT-NOTE: default not enabled.
@@ -109,9 +109,9 @@ pub trait Trait: frame_system::Trait {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as MarginLiquidityPools {
-		pub TradingPairOptions get(fn trading_pair_options): map hasher(twox_64_concat) TradingPair => Option<TradingPairMarginOption<T::Moment>>;
-		pub PoolOptions get(fn pool_options): map hasher(twox_64_concat) LiquidityPoolId => PoolMarginOption;
-		pub PoolTradingPairOptions: double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => Option<PoolTradingPairMarginOption>;
+		pub TradingPairOptions get(fn trading_pair_options): map hasher(twox_64_concat) TradingPair => Option<MarginTradingPairOption<T::Moment>>;
+		pub PoolOptions get(fn pool_options): map hasher(twox_64_concat) LiquidityPoolId => MarginPoolOption;
+		pub PoolTradingPairOptions: double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => Option<MarginPoolTradingPairOption>;
 		pub AccumulatedSwapRates get(fn accumulated_swap_rate): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => SwapRate;
 		pub DefaultMinLeveragedAmount get(fn default_min_leveraged_amount) config(): Balance;
 		pub LastAccumulateTime get(fn last_accumulate_time): T::Moment;
@@ -122,7 +122,7 @@ decl_storage! {
 
 		build(|config: &GenesisConfig<T>| {
 			config.margin_liquidity_config.iter().for_each(|(pair, max_spread, accumulate_config, swap_rate)| {
-				<TradingPairOptions<T>>::insert(&pair, TradingPairMarginOption {
+				<TradingPairOptions<T>>::insert(&pair, MarginTradingPairOption {
 					enabled: true,
 					swap_rate: swap_rate.clone(),
 					max_spread: Some(max_spread.clone()),
@@ -392,7 +392,7 @@ impl<T: Trait> Module<T> {
 	pub fn pool_trading_pair_options(
 		pool_id: LiquidityPoolId,
 		pair: TradingPair,
-	) -> Option<PoolTradingPairMarginOption> {
+	) -> Option<MarginPoolTradingPairOption> {
 		PoolTradingPairOptions::get(pool_id, pair).map(|mut option| {
 			if let Some(max_spread) = Self::max_spread(pair) {
 				option.bid_spread = option.bid_spread.map(|s| s.min(max_spread));
