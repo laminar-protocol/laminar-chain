@@ -125,7 +125,7 @@ decl_storage! {
 				<TradingPairOptions<T>>::insert(&pair, MarginTradingPairOption {
 					enabled: true,
 					swap_rate: swap_rate.clone(),
-					max_spread: Some(max_spread.clone()),
+					max_spread: Some(*max_spread),
 					accumulate_config: Some(accumulate_config.clone()),
 				});
 			})
