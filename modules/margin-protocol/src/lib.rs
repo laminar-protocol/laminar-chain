@@ -116,9 +116,6 @@ decl_storage! {
 		MarginCalledTraders get(fn margin_called_traders): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) LiquidityPoolId => Option<bool>;
 		MarginCalledPools get(fn margin_called_pools): map hasher(twox_64_concat) LiquidityPoolId => Option<bool>;
 		RiskThresholds get(fn risk_thresholds): map hasher(twox_64_concat) TradingPair => TradingPairRiskThreshold;
-		// TraderRiskThreshold get(fn trader_risk_threshold): map hasher(twox_64_concat) TradingPair => Option<RiskThreshold>;
-		// LiquidityPoolENPThreshold get(fn liquidity_pool_enp_threshold): map hasher(twox_64_concat) TradingPair => Option<RiskThreshold>;
-		// LiquidityPoolELLThreshold get(fn liquidity_pool_ell_threshold): map hasher(twox_64_concat) TradingPair => Option<RiskThreshold>;
 	}
 
 	add_extra_genesis {

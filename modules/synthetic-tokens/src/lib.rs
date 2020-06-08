@@ -15,6 +15,9 @@ use sp_runtime::{
 };
 use sp_std::prelude::Vec;
 
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
+
 mod mock;
 mod tests;
 
@@ -42,11 +45,17 @@ impl Default for Position {
 	}
 }
 
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
+pub struct SyntheticTokensRatio {
+	pub extreme: Option<Permill>,
+	pub liquidation: Option<Permill>,
+	pub collateral: Option<Permill>,
+}
+
 decl_storage! {
 	trait Store for Module<T: Trait> as SyntheticTokens {
-		ExtremeRatio get(fn extreme_ratio) config(): map hasher(twox_64_concat) CurrencyId => Option<Permill>;
-		LiquidationRatio get(fn liquidation_ratio) config(): map hasher(twox_64_concat) CurrencyId => Option<Permill>;
-		CollateralRatio get(fn collateral_ratio) config(): map hasher(twox_64_concat) CurrencyId => Option<Permill>;
+		Ratios get(fn ratios) config(): map hasher(twox_64_concat) CurrencyId => SyntheticTokensRatio;
 		Positions get(fn positions): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) CurrencyId => Position;
 	}
 }
@@ -82,7 +91,8 @@ decl_module! {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
-			ExtremeRatio::insert(currency_id, ratio);
+
+			Ratios::mutate(currency_id, |r| r.extreme = Some(ratio));
 
 			Self::deposit_event(Event::ExtremeRatioUpdated(currency_id, ratio));
 		}
@@ -92,7 +102,8 @@ decl_module! {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
-			LiquidationRatio::insert(currency_id, ratio);
+
+			Ratios::mutate(currency_id, |r| r.liquidation = Some(ratio));
 
 			Self::deposit_event(Event::LiquidationRatioUpdated(currency_id, ratio));
 		}
@@ -102,7 +113,8 @@ decl_module! {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
-			CollateralRatio::insert(currency_id, ratio);
+
+			Ratios::mutate(currency_id, |r| r.collateral = Some(ratio));
 
 			Self::deposit_event(Event::CollateralRatioUpdated(currency_id, ratio));
 		}
@@ -178,15 +190,21 @@ impl<T: Trait> Module<T> {
 
 impl<T: Trait> Module<T> {
 	pub fn liquidation_ratio_or_default(currency_id: CurrencyId) -> Permill {
-		Self::liquidation_ratio(currency_id).unwrap_or(T::DefaultLiquidationRatio::get())
+		Self::ratios(currency_id)
+			.liquidation
+			.unwrap_or(T::DefaultLiquidationRatio::get())
 	}
 
 	pub fn extreme_ratio_or_default(currency_id: CurrencyId) -> Permill {
-		Self::extreme_ratio(currency_id).unwrap_or(T::DefaultExtremeRatio::get())
+		Self::ratios(currency_id)
+			.extreme
+			.unwrap_or(T::DefaultExtremeRatio::get())
 	}
 
 	pub fn collateral_ratio_or_default(currency_id: CurrencyId) -> Permill {
-		Self::collateral_ratio(currency_id).unwrap_or(T::DefaultCollateralRatio::get())
+		Self::ratios(currency_id)
+			.collateral
+			.unwrap_or(T::DefaultCollateralRatio::get())
 	}
 }
 

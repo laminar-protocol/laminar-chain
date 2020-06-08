@@ -22,6 +22,7 @@ use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::{Perbill, Permill};
 use sp_std::num::NonZeroI128;
+use synthetic_tokens::SyntheticTokensRatio;
 
 type AccountPublic = <Signature as Verify>::Signer;
 
@@ -340,20 +341,31 @@ fn dev_genesis(
 			min_additional_collateral_ratio: Permill::from_percent(10), // default min additional collateral ratio
 		}),
 		synthetic_tokens: Some(SyntheticTokensConfig {
-			extreme_ratio: vec![
-				(CurrencyId::FOIL, Permill::from_percent(5)),
-				(CurrencyId::FBTC, Permill::from_percent(5)),
-				(CurrencyId::FETH, Permill::from_percent(5)),
-			],
-			liquidation_ratio: vec![
-				(CurrencyId::FOIL, Permill::from_percent(10)),
-				(CurrencyId::FBTC, Permill::from_percent(10)),
-				(CurrencyId::FETH, Permill::from_percent(10)),
-			],
-			collateral_ratio: vec![
-				(CurrencyId::FOIL, Permill::from_percent(50)),
-				(CurrencyId::FBTC, Permill::from_percent(50)),
-				(CurrencyId::FETH, Permill::from_percent(50)),
+			ratios: vec![
+				(
+					CurrencyId::FOIL,
+					SyntheticTokensRatio {
+						extreme: Some(Permill::from_percent(5)),
+						liquidation: Some(Permill::from_percent(10)),
+						collateral: Some(Permill::from_percent(50)),
+					},
+				),
+				(
+					CurrencyId::FBTC,
+					SyntheticTokensRatio {
+						extreme: Some(Permill::from_percent(5)),
+						liquidation: Some(Permill::from_percent(10)),
+						collateral: Some(Permill::from_percent(50)),
+					},
+				),
+				(
+					CurrencyId::FETH,
+					SyntheticTokensRatio {
+						extreme: Some(Permill::from_percent(5)),
+						liquidation: Some(Permill::from_percent(10)),
+						collateral: Some(Permill::from_percent(50)),
+					},
+				),
 			],
 		}),
 		margin_liquidity_pools: Some(MarginLiquidityPoolsConfig {
@@ -610,20 +622,31 @@ fn turbulence_genesis(
 			min_additional_collateral_ratio: Permill::from_percent(10), // default min additional collateral ratio
 		}),
 		synthetic_tokens: Some(SyntheticTokensConfig {
-			extreme_ratio: vec![
-				(CurrencyId::FOIL, Permill::from_percent(5)),
-				(CurrencyId::FBTC, Permill::from_percent(5)),
-				(CurrencyId::FETH, Permill::from_percent(5)),
-			],
-			liquidation_ratio: vec![
-				(CurrencyId::FOIL, Permill::from_percent(10)),
-				(CurrencyId::FBTC, Permill::from_percent(10)),
-				(CurrencyId::FETH, Permill::from_percent(10)),
-			],
-			collateral_ratio: vec![
-				(CurrencyId::FOIL, Permill::from_percent(50)),
-				(CurrencyId::FBTC, Permill::from_percent(50)),
-				(CurrencyId::FETH, Permill::from_percent(50)),
+			ratios: vec![
+				(
+					CurrencyId::FOIL,
+					SyntheticTokensRatio {
+						extreme: Some(Permill::from_percent(5)),
+						liquidation: Some(Permill::from_percent(10)),
+						collateral: Some(Permill::from_percent(50)),
+					},
+				),
+				(
+					CurrencyId::FBTC,
+					SyntheticTokensRatio {
+						extreme: Some(Permill::from_percent(5)),
+						liquidation: Some(Permill::from_percent(10)),
+						collateral: Some(Permill::from_percent(50)),
+					},
+				),
+				(
+					CurrencyId::FETH,
+					SyntheticTokensRatio {
+						extreme: Some(Permill::from_percent(5)),
+						liquidation: Some(Permill::from_percent(10)),
+						collateral: Some(Permill::from_percent(50)),
+					},
+				),
 			],
 		}),
 		margin_liquidity_pools: Some(MarginLiquidityPoolsConfig {
