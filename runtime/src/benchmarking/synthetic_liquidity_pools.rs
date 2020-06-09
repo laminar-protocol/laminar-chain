@@ -40,11 +40,11 @@ runtime_benchmarks! {
 		let p in ...;
 		let r in ...;
 		let owner = create_pool(p)?;
-	}: _(RawOrigin::Signed(owner), 0, FEUR, Some(Permill::from_inner(r)))
+	}: _(RawOrigin::Signed(owner), 0, FEUR, Some(Permill::from_parts(r)))
 
 	set_min_additional_collateral_ratio {
 		let r in ...;
-	}: _(RawOrigin::Root, Permill::from_inner(r))
+	}: _(RawOrigin::Root, Permill::from_parts(r))
 
 	set_synthetic_enabled {
 		let p in ...;

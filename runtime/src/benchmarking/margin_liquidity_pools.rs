@@ -2,7 +2,7 @@ use super::utils::dollars;
 use crate::{AccountId, BaseLiquidityPoolsForMargin, MarginLiquidityPools, MarginProtocol, Runtime};
 
 use frame_system::RawOrigin;
-use sp_runtime::{DispatchError, FixedI128, Permill};
+use sp_runtime::{DispatchError, FixedI128, FixedPointNumber, Permill};
 use sp_std::prelude::*;
 
 use frame_benchmarking::account;

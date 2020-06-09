@@ -3,7 +3,7 @@ use crate::{AccountId, BaseLiquidityPoolsForMargin, MarginLiquidityPools, Margin
 
 use frame_support::traits::ChangeMembers;
 use frame_system::RawOrigin;
-use sp_runtime::{DispatchError, DispatchResult, FixedI128, Permill};
+use sp_runtime::{traits::Zero, DispatchError, DispatchResult, FixedI128, FixedPointNumber, Permill};
 use sp_std::prelude::*;
 
 use frame_benchmarking::account;
@@ -11,6 +11,7 @@ use orml_benchmarking::runtime_benchmarks;
 
 use margin_protocol::RiskThreshold;
 use module_primitives::*;
+use orml_utilities::FixedUnsignedNumber;
 
 const SEED: u32 = 0;
 const MAX_TRADER_INDEX: u32 = 1000;
@@ -87,7 +88,7 @@ runtime_benchmarks! {
 		set_ausd_balance(&trader, balance + dollars(1u128))?;
 	}: _(RawOrigin::Signed(trader.clone()), 0, balance)
 	verify {
-		assert_eq!(MarginProtocol::balances(&trader, 0), FixedI128::saturating_from_integer(d.into()));
+		assert_eq!(MarginProtocol::balances(&trader, 0), FixedI128::saturating_from_integer(d));
 	}
 
 	withdraw {
