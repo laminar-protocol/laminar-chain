@@ -44,7 +44,6 @@ pub use module_primitives::{Balance, CurrencyId, LiquidityPoolId, Price};
 use orml_currencies::BasicCurrencyAdapter;
 pub use orml_oracle::AuthorityId as OracleId;
 use orml_traits::DataProvider;
-use orml_utilities::FixedUnsignedNumber;
 pub use sp_arithmetic::FixedI128;
 
 use margin_protocol_rpc_runtime_api::{PoolInfo, TraderInfo};

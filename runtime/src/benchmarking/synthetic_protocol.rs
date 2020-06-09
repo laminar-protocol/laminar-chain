@@ -5,7 +5,7 @@ use crate::{
 
 use frame_support::traits::ChangeMembers;
 use frame_system::RawOrigin;
-use sp_runtime::{traits::Zero, DispatchError, DispatchResult};
+use sp_runtime::{traits::Zero, DispatchError, DispatchResult, FixedPointNumber};
 use sp_std::prelude::*;
 
 use frame_benchmarking::account;
@@ -13,7 +13,6 @@ use orml_benchmarking::runtime_benchmarks;
 
 use module_primitives::CurrencyId::FEUR;
 use module_primitives::*;
-use orml_utilities::FixedUnsignedNumber;
 
 const SEED: u32 = 0;
 const MAX_TRADER_INDEX: u32 = 1000;

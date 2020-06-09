@@ -8,10 +8,9 @@ use frame_support::{
 use frame_system::{self as system, ensure_root};
 use module_primitives::{Balance, CurrencyId, LiquidityPoolId};
 use module_traits::BaseLiquidityPoolManager;
-use orml_utilities::{FixedU128, FixedUnsignedNumber};
 use sp_runtime::{
-	traits::{AccountIdConversion, CheckedDiv, CheckedSub, One, Zero},
-	DispatchResult, ModuleId, Permill, RuntimeDebug,
+	traits::{AccountIdConversion, CheckedDiv, CheckedSub, Zero},
+	DispatchResult, FixedPointNumber, FixedU128, ModuleId, Permill, RuntimeDebug,
 };
 use sp_std::prelude::Vec;
 

@@ -1,5 +1,4 @@
-use orml_utilities::{FixedU128, FixedUnsignedNumber};
-use sp_arithmetic::{traits::UniqueSaturatedInto, FixedI128, FixedPointNumber};
+use sp_arithmetic::{traits::UniqueSaturatedInto, FixedI128, FixedPointNumber, FixedU128};
 
 /// Create a `FixedI128` from `FixedU128`. Note it could be lossy.
 pub fn fixed_i128_from_fixed_u128(f: FixedU128) -> FixedI128 {

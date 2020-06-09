@@ -11,7 +11,6 @@ use orml_benchmarking::runtime_benchmarks;
 
 use margin_protocol::RiskThreshold;
 use module_primitives::*;
-use orml_utilities::FixedUnsignedNumber;
 
 const SEED: u32 = 0;
 const MAX_TRADER_INDEX: u32 = 1000;

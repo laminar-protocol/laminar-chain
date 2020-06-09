@@ -15,7 +15,6 @@ mod tests {
 	use module_primitives::Leverage::*;
 	use module_traits::{MarginProtocolLiquidityPools, Treasury};
 	use orml_prices::Price;
-	use orml_utilities::FixedUnsignedNumber;
 	use sp_arithmetic::{FixedI128, FixedPointNumber};
 	use sp_runtime::traits::{Bounded, CheckedAdd};
 

@@ -9,7 +9,7 @@ use frame_support::{
 };
 use sp_arithmetic::{
 	traits::{Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Saturating},
-	FixedI128, FixedPointNumber, Permill,
+	FixedI128, FixedPointNumber, FixedU128, Permill,
 };
 use sp_runtime::{
 	offchain::{storage::StorageValueRef, Duration, Timestamp},
@@ -28,7 +28,6 @@ use frame_system::{
 	offchain::{SendTransactionTypes, SubmitTransaction},
 };
 use orml_traits::{MultiCurrency, PriceProvider};
-use orml_utilities::{FixedU128, FixedUnsignedNumber};
 use primitives::{
 	arithmetic::{fixed_i128_from_fixed_u128, fixed_i128_from_u128, fixed_i128_mul_signum, u128_from_fixed_i128},
 	Balance, CurrencyId, Leverage, LiquidityPoolId, Price, TradingPair,
@@ -207,14 +206,14 @@ decl_module! {
 			pair: TradingPair,
 			leverage: Leverage,
 			#[compact] leveraged_amount: Balance,
-			#[compact] price: Price,
+			price: Price,
 		) {
 			let who = ensure_signed(origin)?;
 			Self::_open_position(&who, pool_id, pair, leverage, leveraged_amount, price)?;
 		}
 
 		#[weight = 20_000]
-		pub fn close_position(origin, #[compact] position_id: PositionId, #[compact] price: Price) {
+		pub fn close_position(origin, #[compact] position_id: PositionId, price: Price) {
 			let who = ensure_signed(origin)?;
 			Self::_close_position(&who, position_id, Some(price))?;
 		}

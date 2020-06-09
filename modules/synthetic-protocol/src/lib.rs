@@ -2,8 +2,8 @@
 
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get, weights::DispatchClass};
 use sp_runtime::{
-	traits::{CheckedAdd, CheckedDiv, CheckedSub, One, Saturating, Zero},
-	DispatchError, DispatchResult, Permill,
+	traits::{CheckedAdd, CheckedDiv, CheckedSub, Saturating, Zero},
+	DispatchError, DispatchResult, FixedPointNumber, FixedU128, Permill,
 };
 use sp_std::result;
 // FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
@@ -13,7 +13,6 @@ use frame_system::{self as system, ensure_signed};
 
 use orml_prices::Price;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
-use orml_utilities::{FixedU128, FixedUnsignedNumber};
 
 use module_primitives::{Balance, CurrencyId, LiquidityPoolId};
 use module_traits::{LiquidityPools, SyntheticProtocolLiquidityPools};
@@ -73,7 +72,7 @@ decl_module! {
 			#[compact] pool_id: LiquidityPoolId,
 			currency_id: CurrencyId,
 			#[compact] collateral_amount: Balance,
-			#[compact] max_price: Price,
+			max_price: Price,
 		) {
 			let who = ensure_signed(origin)?;
 			let synthetic_amount = Self::_mint(&who, pool_id, currency_id, collateral_amount, max_price)?;
@@ -87,7 +86,7 @@ decl_module! {
 			#[compact] pool_id: LiquidityPoolId,
 			currency_id: CurrencyId,
 			#[compact] synthetic_amount: Balance,
-			#[compact] min_price: Price,
+			min_price: Price,
 		) {
 			let who = ensure_signed(origin)?;
 			let collateral_amount = Self::_redeem(&who, pool_id, currency_id, synthetic_amount, min_price)?;

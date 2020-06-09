@@ -4,7 +4,7 @@
 
 use codec::{Codec, Decode, Encode};
 use module_primitives::{CurrencyId, LiquidityPoolId};
-use orml_utilities::FixedU128;
+use sp_arithmetic::FixedU128;
 use sp_core::RuntimeDebug;
 use sp_std::prelude::*;
 
