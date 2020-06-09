@@ -18,7 +18,7 @@ use module_traits::{LiquidityPools, Treasury};
 use orml_prices::Price;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
 use pallet_indices::address::Address;
-use sp_arithmetic::Fixed128;
+use sp_arithmetic::{FixedI128, FixedPointNumber};
 use sp_runtime::{DispatchResult, Permill};
 use std::ops::Range;
 use synthetic_protocol_rpc_runtime_api::runtime_decl_for_SyntheticProtocolApi::SyntheticProtocolApi;
@@ -59,11 +59,11 @@ pub fn risk_threshold(margin_call_percent: u32, stop_out_percent: u32) -> RiskTh
 }
 
 parameter_types! {
-	pub const POOL: AccountId = AccountId::from([0u8; 32]);
-	pub const ALICE: AccountId = AccountId::from([1u8; 32]);
-	pub const BOB: AccountId = AccountId::from([2u8; 32]);
+	pub POOL: AccountId = AccountId::from([0u8; 32]);
+	pub ALICE: AccountId = AccountId::from([1u8; 32]);
+	pub BOB: AccountId = AccountId::from([2u8; 32]);
 
-	pub const OracleList: Vec<AccountId> = vec![
+	pub OracleList: Vec<AccountId> = vec![
 		AccountId::from([100u8; 32]),
 		AccountId::from([101u8; 32]),
 		AccountId::from([102u8; 32]),
@@ -177,16 +177,16 @@ pub fn cent(amount: u128) -> u128 {
 	amount.saturating_mul(Price::accuracy()) / 100
 }
 
-pub fn fixed_128_dollar(amount: i128) -> Fixed128 {
-	Fixed128::from_natural(amount)
+pub fn fixed_i128_dollar(amount: i128) -> FixedI128 {
+	FixedI128::saturating_from_integer(amount)
 }
 
-pub fn one_percent() -> Fixed128 {
-	Fixed128::recip(&Fixed128::from_natural(100)).unwrap()
+pub fn one_percent() -> FixedI128 {
+	FixedI128::reciprocal(FixedI128::saturating_from_integer(100)).unwrap()
 }
 
-pub fn negative_one_percent() -> Fixed128 {
-	Fixed128::recip(&Fixed128::from_natural(-100)).unwrap()
+pub fn negative_one_percent() -> FixedI128 {
+	FixedI128::reciprocal(FixedI128::saturating_from_integer(-100)).unwrap()
 }
 
 pub fn multi_currency_balance(who: &AccountId, currency_id: CurrencyId) -> Balance {
@@ -258,7 +258,7 @@ pub fn synthetic_buy(who: &AccountId, currency_id: CurrencyId, amount: Balance) 
 		LIQUIDITY_POOL_ID_0,
 		currency_id,
 		amount,
-		Price::from_rational(10, 1),
+		Price::saturating_from_rational(10, 1),
 	)
 }
 
@@ -268,7 +268,7 @@ pub fn synthetic_sell(who: &AccountId, currency_id: CurrencyId, amount: Balance)
 		LIQUIDITY_POOL_ID_0,
 		currency_id,
 		amount,
-		Price::from_rational(1, 10),
+		Price::saturating_from_rational(1, 10),
 	)
 }
 
@@ -372,14 +372,14 @@ pub fn margin_liquidity_pool_disable_trading_pair(pair: TradingPair) -> Dispatch
 
 pub fn margin_set_mock_swap_rate(pair: TradingPair) -> DispatchResult {
 	let mock_swap_rate: SwapRate = SwapRate {
-		long: Fixed128::recip(&Fixed128::from_natural(-100)).unwrap(),
-		short: Fixed128::recip(&Fixed128::from_natural(100)).unwrap(),
+		long: FixedI128::reciprocal(FixedI128::saturating_from_integer(-100)).unwrap(),
+		short: FixedI128::reciprocal(FixedI128::saturating_from_integer(100)).unwrap(),
 	};
 
 	MarginLiquidityPools::set_swap_rate(<Runtime as system::Trait>::Origin::ROOT, pair, mock_swap_rate)
 }
 
-pub fn margin_set_swap_rate(pair: TradingPair, long_rate: Fixed128, short_rate: Fixed128) -> DispatchResult {
+pub fn margin_set_swap_rate(pair: TradingPair, long_rate: FixedI128, short_rate: FixedI128) -> DispatchResult {
 	let swap_rate: SwapRate = SwapRate {
 		long: long_rate,
 		short: short_rate,
@@ -387,7 +387,7 @@ pub fn margin_set_swap_rate(pair: TradingPair, long_rate: Fixed128, short_rate: 
 	MarginLiquidityPools::set_swap_rate(<Runtime as system::Trait>::Origin::ROOT, pair, swap_rate)
 }
 
-pub fn margin_set_additional_swap(rate: Fixed128) -> DispatchResult {
+pub fn margin_set_additional_swap(rate: FixedI128) -> DispatchResult {
 	MarginLiquidityPools::set_additional_swap(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, rate)
 }
 
@@ -403,7 +403,7 @@ pub fn margin_set_default_min_leveraged_amount(amount: Balance) -> DispatchResul
 	MarginLiquidityPools::set_default_min_leveraged_amount(<Runtime as system::Trait>::Origin::ROOT, amount)
 }
 
-pub fn margin_balance(who: &AccountId) -> Fixed128 {
+pub fn margin_balance(who: &AccountId) -> FixedI128 {
 	ModuleMarginProtocol::balances(who, LIQUIDITY_POOL_ID_0)
 }
 
@@ -433,7 +433,7 @@ pub fn margin_withdraw(who: &AccountId, amount: Balance) -> DispatchResult {
 	ModuleMarginProtocol::withdraw(origin_of(who), LIQUIDITY_POOL_ID_0, amount)
 }
 
-pub fn margin_pool_required_deposit() -> Fixed128 {
+pub fn margin_pool_required_deposit() -> FixedI128 {
 	ModuleMarginProtocol::pool_required_deposit(LIQUIDITY_POOL_ID_0).unwrap()
 }
 
@@ -473,15 +473,15 @@ pub fn margin_liquidity_pool_force_close() -> DispatchResult {
 	ModuleMarginProtocol::liquidity_pool_force_close(<Runtime as system::Trait>::Origin::NONE, LIQUIDITY_POOL_ID_0)
 }
 
-pub fn margin_held(who: &AccountId) -> Fixed128 {
+pub fn margin_held(who: &AccountId) -> FixedI128 {
 	ModuleMarginProtocol::margin_held(who, LIQUIDITY_POOL_ID_0)
 }
 
-pub fn free_margin(who: &AccountId) -> Fixed128 {
+pub fn free_margin(who: &AccountId) -> FixedI128 {
 	ModuleMarginProtocol::free_margin(who, LIQUIDITY_POOL_ID_0).unwrap()
 }
 
-pub fn margin_equity(who: &AccountId) -> Fixed128 {
+pub fn margin_equity(who: &AccountId) -> FixedI128 {
 	ModuleMarginProtocol::equity_of_trader(who, LIQUIDITY_POOL_ID_0).unwrap()
 }
 

@@ -13,7 +13,7 @@ fn mint_feur(who: AccountId, amount: Balance) -> DispatchResult {
 		MOCK_POOL,
 		CurrencyId::FEUR,
 		amount,
-		Price::from_rational(4, 1),
+		Price::saturating_from_rational(4, 1),
 	)
 }
 
@@ -23,7 +23,7 @@ fn redeem_ausd(who: AccountId, amount: Balance) -> DispatchResult {
 		MOCK_POOL,
 		CurrencyId::FEUR,
 		amount,
-		Price::from_rational(2, 1),
+		Price::saturating_from_rational(2, 1),
 	)
 }
 
@@ -56,7 +56,7 @@ fn position() -> (Balance, Balance) {
 }
 
 fn set_mock_feur_price(x: u128, y: u128) {
-	MockPrices::set_mock_price(CurrencyId::FEUR, Some(Price::from_rational(x, y)));
+	MockPrices::set_mock_price(CurrencyId::FEUR, Some(Price::saturating_from_rational(x, y)));
 }
 
 fn set_mock_feur_price_none() {
@@ -102,7 +102,7 @@ fn mint_fails_if_slippage_too_greedy() {
 					MOCK_POOL,
 					CurrencyId::FEUR,
 					1,
-					Price::from_rational(3, 1),
+					Price::saturating_from_rational(3, 1),
 				),
 				Error::<Runtime>::AskPriceTooHigh
 			);
@@ -156,7 +156,7 @@ fn mint_fails_if_currency_is_not_supported() {
 					MOCK_POOL,
 					CurrencyId::LAMI,
 					ONE_MILL,
-					Price::from_rational(3, 1),
+					Price::saturating_from_rational(3, 1),
 				),
 				Error::<Runtime>::NotValidSyntheticCurrencyId
 			);
@@ -268,7 +268,7 @@ fn redeem_fails_if_slippage_too_greedy() {
 					MOCK_POOL,
 					CurrencyId::FEUR,
 					1,
-					Price::from_rational(3, 1),
+					Price::saturating_from_rational(3, 1),
 				),
 				Error::<Runtime>::BidPriceTooLow
 			);
@@ -296,7 +296,7 @@ fn redeem_fails_if_synthetic_position_too_low() {
 				ANOTHER_MOCK_POOL,
 				CurrencyId::FEUR,
 				ONE_MILL / 10,
-				Price::from_rational(4, 1),
+				Price::saturating_from_rational(4, 1),
 			));
 
 			// redeem all in one pool, synthetic position would be too low
@@ -367,7 +367,7 @@ fn redeem_fails_if_currency_is_not_supported() {
 					MOCK_POOL,
 					CurrencyId::LAMI,
 					ONE_MILL,
-					Price::from_rational(3, 1),
+					Price::saturating_from_rational(3, 1),
 				),
 				Error::<Runtime>::NotValidSyntheticCurrencyId,
 			);
@@ -585,7 +585,7 @@ fn liquidate_fails_if_synthetic_position_too_low() {
 				ANOTHER_MOCK_POOL,
 				CurrencyId::FEUR,
 				ONE_MILL / 2,
-				Price::from_rational(4, 1),
+				Price::saturating_from_rational(4, 1),
 			));
 
 			set_mock_feur_price(32, 10);
@@ -929,7 +929,7 @@ fn withdraw_collateral_does_correct_math() {
 			// collateral_position = 1_089_109
 			// collateral_from_pool = 89_109
 
-			MockPrices::set_mock_price(CurrencyId::FEUR, Some(Price::from_rational(29, 10)));
+			MockPrices::set_mock_price(CurrencyId::FEUR, Some(Price::saturating_from_rational(29, 10)));
 
 			// required_collateral
 			// = new_synthetic_value * (1 + additional_collateral_ratio)
@@ -1030,7 +1030,7 @@ fn mint_all_of_collateral() {
 			(ALICE, CurrencyId::AUSD, 1000),
 			(MOCK_POOL, CurrencyId::AUSD, 1000),
 		])
-		.synthetic_price(Price::from_rational(1, 1))
+		.synthetic_price(Price::saturating_from_rational(1, 1))
 		.one_percent_spread()
 		.additional_collateral_ratio(Permill::from_percent(100))
 		.build()

@@ -15,8 +15,9 @@ mod tests {
 	use module_primitives::Leverage::*;
 	use module_traits::{MarginProtocolLiquidityPools, Treasury};
 	use orml_prices::Price;
-	use sp_arithmetic::Fixed128;
-	use sp_runtime::traits::Bounded;
+	use orml_utilities::FixedUnsignedNumber;
+	use sp_arithmetic::{FixedI128, FixedPointNumber};
+	use sp_runtime::traits::{Bounded, CheckedAdd};
 
 	#[test]
 	fn test_margin_liquidity_pools() {
@@ -43,7 +44,7 @@ mod tests {
 					base_liquidity_pools::Error::<Runtime, BaseLiquidityPoolsMarginInstance>::NoPermission
 				);
 
-				assert_eq!(margin_pool_required_deposit(), fixed_128_dollar(0));
+				assert_eq!(margin_pool_required_deposit(), fixed_i128_dollar(0));
 
 				assert_ok!(margin_set_spread(EUR_USD, cent(1)));
 				assert_ok!(margin_set_max_spread(EUR_USD, cent(2)));
@@ -97,10 +98,10 @@ mod tests {
 				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(10_000)));
 				assert_ok!(margin_deposit(&ALICE::get(), dollar(5000)));
 				assert_eq!(margin_liquidity(), dollar(10_000));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(5000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
 				assert_ok!(margin_set_accumulate(EUR_USD, 10 * ONE_MINUTE, 1 * ONE_MINUTE));
@@ -113,19 +114,19 @@ mod tests {
 				assert_eq!(
 					margin_pool_info(),
 					Some(PoolInfo {
-						enp: Fixed128::max_value(),
-						ell: Fixed128::max_value(),
-						required_deposit: Fixed128::zero()
+						enp: FixedI128::max_value(),
+						ell: FixedI128::max_value(),
+						required_deposit: FixedI128::zero()
 					})
 				);
 				assert_eq!(
 					margin_trader_info(&ALICE::get()),
 					TraderInfo {
-						equity: Fixed128::from_natural(5000),
-						margin_held: Fixed128::zero(),
-						margin_level: Fixed128::max_value(),
-						free_margin: Fixed128::from_natural(5000),
-						unrealized_pl: Fixed128::zero()
+						equity: FixedI128::saturating_from_integer(5000),
+						margin_held: FixedI128::zero(),
+						margin_level: FixedI128::max_value(),
+						free_margin: FixedI128::saturating_from_integer(5000),
+						unrealized_pl: FixedI128::zero()
 					}
 				);
 				assert_ok!(margin_open_position(
@@ -133,53 +134,57 @@ mod tests {
 					EUR_USD,
 					LongTen,
 					dollar(5000),
-					Price::from_rational(4, 1)
+					Price::saturating_from_rational(4, 1)
 				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(5000));
 				assert_eq!(
 					margin_pool_info(),
 					Some(PoolInfo {
-						enp: Fixed128::from_parts(0_686666666666666666),
-						ell: Fixed128::from_parts(0_686666666666666666),
-						required_deposit: Fixed128::zero()
+						enp: FixedI128::from_inner(0_686666666666666667),
+						ell: FixedI128::from_inner(0_686666666666666667),
+						required_deposit: FixedI128::zero()
 					})
 				);
 				assert_eq!(
 					margin_trader_info(&ALICE::get()),
 					TraderInfo {
-						equity: Fixed128::from_natural(4700),
-						margin_held: Fixed128::from_natural(1515),
-						margin_level: Fixed128::from_parts(310231023102310231),
-						free_margin: Fixed128::from_natural(3185),
-						unrealized_pl: Fixed128::from_natural(-300)
+						equity: FixedI128::saturating_from_integer(4700),
+						margin_held: FixedI128::saturating_from_integer(1515),
+						margin_level: FixedI128::from_inner(310231023102310231),
+						free_margin: FixedI128::saturating_from_integer(3185),
+						unrealized_pl: FixedI128::saturating_from_integer(-300)
 					}
 				);
 
-				assert_ok!(margin_close_position(&ALICE::get(), 0, Price::from_rational(2, 1)));
+				assert_ok!(margin_close_position(
+					&ALICE::get(),
+					0,
+					Price::saturating_from_rational(2, 1)
+				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				// open_price = 3 + 0.03 = 3.03
 				// close_price = 3 - 0.03 = 2.97
 				// profit = leveraged_held * (close_price - open_price)
 				// -300 = 5000 * (2.97 - 3.03)
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(4700));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(4700));
 				assert_eq!(margin_liquidity(), dollar(10_300));
 				assert_eq!(
 					margin_pool_info(),
 					Some(PoolInfo {
-						enp: Fixed128::max_value(),
-						ell: Fixed128::max_value(),
-						required_deposit: Fixed128::zero()
+						enp: FixedI128::max_value(),
+						ell: FixedI128::max_value(),
+						required_deposit: FixedI128::zero()
 					})
 				);
 				assert_eq!(
 					margin_trader_info(&ALICE::get()),
 					TraderInfo {
-						equity: Fixed128::from_natural(4700),
-						margin_held: Fixed128::zero(),
-						margin_level: Fixed128::max_value(),
-						free_margin: Fixed128::from_natural(4700),
-						unrealized_pl: Fixed128::zero()
+						equity: FixedI128::saturating_from_integer(4700),
+						margin_held: FixedI128::zero(),
+						margin_level: FixedI128::max_value(),
+						free_margin: FixedI128::saturating_from_integer(4700),
+						unrealized_pl: FixedI128::zero()
 					}
 				);
 				assert_ok!(margin_withdraw(&ALICE::get(), dollar(4700)));
@@ -202,10 +207,10 @@ mod tests {
 				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(10_000)));
 				assert_ok!(margin_deposit(&ALICE::get(), dollar(5000)));
 				assert_eq!(margin_liquidity(), dollar(10_000));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(5000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
 
@@ -222,15 +227,19 @@ mod tests {
 					EUR_USD,
 					LongTen,
 					dollar(5000),
-					Price::from_rational(4, 1)
+					Price::saturating_from_rational(4, 1)
 				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(4, 1))]));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(5000));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(4, 1))]));
 
-				assert_ok!(margin_close_position(&ALICE::get(), 0, Price::from_rational(2, 1)));
+				assert_ok!(margin_close_position(
+					&ALICE::get(),
+					0,
+					Price::saturating_from_rational(2, 1)
+				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(9700));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(9700));
 				assert_eq!(margin_liquidity(), dollar(5300));
 			});
 	}
@@ -250,10 +259,10 @@ mod tests {
 				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(10_000)));
 				assert_ok!(margin_deposit(&ALICE::get(), dollar(5000)));
 				assert_eq!(margin_liquidity(), dollar(10_000));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(5000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
 
@@ -270,19 +279,23 @@ mod tests {
 					EUR_USD,
 					LongTen,
 					dollar(5000),
-					Price::from_rational(4, 1)
+					Price::saturating_from_rational(4, 1)
 				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(28, 10))]));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(5000));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(28, 10))]));
 
-				assert_ok!(margin_close_position(&ALICE::get(), 0, Price::from_rational(1, 1)));
+				assert_ok!(margin_close_position(
+					&ALICE::get(),
+					0,
+					Price::saturating_from_rational(1, 1)
+				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				// open_price = 3 + 0.03 = 3.03
 				// close_price = 2.8 - 0.03 = 2.77
 				// profit = leveraged_held * (close_price - open_price)
 				// -1300 = 5000 * (2.77 - 3.03)
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(3700));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(3700));
 				assert_eq!(margin_liquidity(), dollar(11_300));
 			});
 	}
@@ -302,10 +315,10 @@ mod tests {
 				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(10_000)));
 				assert_ok!(margin_deposit(&ALICE::get(), dollar(5000)));
 				assert_eq!(margin_liquidity(), dollar(10_000));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(5000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
 
@@ -328,46 +341,46 @@ mod tests {
 					EUR_USD,
 					LongTen,
 					dollar(5000),
-					Price::from_rational(4, 1)
+					Price::saturating_from_rational(4, 1)
 				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
-				// equity= Fixed128(10300.000000000000000000), net_position =Fixed128(15000.000000000000000000)
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(5000));
+				// equity= FixedI128(10300.000000000000000000), net_position =FixedI128(15000.000000000000000000)
 				assert_eq!(
 					margin_pool_info(),
 					Some(PoolInfo {
-						enp: Fixed128::from_parts(0_686666666666666666),
-						ell: Fixed128::from_parts(0_686666666666666666),
-						required_deposit: Fixed128::zero()
+						enp: FixedI128::from_inner(0_686666666666666667),
+						ell: FixedI128::from_inner(0_686666666666666667),
+						required_deposit: FixedI128::zero()
 					})
 				);
 				// margin = leveraged_amount * price / leverage
 				// 1515 = 5000 * 3.03 / 10
 				// 2.11827 = 3 * (1 - 1515 * 97% / 5000)
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(22, 10))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(22, 10))]));
 				assert_noop!(
 					margin_trader_margin_call(&ALICE::get()),
 					margin_protocol::Error::<Runtime>::SafeTrader
 				);
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(21, 10))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(21, 10))]));
 				assert_eq!(
 					margin_trader_info(&ALICE::get()),
 					TraderInfo {
-						equity: Fixed128::from_natural(200),
-						margin_held: Fixed128::from_natural(1515),
-						margin_level: Fixed128::from_parts(0_013201320132013201),
-						free_margin: Fixed128::from_natural(-1315),
-						unrealized_pl: Fixed128::from_natural(-4800),
+						equity: FixedI128::saturating_from_integer(200),
+						margin_held: FixedI128::saturating_from_integer(1515),
+						margin_level: FixedI128::from_inner(0_013201320132013201),
+						free_margin: FixedI128::saturating_from_integer(-1315),
+						unrealized_pl: FixedI128::saturating_from_integer(-4800),
 					}
 				);
-				// equity= Fixed128(14800.000000000000000000), net_position =Fixed128(10500.000000000000000000)
+				// equity= FixedI128(14800.000000000000000000), net_position =FixedI128(10500.000000000000000000)
 				// net_position = base_amount * curr_price_usd = 5000 * 2.1 = 10500
 				assert_eq!(
 					margin_pool_info(),
 					Some(PoolInfo {
-						enp: Fixed128::from_parts(1_409523809523809523),
-						ell: Fixed128::from_parts(1_409523809523809523),
-						required_deposit: Fixed128::zero()
+						enp: FixedI128::from_inner(1_409523809523809524),
+						ell: FixedI128::from_inner(1_409523809523809524),
+						required_deposit: FixedI128::zero()
 					})
 				);
 				assert_ok!(margin_trader_margin_call(&ALICE::get()));
@@ -381,25 +394,25 @@ mod tests {
 					margin_protocol::Error::<Runtime>::UnsafeTrader
 				);
 				// Price up become safe
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(22, 10))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(22, 10))]));
 				assert_ok!(margin_trader_become_safe(&ALICE::get()));
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(21, 10))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(21, 10))]));
 				assert_eq!(
 					margin_trader_info(&ALICE::get()),
 					TraderInfo {
-						equity: Fixed128::from_natural(200),
-						margin_held: Fixed128::from_natural(1515),
-						margin_level: Fixed128::from_parts(0_013201320132013201),
-						free_margin: Fixed128::from_natural(-1315),
-						unrealized_pl: Fixed128::from_natural(-4800),
+						equity: FixedI128::saturating_from_integer(200),
+						margin_held: FixedI128::saturating_from_integer(1515),
+						margin_level: FixedI128::from_inner(0_013201320132013201),
+						free_margin: FixedI128::saturating_from_integer(-1315),
+						unrealized_pl: FixedI128::saturating_from_integer(-4800),
 					}
 				);
 				assert_eq!(
 					margin_pool_info(),
 					Some(PoolInfo {
-						enp: Fixed128::from_parts(1_409523809523809523),
-						ell: Fixed128::from_parts(1_409523809523809523),
-						required_deposit: Fixed128::zero()
+						enp: FixedI128::from_inner(1_409523809523809524),
+						ell: FixedI128::from_inner(1_409523809523809524),
+						required_deposit: FixedI128::zero()
 					})
 				);
 				assert_ok!(margin_trader_margin_call(&ALICE::get()));
@@ -408,11 +421,11 @@ mod tests {
 				assert_ok!(margin_deposit(&ALICE::get(), dollar(500)));
 				assert_ok!(margin_trader_become_safe(&ALICE::get()));
 
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(19, 10))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(19, 10))]));
 				assert_ok!(margin_trader_stop_out(&ALICE::get()));
 
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(4500));
-				assert_eq!(margin_balance(&ALICE::get()), Fixed128::from_natural(0));
+				assert_eq!(margin_balance(&ALICE::get()), FixedI128::saturating_from_integer(0));
 				assert_eq!(margin_liquidity(), dollar(15_500));
 			});
 	}
@@ -432,10 +445,10 @@ mod tests {
 				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(10_000)));
 				assert_ok!(margin_deposit(&ALICE::get(), dollar(5000)));
 				assert_eq!(margin_liquidity(), dollar(10_000));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(5000));
 				assert_eq!(collateral_balance(&POOL::get()), dollar(10_000));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
 
@@ -458,17 +471,17 @@ mod tests {
 					EUR_USD,
 					LongTen,
 					dollar(5000),
-					Price::from_rational(4, 1)
+					Price::saturating_from_rational(4, 1)
 				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(5000));
 				// 4.4 = 3 * (1 + 10000 * 70% / 3.01 / 5000)
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(38, 10))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(38, 10))]));
 				assert_noop!(
 					margin_liquidity_pool_margin_call(),
 					margin_protocol::Error::<Runtime>::SafePool
 				);
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(42, 10))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(42, 10))]));
 				assert_ok!(margin_liquidity_pool_margin_call());
 				assert_noop!(
 					margin_liquidity_pool_force_close(),
@@ -480,21 +493,21 @@ mod tests {
 					margin_protocol::Error::<Runtime>::UnsafePool
 				);
 				// Price up become safe
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(38, 10))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(38, 10))]));
 				assert_ok!(margin_liquidity_pool_become_safe());
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(42, 10))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(42, 10))]));
 				assert_ok!(margin_liquidity_pool_margin_call());
 
 				// Deposit become safe
 				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(2200)));
 				assert_ok!(margin_liquidity_pool_become_safe());
 
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(50, 10))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(50, 10))]));
 				assert_eq!(collateral_balance(&MockLaminarTreasury::account_id()), 0);
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(5000));
 				assert_ok!(margin_liquidity_pool_force_close());
 
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(14700));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(14700));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(margin_liquidity(), 2499940000000000000000);
 				assert_eq!(
@@ -521,12 +534,12 @@ mod tests {
 				assert_ok!(margin_deposit(&ALICE::get(), dollar(9000)));
 				assert_ok!(margin_deposit(&BOB::get(), dollar(9000)));
 				assert_eq!(margin_liquidity(), dollar(20_000));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(9000));
-				assert_eq!(margin_balance(&BOB::get()), fixed_128_dollar(9000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(9000));
+				assert_eq!(margin_balance(&BOB::get()), fixed_i128_dollar(9000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(1000));
 				assert_eq!(collateral_balance(&BOB::get()), dollar(1000));
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
 
@@ -544,9 +557,9 @@ mod tests {
 					EUR_USD,
 					LongTen,
 					dollar(5000),
-					Price::from_rational(4, 1)
+					Price::saturating_from_rational(4, 1)
 				));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(9000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(9000));
 
 				// BOB open position
 				assert_ok!(margin_open_position(
@@ -554,42 +567,58 @@ mod tests {
 					EUR_USD,
 					ShortTen,
 					dollar(6000),
-					Price::from_rational(2, 1)
+					Price::saturating_from_rational(2, 1)
 				));
-				assert_eq!(margin_balance(&BOB::get()), fixed_128_dollar(9000));
+				assert_eq!(margin_balance(&BOB::get()), fixed_i128_dollar(9000));
 
 				// ALICE open position and BOB close position
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(31, 10))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(31, 10))]));
 				assert_ok!(margin_open_position(
 					&ALICE::get(),
 					EUR_USD,
 					LongTwenty,
 					dollar(1000),
-					Price::from_rational(4, 1)
+					Price::saturating_from_rational(4, 1)
 				));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(9000));
-				assert_ok!(margin_close_position(&BOB::get(), 1, Price::from_rational(4, 1)));
-				assert_eq!(margin_balance(&BOB::get()), fixed_128_dollar(8040));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(9000));
+				assert_ok!(margin_close_position(
+					&BOB::get(),
+					1,
+					Price::saturating_from_rational(4, 1)
+				));
+				assert_eq!(margin_balance(&BOB::get()), fixed_i128_dollar(8040));
 
 				// ALICE close position and BOB open position
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(29, 10))]));
-				assert_ok!(margin_close_position(&ALICE::get(), 0, Price::from_rational(2, 1)));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(8200));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(29, 10))]));
+				assert_ok!(margin_close_position(
+					&ALICE::get(),
+					0,
+					Price::saturating_from_rational(2, 1)
+				));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(8200));
 				assert_ok!(margin_open_position(
 					&BOB::get(),
 					EUR_USD,
 					ShortTwenty,
 					dollar(2000),
-					Price::from_rational(2, 1)
+					Price::saturating_from_rational(2, 1)
 				));
-				assert_eq!(margin_balance(&BOB::get()), fixed_128_dollar(8040));
+				assert_eq!(margin_balance(&BOB::get()), fixed_i128_dollar(8040));
 
 				// close all
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(28, 10))]));
-				assert_ok!(margin_close_position(&ALICE::get(), 2, Price::from_rational(2, 1)));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(7840));
-				assert_ok!(margin_close_position(&BOB::get(), 3, Price::from_rational(4, 1)));
-				assert_eq!(margin_balance(&BOB::get()), fixed_128_dollar(8120));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(28, 10))]));
+				assert_ok!(margin_close_position(
+					&ALICE::get(),
+					2,
+					Price::saturating_from_rational(2, 1)
+				));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(7840));
+				assert_ok!(margin_close_position(
+					&BOB::get(),
+					3,
+					Price::saturating_from_rational(4, 1)
+				));
+				assert_eq!(margin_balance(&BOB::get()), fixed_i128_dollar(8120));
 				assert_eq!(margin_liquidity(), dollar(22_040));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(1000));
 				assert_eq!(collateral_balance(&BOB::get()), dollar(1000));
@@ -613,14 +642,14 @@ mod tests {
 				assert_ok!(margin_deposit(&ALICE::get(), dollar(9000)));
 				assert_ok!(margin_deposit(&BOB::get(), dollar(9000)));
 				assert_eq!(margin_liquidity(), dollar(20_000));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(9000));
-				assert_eq!(margin_balance(&BOB::get()), fixed_128_dollar(9000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(9000));
+				assert_eq!(margin_balance(&BOB::get()), fixed_i128_dollar(9000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(1000));
 				assert_eq!(collateral_balance(&BOB::get()), dollar(1000));
 				assert_ok!(set_oracle_price(vec![
-					(FEUR, Price::from_rational(3, 1)),
-					(FJPY, Price::from_rational(5, 1))
+					(FEUR, Price::saturating_from_rational(3, 1)),
+					(FJPY, Price::saturating_from_rational(5, 1))
 				]));
 				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
@@ -641,29 +670,29 @@ mod tests {
 				assert_eq!(
 					margin_pool_info(),
 					Some(PoolInfo {
-						enp: Fixed128::max_value(),
-						ell: Fixed128::max_value(),
-						required_deposit: Fixed128::zero()
+						enp: FixedI128::max_value(),
+						ell: FixedI128::max_value(),
+						required_deposit: FixedI128::zero()
 					})
 				);
 				assert_eq!(
 					margin_trader_info(&ALICE::get()),
 					TraderInfo {
-						equity: Fixed128::from_natural(9000),
-						margin_held: Fixed128::zero(),
-						margin_level: Fixed128::max_value(),
-						free_margin: Fixed128::from_natural(9000),
-						unrealized_pl: Fixed128::zero()
+						equity: FixedI128::saturating_from_integer(9000),
+						margin_held: FixedI128::zero(),
+						margin_level: FixedI128::max_value(),
+						free_margin: FixedI128::saturating_from_integer(9000),
+						unrealized_pl: FixedI128::zero()
 					}
 				);
 				assert_eq!(
 					margin_trader_info(&BOB::get()),
 					TraderInfo {
-						equity: Fixed128::from_natural(9000),
-						margin_held: Fixed128::zero(),
-						margin_level: Fixed128::max_value(),
-						free_margin: Fixed128::from_natural(9000),
-						unrealized_pl: Fixed128::zero()
+						equity: FixedI128::saturating_from_integer(9000),
+						margin_held: FixedI128::zero(),
+						margin_level: FixedI128::max_value(),
+						free_margin: FixedI128::saturating_from_integer(9000),
+						unrealized_pl: FixedI128::zero()
 					}
 				);
 				// ALICE open position
@@ -672,17 +701,17 @@ mod tests {
 					EUR_USD,
 					LongTen,
 					dollar(5000),
-					Price::from_rational(4, 1)
+					Price::saturating_from_rational(4, 1)
 				));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(9000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(9000));
 				assert_eq!(
 					margin_trader_info(&ALICE::get()),
 					TraderInfo {
-						equity: Fixed128::from_natural(8700),
-						margin_held: Fixed128::from_natural(1515),
-						margin_level: Fixed128::from_parts(574257425742574257),
-						free_margin: Fixed128::from_natural(7185),
-						unrealized_pl: Fixed128::from_natural(-300)
+						equity: FixedI128::saturating_from_integer(8700),
+						margin_held: FixedI128::saturating_from_integer(1515),
+						margin_level: FixedI128::from_inner(574257425742574257),
+						free_margin: FixedI128::saturating_from_integer(7185),
+						unrealized_pl: FixedI128::saturating_from_integer(-300)
 					}
 				);
 
@@ -692,112 +721,128 @@ mod tests {
 					JPY_EUR,
 					ShortTen,
 					dollar(6000),
-					Price::from_rational(1, 1)
+					Price::saturating_from_rational(1, 1)
 				));
-				assert_eq!(margin_balance(&BOB::get()), fixed_128_dollar(9000));
+				assert_eq!(margin_balance(&BOB::get()), fixed_i128_dollar(9000));
 				assert_eq!(
 					margin_trader_info(&BOB::get()),
 					TraderInfo {
-						equity: Fixed128::from_natural(7920),
-						margin_held: Fixed128::from_parts(2945999999999999998800),
-						margin_level: Fixed128::from_parts(268839103869653767),
-						free_margin: Fixed128::from_parts(4974000000000000001200),
-						unrealized_pl: Fixed128::from_natural(-1080)
+						equity: FixedI128::saturating_from_integer(7920),
+						margin_held: FixedI128::from_inner(2945999999999999998800),
+						margin_level: FixedI128::from_inner(268839103869653768),
+						free_margin: FixedI128::from_inner(4974000000000000001200),
+						unrealized_pl: FixedI128::saturating_from_integer(-1080)
 					}
 				);
 
 				// ALICE open position and BOB close position
 				assert_ok!(set_oracle_price(vec![
-					(FEUR, Price::from_rational(31, 10)),
-					(FJPY, Price::from_rational(49, 10))
+					(FEUR, Price::saturating_from_rational(31, 10)),
+					(FJPY, Price::saturating_from_rational(49, 10))
 				]));
 				assert_ok!(margin_open_position(
 					&ALICE::get(),
 					JPY_EUR,
 					LongTwenty,
 					dollar(1000),
-					Price::from_rational(4, 1)
+					Price::saturating_from_rational(4, 1)
 				));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(9000));
-				assert_ok!(margin_close_position(&BOB::get(), 1, Price::from_rational(4, 1)));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(9000));
+				assert_ok!(margin_close_position(
+					&BOB::get(),
+					1,
+					Price::saturating_from_rational(4, 1)
+				));
 				assert_eq!(
 					margin_balance(&BOB::get()),
-					Fixed128::from_parts(9483999999999999999600)
+					FixedI128::from_inner(9483999999999999999600)
 				);
 				assert_eq!(
 					margin_trader_info(&ALICE::get()),
 					TraderInfo {
-						equity: Fixed128::from_natural(9014),
-						margin_held: Fixed128::from_parts(1764649999999999999900),
-						margin_level: Fixed128::from_parts(447500372337784838),
-						free_margin: Fixed128::from_parts(7249350000000000000100),
-						unrealized_pl: Fixed128::from_natural(14)
+						equity: FixedI128::saturating_from_integer(9014),
+						margin_held: FixedI128::from_inner(1764649999999999999900),
+						margin_level: FixedI128::from_inner(447500372337784838),
+						free_margin: FixedI128::from_inner(7249350000000000000100),
+						unrealized_pl: FixedI128::saturating_from_integer(14)
 					}
 				);
 				assert_eq!(
 					margin_trader_info(&BOB::get()),
 					TraderInfo {
-						equity: Fixed128::from_parts(9483999999999999999600),
-						margin_held: Fixed128::zero(),
-						margin_level: Fixed128::max_value(),
-						free_margin: Fixed128::from_parts(9483999999999999999600),
-						unrealized_pl: Fixed128::zero()
+						equity: FixedI128::from_inner(9483999999999999999600),
+						margin_held: FixedI128::zero(),
+						margin_level: FixedI128::max_value(),
+						free_margin: FixedI128::from_inner(9483999999999999999600),
+						unrealized_pl: FixedI128::zero()
 					}
 				);
 
 				// ALICE close position and BOB open position
 				assert_ok!(set_oracle_price(vec![
-					(FEUR, Price::from_rational(29, 10)),
-					(FJPY, Price::from_rational(51, 10))
+					(FEUR, Price::saturating_from_rational(29, 10)),
+					(FJPY, Price::saturating_from_rational(51, 10))
 				]));
-				assert_ok!(margin_close_position(&ALICE::get(), 0, Price::from_rational(2, 1)));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(8200));
+				assert_ok!(margin_close_position(
+					&ALICE::get(),
+					0,
+					Price::saturating_from_rational(2, 1)
+				));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(8200));
 				assert_ok!(margin_open_position(
 					&BOB::get(),
 					EUR_USD,
 					ShortTwenty,
 					dollar(2000),
-					Price::from_rational(2, 1)
+					Price::saturating_from_rational(2, 1)
 				));
 				assert_eq!(
 					margin_balance(&BOB::get()),
-					Fixed128::from_parts(9483999999999999999600)
+					FixedI128::from_inner(9483999999999999999600)
 				);
 				assert_eq!(
 					margin_trader_info(&ALICE::get()),
 					TraderInfo {
-						equity: Fixed128::from_parts(8542_129032258064515700),
-						margin_held: Fixed128::from_parts(249_649999999999999900),
-						margin_level: Fixed128::from_parts(1_828808607913147372),
-						free_margin: Fixed128::from_parts(8292_479032258064515800),
-						unrealized_pl: Fixed128::from_parts(342_129032258064515700)
+						equity: FixedI128::from_inner(8542_129032258064515700),
+						margin_held: FixedI128::from_inner(249_649999999999999900),
+						margin_level: FixedI128::from_inner(1_828808607913147372),
+						free_margin: FixedI128::from_inner(8292_479032258064515800),
+						unrealized_pl: FixedI128::from_inner(342_129032258064515700)
 					}
 				);
 				assert_eq!(
 					margin_trader_info(&BOB::get()),
 					TraderInfo {
-						equity: Fixed128::from_parts(9363999999999999999600),
-						margin_held: Fixed128::from_natural(287),
-						margin_level: Fixed128::from_parts(1631358885017421602),
-						free_margin: Fixed128::from_parts(9076999999999999999600),
-						unrealized_pl: Fixed128::from_natural(-120)
+						equity: FixedI128::from_inner(9363999999999999999600),
+						margin_held: FixedI128::saturating_from_integer(287),
+						margin_level: FixedI128::from_inner(1631358885017421603),
+						free_margin: FixedI128::from_inner(9076999999999999999600),
+						unrealized_pl: FixedI128::saturating_from_integer(-120)
 					}
 				);
 
 				// close all
 				assert_ok!(set_oracle_price(vec![
-					(FEUR, Price::from_rational(28, 10)),
-					(FJPY, Price::from_rational(52, 10))
+					(FEUR, Price::saturating_from_rational(28, 10)),
+					(FJPY, Price::saturating_from_rational(52, 10))
 				]));
-				assert_ok!(margin_close_position(&ALICE::get(), 2, Price::from_rational(1, 1)));
+				assert_ok!(margin_close_position(
+					&ALICE::get(),
+					2,
+					Price::saturating_from_rational(1, 1)
+				));
 				assert_eq!(
 					margin_balance(&ALICE::get()),
-					Fixed128::from_parts(8806193548387096773600)
+					FixedI128::from_inner(8806193548387096773600)
 				);
-				assert_ok!(margin_close_position(&BOB::get(), 3, Price::from_rational(4, 1)));
+				assert_ok!(margin_close_position(
+					&BOB::get(),
+					3,
+					Price::saturating_from_rational(4, 1)
+				));
 				assert_eq!(
 					margin_balance(&BOB::get()),
-					Fixed128::from_parts(9563999999999999999600)
+					FixedI128::from_inner(9563999999999999999600)
 				);
 				assert_eq!(margin_liquidity(), 19629806451612903226800);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(1000));
@@ -805,29 +850,29 @@ mod tests {
 				assert_eq!(
 					margin_pool_info(),
 					Some(PoolInfo {
-						enp: Fixed128::max_value(),
-						ell: Fixed128::max_value(),
-						required_deposit: Fixed128::zero()
+						enp: FixedI128::max_value(),
+						ell: FixedI128::max_value(),
+						required_deposit: FixedI128::zero()
 					})
 				);
 				assert_eq!(
 					margin_trader_info(&ALICE::get()),
 					TraderInfo {
-						equity: Fixed128::from_parts(8806193548387096773600),
-						margin_held: Fixed128::zero(),
-						margin_level: Fixed128::max_value(),
-						free_margin: Fixed128::from_parts(8806193548387096773600),
-						unrealized_pl: Fixed128::zero()
+						equity: FixedI128::from_inner(8806193548387096773600),
+						margin_held: FixedI128::zero(),
+						margin_level: FixedI128::max_value(),
+						free_margin: FixedI128::from_inner(8806193548387096773600),
+						unrealized_pl: FixedI128::zero()
 					}
 				);
 				assert_eq!(
 					margin_trader_info(&BOB::get()),
 					TraderInfo {
-						equity: Fixed128::from_parts(9563999999999999999600),
-						margin_held: Fixed128::zero(),
-						margin_level: Fixed128::max_value(),
-						free_margin: Fixed128::from_parts(9563999999999999999600),
-						unrealized_pl: Fixed128::zero()
+						equity: FixedI128::from_inner(9563999999999999999600),
+						margin_held: FixedI128::zero(),
+						margin_level: FixedI128::max_value(),
+						free_margin: FixedI128::from_inner(9563999999999999999600),
+						unrealized_pl: FixedI128::zero()
 					}
 				);
 			});
@@ -848,10 +893,10 @@ mod tests {
 				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(10_000)));
 				assert_ok!(margin_deposit(&ALICE::get(), dollar(5000)));
 				assert_eq!(margin_liquidity(), dollar(10_000));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(5000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
 
@@ -869,14 +914,18 @@ mod tests {
 					EUR_USD,
 					LongTen,
 					dollar(5000),
-					Price::from_rational(4, 1)
+					Price::saturating_from_rational(4, 1)
 				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(5000));
 
 				margin_execute_time(1 * ONE_MINUTE..9 * ONE_MINUTE);
 
-				assert_ok!(margin_close_position(&ALICE::get(), 0, Price::from_rational(2, 1)));
+				assert_ok!(margin_close_position(
+					&ALICE::get(),
+					0,
+					Price::saturating_from_rational(2, 1)
+				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				// open_price = 3 + 0.03 = 3.03
 				// close_price = 3 - 0.03 = 2.97
@@ -886,7 +935,7 @@ mod tests {
 				// -151.5 = 5000 * 3.03 * (-0.01 - 0)
 				assert_eq!(
 					margin_balance(&ALICE::get()),
-					Fixed128::from_parts(4548500000000000000000)
+					FixedI128::from_inner(4548500000000000000000)
 				);
 				assert_eq!(margin_liquidity(), 10451500000000000000000);
 
@@ -896,17 +945,21 @@ mod tests {
 					EUR_USD,
 					ShortTen,
 					dollar(5000),
-					Price::from_rational(2, 1)
+					Price::saturating_from_rational(2, 1)
 				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(
 					margin_balance(&ALICE::get()),
-					Fixed128::from_parts(4548_500000000000000000)
+					FixedI128::from_inner(4548_500000000000000000)
 				);
 
 				margin_execute_time(9 * ONE_MINUTE..22 * ONE_MINUTE);
 
-				assert_ok!(margin_close_position(&ALICE::get(), 1, Price::from_rational(4, 1)));
+				assert_ok!(margin_close_position(
+					&ALICE::get(),
+					1,
+					Price::saturating_from_rational(4, 1)
+				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				// open_price = 3 + 0.03 = 3.03
 				// close_price = 3 - 0.03 = 2.97
@@ -916,7 +969,7 @@ mod tests {
 				// 304.515 = 5000 * 2.97 * (0.03 - 0.01)
 				assert_eq!(
 					margin_balance(&ALICE::get()),
-					Fixed128::from_parts(4545_500000000000000000)
+					FixedI128::from_inner(4545_500000000000000000)
 				);
 				assert_eq!(margin_liquidity(), 10454_500000000000000000);
 				assert_ok!(margin_withdraw(&ALICE::get(), 4545_500000000000000000));
@@ -939,10 +992,10 @@ mod tests {
 				assert_ok!(margin_deposit_liquidity(&POOL::get(), dollar(10_000)));
 				assert_ok!(margin_deposit(&ALICE::get(), dollar(5000)));
 				assert_eq!(margin_liquidity(), dollar(10_000));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(5000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 				assert_ok!(margin_set_enabled_trades());
 				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
 
@@ -967,14 +1020,18 @@ mod tests {
 					EUR_USD,
 					LongTen,
 					dollar(5000),
-					Price::from_rational(4, 1)
+					Price::saturating_from_rational(4, 1)
 				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_eq!(margin_balance(&ALICE::get()), fixed_128_dollar(5000));
+				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(5000));
 
 				margin_execute_time(1 * ONE_MINUTE..9 * ONE_MINUTE);
 
-				assert_ok!(margin_close_position(&ALICE::get(), 0, Price::from_rational(2, 1)));
+				assert_ok!(margin_close_position(
+					&ALICE::get(),
+					0,
+					Price::saturating_from_rational(2, 1)
+				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				// open_price = 3 + 0.03 = 3.03
 				// close_price = 3 - 0.03 = 2.97
@@ -984,7 +1041,7 @@ mod tests {
 				// -153.015 = 5000 * 3.03 * (-0.0101 - 0)
 				assert_eq!(
 					margin_balance(&ALICE::get()),
-					Fixed128::from_parts(4546_985000000000000000)
+					FixedI128::from_inner(4546_985000000000000000)
 				);
 				assert_eq!(margin_liquidity(), 10453_015000000000000000);
 
@@ -994,17 +1051,21 @@ mod tests {
 					EUR_USD,
 					ShortTen,
 					dollar(5000),
-					Price::from_rational(2, 1)
+					Price::saturating_from_rational(2, 1)
 				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(
 					margin_balance(&ALICE::get()),
-					Fixed128::from_parts(4546_985000000000000000)
+					FixedI128::from_inner(4546_985000000000000000)
 				);
 
 				margin_execute_time(9 * ONE_MINUTE..22 * ONE_MINUTE);
 
-				assert_ok!(margin_close_position(&ALICE::get(), 1, Price::from_rational(4, 1)));
+				assert_ok!(margin_close_position(
+					&ALICE::get(),
+					1,
+					Price::saturating_from_rational(4, 1)
+				));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				// open_price = 3 + 0.03 = 3.03
 				// close_price = 3 - 0.03 = 2.97
@@ -1014,7 +1075,7 @@ mod tests {
 				// 294.03 = 5000 * 2.97 * (0.0297 - 0.0099)
 				assert_eq!(
 					margin_balance(&ALICE::get()),
-					Fixed128::from_parts(4541_015000000000000000)
+					FixedI128::from_inner(4541_015000000000000000)
 				);
 				assert_eq!(margin_liquidity(), 10458_985000000000000000);
 			});

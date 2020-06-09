@@ -16,7 +16,6 @@ macro_rules! new_full_start {
 	($config:expr) => {{
 		use std::sync::Arc;
 
-		type RpcExtension = jsonrpc_core::IoHandler<sc_rpc::Metadata>;
 		let mut import_setup = None;
 		let mut rpc_setup = None;
 		let inherent_data_providers = sp_inherents::InherentDataProviders::new();
@@ -27,12 +26,14 @@ macro_rules! new_full_start {
 			crate::executor::Executor,
 		>($config)?
 		.with_select_chain(|_config, backend| Ok(sc_consensus::LongestChain::new(backend.clone())))?
-		.with_transaction_pool(|config, client, _fetcher, prometheus_registry| {
-			let pool_api = sc_transaction_pool::FullChainApi::new(client.clone());
+		.with_transaction_pool(|builder| {
+			let pool_api = sc_transaction_pool::FullChainApi::new(builder.client().clone());
+			let config = builder.config();
+
 			Ok(sc_transaction_pool::BasicPool::new(
-				config,
+				config.transaction_pool.clone(),
 				std::sync::Arc::new(pool_api),
-				prometheus_registry,
+				builder.prometheus_registry(),
 			))
 		})?
 		.with_import_queue(
@@ -65,36 +66,52 @@ macro_rules! new_full_start {
 				Ok(import_queue)
 			},
 			)?
-		.with_rpc_extensions(|builder| -> std::result::Result<RpcExtension, _> {
-			let babe_link = import_setup
-				.as_ref()
-				.map(|s| &s.2)
-				.expect("BabeLink is present for full services or set up failed; qed.");
+		.with_rpc_extensions_builder(|builder| {
 			let grandpa_link = import_setup
 				.as_ref()
 				.map(|s| &s.1)
 				.expect("GRANDPA LinkHalf is present for full services or set up failed; qed.");
-			let shared_authority_set = grandpa_link.shared_authority_set();
+
+			let shared_authority_set = grandpa_link.shared_authority_set().clone();
 			let shared_voter_state = sc_finality_grandpa::SharedVoterState::empty();
-			let deps = crate::rpc::FullDeps {
-				client: builder.client().clone(),
-				pool: builder.pool(),
-				select_chain: builder
-					.select_chain()
-					.cloned()
-					.expect("SelectChain is present for full services or set up failed; qed."),
-				babe: crate::rpc::BabeDeps {
-					keystore: builder.keystore(),
-					babe_config: sc_consensus_babe::BabeLink::config(babe_link).clone(),
-					shared_epoch_changes: sc_consensus_babe::BabeLink::epoch_changes(babe_link).clone(),
-				},
-				grandpa: crate::rpc::GrandpaDeps {
-					shared_voter_state: shared_voter_state.clone(),
-					shared_authority_set: shared_authority_set.clone(),
-				},
-			};
-			rpc_setup = Some((shared_voter_state));
-			Ok(crate::rpc::create_full(deps))
+
+			rpc_setup = Some((shared_voter_state.clone()));
+
+			let babe_link = import_setup
+				.as_ref()
+				.map(|s| &s.2)
+				.expect("BabeLink is present for full services or set up failed; qed.");
+
+			let babe_config = babe_link.config().clone();
+			let shared_epoch_changes = babe_link.epoch_changes().clone();
+
+			let client = builder.client().clone();
+			let pool = builder.pool().clone();
+			let select_chain = builder
+				.select_chain()
+				.cloned()
+				.expect("SelectChain is present for full services or set up failed; qed.");
+			let keystore = builder.keystore().clone();
+
+			Ok(move |deny_unsafe| {
+				let deps = crate::rpc::FullDeps {
+					client: client.clone(),
+					pool: pool.clone(),
+					select_chain: select_chain.clone(),
+					deny_unsafe,
+					babe: crate::rpc::BabeDeps {
+						babe_config: babe_config.clone(),
+						shared_epoch_changes: shared_epoch_changes.clone(),
+						keystore: keystore.clone(),
+					},
+					grandpa: crate::rpc::GrandpaDeps {
+						shared_voter_state: shared_voter_state.clone(),
+						shared_authority_set: shared_authority_set.clone(),
+					},
+				};
+
+				crate::rpc::create_full(deps)
+			})
 		})?;
 
 		(builder, import_setup, inherent_data_providers, rpc_setup)
@@ -137,7 +154,11 @@ macro_rules! new_full {
 		($with_startup_data)(&block_import, &babe_link);
 
 		if let sc_service::config::Role::Authority { .. } = &role {
-			let proposer = sc_basic_authorship::ProposerFactory::new(service.client(), service.transaction_pool());
+			let proposer = sc_basic_authorship::ProposerFactory::new(
+				service.client(),
+				service.transaction_pool(),
+				service.prometheus_registry().as_ref(),
+			);
 
 			let client = service.client();
 			let select_chain = service.select_chain().ok_or(sc_service::Error::SelectChainRequired)?;
@@ -224,13 +245,15 @@ pub fn new_light(config: Configuration) -> Result<impl AbstractService, ServiceE
 
 	let service = ServiceBuilder::new_light::<Block, RuntimeApi, crate::executor::Executor>(config)?
 		.with_select_chain(|_config, backend| Ok(sc_consensus::LongestChain::new(backend.clone())))?
-		.with_transaction_pool(|config, client, fetcher, prometheus_registry| {
-			let fetcher = fetcher.ok_or_else(|| "Trying to start light transaction pool without active fetcher")?;
-			let pool_api = sc_transaction_pool::LightChainApi::new(client.clone(), fetcher.clone());
+		.with_transaction_pool(|builder| {
+			let fetcher = builder
+				.fetcher()
+				.ok_or_else(|| "Trying to start light transaction pool without active fetcher")?;
+			let pool_api = sc_transaction_pool::LightChainApi::new(builder.client().clone(), fetcher);
 			let pool = sc_transaction_pool::BasicPool::with_revalidation_type(
-				config,
+				builder.config().transaction_pool.clone(),
 				Arc::new(pool_api),
-				prometheus_registry,
+				builder.prometheus_registry(),
 				sc_transaction_pool::RevalidationType::Light,
 			);
 			Ok(pool)

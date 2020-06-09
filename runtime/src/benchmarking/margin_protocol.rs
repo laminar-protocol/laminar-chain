@@ -3,7 +3,7 @@ use crate::{AccountId, BaseLiquidityPoolsForMargin, MarginLiquidityPools, Margin
 
 use frame_support::traits::ChangeMembers;
 use frame_system::RawOrigin;
-use sp_runtime::{DispatchError, DispatchResult, Fixed128, Permill};
+use sp_runtime::{DispatchError, DispatchResult, FixedI128, Permill};
 use sp_std::prelude::*;
 
 use frame_benchmarking::account;
@@ -87,7 +87,7 @@ runtime_benchmarks! {
 		set_ausd_balance(&trader, balance + dollars(1u128))?;
 	}: _(RawOrigin::Signed(trader.clone()), 0, balance)
 	verify {
-		assert_eq!(MarginProtocol::balances(&trader, 0), Fixed128::from_natural(d.into()));
+		assert_eq!(MarginProtocol::balances(&trader, 0), FixedI128::saturating_from_integer(d.into()));
 	}
 
 	withdraw {
@@ -102,7 +102,7 @@ runtime_benchmarks! {
 		deposit_balance(&trader, balance)?;
 	}: _(RawOrigin::Signed(trader.clone()), 0, balance)
 	verify {
-		assert_eq!(MarginProtocol::balances(&trader, 0), Fixed128::zero());
+		assert_eq!(MarginProtocol::balances(&trader, 0), FixedI128::zero());
 	}
 
 	open_position {
@@ -120,8 +120,8 @@ runtime_benchmarks! {
 		add_liquidity(&pool_owner, liquidity)?;
 
 		set_up_oracle();
-		set_price(vec![(CurrencyId::FEUR, Price::from_natural(1))])?;
-	}: _(RawOrigin::Signed(trader), 0, EUR_USD, Leverage::LongTwo, balance, Price::from_natural(2))
+		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(1))])?;
+	}: _(RawOrigin::Signed(trader), 0, EUR_USD, Leverage::LongTwo, balance, Price::saturating_from_integer(2))
 
 	// `open_position` when there is already ten positions in pool
 	open_position_with_ten_in_pool {
@@ -139,7 +139,7 @@ runtime_benchmarks! {
 		add_liquidity(&pool_owner, liquidity)?;
 
 		set_up_oracle();
-		set_price(vec![(CurrencyId::FEUR, Price::from_natural(1))])?;
+		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(1))])?;
 
 		for _ in 0..10 {
 			MarginProtocol::open_position(
@@ -148,10 +148,10 @@ runtime_benchmarks! {
 				EUR_USD,
 				Leverage::LongTwo,
 				balance / 10,
-				Price::from_natural(2)
+				Price::saturating_from_integer(2)
 			)?;
 		}
-	}: open_position(RawOrigin::Signed(trader), 0, EUR_USD, Leverage::LongTwo, balance, Price::from_natural(2))
+	}: open_position(RawOrigin::Signed(trader), 0, EUR_USD, Leverage::LongTwo, balance, Price::saturating_from_integer(2))
 
 	close_position {
 		let t in ...;
@@ -168,7 +168,7 @@ runtime_benchmarks! {
 		add_liquidity(&pool_owner, liquidity)?;
 
 		set_up_oracle();
-		set_price(vec![(CurrencyId::FEUR, Price::from_natural(1))])?;
+		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(1))])?;
 
 		MarginProtocol::open_position(
 			RawOrigin::Signed(trader.clone()).into(),
@@ -176,7 +176,7 @@ runtime_benchmarks! {
 			EUR_USD,
 			Leverage::LongTwo,
 			balance,
-			Price::from_natural(2)
+			Price::saturating_from_integer(2)
 		)?;
 	}: _(RawOrigin::Signed(trader), 0, Price::zero())
 
@@ -196,7 +196,7 @@ runtime_benchmarks! {
 		add_liquidity(&pool_owner, liquidity)?;
 
 		set_up_oracle();
-		set_price(vec![(CurrencyId::FEUR, Price::from_natural(1))])?;
+		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(1))])?;
 
 		for _ in 0..10 {
 			MarginProtocol::open_position(
@@ -205,7 +205,7 @@ runtime_benchmarks! {
 				EUR_USD,
 				Leverage::LongTwo,
 				balance / 10,
-				Price::from_natural(2)
+				Price::saturating_from_integer(2)
 			)?;
 		}
 	}: close_position(RawOrigin::Signed(trader), 0, Price::zero())
@@ -225,7 +225,7 @@ runtime_benchmarks! {
 		add_liquidity(&pool_owner, liquidity)?;
 
 		set_up_oracle();
-		set_price(vec![(CurrencyId::FEUR, Price::from_natural(2))])?;
+		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(2))])?;
 
 		MarginProtocol::open_position(
 			RawOrigin::Signed(trader.clone()).into(),
@@ -233,10 +233,10 @@ runtime_benchmarks! {
 			EUR_USD,
 			Leverage::LongTwo,
 			balance,
-			Price::from_natural(3)
+			Price::saturating_from_integer(3)
 		)?;
 
-		set_price(vec![(CurrencyId::FEUR, Price::from_natural(1))])?;
+		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(1))])?;
 	}: _(RawOrigin::None, lookup_of_account(trader.clone()), 0)
 	verify {
 		assert_eq!(MarginProtocol::margin_called_traders(&trader, 0), Some(true));
@@ -257,7 +257,7 @@ runtime_benchmarks! {
 		add_liquidity(&pool_owner, liquidity)?;
 
 		set_up_oracle();
-		set_price(vec![(CurrencyId::FEUR, Price::from_natural(2))])?;
+		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(2))])?;
 
 		MarginProtocol::open_position(
 			RawOrigin::Signed(trader.clone()).into(),
@@ -265,10 +265,10 @@ runtime_benchmarks! {
 			EUR_USD,
 			Leverage::LongTwo,
 			balance,
-			Price::from_natural(3)
+			Price::saturating_from_integer(3)
 		)?;
 
-		set_price(vec![(CurrencyId::FEUR, Price::from_natural(1))])?;
+		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(1))])?;
 		MarginProtocol::trader_margin_call(
 			RawOrigin::None.into(),
 			lookup_of_account(trader.clone()),
@@ -277,7 +277,7 @@ runtime_benchmarks! {
 
 		assert_eq!(MarginProtocol::margin_called_traders(&trader, 0), Some(true));
 
-		set_price(vec![(CurrencyId::FEUR, Price::from_natural(2))])?;
+		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(2))])?;
 	}: _(RawOrigin::None, lookup_of_account(trader.clone()), 0)
 	verify {
 		assert_eq!(MarginProtocol::margin_called_traders(&trader, 0), None);
@@ -298,7 +298,7 @@ runtime_benchmarks! {
 		add_liquidity(&pool_owner, liquidity)?;
 
 		set_up_oracle();
-		set_price(vec![(CurrencyId::FEUR, Price::from_natural(2))])?;
+		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(2))])?;
 
 		MarginProtocol::open_position(
 			RawOrigin::Signed(trader.clone()).into(),
@@ -306,11 +306,11 @@ runtime_benchmarks! {
 			EUR_USD,
 			Leverage::LongTwo,
 			balance,
-			Price::from_natural(3)
+			Price::saturating_from_integer(3)
 		)?;
 		assert_eq!(MarginProtocol::positions_by_trader(&trader, (0, 0)), Some(true));
 
-		set_price(vec![(CurrencyId::FEUR, Price::from_natural(1))])?;
+		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(1))])?;
 	}: _(RawOrigin::None, lookup_of_account(trader.clone()), 0)
 	verify {
 		assert_eq!(MarginProtocol::positions_by_trader(&trader, (0, 0)), None);
@@ -331,7 +331,7 @@ runtime_benchmarks! {
 		add_liquidity(&pool_owner, liquidity)?;
 
 		set_up_oracle();
-		set_price(vec![(CurrencyId::FEUR, Price::from_natural(1))])?;
+		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(1))])?;
 
 		MarginProtocol::open_position(
 			RawOrigin::Signed(trader.clone()).into(),
@@ -339,10 +339,10 @@ runtime_benchmarks! {
 			EUR_USD,
 			Leverage::LongTwo,
 			balance,
-			Price::from_natural(2)
+			Price::saturating_from_integer(2)
 		)?;
 
-		set_price(vec![(CurrencyId::FEUR, Price::from_natural(2))])?;
+		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(2))])?;
 	}: _(RawOrigin::None, 0)
 	verify {
 		assert_eq!(MarginProtocol::margin_called_pools(0), Some(true))
@@ -363,7 +363,7 @@ runtime_benchmarks! {
 		add_liquidity(&pool_owner, liquidity)?;
 
 		set_up_oracle();
-		set_price(vec![(CurrencyId::FEUR, Price::from_natural(1))])?;
+		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(1))])?;
 
 		MarginProtocol::open_position(
 			RawOrigin::Signed(trader.clone()).into(),
@@ -371,14 +371,14 @@ runtime_benchmarks! {
 			EUR_USD,
 			Leverage::LongTwo,
 			balance,
-			Price::from_natural(2)
+			Price::saturating_from_integer(2)
 		)?;
 
-		set_price(vec![(CurrencyId::FEUR, Price::from_natural(2))])?;
+		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(2))])?;
 		MarginProtocol::liquidity_pool_margin_call(RawOrigin::None.into(), 0)?;
 		assert_eq!(MarginProtocol::margin_called_pools(0), Some(true));
 
-		set_price(vec![(CurrencyId::FEUR, Price::from_natural(1))])?;
+		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(1))])?;
 	}: _(RawOrigin::None, 0)
 	verify {
 		assert_eq!(MarginProtocol::margin_called_pools(0), None)
@@ -399,7 +399,7 @@ runtime_benchmarks! {
 		add_liquidity(&pool_owner, liquidity)?;
 
 		set_up_oracle();
-		set_price(vec![(CurrencyId::FEUR, Price::from_natural(1))])?;
+		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(1))])?;
 
 		MarginProtocol::open_position(
 			RawOrigin::Signed(trader.clone()).into(),
@@ -407,11 +407,11 @@ runtime_benchmarks! {
 			EUR_USD,
 			Leverage::LongTwo,
 			balance,
-			Price::from_natural(2)
+			Price::saturating_from_integer(2)
 		)?;
 		assert_eq!(MarginProtocol::positions_by_pool(0, (EUR_USD, 0)), Some(true));
 
-		set_price(vec![(CurrencyId::FEUR, Price::from_natural(2))])?;
+		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(2))])?;
 	}: _(RawOrigin::None, 0)
 	verify {
 		assert_eq!(MarginProtocol::positions_by_pool(0, (EUR_USD, 0)), None);

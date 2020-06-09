@@ -11,8 +11,8 @@ mod tests {
 		Runtime, DOLLARS,
 	};
 	use orml_prices::Price;
-	use orml_utilities::FixedU128;
-	use sp_runtime::Permill;
+	use orml_utilities::{FixedU128, FixedUnsignedNumber};
+	use sp_runtime::{traits::Zero, Permill};
 	use synthetic_protocol_rpc_runtime_api::PoolInfo;
 
 	#[test]
@@ -33,7 +33,7 @@ mod tests {
 					Permill::from_percent(10)
 				));
 				assert_ok!(synthetic_set_spread(FEUR, cent(3)));
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
@@ -65,7 +65,7 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_rational(11, 10),
+						collateral_ratio: FixedU128::saturating_from_rational(11, 10),
 						is_safe: true
 					})
 				);
@@ -86,7 +86,7 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_rational(11, 10),
+						collateral_ratio: FixedU128::saturating_from_rational(11, 10),
 						is_safe: true
 					})
 				);
@@ -107,7 +107,7 @@ mod tests {
 					Permill::from_percent(100)
 				));
 				assert_ok!(synthetic_set_spread(FEUR, cent(1)));
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(1, 1))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(1, 1))]));
 
 				assert_eq!(collateral_balance(&ALICE::get()), 1000);
 				assert_eq!(collateral_balance(&POOL::get()), 0);
@@ -138,7 +138,7 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_natural(2),
+						collateral_ratio: FixedU128::saturating_from_integer(2),
 						is_safe: true
 					})
 				);
@@ -185,7 +185,7 @@ mod tests {
 					Permill::from_percent(10)
 				));
 				assert_ok!(synthetic_set_spread(FEUR, cent(3)));
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
@@ -209,12 +209,12 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_rational(11, 10),
+						collateral_ratio: FixedU128::saturating_from_rational(11, 10),
 						is_safe: true
 					})
 				);
 
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(31, 10))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(31, 10))]));
 
 				assert_ok!(synthetic_sell(
 					&ALICE::get(),
@@ -253,7 +253,7 @@ mod tests {
 					Permill::from_percent(10)
 				));
 				assert_ok!(synthetic_set_spread(FEUR, cent(3)));
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
 				assert_eq!(collateral_balance(&POOL::get()), 0);
@@ -277,12 +277,12 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_rational(11, 10),
+						collateral_ratio: FixedU128::saturating_from_rational(11, 10),
 						is_safe: true
 					})
 				);
 
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(2, 1))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(2, 1))]));
 
 				assert_ok!(synthetic_sell(
 					&ALICE::get(),
@@ -322,7 +322,7 @@ mod tests {
 					Permill::from_percent(10)
 				));
 				assert_ok!(synthetic_set_spread(FEUR, cent(3)));
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
@@ -346,7 +346,7 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_rational(11, 10),
+						collateral_ratio: FixedU128::saturating_from_rational(11, 10),
 						is_safe: true
 					})
 				);
@@ -360,12 +360,12 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_rational(11, 10),
+						collateral_ratio: FixedU128::saturating_from_rational(11, 10),
 						is_safe: true
 					})
 				);
 
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(2, 1))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(2, 1))]));
 
 				// ALICE buy synthetic and BOB sell synthetic
 				assert_ok!(synthetic_buy(&ALICE::get(), FEUR, dollar(2000)));
@@ -376,7 +376,7 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_parts(1523558421851289833),
+						collateral_ratio: FixedU128::from_inner(1523558421851289833),
 						is_safe: true
 					})
 				);
@@ -395,7 +395,7 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_parts(1099999999999999999),
+						collateral_ratio: FixedU128::from_inner(1099999999999999999),
 						is_safe: true
 					})
 				);
@@ -407,7 +407,7 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_parts(1099999999999999999),
+						collateral_ratio: FixedU128::from_inner(1099999999999999999),
 						is_safe: true
 					})
 				);
@@ -463,8 +463,8 @@ mod tests {
 				assert_ok!(synthetic_set_spread(FEUR, cent(3)));
 				assert_ok!(synthetic_set_spread(FJPY, cent(4)));
 				assert_ok!(set_oracle_price(vec![
-					(FEUR, Price::from_rational(3, 1)),
-					(FJPY, Price::from_rational(4, 1))
+					(FEUR, Price::saturating_from_rational(3, 1)),
+					(FJPY, Price::saturating_from_rational(4, 1))
 				]));
 
 				assert_eq!(collateral_balance(&POOL::get()), 0);
@@ -489,7 +489,7 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_rational(11, 10),
+						collateral_ratio: FixedU128::saturating_from_rational(11, 10),
 						is_safe: true
 					})
 				);
@@ -502,14 +502,14 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_rational(11, 10),
+						collateral_ratio: FixedU128::saturating_from_rational(11, 10),
 						is_safe: true
 					})
 				);
 
 				// change price
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(2, 1))]));
-				assert_ok!(set_oracle_price(vec![(FJPY, Price::from_rational(5, 1))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(2, 1))]));
+				assert_ok!(set_oracle_price(vec![(FJPY, Price::saturating_from_rational(5, 1))]));
 
 				// ALICE buy synthetic FJPY and BOB sell FEUR
 				assert_ok!(synthetic_buy(&ALICE::get(), FJPY, dollar(2000)));
@@ -520,7 +520,7 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_parts(1650000000000000000),
+						collateral_ratio: FixedU128::from_inner(1650000000000000000),
 						is_safe: true
 					})
 				);
@@ -533,7 +533,7 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_parts(1444386181369524984),
+						collateral_ratio: FixedU128::from_inner(1444386181369524984),
 						is_safe: true
 					})
 				);
@@ -547,7 +547,7 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_parts(1099999999999999999),
+						collateral_ratio: FixedU128::from_inner(1099999999999999999),
 						is_safe: true
 					})
 				);
@@ -560,7 +560,7 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_parts(1099999999999999999),
+						collateral_ratio: FixedU128::from_inner(1099999999999999999),
 						is_safe: true
 					})
 				);
@@ -574,7 +574,7 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_parts(1099999999999999999),
+						collateral_ratio: FixedU128::from_inner(1099999999999999999),
 						is_safe: true
 					})
 				);
@@ -587,7 +587,7 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_parts(1099999999999999999),
+						collateral_ratio: FixedU128::from_inner(1099999999999999999),
 						is_safe: true
 					})
 				);
@@ -612,7 +612,7 @@ mod tests {
 					Permill::from_percent(10)
 				));
 				assert_ok!(synthetic_set_spread(FEUR, cent(3)));
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
@@ -623,7 +623,7 @@ mod tests {
 
 				assert_ok!(synthetic_buy(&ALICE::get(), FEUR, dollar(5000)));
 
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(300, 95))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(300, 95))]));
 
 				assert_ok!(synthetic_liquidate(
 					&ALICE::get(),
@@ -662,7 +662,7 @@ mod tests {
 					Permill::from_percent(1)
 				));
 				assert_ok!(synthetic_set_spread(FEUR, cent(3)));
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
@@ -673,7 +673,7 @@ mod tests {
 
 				assert_ok!(synthetic_buy(&ALICE::get(), FEUR, dollar(5000)));
 
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(300, 90))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(300, 90))]));
 
 				assert_ok!(synthetic_liquidate(&ALICE::get(), FEUR, 1));
 				assert_ok!(synthetic_add_collateral(&POOL::get(), FEUR, dollar(20_000)));
@@ -684,7 +684,7 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_parts(4626000000000000000),
+						collateral_ratio: FixedU128::from_inner(4626000000000000000),
 						is_safe: true
 					})
 				);
@@ -709,11 +709,11 @@ mod tests {
 					Permill::from_percent(10)
 				));
 				assert_ok!(synthetic_set_spread(FEUR, cent(3)));
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 
 				assert_ok!(synthetic_buy(&ALICE::get(), FEUR, dollar(5000)));
 
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(300, 95))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(300, 95))]));
 
 				assert_ok!(synthetic_liquidate(&ALICE::get(), FEUR, dollar(800)));
 				assert_eq!(collateral_balance(&ALICE::get()), 7519526315789473684117);
@@ -723,7 +723,7 @@ mod tests {
 				assert_eq!(
 					synthetic_pool_info(FEUR),
 					Some(PoolInfo {
-						collateral_ratio: FixedU128::from_parts(1044999999999999999),
+						collateral_ratio: FixedU128::from_inner(1044999999999999999),
 						is_safe: false
 					})
 				);
@@ -766,7 +766,7 @@ mod tests {
 					Permill::from_percent(10)
 				));
 				assert_ok!(synthetic_set_spread(FEUR, cent(3)));
-				assert_ok!(set_oracle_price(vec![(FEUR, Price::from_rational(3, 1))]));
+				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 
 				assert_ok!(synthetic_buy(&ALICE::get(), FEUR, dollar(5000)));
 				assert_eq!(multi_currency_balance(&ALICE::get(), FEUR), 1650165016501650165016);

@@ -63,6 +63,7 @@ impl frame_system::Trait for Runtime {
 	type Header = Header;
 	type Event = TestEvent;
 	type BlockHashCount = BlockHashCount;
+	type MaximumExtrinsicWeight = MaximumBlockWeight;
 	type MaximumBlockWeight = MaximumBlockWeight;
 	type DbWeight = ();
 	type BlockExecutionWeight = ();
@@ -85,6 +86,7 @@ impl orml_tokens::Trait for Runtime {
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
 	type DustRemoval = ();
+	type OnReceived = ();
 }
 
 parameter_types! {
@@ -103,7 +105,7 @@ impl orml_currencies::Trait for Runtime {
 parameter_types! {
 	pub const GetCollateralCurrencyId: CurrencyId = CurrencyId::AUSD;
 	pub const GetSyntheticCurrencyId: CurrencyId = CurrencyId::FEUR;
-	pub const SyntheticCurrencyIds: Vec<CurrencyId> = vec![CurrencyId::FEUR];
+	pub SyntheticCurrencyIds: Vec<CurrencyId> = vec![CurrencyId::FEUR];
 	pub const DefaultExtremeRatio: Permill = Permill::from_percent(1);
 	pub const DefaultLiquidationRatio: Permill = Permill::from_percent(5);
 	pub const DefaultCollateralRatio: Permill = Permill::from_percent(10);
@@ -210,12 +212,12 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 impl SyntheticProtocolLiquidityPools<AccountId> for MockLiquidityPools {
 	fn get_bid_spread(_pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Balance> {
 		let price = MockPrices::prices(currency_id)?;
-		Some(Self::spread().mul_ceil(price.deconstruct()))
+		Some(Self::spread().mul_ceil(price.into_inner()))
 	}
 
 	fn get_ask_spread(_pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Balance> {
 		let price = MockPrices::prices(currency_id)?;
-		Some(Self::spread().mul_ceil(price.deconstruct()))
+		Some(Self::spread().mul_ceil(price.into_inner()))
 	}
 
 	fn get_additional_collateral_ratio(_pool_id: LiquidityPoolId, _currency_id: CurrencyId) -> Permill {
@@ -260,7 +262,7 @@ impl Default for ExtBuilder {
 		Self {
 			endowed_accounts: vec![],
 			// collateral price set to `1` for calculation simplicity.
-			prices: vec![(CurrencyId::AUSD, FixedU128::from_rational(1, 1))],
+			prices: vec![(CurrencyId::AUSD, FixedU128::saturating_from_rational(1, 1))],
 			spread: Permill::zero(),
 			additional_collateral_ratio: Permill::zero(),
 			is_allowed: true,
@@ -291,7 +293,7 @@ impl ExtBuilder {
 
 	/// set synthetic price to `3`
 	pub fn synthetic_price_three(self) -> Self {
-		self.synthetic_price(Price::from_rational(3, 1))
+		self.synthetic_price(Price::saturating_from_rational(3, 1))
 	}
 
 	pub fn spread(mut self, spread: Permill) -> Self {

@@ -64,8 +64,8 @@ runtime_benchmarks! {
 		add_liquidity(&owner, balance)?;
 
 		set_up_oracle();
-		set_price(vec![(CurrencyId::FEUR, Price::from_natural(1))])?;
-	}: _(RawOrigin::Signed(trader), 0, FEUR, balance, Price::from_natural(2))
+		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(1))])?;
+	}: _(RawOrigin::Signed(trader), 0, FEUR, balance, Price::saturating_from_integer(2))
 
 	redeem {
 		let p in ...;
@@ -81,8 +81,8 @@ runtime_benchmarks! {
 		add_liquidity(&owner, balance)?;
 
 		set_up_oracle();
-		set_price(vec![(CurrencyId::FEUR, Price::from_natural(1))])?;
-		SyntheticProtocol::mint(RawOrigin::Signed(trader.clone()).into(), 0, FEUR, balance, Price::from_natural(2))?;
+		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(1))])?;
+		SyntheticProtocol::mint(RawOrigin::Signed(trader.clone()).into(), 0, FEUR, balance, Price::saturating_from_integer(2))?;
 	}: _(RawOrigin::Signed(trader), 0, FEUR, balance / 2, Price::zero())
 
 	liquidate {
@@ -99,10 +99,10 @@ runtime_benchmarks! {
 		add_liquidity(&owner, balance)?;
 
 		set_up_oracle();
-		set_price(vec![(CurrencyId::FEUR, Price::from_natural(1))])?;
-		SyntheticProtocol::mint(RawOrigin::Signed(trader.clone()).into(), 0, FEUR, balance, Price::from_natural(2))?;
+		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(1))])?;
+		SyntheticProtocol::mint(RawOrigin::Signed(trader.clone()).into(), 0, FEUR, balance, Price::saturating_from_integer(2))?;
 
-		set_price(vec![(CurrencyId::FEUR, Price::from_rational(12, 10))])?;
+		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_rational(12, 10))])?;
 	}: _(RawOrigin::Signed(trader), 0, FEUR, balance / 2)
 
 	add_collateral {
@@ -131,10 +131,10 @@ runtime_benchmarks! {
 		add_liquidity(&owner, balance)?;
 
 		set_up_oracle();
-		set_price(vec![(CurrencyId::FEUR, Price::from_natural(1))])?;
-		SyntheticProtocol::mint(RawOrigin::Signed(trader.clone()).into(), 0, FEUR, balance, Price::from_natural(2))?;
+		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(1))])?;
+		SyntheticProtocol::mint(RawOrigin::Signed(trader.clone()).into(), 0, FEUR, balance, Price::saturating_from_integer(2))?;
 
-		set_price(vec![(CurrencyId::FEUR, Price::from_rational(1, 2))])?;
+		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_rational(1, 2))])?;
 	}: _(RawOrigin::Signed(owner), 0, FEUR)
 }
 

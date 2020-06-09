@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use primitives::{Balance, CurrencyId, Leverage, LiquidityPoolId, TradingPair};
-use sp_arithmetic::Fixed128;
+use sp_arithmetic::FixedI128;
 use sp_runtime::{DispatchResult, Permill};
 use sp_std::prelude::*;
 
@@ -34,9 +34,9 @@ pub trait MarginProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
 	fn is_allowed_position(pool_id: LiquidityPoolId, pair: TradingPair, leverage: Leverage) -> bool;
 	fn get_bid_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance>;
 	fn get_ask_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance>;
-	fn get_swap_rate(pool_id: LiquidityPoolId, pair: TradingPair, is_long: bool) -> Fixed128;
+	fn get_swap_rate(pool_id: LiquidityPoolId, pair: TradingPair, is_long: bool) -> FixedI128;
 	/// Accumulated swap rate, with USD account currency.
-	fn get_accumulated_swap_rate(pool_id: LiquidityPoolId, pair: TradingPair, is_long: bool) -> Fixed128;
+	fn get_accumulated_swap_rate(pool_id: LiquidityPoolId, pair: TradingPair, is_long: bool) -> FixedI128;
 	fn can_open_position(
 		pool_id: LiquidityPoolId,
 		pair: TradingPair,

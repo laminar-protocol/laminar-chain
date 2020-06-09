@@ -6,11 +6,12 @@ use runtime::{
 	opaque::Block, AccountId, Balance, BlockNumber, CurrencyId, Hash, Index, TimeStampedPrice, UncheckedExtrinsic,
 };
 use sc_consensus_babe::{Config, Epoch};
-use sc_consensus_babe_rpc::BabeRPCHandler;
+use sc_consensus_babe_rpc::BabeRpcHandler;
 use sc_consensus_epochs::SharedEpochChanges;
 use sc_finality_grandpa::{SharedAuthoritySet, SharedVoterState};
 use sc_finality_grandpa_rpc::GrandpaRpcHandler;
 use sc_keystore::KeyStorePtr;
+use sc_rpc_api::DenyUnsafe;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sp_consensus::SelectChain;
@@ -55,6 +56,8 @@ pub struct FullDeps<C, P, SC> {
 	pub pool: Arc<P>,
 	/// The SelectChain Strategy
 	pub select_chain: SC,
+	/// Whether to deny unsafe calls
+	pub deny_unsafe: DenyUnsafe,
 	/// BABE specific dependencies.
 	pub babe: BabeDeps,
 	/// GRANDPA specific dependencies.
@@ -89,6 +92,7 @@ where
 		client,
 		pool,
 		select_chain,
+		deny_unsafe,
 		babe,
 		grandpa,
 	} = deps;
@@ -106,12 +110,13 @@ where
 	io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(
 		client.clone(),
 	)));
-	io.extend_with(sc_consensus_babe_rpc::BabeApi::to_delegate(BabeRPCHandler::new(
+	io.extend_with(sc_consensus_babe_rpc::BabeApi::to_delegate(BabeRpcHandler::new(
 		client.clone(),
 		shared_epoch_changes,
 		keystore,
 		babe_config,
 		select_chain,
+		deny_unsafe,
 	)));
 	io.extend_with(sc_finality_grandpa_rpc::GrandpaApi::to_delegate(
 		GrandpaRpcHandler::new(shared_authority_set, shared_voter_state),

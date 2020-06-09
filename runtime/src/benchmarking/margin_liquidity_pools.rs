@@ -2,7 +2,7 @@ use super::utils::dollars;
 use crate::{AccountId, BaseLiquidityPoolsForMargin, MarginLiquidityPools, MarginProtocol, Runtime};
 
 use frame_system::RawOrigin;
-use sp_runtime::{DispatchError, Fixed128, Permill};
+use sp_runtime::{DispatchError, FixedI128, Permill};
 use sp_std::prelude::*;
 
 use frame_benchmarking::account;
@@ -56,8 +56,8 @@ runtime_benchmarks! {
 		let r in ...;
 		let _ = create_pool(p)?;
 		let swap_rate = SwapRate {
-			long: Fixed128::from_parts(r.into()),
-			short: Fixed128::from_parts(r.into()),
+			long: FixedI128::from_inner(r.into()),
+			short: FixedI128::from_inner(r.into()),
 		};
 	}: _(RawOrigin::Root, EUR_USD, swap_rate)
 
@@ -65,7 +65,7 @@ runtime_benchmarks! {
 		let p in ...;
 		let r in ...;
 		let caller = create_pool(p)?;
-		let rate = Fixed128::from_parts(r.into());
+		let rate = FixedI128::from_inner(r.into());
 	}: _(RawOrigin::Signed(caller), 0, rate)
 
 	set_max_spread {
