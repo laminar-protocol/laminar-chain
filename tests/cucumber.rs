@@ -6,9 +6,8 @@ use frame_support::{assert_noop, assert_ok};
 use margin_protocol::RiskThreshold;
 use margin_protocol_rpc_runtime_api::{PoolInfo, TraderInfo};
 use module_primitives::{Balance, Leverage, TradingPair};
-use orml_utilities::FixedU128;
 use runtime::{tests::*, AccountId, CurrencyId, Moment};
-use sp_arithmetic::Fixed128;
+use sp_arithmetic::{FixedI128, FixedPointNumber, FixedU128};
 use sp_runtime::{traits::Bounded, DispatchResult, Permill};
 use std::ops::Range;
 use synthetic_protocol_rpc_runtime_api::PoolInfo as SyntheticProtocolPoolInfo;
@@ -47,7 +46,7 @@ fn parse_dollar(value: Option<&String>) -> Balance {
 	}
 }
 
-fn parse_fixed_128_dollar(value: Option<&String>) -> Fixed128 {
+fn parse_fixed_i128_dollar(value: Option<&String>) -> FixedI128 {
 	let value = value.expect("Missing balance");
 	let value = value.replace(" ", "").replace("_", "");
 	let dollar = if value.starts_with("$") {
@@ -56,11 +55,11 @@ fn parse_fixed_128_dollar(value: Option<&String>) -> Fixed128 {
 	} else {
 		value.parse::<i128>().expect("invalid dollar value")
 	};
-	Fixed128::from_parts(dollar)
+	FixedI128::from_inner(dollar)
 }
 
 fn parse_price(value: Option<&String>) -> FixedU128 {
-	FixedU128::from_parts(parse_dollar(value))
+	FixedU128::from_inner(parse_dollar(value))
 }
 
 fn parse_bool(value: Option<&String>) -> bool {
@@ -83,16 +82,16 @@ fn parse_permill(value: Option<&String>) -> Permill {
 	}
 }
 
-fn parse_fixed128(value: Option<&String>) -> Fixed128 {
+fn parse_fixedi128(value: Option<&String>) -> FixedI128 {
 	let value = value.expect("Missing percentage");
 	let value = value.replace(" ", "").replace("_", "");
 	if value.ends_with("%") {
 		let num = value[..value.len() - 1].parse::<f64>().expect("Invalid dollar value");
-		Fixed128::from_parts((num / 100f64 * (10u64.pow(18) as f64)) as i128)
+		FixedI128::from_inner((num / 100f64 * (10u64.pow(18) as f64)) as i128)
 	} else if value == "MaxValue" {
-		Fixed128::max_value()
+		FixedI128::max_value()
 	} else {
-		Fixed128::from_parts(value.parse::<i128>().expect("invalid dollar value"))
+		FixedI128::from_inner(value.parse::<i128>().expect("invalid dollar value"))
 	}
 }
 
@@ -101,9 +100,9 @@ fn parse_fixed_u128(value: Option<&String>) -> FixedU128 {
 	let value = value.replace(" ", "").replace("_", "");
 	if value.ends_with("%") {
 		let num = value[..value.len() - 1].parse::<f64>().expect("Invalid dollar value");
-		FixedU128::from_parts((num / 100f64 * (10u64.pow(18) as f64)) as u128)
+		FixedU128::from_inner((num / 100f64 * (10u64.pow(18) as f64)) as u128)
 	} else {
-		FixedU128::from_parts(value.parse::<u128>().expect("invalid dollar value"))
+		FixedU128::from_inner(value.parse::<u128>().expect("invalid dollar value"))
 	}
 }
 
@@ -332,9 +331,13 @@ mod steps {
 			})
 			.given("margin set swap rate", |world, step| {
 				world.execute_with(|| {
-					let iter = get_rows(step)
-						.iter()
-						.map(|x| (parse_pair(x.get(0)), parse_fixed128(x.get(1)), parse_fixed128(x.get(2))));
+					let iter = get_rows(step).iter().map(|x| {
+						(
+							parse_pair(x.get(0)),
+							parse_fixedi128(x.get(1)),
+							parse_fixedi128(x.get(2)),
+						)
+					});
 					for (pair, long, short) in iter {
 						assert_ok!(margin_set_swap_rate(pair, long, short));
 					}
@@ -505,7 +508,7 @@ mod steps {
 						(
 							parse_name(x.get(0)),
 							parse_dollar(x.get(1)),
-							parse_fixed_128_dollar(x.get(2)),
+							parse_fixed_i128_dollar(x.get(2)),
 						)
 					});
 					for (name, free, margin) in iter {
@@ -528,7 +531,7 @@ mod steps {
 			})
 			.then_regex(r"margin set additional swap (.+)", |world, matches, _step| {
 				world.execute_with(|| {
-					let swap = parse_fixed128(matches.get(1));
+					let swap = parse_fixedi128(matches.get(1));
 					assert_ok!(margin_set_additional_swap(swap));
 				})
 			})
@@ -537,11 +540,11 @@ mod steps {
 					let iter = get_rows(step).iter().map(|x| {
 						(
 							parse_name(x.get(0)),
-							parse_fixed_128_dollar(x.get(1)),
-							parse_fixed_128_dollar(x.get(2)),
-							parse_fixed128(x.get(3)),
-							parse_fixed_128_dollar(x.get(4)),
-							parse_fixed_128_dollar(x.get(5)),
+							parse_fixed_i128_dollar(x.get(1)),
+							parse_fixed_i128_dollar(x.get(2)),
+							parse_fixedi128(x.get(3)),
+							parse_fixed_i128_dollar(x.get(4)),
+							parse_fixed_i128_dollar(x.get(5)),
 						)
 					});
 					for (name, equity, margin_held, margin_level, free_margin, unrealized_pl) in iter {
@@ -562,9 +565,9 @@ mod steps {
 				world.execute_with(|| {
 					let iter = get_rows(step).iter().map(|x| {
 						(
-							parse_fixed128(x.get(0)),
-							parse_fixed128(x.get(1)),
-							parse_fixed_128_dollar(x.get(2)),
+							parse_fixedi128(x.get(0)),
+							parse_fixedi128(x.get(1)),
+							parse_fixed_i128_dollar(x.get(2)),
 						)
 					});
 					for (enp, ell, required_deposit) in iter {

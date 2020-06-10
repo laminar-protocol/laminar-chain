@@ -37,7 +37,7 @@ parameter_types! {
 	pub const MaximumBlockWeight: u32 = 1024;
 	pub const MaximumBlockLength: u32 = 2 * 1024;
 	pub const AvailableBlockRatio: Perbill = Perbill::one();
-	pub const SyntheticCurrencyIds: Vec<CurrencyId> = vec![CurrencyId::FEUR];
+	pub SyntheticCurrencyIds: Vec<CurrencyId> = vec![CurrencyId::FEUR];
 	pub const DefaultExtremeRatio: Permill = Permill::from_percent(1);
 	pub const DefaultLiquidationRatio: Permill = Permill::from_percent(5);
 	pub const DefaultCollateralRatio: Permill = Permill::from_percent(10);
@@ -56,6 +56,7 @@ impl frame_system::Trait for Runtime {
 	type Header = Header;
 	type Event = TestEvent;
 	type BlockHashCount = BlockHashCount;
+	type MaximumExtrinsicWeight = MaximumBlockWeight;
 	type MaximumBlockWeight = MaximumBlockWeight;
 	type DbWeight = ();
 	type BlockExecutionWeight = ();

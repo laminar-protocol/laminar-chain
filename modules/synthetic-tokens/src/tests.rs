@@ -169,16 +169,16 @@ fn collateral_ratio_or_default() {
 #[test]
 fn no_incentive_if_collateral_less_than_synthetic_value() {
 	ExtBuilder::default().build().execute_with(|| {
-		let ratio = FixedU128::from_rational(1, 2);
+		let ratio = FixedU128::saturating_from_rational(1, 2);
 		assert_eq!(
 			SyntheticTokens::incentive_ratio(CurrencyId::FEUR, ratio),
-			FixedU128::from_parts(0)
+			FixedU128::from_inner(0)
 		);
 	});
 }
 
 fn plus_one(ratio: FixedU128) -> FixedU128 {
-	ratio.saturating_add(FixedU128::from_rational(1, 1))
+	ratio.saturating_add(FixedU128::saturating_from_rational(1, 1))
 }
 
 #[test]
@@ -190,15 +190,15 @@ fn no_incentive_if_equal_or_above_liquidation_ratio() {
 				CurrencyId::FEUR,
 				plus_one(<Runtime as Trait>::DefaultLiquidationRatio::get().into())
 			),
-			FixedU128::from_parts(0)
+			FixedU128::from_inner(0)
 		);
 
 		// above
-		let ratio = FixedU128::from_rational(11, 100);
+		let ratio = FixedU128::saturating_from_rational(11, 100);
 		assert!(ratio > SyntheticTokens::liquidation_ratio_or_default(CurrencyId::FEUR).into());
 		assert_eq!(
 			SyntheticTokens::incentive_ratio(CurrencyId::FEUR, plus_one(ratio)),
-			FixedU128::from_parts(0)
+			FixedU128::from_inner(0)
 		);
 	});
 }
@@ -212,15 +212,15 @@ fn full_incentive_if_equal_or_below_extreme_ratio() {
 				CurrencyId::FEUR,
 				plus_one(<Runtime as Trait>::DefaultExtremeRatio::get().into())
 			),
-			FixedU128::from_rational(1, 1)
+			FixedU128::saturating_from_rational(1, 1)
 		);
 
 		// below
-		let ratio = FixedU128::from_parts(0);
+		let ratio = FixedU128::from_inner(0);
 		assert!(ratio < SyntheticTokens::extreme_ratio_or_default(CurrencyId::FEUR).into());
 		assert_eq!(
 			SyntheticTokens::incentive_ratio(CurrencyId::FEUR, plus_one(ratio)),
-			FixedU128::from_rational(1, 1)
+			FixedU128::saturating_from_rational(1, 1)
 		);
 	});
 }
@@ -241,10 +241,10 @@ fn proportional_incentive_between_extreme_and_liquidation() {
 			Permill::one()
 		));
 
-		let ten_percent = FixedU128::from_rational(1, 10);
+		let ten_percent = FixedU128::saturating_from_rational(1, 10);
 		assert_eq!(
 			SyntheticTokens::incentive_ratio(CurrencyId::FEUR, plus_one(ten_percent)),
-			FixedU128::from_rational(9, 10)
+			FixedU128::saturating_from_rational(9, 10)
 		);
 	});
 }

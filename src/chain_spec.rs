@@ -15,13 +15,12 @@ use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use serde::{Deserialize, Serialize};
 use serde_json::map::Map;
-use sp_arithmetic::Fixed128;
+use sp_arithmetic::FixedI128;
 use sp_consensus_babe::AuthorityId as BabeId;
 use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{IdentifyAccount, Verify};
-use sp_runtime::{Perbill, Permill};
-use sp_std::num::NonZeroI128;
+use sp_runtime::{FixedPointNumber, Perbill, Permill};
 use synthetic_tokens::SyntheticTokensRatio;
 
 type AccountPublic = <Signature as Verify>::Signer;
@@ -380,8 +379,8 @@ fn dev_genesis(
 					accumulate_config(1 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
+						long: FixedI128::saturating_from_rational(1, 10000),
+						short: FixedI128::saturating_from_rational(-1, 10000),
 					},
 				),
 				(
@@ -393,8 +392,8 @@ fn dev_genesis(
 					accumulate_config(1 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
+						long: FixedI128::saturating_from_rational(1, 10000),
+						short: FixedI128::saturating_from_rational(-1, 10000),
 					},
 				),
 				(
@@ -406,8 +405,8 @@ fn dev_genesis(
 					accumulate_config(1 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
+						long: FixedI128::saturating_from_rational(1, 10000),
+						short: FixedI128::saturating_from_rational(-1, 10000),
 					},
 				),
 				(
@@ -419,8 +418,8 @@ fn dev_genesis(
 					accumulate_config(1 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
+						long: FixedI128::saturating_from_rational(1, 10000),
+						short: FixedI128::saturating_from_rational(-1, 10000),
 					},
 				),
 				(
@@ -432,8 +431,8 @@ fn dev_genesis(
 					accumulate_config(1 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
+						long: FixedI128::saturating_from_rational(1, 10000),
+						short: FixedI128::saturating_from_rational(-1, 10000),
 					},
 				),
 				(
@@ -445,8 +444,8 @@ fn dev_genesis(
 					accumulate_config(1 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
+						long: FixedI128::saturating_from_rational(1, 10000),
+						short: FixedI128::saturating_from_rational(-1, 10000),
 					},
 				),
 				(
@@ -458,8 +457,8 @@ fn dev_genesis(
 					accumulate_config(1 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
+						long: FixedI128::saturating_from_rational(1, 10000),
+						short: FixedI128::saturating_from_rational(-1, 10000),
 					},
 				),
 				(
@@ -471,8 +470,8 @@ fn dev_genesis(
 					accumulate_config(1 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
-						short: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
+						long: FixedI128::saturating_from_rational(1, 1000),
+						short: FixedI128::saturating_from_rational(1, 1000),
 					},
 				),
 				(
@@ -484,8 +483,8 @@ fn dev_genesis(
 					accumulate_config(1 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
-						short: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
+						long: FixedI128::saturating_from_rational(1, 1000),
+						short: FixedI128::saturating_from_rational(1, 1000),
 					},
 				),
 			],
@@ -661,8 +660,8 @@ fn turbulence_genesis(
 					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
+						long: FixedI128::saturating_from_rational(1, 10000),
+						short: FixedI128::saturating_from_rational(-1, 10000),
 					},
 				),
 				(
@@ -674,8 +673,8 @@ fn turbulence_genesis(
 					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
+						long: FixedI128::saturating_from_rational(1, 10000),
+						short: FixedI128::saturating_from_rational(-1, 10000),
 					},
 				),
 				(
@@ -687,8 +686,8 @@ fn turbulence_genesis(
 					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
+						long: FixedI128::saturating_from_rational(1, 10000),
+						short: FixedI128::saturating_from_rational(-1, 10000),
 					},
 				),
 				(
@@ -700,8 +699,8 @@ fn turbulence_genesis(
 					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
+						long: FixedI128::saturating_from_rational(1, 10000),
+						short: FixedI128::saturating_from_rational(-1, 10000),
 					},
 				),
 				(
@@ -713,8 +712,8 @@ fn turbulence_genesis(
 					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
+						long: FixedI128::saturating_from_rational(1, 10000),
+						short: FixedI128::saturating_from_rational(-1, 10000),
 					},
 				),
 				(
@@ -726,8 +725,8 @@ fn turbulence_genesis(
 					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
+						long: FixedI128::saturating_from_rational(1, 10000),
+						short: FixedI128::saturating_from_rational(-1, 10000),
 					},
 				),
 				(
@@ -739,8 +738,8 @@ fn turbulence_genesis(
 					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(10000).unwrap()),
-						short: Fixed128::from_rational(-1, NonZeroI128::new(10000).unwrap()),
+						long: FixedI128::saturating_from_rational(1, 10000),
+						short: FixedI128::saturating_from_rational(-1, 10000),
 					},
 				),
 				(
@@ -752,8 +751,8 @@ fn turbulence_genesis(
 					accumulate_config(8 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
-						short: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
+						long: FixedI128::saturating_from_rational(1, 1000),
+						short: FixedI128::saturating_from_rational(1, 1000),
 					},
 				),
 				(
@@ -765,8 +764,8 @@ fn turbulence_genesis(
 					accumulate_config(8 * HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
-						long: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
-						short: Fixed128::from_rational(1, NonZeroI128::new(1000).unwrap()),
+						long: FixedI128::saturating_from_rational(1, 1000),
+						short: FixedI128::saturating_from_rational(1, 1000),
 					},
 				),
 			],

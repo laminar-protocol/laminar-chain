@@ -24,14 +24,15 @@ use sp_core::{
 	u32_trait::{_1, _2, _3, _4},
 };
 use sp_runtime::traits::{
-	BlakeTwo256, Block as BlockT, Convert, ConvertInto, NumberFor, OpaqueKeys, SaturatedConversion, StaticLookup,
+	BlakeTwo256, Block as BlockT, Convert, NumberFor, OpaqueKeys, SaturatedConversion, StaticLookup,
 };
 use sp_runtime::{
 	create_runtime_str,
 	curve::PiecewiseLinear,
-	generic, impl_opaque_keys, traits,
+	generic, impl_opaque_keys,
+	traits::{Extrinsic, Saturating, Verify},
 	transaction_validity::{TransactionPriority, TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, ModuleId,
+	ApplyExtrinsicResult, FixedPointNumber, ModuleId,
 };
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
@@ -43,7 +44,7 @@ pub use module_primitives::{Balance, CurrencyId, LiquidityPoolId, Price};
 use orml_currencies::BasicCurrencyAdapter;
 pub use orml_oracle::AuthorityId as OracleId;
 use orml_traits::DataProvider;
-pub use sp_arithmetic::Fixed128;
+pub use sp_arithmetic::FixedI128;
 
 use margin_protocol_rpc_runtime_api::{PoolInfo, TraderInfo};
 use synthetic_protocol_rpc_runtime_api::PoolInfo as SyntheticProtocolPoolInfo;
@@ -51,10 +52,10 @@ use synthetic_protocol_rpc_runtime_api::PoolInfo as SyntheticProtocolPoolInfo;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, debug, parameter_types,
-	traits::{Contains, ContainsLengthBound, KeyOwnerProofSystem, Randomness},
+	traits::{Contains, ContainsLengthBound, Filter, InstanceFilter, KeyOwnerProofSystem, Randomness},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
-		Weight,
+		IdentityFee, Weight,
 	},
 	StorageValue,
 };
@@ -113,11 +114,25 @@ pub fn native_version() -> NativeVersion {
 	}
 }
 
+pub struct BaseFilter;
+impl Filter<Call> for BaseFilter {
+	fn filter(_call: &Call) -> bool {
+		true
+	}
+}
+pub struct IsCallable;
+frame_support::impl_filter_stack!(IsCallable, BaseFilter, Call, is_callable);
+
+const AVERAGE_ON_INITIALIZE_WEIGHT: Perbill = Perbill::from_percent(10);
 parameter_types! {
 	pub const BlockHashCount: BlockNumber = 900; // mortal tx can be valid up to 1 hour after signing
 	/// We allow for 2 seconds of compute with a 6 second average block time.
 	pub const MaximumBlockWeight: Weight = 2 * WEIGHT_PER_SECOND;
 	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
+	/// Assume 10% of weight for average on_initialize calls.
+	pub MaximumExtrinsicWeight: Weight =
+		AvailableBlockRatio::get().saturating_sub(AVERAGE_ON_INITIALIZE_WEIGHT)
+		* MaximumBlockWeight::get();
 	pub const MaximumBlockLength: u32 = 5 * 1024 * 1024;
 	pub const Version: RuntimeVersion = VERSION;
 }
@@ -145,6 +160,8 @@ impl system::Trait for Runtime {
 	type Origin = Origin;
 	/// Maximum number of block number to block hash mappings to keep (oldest pruned first).
 	type BlockHashCount = BlockHashCount;
+	/// Maximum weight of each extrinsic.
+	type MaximumExtrinsicWeight = MaximumExtrinsicWeight;
 	/// Maximum weight of each block.
 	type MaximumBlockWeight = MaximumBlockWeight;
 	/// The weight of database operations that the runtime can invoke.
@@ -173,24 +190,33 @@ impl system::Trait for Runtime {
 	type AccountData = pallet_balances::AccountData<Balance>;
 }
 
-parameter_types! {
-	pub const MultisigDepositBase: Balance = 500 * MILLICENTS;
-	pub const MultisigDepositFactor: Balance = 100 * MILLICENTS;
-	pub const MaxSignatories: u16 = 100;
-}
-
 impl pallet_utility::Trait for Runtime {
 	type Event = Event;
 	type Call = Call;
-	type Currency = Balances;
-	type MultisigDepositBase = MultisigDepositBase;
-	type MultisigDepositFactor = MultisigDepositFactor;
-	type MaxSignatories = MaxSignatories;
+	type IsCallable = IsCallable;
 }
 
 parameter_types! {
 	pub const EpochDuration: u64 = EPOCH_DURATION_IN_SLOTS;
 	pub const ExpectedBlockTime: Moment = MILLISECS_PER_BLOCK;
+}
+
+parameter_types! {
+	// One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
+	pub const DepositBase: Balance = deposit(1, 88);
+	// Additional storage item size of 32 bytes.
+	pub const DepositFactor: Balance = deposit(0, 32);
+	pub const MaxSignatories: u16 = 100;
+}
+
+impl pallet_multisig::Trait for Runtime {
+	type Event = Event;
+	type Call = Call;
+	type Currency = Balances;
+	type DepositBase = DepositBase;
+	type DepositFactor = DepositFactor;
+	type MaxSignatories = MaxSignatories;
+	type IsCallable = IsCallable;
 }
 
 impl pallet_babe::Trait for Runtime {
@@ -264,7 +290,7 @@ impl pallet_transaction_payment::Trait for Runtime {
 	type Currency = pallet_balances::Module<Runtime>;
 	type OnTransactionPayment = ();
 	type TransactionByteFee = TransactionByteFee;
-	type WeightToFee = ConvertInto;
+	type WeightToFee = IdentityFee<Balance>;
 	type FeeMultiplierUpdate = ();
 }
 
@@ -280,10 +306,15 @@ parameter_types! {
 	pub const MarginProtocolUnsignedPriority: TransactionPriority = TransactionPriority::max_value() - 2;
 }
 
+parameter_types! {
+	pub OffencesWeightSoftLimit: Weight = Perbill::from_percent(60) * MaximumBlockWeight::get();
+}
+
 impl pallet_offences::Trait for Runtime {
 	type Event = Event;
 	type IdentificationTuple = pallet_session::historical::IdentificationTuple<Self>;
 	type OnOffenceHandler = Staking;
+	type WeightSoftLimit = OffencesWeightSoftLimit;
 }
 
 parameter_types! {
@@ -465,6 +496,8 @@ parameter_types! {
 	pub const ElectionLookahead: BlockNumber = EPOCH_DURATION_IN_BLOCKS / 4;
 	pub const MaxNominatorRewardedPerValidator: u32 = 64;
 	pub const MaxIterations: u32 = 5;
+	// 0.05%. The higher the value, the more strict solution acceptance becomes.
+	pub MinSolutionScoreBump: Perbill = Perbill::from_rational_approximation(5u32, 10_000);
 }
 
 impl pallet_staking::Trait for Runtime {
@@ -486,6 +519,7 @@ impl pallet_staking::Trait for Runtime {
 	type ElectionLookahead = ElectionLookahead;
 	type Call = Call;
 	type MaxIterations = MaxIterations;
+	type MinSolutionScoreBump = MinSolutionScoreBump;
 	type MaxNominatorRewardedPerValidator = MaxNominatorRewardedPerValidator;
 	type UnsignedPriority = StakingUnsignedPriority;
 }
@@ -514,11 +548,12 @@ impl orml_tokens::Trait for Runtime {
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
 	type DustRemoval = ();
+	type OnReceived = ();
 }
 
 parameter_types! {
 	pub const GetLaminarTokenId: CurrencyId = CurrencyId::LAMI;
-	pub const SyntheticCurrencyIds: Vec<CurrencyId> = vec![
+	pub SyntheticCurrencyIds: Vec<CurrencyId> = vec![
 		CurrencyId::FEUR,
 		CurrencyId::FJPY,
 		CurrencyId::FAUD,
@@ -547,7 +582,7 @@ pub struct LaminarDataProvider;
 impl DataProvider<CurrencyId, Price> for LaminarDataProvider {
 	fn get(currency: &CurrencyId) -> Option<Price> {
 		match currency {
-			CurrencyId::AUSD => Some(Price::from_natural(1)),
+			CurrencyId::AUSD => Some(Price::saturating_from_integer(1)),
 			_ => <Oracle as DataProvider<CurrencyId, Price>>::get(currency),
 		}
 	}
@@ -563,7 +598,7 @@ impl synthetic_tokens::Trait for Runtime {
 
 parameter_types! {
 	pub const GetLiquidityCurrencyId: CurrencyId = CurrencyId::AUSD;
-	pub const MaxSwap: Fixed128 = Fixed128::from_natural(2); // TODO: set this
+	pub MaxSwap: FixedI128 = FixedI128::saturating_from_integer(2); // TODO: set this
 }
 
 type LiquidityCurrency = orml_currencies::Currency<Runtime, GetLiquidityCurrencyId>;
@@ -643,10 +678,10 @@ where
 {
 	fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
 		call: Call,
-		public: <Signature as traits::Verify>::Signer,
+		public: <Signature as Verify>::Signer,
 		account: AccountId,
 		nonce: Index,
-	) -> Option<(Call, <UncheckedExtrinsic as traits::Extrinsic>::SignaturePayload)> {
+	) -> Option<(Call, <UncheckedExtrinsic as Extrinsic>::SignaturePayload)> {
 		// take the biggest period possible.
 		let period = BlockHashCount::get()
 			.checked_next_power_of_two()
@@ -681,7 +716,7 @@ where
 }
 
 impl frame_system::offchain::SigningTypes for Runtime {
-	type Public = <Signature as traits::Verify>::Signer;
+	type Public = <Signature as Verify>::Signer;
 	type Signature = Signature;
 }
 
@@ -742,7 +777,8 @@ construct_runtime!(
 		Oracle: orml_oracle::{Module, Storage, Call, Config<T>, Event<T>, ValidateUnsigned},
 		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
 		OperatorMembership: pallet_membership::<Instance3>::{Module, Call, Storage, Event<T>, Config<T>},
-		Utility: pallet_utility::{Module, Call, Storage, Event<T>},
+		Utility: pallet_utility::{Module, Call, Storage, Event},
+		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
 		PalletTreasury: pallet_treasury::{Module, Call, Storage, Config, Event<T>},
 		Staking: pallet_staking::{Module, Call, Config<T>, Storage, Event<T>},
 		Session: pallet_session::{Module, Call, Storage, Event, Config<T>},

@@ -55,6 +55,7 @@ impl system::Trait for Runtime {
 	type DbWeight = ();
 	type BlockExecutionWeight = ();
 	type ExtrinsicBaseWeight = ();
+	type MaximumExtrinsicWeight = MaximumBlockWeight;
 	type MaximumBlockLength = MaximumBlockLength;
 	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
@@ -70,7 +71,7 @@ parameter_types! {
 	pub const ExistentialDeposit: u128 = 50;
 	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::LAMI;
 	pub const GetLiquidityCurrencyId: CurrencyId = CurrencyId::AUSD;
-	pub const MaxSwap: Fixed128 = Fixed128::from_natural(2);
+	pub MaxSwap: FixedI128 = FixedI128::saturating_from_integer(2);
 }
 
 impl pallet_balances::Trait for Runtime {
@@ -98,6 +99,7 @@ impl orml_tokens::Trait for Runtime {
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
 	type DustRemoval = ();
+	type OnReceived = ();
 }
 
 pub struct PoolManager;

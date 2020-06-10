@@ -14,10 +14,10 @@ use frame_support::{
 use frame_system::{self as system, ensure_root, ensure_signed};
 use orml_traits::MultiCurrency;
 use primitives::{
-	arithmetic::fixed_128_mul_signum, AccumulateConfig, Balance, CurrencyId, Leverage, Leverages, LiquidityPoolId,
+	arithmetic::fixed_i128_mul_signum, AccumulateConfig, Balance, CurrencyId, Leverage, Leverages, LiquidityPoolId,
 	TradingPair,
 };
-use sp_arithmetic::Fixed128;
+use sp_arithmetic::{FixedI128, FixedPointNumber};
 use sp_runtime::{
 	traits::{AtLeast32Bit, Saturating},
 	DispatchResult, ModuleId, RuntimeDebug,
@@ -34,8 +34,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct SwapRate {
-	pub long: Fixed128,
-	pub short: Fixed128,
+	pub long: FixedI128,
+	pub short: FixedI128,
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
@@ -62,7 +62,7 @@ pub struct MarginPoolOption {
 	/// Additional swap rate, to adjust the swap rate in `MarginTradingPairOption`.
 	///
 	/// DEFAULT-NOTE: no adjustment for this pool.
-	pub additional_swap_rate: Fixed128,
+	pub additional_swap_rate: FixedI128,
 
 	/// Min leveraged amount. A position cannot be opened if it's leveraged amount is below min.
 	///
@@ -102,7 +102,7 @@ pub trait Trait: frame_system::Trait {
 	type PoolManager: MarginProtocolLiquidityPoolsManager;
 	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
 	type UpdateOrigin: EnsureOrigin<Self::Origin>;
-	type MaxSwap: Get<Fixed128>;
+	type MaxSwap: Get<FixedI128>;
 	type UnixTime: UnixTime;
 	type Moment: AtLeast32Bit + Parameter + Default + Copy + From<u64>;
 }
@@ -147,7 +147,7 @@ decl_event!(
 		/// Accumulated swap rate updated (pool_id, pair, accumulated_swap_rate)
 		AccumulatedSwapRateUpdated(LiquidityPoolId, TradingPair, SwapRate),
 		/// Additional swap rate updated (who, pool_id, additional_swap_rate)
-		AdditionalSwapRateUpdated(AccountId, LiquidityPoolId, Fixed128),
+		AdditionalSwapRateUpdated(AccountId, LiquidityPoolId, FixedI128),
 		/// Max spread updated (pair, spread)
 		MaxSpreadUpdated(TradingPair, Balance),
 		/// Set accumulate (pair, frequency, offset)
@@ -202,7 +202,7 @@ decl_module! {
 		}
 
 		#[weight = 10_000]
-		pub fn set_additional_swap(origin, #[compact] pool_id: LiquidityPoolId,  rate: Fixed128) {
+		pub fn set_additional_swap(origin, #[compact] pool_id: LiquidityPoolId,  rate: FixedI128) {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
 
@@ -361,7 +361,7 @@ impl<T: Trait> Module<T> {
 
 	// Pool margin option
 
-	pub fn additional_swap_rate(pool_id: LiquidityPoolId) -> Fixed128 {
+	pub fn additional_swap_rate(pool_id: LiquidityPoolId) -> FixedI128 {
 		Self::pool_options(pool_id).additional_swap_rate
 	}
 
@@ -441,7 +441,7 @@ impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
 		Self::pool_trading_pair_options(pool_id, pair).ask_spread
 	}
 
-	fn get_swap_rate(pool_id: LiquidityPoolId, pair: TradingPair, is_long: bool) -> Fixed128 {
+	fn get_swap_rate(pool_id: LiquidityPoolId, pair: TradingPair, is_long: bool) -> FixedI128 {
 		let max_swap = T::MaxSwap::get();
 		let swap_rate = Self::swap_rate(pair);
 		let additional_swap_rate = Self::additional_swap_rate(pool_id);
@@ -456,12 +456,12 @@ impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
 			if adjust_swap.is_positive() {
 				max_swap
 			} else {
-				fixed_128_mul_signum(max_swap, -1)
+				fixed_i128_mul_signum(max_swap, -1)
 			}
 		}
 	}
 
-	fn get_accumulated_swap_rate(pool_id: LiquidityPoolId, pair: TradingPair, is_long: bool) -> Fixed128 {
+	fn get_accumulated_swap_rate(pool_id: LiquidityPoolId, pair: TradingPair, is_long: bool) -> FixedI128 {
 		let accumulated_swap_rate = Self::accumulated_swap_rate(pool_id, pair);
 		if is_long {
 			accumulated_swap_rate.long

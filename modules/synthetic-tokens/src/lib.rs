@@ -8,10 +8,9 @@ use frame_support::{
 use frame_system::{self as system, ensure_root};
 use module_primitives::{Balance, CurrencyId, LiquidityPoolId};
 use module_traits::BaseLiquidityPoolManager;
-use orml_utilities::FixedU128;
 use sp_runtime::{
-	traits::{AccountIdConversion, Zero},
-	DispatchResult, ModuleId, Permill, RuntimeDebug,
+	traits::{AccountIdConversion, CheckedDiv, CheckedSub, Zero},
+	DispatchResult, FixedPointNumber, FixedU128, ModuleId, Permill, RuntimeDebug,
 };
 use sp_std::prelude::Vec;
 
@@ -157,9 +156,9 @@ impl<T: Trait> Module<T> {
 	/// If `ratio < extreme_ratio`, return `1`; if `ratio >= liquidation_ratio`, return `0`; Otherwise return
 	/// `(liquidation_ratio - ratio) / (liquidation_ratio - extreme_ratio)`.
 	pub fn incentive_ratio(currency_id: CurrencyId, current_ratio: FixedU128) -> FixedU128 {
-		let one = FixedU128::from_rational(1, 1);
+		let one = FixedU128::one();
 		if current_ratio < one {
-			return FixedU128::from_parts(0);
+			return FixedU128::from_inner(0);
 		}
 
 		let ratio = current_ratio
@@ -167,7 +166,7 @@ impl<T: Trait> Module<T> {
 			.expect("ensured current_ratio > one_percent; qed");
 		let liquidation_ratio = Self::liquidation_ratio_or_default(currency_id).into();
 		if ratio >= liquidation_ratio {
-			return FixedU128::from_parts(0);
+			return FixedU128::from_inner(0);
 		}
 		let extreme_ratio = Self::extreme_ratio_or_default(currency_id).into();
 		if ratio <= extreme_ratio {

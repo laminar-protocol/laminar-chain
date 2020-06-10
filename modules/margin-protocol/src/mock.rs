@@ -67,6 +67,7 @@ impl frame_system::Trait for Runtime {
 	type Header = Header;
 	type Event = TestEvent;
 	type BlockHashCount = BlockHashCount;
+	type MaximumExtrinsicWeight = MaximumBlockWeight;
 	type MaximumBlockWeight = MaximumBlockWeight;
 	type DbWeight = ();
 	type BlockExecutionWeight = ();
@@ -89,6 +90,7 @@ impl orml_tokens::Trait for Runtime {
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
 	type DustRemoval = ();
+	type OnReceived = ();
 }
 
 pub type OrmlTokens = orml_tokens::Module<Runtime>;
@@ -120,7 +122,7 @@ impl DataProvider<CurrencyId, Price> for MockPrices {
 
 thread_local! {
 	static SPREAD: RefCell<Permill> = RefCell::new(Permill::zero());
-	static ACC_SWAP_RATES: RefCell<BTreeMap<TradingPair, Fixed128>> = RefCell::new(BTreeMap::new());
+	static ACC_SWAP_RATES: RefCell<BTreeMap<TradingPair, FixedI128>> = RefCell::new(BTreeMap::new());
 	static LIQUIDITIES: RefCell<BTreeMap<LiquidityPoolId, Balance>> = RefCell::new(BTreeMap::new());
 }
 
@@ -136,11 +138,11 @@ impl MockLiquidityPools {
 		SPREAD.with(|v| *v.borrow_mut() = spread);
 	}
 
-	pub fn accumulated_swap_rate(pair: TradingPair) -> Fixed128 {
+	pub fn accumulated_swap_rate(pair: TradingPair) -> FixedI128 {
 		ACC_SWAP_RATES.with(|v| v.borrow_mut().get(&pair).map(|r| *r)).unwrap()
 	}
 
-	pub fn set_mock_accumulated_swap_rate(pair: TradingPair, rate: Fixed128) {
+	pub fn set_mock_accumulated_swap_rate(pair: TradingPair, rate: FixedI128) {
 		ACC_SWAP_RATES.with(|v| v.borrow_mut().insert(pair, rate));
 	}
 
@@ -201,21 +203,21 @@ impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
 		let base_price = MockPrices::prices(pair.base)?;
 		let quote_price = MockPrices::prices(pair.quote)?;
 		let price = base_price.checked_div(&quote_price).unwrap();
-		Some(Self::spread().mul_ceil(price.deconstruct()))
+		Some(Self::spread().mul_ceil(price.into_inner()))
 	}
 
 	fn get_ask_spread(_pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance> {
 		let base_price = MockPrices::prices(pair.base)?;
 		let quote_price = MockPrices::prices(pair.quote)?;
 		let price = base_price.checked_div(&quote_price).unwrap();
-		Some(Self::spread().mul_ceil(price.deconstruct()))
+		Some(Self::spread().mul_ceil(price.into_inner()))
 	}
 
-	fn get_swap_rate(_pool_id: LiquidityPoolId, _pair: TradingPair, _is_long: bool) -> Fixed128 {
+	fn get_swap_rate(_pool_id: LiquidityPoolId, _pair: TradingPair, _is_long: bool) -> FixedI128 {
 		unimplemented!()
 	}
 
-	fn get_accumulated_swap_rate(_pool_id: LiquidityPoolId, pair: TradingPair, _is_long: bool) -> Fixed128 {
+	fn get_accumulated_swap_rate(_pool_id: LiquidityPoolId, pair: TradingPair, _is_long: bool) -> FixedI128 {
 		Self::accumulated_swap_rate(pair)
 	}
 
@@ -320,7 +322,7 @@ pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	spread: Permill,
 	prices: Vec<(CurrencyId, Price)>,
-	swap_rates: Vec<(TradingPair, Fixed128)>,
+	swap_rates: Vec<(TradingPair, FixedI128)>,
 	pool_liquidities: Vec<(LiquidityPoolId, Balance)>,
 }
 
@@ -330,7 +332,7 @@ impl Default for ExtBuilder {
 		Self {
 			endowed_accounts: vec![],
 			spread: Permill::from_rational_approximation(1, 1000u32),
-			prices: vec![(CurrencyId::AUSD, FixedU128::from_rational(1, 1))],
+			prices: vec![(CurrencyId::AUSD, FixedU128::saturating_from_rational(1, 1))],
 			swap_rates: vec![],
 			pool_liquidities: vec![],
 		}
@@ -343,11 +345,11 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn module_balance(mut self, balance: Fixed128) -> Self {
+	pub fn module_balance(mut self, balance: FixedI128) -> Self {
 		self.endowed_accounts.push((
 			MarginProtocol::account_id(),
 			CurrencyId::AUSD,
-			u128_from_fixed_128(balance),
+			u128_from_fixed_i128(balance),
 		));
 		self
 	}
@@ -360,11 +362,11 @@ impl ExtBuilder {
 	/// `price`: rational(x, y)
 	pub fn price(mut self, currency_id: CurrencyId, price: (u128, u128)) -> Self {
 		self.prices
-			.push((currency_id, FixedU128::from_rational(price.0, price.1)));
+			.push((currency_id, FixedU128::saturating_from_rational(price.0, price.1)));
 		self
 	}
 
-	pub fn accumulated_swap_rate(mut self, pair: TradingPair, rate: Fixed128) -> Self {
+	pub fn accumulated_swap_rate(mut self, pair: TradingPair, rate: FixedI128) -> Self {
 		self.swap_rates.push((pair, rate));
 		self
 	}

@@ -50,6 +50,7 @@ impl system::Trait for Runtime {
 	type Header = Header;
 	type Event = ();
 	type BlockHashCount = BlockHashCount;
+	type MaximumExtrinsicWeight = MaximumBlockWeight;
 	type MaximumBlockWeight = MaximumBlockWeight;
 	type DbWeight = ();
 	type BlockExecutionWeight = ();
@@ -94,6 +95,7 @@ impl orml_tokens::Trait for Runtime {
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
 	type DustRemoval = ();
+	type OnReceived = ();
 }
 
 pub struct PoolManager;
