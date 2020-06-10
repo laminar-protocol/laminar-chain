@@ -13,10 +13,25 @@ use sp_std::prelude::*;
 use traits::{LiquidityPools, OnDisableLiquidityPool, OnRemoveLiquidityPool, SyntheticProtocolLiquidityPools};
 
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
-pub struct SyntheticLiquidityPoolOption {
-	pub bid_spread: Balance,
-	pub ask_spread: Balance,
+pub struct SyntheticPoolCurrencyOption {
+	/// Bid spread.
+	///
+	/// DEFAULT-NOTE: `None`, pool owner must set spread.
+	pub bid_spread: Option<Balance>,
+
+	/// Ask spread.
+	///
+	/// DEFAULT-NOTE: `None`, pool owner must set spread.
+	pub ask_spread: Option<Balance>,
+
+	/// Additional collateral ratio.
+	///
+	/// DEFAULT-NOTE: `None`. If not set, `MinAdditionalCollateralRatio` will be used.
 	pub additional_collateral_ratio: Option<Permill>,
+
+	/// Is a synthetic currency enabled to mint in the pool.
+	///
+	/// DEFAULT-NOTE: default not enabled.
 	pub synthetic_enabled: bool,
 }
 
@@ -31,7 +46,7 @@ pub trait Trait: frame_system::Trait {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as SyntheticLiquidityPools {
-		pub LiquidityPoolOptions get(fn liquidity_pool_options): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) CurrencyId => Option<SyntheticLiquidityPoolOption>;
+		pub PoolCurrencyOptions get(fn pool_currency_options): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) CurrencyId => SyntheticPoolCurrencyOption;
 		pub MinAdditionalCollateralRatio get(fn min_additional_collateral_ratio) config(): Permill;
 		pub MaxSpread get(fn max_spread): map hasher(twox_64_concat) CurrencyId => Balance;
 	}
@@ -141,23 +156,22 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 
 impl<T: Trait> SyntheticProtocolLiquidityPools<T::AccountId> for Module<T> {
 	fn get_bid_spread(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Balance> {
-		Self::liquidity_pool_options(&pool_id, &currency_id).map(|pool| pool.bid_spread)
+		Self::pool_currency_options(&pool_id, &currency_id).bid_spread
 	}
 
 	fn get_ask_spread(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Balance> {
-		Self::liquidity_pool_options(&pool_id, &currency_id).map(|pool| pool.ask_spread)
+		Self::pool_currency_options(&pool_id, &currency_id).ask_spread
 	}
 
 	fn get_additional_collateral_ratio(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Permill {
 		let min_ratio = Self::min_additional_collateral_ratio();
-
-		Self::liquidity_pool_options(&pool_id, &currency_id).map_or(min_ratio, |pool| {
-			pool.additional_collateral_ratio.unwrap_or(min_ratio).max(min_ratio)
-		})
+		Self::pool_currency_options(&pool_id, &currency_id)
+			.additional_collateral_ratio
+			.map_or(min_ratio, |ratio| ratio.max(min_ratio))
 	}
 
 	fn can_mint(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> bool {
-		Self::liquidity_pool_options(&pool_id, &currency_id).map_or(false, |pool| pool.synthetic_enabled)
+		Self::pool_currency_options(&pool_id, &currency_id).synthetic_enabled
 	}
 }
 
@@ -175,10 +189,12 @@ impl<T: Trait> Module<T> {
 		if !max_spread.is_zero() {
 			ensure!(ask <= max_spread && bid <= max_spread, Error::<T>::SpreadTooHigh);
 		}
-		let mut pool = Self::liquidity_pool_options(&pool_id, &currency_id).unwrap_or_default();
-		pool.bid_spread = bid;
-		pool.ask_spread = ask;
-		LiquidityPoolOptions::insert(&pool_id, &currency_id, pool);
+
+		PoolCurrencyOptions::mutate(pool_id, currency_id, |o| {
+			o.bid_spread = Some(bid);
+			o.ask_spread = Some(ask);
+		});
+
 		Ok(())
 	}
 
@@ -189,9 +205,7 @@ impl<T: Trait> Module<T> {
 		ratio: Option<Permill>,
 	) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, who), Error::<T>::NoPermission);
-		let mut pool = Self::liquidity_pool_options(&pool_id, &currency_id).unwrap_or_default();
-		pool.additional_collateral_ratio = ratio;
-		LiquidityPoolOptions::insert(&pool_id, &currency_id, pool);
+		PoolCurrencyOptions::mutate(pool_id, currency_id, |o| o.additional_collateral_ratio = ratio);
 		Ok(())
 	}
 
@@ -202,21 +216,19 @@ impl<T: Trait> Module<T> {
 		enabled: bool,
 	) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, who), Error::<T>::NoPermission);
-		let mut pool = Self::liquidity_pool_options(&pool_id, &currency_id).unwrap_or_default();
-		pool.synthetic_enabled = enabled;
-		LiquidityPoolOptions::insert(&pool_id, &currency_id, pool);
+		PoolCurrencyOptions::mutate(pool_id, currency_id, |o| o.synthetic_enabled = enabled);
 		Ok(())
 	}
 }
 
 impl<T: Trait> OnDisableLiquidityPool for Module<T> {
 	fn on_disable(pool_id: LiquidityPoolId) {
-		LiquidityPoolOptions::remove_prefix(&pool_id);
+		PoolCurrencyOptions::remove_prefix(&pool_id);
 	}
 }
 
 impl<T: Trait> OnRemoveLiquidityPool for Module<T> {
 	fn on_remove(pool_id: LiquidityPoolId) {
-		LiquidityPoolOptions::remove_prefix(&pool_id);
+		PoolCurrencyOptions::remove_prefix(&pool_id);
 	}
 }

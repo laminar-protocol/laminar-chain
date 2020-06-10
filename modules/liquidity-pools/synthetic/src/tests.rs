@@ -13,7 +13,10 @@ use traits::{LiquidityPools, SyntheticProtocolLiquidityPools};
 fn should_disable_pool() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
+		assert_eq!(
+			ModuleLiquidityPools::pool_currency_options(0, CurrencyId::AUSD),
+			Default::default()
+		);
 		assert_ok!(ModuleLiquidityPools::set_synthetic_enabled(
 			Origin::signed(ALICE),
 			0,
@@ -21,16 +24,19 @@ fn should_disable_pool() {
 			true,
 		));
 		assert_eq!(
-			ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD),
-			Some(SyntheticLiquidityPoolOption {
-				bid_spread: 0,
-				ask_spread: 0,
+			ModuleLiquidityPools::pool_currency_options(0, CurrencyId::AUSD),
+			SyntheticPoolCurrencyOption {
+				bid_spread: None,
+				ask_spread: None,
 				additional_collateral_ratio: None,
 				synthetic_enabled: true,
-			})
+			},
 		);
 		assert_ok!(BaseLiquidityPools::disable_pool(Origin::signed(ALICE), 0));
-		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
+		assert_eq!(
+			ModuleLiquidityPools::pool_currency_options(0, CurrencyId::AUSD),
+			Default::default()
+		);
 	})
 }
 
@@ -41,7 +47,10 @@ fn should_remove_pool() {
 		assert_ok!(ModuleLiquidityPools::deposit_liquidity(&ALICE, 0, 1000));
 		assert_eq!(BaseLiquidityPools::liquidity(0), 1000);
 		assert_ok!(BaseLiquidityPools::remove_pool(Origin::signed(ALICE), 0));
-		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
+		assert_eq!(
+			ModuleLiquidityPools::pool_currency_options(0, CurrencyId::AUSD),
+			Default::default()
+		);
 		assert_eq!(BaseLiquidityPools::owner(0), None);
 		assert_eq!(BaseLiquidityPools::liquidity(0), 0);
 		assert_eq!(<ModuleLiquidityPools as LiquidityPools<AccountId>>::liquidity(0), 0);
@@ -53,7 +62,10 @@ fn should_set_spread() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_eq!(BaseLiquidityPools::owner(0), Some(ALICE));
-		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
+		assert_eq!(
+			ModuleLiquidityPools::pool_currency_options(0, CurrencyId::AUSD),
+			Default::default()
+		);
 		assert_ok!(ModuleLiquidityPools::set_spread(
 			Origin::signed(ALICE),
 			0,
@@ -62,16 +74,16 @@ fn should_set_spread() {
 			60
 		));
 
-		let pool_option = SyntheticLiquidityPoolOption {
-			bid_spread: 80,
-			ask_spread: 60,
+		let pool_option = SyntheticPoolCurrencyOption {
+			bid_spread: Some(80),
+			ask_spread: Some(60),
 			additional_collateral_ratio: None,
 			synthetic_enabled: false,
 		};
 
 		assert_eq!(
-			ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD),
-			Some(pool_option)
+			ModuleLiquidityPools::pool_currency_options(0, CurrencyId::AUSD),
+			pool_option
 		);
 
 		assert_eq!(
@@ -90,7 +102,10 @@ fn should_set_max_spread() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_eq!(BaseLiquidityPools::owner(0), Some(ALICE));
-		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
+		assert_eq!(
+			ModuleLiquidityPools::pool_currency_options(0, CurrencyId::AUSD),
+			Default::default()
+		);
 		// no max spread
 		assert_ok!(ModuleLiquidityPools::set_spread(
 			Origin::signed(ALICE),
@@ -117,13 +132,13 @@ fn should_set_max_spread() {
 		));
 
 		assert_eq!(
-			ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD),
-			Some(SyntheticLiquidityPoolOption {
-				bid_spread: 28,
-				ask_spread: 29,
+			ModuleLiquidityPools::pool_currency_options(0, CurrencyId::AUSD),
+			SyntheticPoolCurrencyOption {
+				bid_spread: Some(28),
+				ask_spread: Some(29),
 				additional_collateral_ratio: None,
 				synthetic_enabled: false,
-			})
+			},
 		);
 	});
 }
@@ -133,7 +148,10 @@ fn should_set_additional_collateral_ratio() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_eq!(BaseLiquidityPools::owner(0), Some(ALICE));
-		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
+		assert_eq!(
+			ModuleLiquidityPools::pool_currency_options(0, CurrencyId::AUSD),
+			Default::default()
+		);
 		assert_ok!(ModuleLiquidityPools::set_min_additional_collateral_ratio(
 			Origin::ROOT,
 			Permill::from_percent(120)
@@ -145,16 +163,16 @@ fn should_set_additional_collateral_ratio() {
 			Some(Permill::from_percent(120)),
 		));
 
-		let pool_option = SyntheticLiquidityPoolOption {
-			bid_spread: 0,
-			ask_spread: 0,
+		let pool_option = SyntheticPoolCurrencyOption {
+			bid_spread: None,
+			ask_spread: None,
 			additional_collateral_ratio: Some(Permill::from_percent(120)),
 			synthetic_enabled: false,
 		};
 
 		assert_eq!(
-			ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD),
-			Some(pool_option)
+			ModuleLiquidityPools::pool_currency_options(0, CurrencyId::AUSD),
+			pool_option
 		);
 
 		assert_eq!(
@@ -179,7 +197,10 @@ fn should_fail_set_additional_collateral_ratio() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_eq!(BaseLiquidityPools::owner(0), Some(ALICE));
-		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
+		assert_eq!(
+			ModuleLiquidityPools::pool_currency_options(0, CurrencyId::AUSD),
+			Default::default()
+		);
 		assert_eq!(
 			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::get_additional_collateral_ratio(
 				0,
@@ -259,7 +280,10 @@ fn should_set_synthetic_enabled() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_eq!(BaseLiquidityPools::owner(0), Some(ALICE));
-		assert_eq!(ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD), None);
+		assert_eq!(
+			ModuleLiquidityPools::pool_currency_options(0, CurrencyId::AUSD),
+			Default::default()
+		);
 		assert_eq!(
 			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::can_mint(0, CurrencyId::AUSD),
 			false
@@ -271,16 +295,16 @@ fn should_set_synthetic_enabled() {
 			true,
 		));
 
-		let pool_option = SyntheticLiquidityPoolOption {
-			bid_spread: 0,
-			ask_spread: 0,
+		let pool_option = SyntheticPoolCurrencyOption {
+			bid_spread: None,
+			ask_spread: None,
 			additional_collateral_ratio: None,
 			synthetic_enabled: true,
 		};
 
 		assert_eq!(
-			ModuleLiquidityPools::liquidity_pool_options(0, CurrencyId::AUSD),
-			Some(pool_option)
+			ModuleLiquidityPools::pool_currency_options(0, CurrencyId::AUSD),
+			pool_option
 		);
 
 		assert_eq!(
