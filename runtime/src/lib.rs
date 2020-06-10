@@ -1031,8 +1031,7 @@ impl_runtime_apis! {
 			let mut batches = Vec::<BenchmarkBatch>::new();
 			let params = (&pallet, &benchmark, &lowest_range_values, &highest_range_values, &steps, repeat);
 
-			//add_benchmark!(params, batches, b"base-liquidity-pools-margin", BaseLiquidityPoolsForMargin);
-			//add_benchmark!(params, batches, b"base-liquidity-pools-synthetic", BaseLiquidityPoolsForSynthetic);
+			add_benchmark!(params, batches, b"base-liquidity-pools", benchmarking::base_liquidity_pools);
 			add_benchmark!(params, batches, b"margin-liquidity-pools", benchmarking::margin_liquidity_pools);
 			add_benchmark!(params, batches, b"synthetic-liquidity-pools", benchmarking::synthetic_liquidity_pools);
 			add_benchmark!(params, batches, b"margin-protocol", benchmarking::margin_protocol);
