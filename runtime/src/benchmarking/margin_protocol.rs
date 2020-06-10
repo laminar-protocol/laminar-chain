@@ -3,7 +3,7 @@ use crate::{AccountId, BaseLiquidityPoolsForMargin, MarginLiquidityPools, Margin
 
 use frame_support::traits::ChangeMembers;
 use frame_system::RawOrigin;
-use sp_runtime::{traits::Zero, DispatchError, DispatchResult, FixedI128, FixedPointNumber, Permill};
+use sp_runtime::{DispatchError, DispatchResult, FixedI128, FixedPointNumber, Permill};
 use sp_std::prelude::*;
 
 use frame_benchmarking::account;

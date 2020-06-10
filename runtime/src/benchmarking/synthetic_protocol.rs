@@ -5,7 +5,7 @@ use crate::{
 
 use frame_support::traits::ChangeMembers;
 use frame_system::RawOrigin;
-use sp_runtime::{traits::Zero, DispatchError, DispatchResult, FixedPointNumber};
+use sp_runtime::{DispatchError, DispatchResult, FixedPointNumber};
 use sp_std::prelude::*;
 
 use frame_benchmarking::account;
