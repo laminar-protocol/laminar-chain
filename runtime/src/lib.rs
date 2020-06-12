@@ -55,7 +55,7 @@ pub use frame_support::{
 	traits::{Contains, ContainsLengthBound, Filter, InstanceFilter, KeyOwnerProofSystem, Randomness},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
-		IdentityFee, Weight,
+		Weight,
 	},
 	StorageValue,
 };
@@ -64,7 +64,7 @@ pub use pallet_staking::StakerStatus;
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Percent, Permill};
 
-pub use constants::{currency::*, time::*};
+pub use constants::{currency::*, fee::*, time::*};
 pub use types::*;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
@@ -290,7 +290,7 @@ impl pallet_transaction_payment::Trait for Runtime {
 	type Currency = pallet_balances::Module<Runtime>;
 	type OnTransactionPayment = ();
 	type TransactionByteFee = TransactionByteFee;
-	type WeightToFee = IdentityFee<Balance>;
+	type WeightToFee = WeightToFee;
 	type FeeMultiplierUpdate = ();
 }
 
