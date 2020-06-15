@@ -337,9 +337,19 @@ pub fn margin_deposit_liquidity(who: &AccountId, amount: Balance) -> DispatchRes
 }
 
 pub fn margin_set_enabled_trades() -> DispatchResult {
-	MarginLiquidityPools::set_enabled_trades(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, EUR_USD, Leverages::all())?;
-	MarginLiquidityPools::set_enabled_trades(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, JPY_EUR, Leverages::all())?;
-	MarginLiquidityPools::set_enabled_trades(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, JPY_USD, Leverages::all())
+	MarginLiquidityPools::set_enabled_leverages(
+		origin_of(&POOL::get()),
+		LIQUIDITY_POOL_ID_0,
+		EUR_USD,
+		Leverages::all(),
+	)?;
+	MarginLiquidityPools::set_enabled_leverages(
+		origin_of(&POOL::get()),
+		LIQUIDITY_POOL_ID_0,
+		JPY_EUR,
+		Leverages::all(),
+	)?;
+	MarginLiquidityPools::set_enabled_leverages(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, JPY_USD, Leverages::all())
 }
 
 pub fn margin_withdraw_liquidity(who: &AccountId, amount: Balance) -> DispatchResult {
@@ -351,7 +361,7 @@ pub fn margin_set_spread(pair: TradingPair, spread: Balance) -> DispatchResult {
 }
 
 pub fn margin_set_accumulate(pair: TradingPair, frequency: Moment, offset: Moment) -> DispatchResult {
-	MarginLiquidityPools::set_accumulate(<Runtime as system::Trait>::Origin::ROOT, pair, frequency, offset)
+	MarginLiquidityPools::set_accumulate_config(<Runtime as system::Trait>::Origin::ROOT, pair, frequency, offset)
 }
 
 pub fn margin_enable_trading_pair(pair: TradingPair) -> DispatchResult {
@@ -388,7 +398,7 @@ pub fn margin_set_swap_rate(pair: TradingPair, long_rate: FixedI128, short_rate:
 }
 
 pub fn margin_set_additional_swap(rate: FixedI128) -> DispatchResult {
-	MarginLiquidityPools::set_additional_swap(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, rate)
+	MarginLiquidityPools::set_additional_swap_rate(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, rate)
 }
 
 pub fn margin_set_max_spread(pair: TradingPair, max_spread: Balance) -> DispatchResult {

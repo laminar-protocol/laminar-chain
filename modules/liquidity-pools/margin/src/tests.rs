@@ -24,7 +24,7 @@ fn is_enabled_should_work() {
 			quote: CurrencyId::FEUR,
 		};
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_ok!(ModuleLiquidityPools::set_enabled_trades(
+		assert_ok!(ModuleLiquidityPools::set_enabled_leverages(
 			Origin::signed(ALICE),
 			0,
 			pair,
@@ -66,7 +66,7 @@ fn should_disable_pool() {
 			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
 			Default::default()
 		);
-		assert_ok!(ModuleLiquidityPools::set_enabled_trades(
+		assert_ok!(ModuleLiquidityPools::set_enabled_leverages(
 			Origin::signed(ALICE),
 			0,
 			pair,
@@ -231,7 +231,7 @@ fn should_set_enabled_trades() {
 			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
 			Default::default()
 		);
-		assert_ok!(ModuleLiquidityPools::set_enabled_trades(
+		assert_ok!(ModuleLiquidityPools::set_enabled_leverages(
 			Origin::signed(ALICE),
 			0,
 			pair,
@@ -313,7 +313,7 @@ fn should_get_swap() {
 
 		// add additional swap rate
 		let rate = FixedI128::saturating_from_integer(1);
-		assert_ok!(ModuleLiquidityPools::set_additional_swap(
+		assert_ok!(ModuleLiquidityPools::set_additional_swap_rate(
 			Origin::signed(ALICE),
 			0,
 			rate
@@ -334,7 +334,7 @@ fn should_get_swap() {
 			0,
 			pair
 		));
-		assert_ok!(ModuleLiquidityPools::set_additional_swap(
+		assert_ok!(ModuleLiquidityPools::set_additional_swap_rate(
 			Origin::signed(ALICE),
 			0,
 			rate
@@ -363,10 +363,10 @@ fn should_get_accumulated_swap() {
 		};
 
 		assert_noop!(
-			ModuleLiquidityPools::set_accumulate(Origin::ROOT, pair, 1, 0),
+			ModuleLiquidityPools::set_accumulate_config(Origin::ROOT, pair, 1, 0),
 			Error::<Runtime>::FrequencyTooLow
 		);
-		assert_ok!(ModuleLiquidityPools::set_accumulate(
+		assert_ok!(ModuleLiquidityPools::set_accumulate_config(
 			Origin::ROOT,
 			pair,
 			1 * ONE_MINUTE,
@@ -389,7 +389,7 @@ fn should_get_accumulated_swap() {
 
 		// add additional swap rate
 		let rate = FixedI128::saturating_from_rational(1, 10); // 10%
-		assert_ok!(ModuleLiquidityPools::set_additional_swap(
+		assert_ok!(ModuleLiquidityPools::set_additional_swap_rate(
 			Origin::signed(ALICE),
 			0,
 			rate
@@ -440,13 +440,13 @@ fn can_open_position() {
 			false
 		);
 
-		assert_ok!(ModuleLiquidityPools::set_enabled_trades(
+		assert_ok!(ModuleLiquidityPools::set_enabled_leverages(
 			Origin::signed(ALICE),
 			0,
 			pair,
 			Leverage::ShortFive.into(),
 		));
-		assert_ok!(ModuleLiquidityPools::set_enabled_trades(
+		assert_ok!(ModuleLiquidityPools::set_enabled_leverages(
 			Origin::signed(ALICE),
 			0,
 			pair,
@@ -477,7 +477,7 @@ fn should_update_accumulated_rate() {
 			short: FixedI128::saturating_from_rational(23, 1000), // 2.3%
 		};
 
-		assert_ok!(ModuleLiquidityPools::set_accumulate(
+		assert_ok!(ModuleLiquidityPools::set_accumulate_config(
 			Origin::ROOT,
 			pair,
 			1 * ONE_MINUTE,

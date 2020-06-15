@@ -1006,7 +1006,7 @@ mod tests {
 				assert_ok!(margin_enable_trading_pair(EUR_USD));
 				assert_ok!(margin_liquidity_pool_enable_trading_pair(EUR_USD));
 
-				// set_additional_swap, so long = -0.0101, short = 0.0099
+				// set_additional_swap_rate, so long = -0.0101, short = 0.0099
 				assert_ok!(margin_set_additional_swap(one_percent()));
 				println!(
 					"long_rate = {:?}, short_rate = {:?}",

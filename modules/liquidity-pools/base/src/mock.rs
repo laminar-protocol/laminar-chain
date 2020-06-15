@@ -122,8 +122,8 @@ impl Trait for Runtime {
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = PoolManager;
 	type ExistentialDeposit = ExistentialDeposit;
-	type Deposit = IdentityDeposit;
-	type DepositCurrency = Balances;
+	type IdentityDeposit = IdentityDeposit;
+	type IdentityDepositCurrency = Balances;
 	type ModuleId = Instance1ModuleId;
 	type OnDisableLiquidityPool = DummyOnDisable;
 	type OnRemoveLiquidityPool = DummyOnRemove;
@@ -135,8 +135,8 @@ impl Trait<Instance1> for Runtime {
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = PoolManager;
 	type ExistentialDeposit = ExistentialDeposit;
-	type Deposit = IdentityDeposit;
-	type DepositCurrency = Balances;
+	type IdentityDeposit = IdentityDeposit;
+	type IdentityDepositCurrency = Balances;
 	type ModuleId = Instance1ModuleId;
 	type OnDisableLiquidityPool = DummyOnDisable;
 	type OnRemoveLiquidityPool = DummyOnRemove;
@@ -153,8 +153,8 @@ impl Trait<Instance2> for Runtime {
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = PoolManager;
 	type ExistentialDeposit = ExistentialDeposit;
-	type Deposit = IdentityDeposit;
-	type DepositCurrency = Balances;
+	type IdentityDeposit = IdentityDeposit;
+	type IdentityDepositCurrency = Balances;
 	type ModuleId = Instance2ModuleId;
 	type OnDisableLiquidityPool = DummyOnDisable;
 	type OnRemoveLiquidityPool = DummyOnRemove;

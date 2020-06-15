@@ -121,8 +121,8 @@ impl module_base_liquidity_pools::Trait<SyntheticInstance> for Runtime {
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = PoolManager;
 	type ExistentialDeposit = ExistentialDeposit;
-	type Deposit = IdentityDeposit;
-	type DepositCurrency = pallet_balances::Module<Self>;
+	type IdentityDeposit = IdentityDeposit;
+	type IdentityDepositCurrency = pallet_balances::Module<Self>;
 	type ModuleId = SyntheticLiquidityPoolsModuleId;
 	type OnDisableLiquidityPool = ModuleLiquidityPools;
 	type OnRemoveLiquidityPool = ModuleLiquidityPools;
@@ -133,7 +133,6 @@ pub type BaseLiquidityPools = module_base_liquidity_pools::Module<Runtime, Synth
 impl Trait for Runtime {
 	type Event = ();
 	type BaseLiquidityPools = module_base_liquidity_pools::Module<Runtime, SyntheticInstance>;
-	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
 }
 pub type ModuleLiquidityPools = Module<Runtime>;

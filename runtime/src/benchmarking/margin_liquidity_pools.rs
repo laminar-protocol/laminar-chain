@@ -46,7 +46,7 @@ runtime_benchmarks! {
 		let caller = create_pool(p)?;
 	}: _(RawOrigin::Signed(caller), 0, EUR_USD, s.into(), s.into())
 
-	set_enabled_trades {
+	set_enabled_leverages {
 		let p in ...;
 		let caller = create_pool(p)?;
 	}: _(RawOrigin::Signed(caller), 0, EUR_USD, Leverages::all())
@@ -61,7 +61,7 @@ runtime_benchmarks! {
 		};
 	}: _(RawOrigin::Root, EUR_USD, swap_rate)
 
-	set_additional_swap {
+	set_additional_swap_rate {
 		let p in ...;
 		let r in ...;
 		let caller = create_pool(p)?;
@@ -72,7 +72,7 @@ runtime_benchmarks! {
 		let s in ...;
 	}: _(RawOrigin::Root, EUR_USD, s.into())
 
-	set_accumulate {
+	set_accumulate_config {
 		let frequency = 10u64;
 		let offset = 1u64;
 	}: _(RawOrigin::Root, EUR_USD, frequency, offset)
@@ -157,9 +157,9 @@ mod tests {
 	}
 
 	#[test]
-	fn set_enabled_trades() {
+	fn set_enabled_leverages() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_set_enabled_trades());
+			assert_ok!(test_benchmark_set_enabled_leverages());
 		});
 	}
 
@@ -171,9 +171,9 @@ mod tests {
 	}
 
 	#[test]
-	fn set_additional_swap() {
+	fn set_additional_swap_rate() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_set_additional_swap());
+			assert_ok!(test_benchmark_set_additional_swap_rate());
 		});
 	}
 
@@ -185,9 +185,9 @@ mod tests {
 	}
 
 	#[test]
-	fn set_accumulate() {
+	fn set_accumulate_config() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_set_accumulate());
+			assert_ok!(test_benchmark_set_accumulate_config());
 		});
 	}
 

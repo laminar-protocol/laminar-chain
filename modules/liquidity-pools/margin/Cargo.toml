@@ -19,7 +19,6 @@ traits = { package = "module-traits", path = "../../traits", default-features = 
 primitives = { package = "module-primitives", path = "../../primitives", default-features = false }
 
 orml-currencies = { path = "../../../orml/currencies", default-features = false }
-orml-traits = { path = "../../../orml/traits", default-features = false }
 orml-tokens = { path = "../../../orml/tokens", default-features = false }
 
 [dev-dependencies]
@@ -42,6 +41,5 @@ std = [
 	"traits/std",
 	"primitives/std",
 	"orml-currencies/std",
-	"orml-traits/std",
 	"orml-tokens/std",
 ]

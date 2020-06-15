@@ -12,10 +12,8 @@ use frame_support::{
 	Parameter,
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
-use orml_traits::MultiCurrency;
 use primitives::{
-	arithmetic::fixed_i128_mul_signum, AccumulateConfig, Balance, CurrencyId, Leverage, Leverages, LiquidityPoolId,
-	TradingPair,
+	arithmetic::fixed_i128_mul_signum, AccumulateConfig, Balance, Leverage, Leverages, LiquidityPoolId, TradingPair,
 };
 use sp_arithmetic::{FixedI128, FixedPointNumber};
 use sp_runtime::{
@@ -38,6 +36,7 @@ pub struct SwapRate {
 	pub short: FixedI128,
 }
 
+/// Trading pair option of margin liquidity pools.
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct MarginTradingPairOption<Moment> {
 	/// Is enabled for trading.
@@ -57,6 +56,7 @@ pub struct MarginTradingPairOption<Moment> {
 	pub accumulate_config: Option<AccumulateConfig<Moment>>,
 }
 
+/// Pool option of margin liquidity pools.
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct MarginPoolOption {
 	/// Additional swap rate, to adjust the swap rate in `MarginTradingPairOption`.
@@ -64,12 +64,14 @@ pub struct MarginPoolOption {
 	/// DEFAULT-NOTE: no adjustment for this pool.
 	pub additional_swap_rate: FixedI128,
 
-	/// Min leveraged amount. A position cannot be opened if it's leveraged amount is below min.
+	/// Min leveraged amount to open a position. If not set or smaller than default min leveraged amount,
+	/// the default value will be used instead.
 	///
-	/// DEFAULT-NOTE: no min requirement for this pool. (`DefaultMinLeveragedAmount` will be used)
+	/// DEFAULT-NOTE: no min requirement for this pool.
 	pub min_leveraged_amount: Balance,
 }
 
+/// Trading pair option in a pool of margin.
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct MarginPoolTradingPairOption {
 	/// Is enabled in pool.
@@ -97,23 +99,46 @@ pub const MODULE_ID: ModuleId = ModuleId(*b"lami/mlp");
 pub const ONE_MINUTE: u64 = 60;
 
 pub trait Trait: frame_system::Trait {
+	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+
+	/// The `LiquidityPools` implementation.
 	type BaseLiquidityPools: LiquidityPools<Self::AccountId>;
+
+	/// The `MarginProtocolLiquidityPoolsManager` implementation.
 	type PoolManager: MarginProtocolLiquidityPoolsManager;
-	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
+
+	/// Required origin for updating protocol options.
 	type UpdateOrigin: EnsureOrigin<Self::Origin>;
-	type MaxSwap: Get<FixedI128>;
+
+	/// Maximum swap rate.
+	type MaxSwapRate: Get<FixedI128>;
+
+	/// Time used for computing accumulated swap rate.
 	type UnixTime: UnixTime;
+
+	/// Type used for expressing timestamp.
 	type Moment: AtLeast32Bit + Parameter + Default + Copy + From<u64>;
 }
 
 decl_storage! {
 	trait Store for Module<T: Trait> as MarginLiquidityPools {
+		/// Trading pair options.
 		pub TradingPairOptions get(fn trading_pair_options): map hasher(twox_64_concat) TradingPair => MarginTradingPairOption<T::Moment>;
+
+		/// Liquidity pool options, managed by pool owner.
 		pub PoolOptions get(fn pool_options): map hasher(twox_64_concat) LiquidityPoolId => MarginPoolOption;
+
+		/// Trading pair options in a liquidity pool.
 		pub PoolTradingPairOptions: double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => MarginPoolTradingPairOption;
+
+		/// The accumulated swap rate of trading pairs in liquidity pools.
 		pub AccumulatedSwapRates get(fn accumulated_swap_rate): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => SwapRate;
+
+		/// The default minimum leveraged amount allowed to open a position.
 		pub DefaultMinLeveragedAmount get(fn default_min_leveraged_amount) config(): Balance;
+
+		/// The last time swap rate was accumulated.
 		pub LastAccumulateTime get(fn last_accumulate_time): T::Moment;
 	}
 
@@ -138,32 +163,44 @@ decl_event!(
 		<T as system::Trait>::AccountId,
 		<T as Trait>::Moment,
 	{
-		/// Set spread (who, pool_id, pair, bid, ask)
-		SetSpread(AccountId, LiquidityPoolId, TradingPair, Balance, Balance),
-		/// Set enabled trades (who, pool_id, pair, enabled)
-		SetEnabledTrades(AccountId, LiquidityPoolId, TradingPair, Leverages),
+		/// Spread set (who, pool_id, pair, bid, ask)
+		SpreadSet(AccountId, LiquidityPoolId, TradingPair, Balance, Balance),
+
+		/// Enabled trades set (who, pool_id, pair, enabled_leverages)
+		EnabledTradesSet(AccountId, LiquidityPoolId, TradingPair, Leverages),
+
 		/// Swap rate updated (pair, swap_rate)
 		SwapRateUpdated(TradingPair, SwapRate),
+
 		/// Accumulated swap rate updated (pool_id, pair, accumulated_swap_rate)
 		AccumulatedSwapRateUpdated(LiquidityPoolId, TradingPair, SwapRate),
+
 		/// Additional swap rate updated (who, pool_id, additional_swap_rate)
 		AdditionalSwapRateUpdated(AccountId, LiquidityPoolId, FixedI128),
+
 		/// Max spread updated (pair, spread)
 		MaxSpreadUpdated(TradingPair, Balance),
-		/// Set accumulate (pair, frequency, offset)
-		SetAccumulate(TradingPair, Moment, Moment),
+
+		/// Accumulate set (pair, frequency, offset)
+		AccumulateConfigSet(TradingPair, Moment, Moment),
+
 		/// Trading pair enabled (pair)
 		TradingPairEnabled(TradingPair),
+
 		/// Trading pair disabled (pair)
 		TradingPairDisabled(TradingPair),
-		/// LiquidityPool trading pair enabled (pair)
-		LiquidityPoolTradingPairEnabled(TradingPair),
-		/// LiquidityPool trading pair disabled (pair)
-		LiquidityPoolTradingPairDisabled(TradingPair),
-		/// Set default min leveraged amount (default_min_leveraged_amount)
-		SetDefaultMinLeveragedAmount(Balance),
-		/// Set min leveraged amount (pool_id, min_leveraged_amount)
-		SetMinLeveragedAmount(LiquidityPoolId, Balance),
+
+		/// Trading pair enabled in pool (pool_id, pair)
+		LiquidityPoolTradingPairEnabled(LiquidityPoolId, TradingPair),
+
+		/// Trading pair disabled in pool (pool_id, pair)
+		LiquidityPoolTradingPairDisabled(LiquidityPoolId, TradingPair),
+
+		/// Default min leveraged amount set (default_min_leveraged_amount)
+		DefaultMinLeveragedAmountSet(Balance),
+
+		/// Pool min leveraged amount set (pool_id, min_leveraged_amount)
+		MinLeveragedAmountSet(LiquidityPoolId, Balance),
 	}
 );
 
@@ -173,36 +210,48 @@ decl_module! {
 
 		fn deposit_event() = default;
 
+		/// Set bid and ask spread for `pair` in `pool_id`.
+		///
+		/// May only be called from the pool owner.
 		#[weight = 10_000]
 		pub fn set_spread(origin, #[compact] pool_id: LiquidityPoolId, pair: TradingPair, #[compact] bid: Balance, #[compact] ask: Balance) {
 			let who = ensure_signed(origin)?;
 			Self::_set_spread(&who, pool_id, pair, bid, ask)?;
-			Self::deposit_event(RawEvent::SetSpread(who, pool_id, pair, bid, ask));
+			Self::deposit_event(RawEvent::SpreadSet(who, pool_id, pair, bid, ask));
 		}
 
+		/// Set enabled leverages for `pair` in `pool_id`.
+		///
+		/// May only be called from the pool owner.
 		#[weight = 10_000]
-		pub fn set_enabled_trades(origin, #[compact] pool_id: LiquidityPoolId, pair: TradingPair, enabled: Leverages) {
+		pub fn set_enabled_leverages(origin, #[compact] pool_id: LiquidityPoolId, pair: TradingPair, enabled: Leverages) {
 			let who = ensure_signed(origin)?;
-			Self::_set_enabled_trades(&who, pool_id, pair, enabled)?;
-			Self::deposit_event(RawEvent::SetEnabledTrades(who, pool_id, pair, enabled));
+			Self::_set_enabled_leverages(&who, pool_id, pair, enabled)?;
+			Self::deposit_event(RawEvent::EnabledTradesSet(who, pool_id, pair, enabled));
 		}
 
+		/// Set swap rate for `pair`.
+		///
+		/// May only be called from `UpdateOrigin` or root.
 		#[weight = 10_000]
 		pub fn set_swap_rate(origin, pair: TradingPair, rate: SwapRate) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
 
-			ensure!(rate.long.saturating_abs() <= T::MaxSwap::get(), Error::<T>::SwapRateTooHigh);
-			ensure!(rate.short.saturating_abs() <= T::MaxSwap::get(), Error::<T>::SwapRateTooHigh);
+			ensure!(rate.long.saturating_abs() <= T::MaxSwapRate::get(), Error::<T>::SwapRateTooHigh);
+			ensure!(rate.short.saturating_abs() <= T::MaxSwapRate::get(), Error::<T>::SwapRateTooHigh);
 
 			<TradingPairOptions<T>>::mutate(&pair, |o| o.swap_rate = rate.clone());
 
 			Self::deposit_event(RawEvent::SwapRateUpdated(pair, rate));
 		}
 
+		/// Set additional swap rate for `pool_id`.
+		///
+		/// May only be called from the pool owner.
 		#[weight = 10_000]
-		pub fn set_additional_swap(origin, #[compact] pool_id: LiquidityPoolId,  rate: FixedI128) {
+		pub fn set_additional_swap_rate(origin, #[compact] pool_id: LiquidityPoolId, rate: FixedI128) {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
 
@@ -211,6 +260,9 @@ decl_module! {
 			Self::deposit_event(RawEvent::AdditionalSwapRateUpdated(who, pool_id, rate));
 		}
 
+		/// Set maximum spread for `pair`.
+		///
+		/// May only be called from `UpdateOrigin` or root.
 		#[weight = 10_000]
 		pub fn set_max_spread(origin, pair: TradingPair, #[compact] max_spread: Balance) {
 			T::UpdateOrigin::try_origin(origin)
@@ -222,8 +274,11 @@ decl_module! {
 			Self::deposit_event(RawEvent::MaxSpreadUpdated(pair, max_spread));
 		}
 
+		/// Set swap rate accumulation configuration.
+		///
+		/// May only be called from `UpdateOrigin` or root.
 		#[weight = 10_000]
-		pub fn set_accumulate(origin, pair: TradingPair, frequency: T::Moment, offset: T::Moment) {
+		pub fn set_accumulate_config(origin, pair: TradingPair, frequency: T::Moment, offset: T::Moment) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
@@ -235,9 +290,12 @@ decl_module! {
 				|o| o.accumulate_config = Some(AccumulateConfig { frequency, offset })
 			);
 
-			Self::deposit_event(RawEvent::SetAccumulate(pair, frequency, offset));
+			Self::deposit_event(RawEvent::AccumulateConfigSet(pair, frequency, offset));
 		}
 
+		/// Enable a trading pair.
+		///
+		/// May only be called from `UpdateOrigin` or root.
 		#[weight = 10_000]
 		pub fn enable_trading_pair(origin, pair: TradingPair) {
 			T::UpdateOrigin::try_origin(origin)
@@ -249,6 +307,9 @@ decl_module! {
 			Self::deposit_event(RawEvent::TradingPairEnabled(pair))
 		}
 
+		/// Disable a trading pair.
+		///
+		/// May only be called from `UpdateOrigin` or root.
 		#[weight = 10_000]
 		pub fn disable_trading_pair(origin, pair: TradingPair) {
 			T::UpdateOrigin::try_origin(origin)
@@ -260,6 +321,9 @@ decl_module! {
 			Self::deposit_event(RawEvent::TradingPairDisabled(pair))
 		}
 
+		/// Enable `pair` in `pool_id`.
+		///
+		/// May only be called from the pool owner.
 		#[weight = 10_000]
 		pub fn liquidity_pool_enable_trading_pair(origin, #[compact] pool_id: LiquidityPoolId, pair: TradingPair) {
 			let who = ensure_signed(origin)?;
@@ -270,9 +334,12 @@ decl_module! {
 
 			PoolTradingPairOptions::mutate(&pool_id, &pair, |o| o.enabled = true);
 
-			Self::deposit_event(RawEvent::LiquidityPoolTradingPairEnabled(pair))
+			Self::deposit_event(RawEvent::LiquidityPoolTradingPairEnabled(pool_id, pair))
 		}
 
+		/// Disable `pair` in `pool_id`.
+		///
+		/// May only be called from the pool owner.
 		#[weight = 10_000]
 		pub fn liquidity_pool_disable_trading_pair(origin, #[compact] pool_id: LiquidityPoolId, pair: TradingPair) {
 			let who = ensure_signed(origin)?;
@@ -280,18 +347,24 @@ decl_module! {
 
 			PoolTradingPairOptions::mutate(&pool_id, &pair, |o| o.enabled = false);
 
-			Self::deposit_event(RawEvent::LiquidityPoolTradingPairDisabled(pair))
+			Self::deposit_event(RawEvent::LiquidityPoolTradingPairDisabled(pool_id, pair))
 		}
 
+		/// Set default minimum leveraged amount to open a position.
+		///
+		/// May only be called from `UpdateOrigin` or root.
 		#[weight = 10_000]
 		pub fn set_default_min_leveraged_amount(origin, #[compact] amount: Balance) {
 			T::UpdateOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
 			DefaultMinLeveragedAmount::put(amount);
-			Self::deposit_event(RawEvent::SetDefaultMinLeveragedAmount(amount))
+			Self::deposit_event(RawEvent::DefaultMinLeveragedAmountSet(amount))
 		}
 
+		/// Set minimum leveraged amount to open a position in `pool_id`.
+		///
+		/// May only be called from the pool owner.
 		#[weight = 10_000]
 		pub fn set_min_leveraged_amount(origin, #[compact] pool_id: LiquidityPoolId, #[compact] amount: Balance) {
 			let who = ensure_signed(origin)?;
@@ -299,7 +372,7 @@ decl_module! {
 
 			PoolOptions::mutate(&pool_id, |o| o.min_leveraged_amount = amount);
 
-			Self::deposit_event(RawEvent::SetMinLeveragedAmount(pool_id, amount))
+			Self::deposit_event(RawEvent::MinLeveragedAmountSet(pool_id, amount))
 		}
 
 		fn on_initialize() -> Weight {
@@ -327,14 +400,18 @@ decl_module! {
 }
 
 decl_error! {
-	// MarginLiquidityPools module errors
+	/// Errors for the margin liquidity pools module.
 	pub enum Error for Module<T: Trait> {
+		/// Caller doesn't have permission.
 		NoPermission,
+
+		/// Swap rate is higher than max allowed.
 		SwapRateTooHigh,
-		SwapRateTooLow,
-		SpreadTooHigh,
+
+		/// Trading pair is not enabled in pool.
 		TradingPairNotEnabled,
-		NumOutOfBound,
+
+		/// `frequency` of accumulate config is too low.
 		FrequencyTooLow,
 	}
 }
@@ -442,7 +519,7 @@ impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
 	}
 
 	fn get_swap_rate(pool_id: LiquidityPoolId, pair: TradingPair, is_long: bool) -> FixedI128 {
-		let max_swap = T::MaxSwap::get();
+		let max_swap = T::MaxSwapRate::get();
 		let swap_rate = Self::swap_rate(pair);
 		let additional_swap_rate = Self::additional_swap_rate(pool_id);
 
@@ -500,7 +577,7 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	fn _set_enabled_trades(
+	fn _set_enabled_leverages(
 		who: &T::AccountId,
 		pool_id: LiquidityPoolId,
 		pair: TradingPair,
