@@ -373,7 +373,7 @@ mod tests {
 					}
 				);
 				// equity= FixedI128(14800.000000000000000000), net_position =FixedI128(10500.000000000000000000)
-				// net_position = base_amount * curr_price_usd = 5000 * 2.1 = 10500
+				// net_position = held * curr_price_usd = 5000 * 2.1 = 10500
 				assert_eq!(
 					margin_pool_state(),
 					Some(MarginPoolState {

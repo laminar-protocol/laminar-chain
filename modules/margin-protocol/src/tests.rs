@@ -59,22 +59,22 @@ fn set_ell_risk_threshold(pair: TradingPair, threshold: RiskThreshold) {
 	));
 }
 
-fn pool_trader_info(
-	position_num: u64,
+fn positions_snapshot(
+	positions_count: u64,
 	long_base_amount: FixedI128,
 	long_quote_amount: FixedI128,
 	short_base_amount: FixedI128,
 	short_quote_amount: FixedI128,
-) -> PoolTraderInfo {
-	PoolTraderInfo {
-		position_num: position_num,
-		long: PairInfo {
-			base_amount: long_base_amount,
-			quote_amount: long_quote_amount,
+) -> PositionsSnapshot {
+	PositionsSnapshot {
+		positions_count: positions_count,
+		long: LeveragedAmounts {
+			held: long_base_amount,
+			debits: long_quote_amount,
 		},
-		short: PairInfo {
-			base_amount: short_base_amount,
-			quote_amount: short_quote_amount,
+		short: LeveragedAmounts {
+			held: short_base_amount,
+			debits: short_quote_amount,
 		},
 	}
 }
@@ -413,7 +413,7 @@ fn equity_of_pool_works() {
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 1), true);
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 2), true);
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 3), true);
-			let pool_info = pool_trader_info(
+			let snapshot = positions_snapshot(
 				4,
 				eur_usd_long_1()
 					.leveraged_held
@@ -432,7 +432,7 @@ fn equity_of_pool_works() {
 					.checked_add(&eur_usd_short_2().leveraged_debits)
 					.unwrap(),
 			);
-			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info);
+			PositionsSnapshots::insert(MOCK_POOL, EUR_USD_PAIR, snapshot);
 			assert_eq!(
 				MarginProtocol::_equity_of_pool(MOCK_POOL),
 				Ok(FixedI128::from_inner(103297_100000000000000000))
@@ -457,7 +457,7 @@ fn enp_and_ell_without_new_position_works() {
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 2), true);
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 3), true);
 
-			let pool_info = pool_trader_info(
+			let snapshot = positions_snapshot(
 				4,
 				eur_usd_long_1()
 					.leveraged_held
@@ -476,7 +476,7 @@ fn enp_and_ell_without_new_position_works() {
 					.checked_add(&eur_usd_short_2().leveraged_debits)
 					.unwrap(),
 			);
-			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info);
+			PositionsSnapshots::insert(MOCK_POOL, EUR_USD_PAIR, snapshot);
 
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::None),
@@ -522,7 +522,7 @@ fn enp_and_ell_without_position_with_liquidity_works() {
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 1), true);
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 2), true);
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 3), true);
-			let pool_info = pool_trader_info(
+			let snapshot = positions_snapshot(
 				4,
 				eur_usd_long_1()
 					.leveraged_held
@@ -541,7 +541,7 @@ fn enp_and_ell_without_position_with_liquidity_works() {
 					.checked_add(&eur_usd_short_2().leveraged_debits)
 					.unwrap(),
 			);
-			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info);
+			PositionsSnapshots::insert(MOCK_POOL, EUR_USD_PAIR, snapshot);
 
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(
@@ -580,14 +580,14 @@ fn ensure_liquidity_works() {
 
 			<Positions<Runtime>>::insert(0, position.clone());
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), true);
-			let pool_info = pool_trader_info(
+			let snapshot = positions_snapshot(
 				1,
 				position.leveraged_held,
 				position.leveraged_debits,
 				FixedI128::saturating_from_integer(0),
 				FixedI128::saturating_from_integer(0),
 			);
-			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info);
+			PositionsSnapshots::insert(MOCK_POOL, EUR_USD_PAIR, snapshot);
 
 			assert_ok!(MarginProtocol::ensure_can_withdraw(MOCK_POOL, 10));
 
@@ -657,14 +657,14 @@ fn ensure_pool_safe_works() {
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), true);
 			set_ell_risk_threshold(EUR_USD_PAIR, risk_threshold(99, 0));
 
-			let pool_info = pool_trader_info(
+			let snapshot = positions_snapshot(
 				1,
 				position.leveraged_held,
 				position.leveraged_debits,
 				FixedI128::saturating_from_integer(0),
 				FixedI128::saturating_from_integer(0),
 			);
-			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info);
+			PositionsSnapshots::insert(MOCK_POOL, EUR_USD_PAIR, snapshot);
 
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::None),
@@ -890,7 +890,7 @@ fn trader_stop_out_close_bigger_loss_position() {
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), true);
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 1), true);
 
-			let pool_info = pool_trader_info(
+			let snapshot = positions_snapshot(
 				2,
 				loss_position
 					.leveraged_held
@@ -903,7 +903,7 @@ fn trader_stop_out_close_bigger_loss_position() {
 				FixedI128::saturating_from_integer(0),
 				FixedI128::saturating_from_integer(0),
 			);
-			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info);
+			PositionsSnapshots::insert(MOCK_POOL, EUR_USD_PAIR, snapshot);
 
 			assert_ok!(MarginProtocol::trader_stop_out(Origin::NONE, ALICE, MOCK_POOL));
 
@@ -937,14 +937,14 @@ fn liquidity_pool_margin_call_and_become_safe_work() {
 
 			<Positions<Runtime>>::insert(0, position.clone());
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), true);
-			let pool_info = pool_trader_info(
+			let snapshot = positions_snapshot(
 				1,
 				position.leveraged_held,
 				position.leveraged_debits,
 				FixedI128::saturating_from_integer(0),
 				FixedI128::saturating_from_integer(0),
 			);
-			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info);
+			PositionsSnapshots::insert(MOCK_POOL, EUR_USD_PAIR, snapshot);
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::None),
 				Ok((
@@ -1491,14 +1491,14 @@ fn close_loss_position_works() {
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), true);
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), true);
 
-			let pool_info = pool_trader_info(
+			let snapshot = positions_snapshot(
 				1,
 				position.leveraged_held,
 				position.leveraged_debits,
 				FixedI128::saturating_from_integer(0),
 				FixedI128::saturating_from_integer(0),
 			);
-			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info.clone());
+			PositionsSnapshots::insert(MOCK_POOL, EUR_USD_PAIR, snapshot.clone());
 
 			assert_ok!(MarginProtocol::close_position(
 				Origin::signed(ALICE),
@@ -1556,14 +1556,14 @@ fn close_loss_position_realizing_part_on_not_enough_equity() {
 			};
 			<Positions<Runtime>>::insert(0, position.clone());
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), true);
-			let pool_info = pool_trader_info(
+			let snapshot = positions_snapshot(
 				1,
 				position.leveraged_held,
 				position.leveraged_debits,
 				FixedI128::saturating_from_integer(0),
 				FixedI128::saturating_from_integer(0),
 			);
-			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info.clone());
+			PositionsSnapshots::insert(MOCK_POOL, EUR_USD_PAIR, snapshot.clone());
 
 			MockPrices::set_mock_price(CurrencyId::FEUR, Some(Price::saturating_from_rational(1, 1)));
 
@@ -1607,7 +1607,7 @@ fn close_loss_position_realizing_nothing_on_negative_equity() {
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), true);
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 1), true);
 
-			let pool_info = pool_trader_info(
+			let snapshot = positions_snapshot(
 				2,
 				position.leveraged_held.checked_add(&position.leveraged_held).unwrap(),
 				position
@@ -1617,7 +1617,7 @@ fn close_loss_position_realizing_nothing_on_negative_equity() {
 				FixedI128::saturating_from_integer(0),
 				FixedI128::saturating_from_integer(0),
 			);
-			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info.clone());
+			PositionsSnapshots::insert(MOCK_POOL, EUR_USD_PAIR, snapshot.clone());
 
 			MockPrices::set_mock_price(CurrencyId::FEUR, Some(Price::saturating_from_rational(1, 1)));
 			assert!(MarginProtocol::equity_of_trader(&ALICE, MOCK_POOL).unwrap() < FixedI128::zero());
@@ -1656,15 +1656,18 @@ fn close_profit_position_works() {
 			<Positions<Runtime>>::insert(id, position.clone());
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), true);
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), true);
-			let pool_info = pool_trader_info(
+			let snapshot = positions_snapshot(
 				1,
 				position.leveraged_held,
 				position.leveraged_debits,
 				FixedI128::saturating_from_integer(0),
 				FixedI128::saturating_from_integer(0),
 			);
-			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info.clone());
-			assert_eq!(MarginProtocol::pool_trader_infos(MOCK_POOL, EUR_USD_PAIR), pool_info);
+			PositionsSnapshots::insert(MOCK_POOL, EUR_USD_PAIR, snapshot.clone());
+			assert_eq!(
+				MarginProtocol::pool_positions_snapshots(MOCK_POOL, EUR_USD_PAIR),
+				snapshot
+			);
 
 			assert_ok!(MarginProtocol::close_position(
 				Origin::signed(ALICE),
@@ -1672,14 +1675,17 @@ fn close_profit_position_works() {
 				Price::saturating_from_rational(11, 10)
 			));
 
-			let pool_info = pool_trader_info(
+			let snapshot = positions_snapshot(
 				0,
 				FixedI128::saturating_from_integer(0),
 				FixedI128::saturating_from_integer(0),
 				FixedI128::saturating_from_integer(0),
 				FixedI128::saturating_from_integer(0),
 			);
-			assert_eq!(MarginProtocol::pool_trader_infos(MOCK_POOL, EUR_USD_PAIR), pool_info);
+			assert_eq!(
+				MarginProtocol::pool_positions_snapshots(MOCK_POOL, EUR_USD_PAIR),
+				snapshot
+			);
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::None),
 				Ok((FixedI128::max_value(), FixedI128::max_value(),))
@@ -2155,14 +2161,14 @@ fn liquidity_pool_manager_can_remove_works() {
 
 		<Positions<Runtime>>::insert(0, eur_jpy_long());
 		PositionsByPool::insert(MOCK_POOL, (EUR_JPY_PAIR, 0), true);
-		let pool_info = pool_trader_info(
+		let snapshot = positions_snapshot(
 			1,
 			eur_jpy_long().leveraged_held,
 			eur_jpy_long().leveraged_debits,
 			FixedI128::saturating_from_integer(0),
 			FixedI128::saturating_from_integer(0),
 		);
-		PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info);
+		PositionsSnapshots::insert(MOCK_POOL, EUR_USD_PAIR, snapshot);
 		assert!(!<MarginProtocol as BaseLiquidityPoolManager<
 			LiquidityPoolId,
 			Balance,
@@ -2194,14 +2200,14 @@ fn liquidity_pool_manager_get_required_deposit_works() {
 			let id = 0;
 			<Positions<Runtime>>::insert(id, position.clone());
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, id), true);
-			let pool_info = pool_trader_info(
+			let snapshot = positions_snapshot(
 				1,
 				position.leveraged_held,
 				position.leveraged_debits,
 				FixedI128::saturating_from_integer(0),
 				FixedI128::saturating_from_integer(0),
 			);
-			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info);
+			PositionsSnapshots::insert(MOCK_POOL, EUR_USD_PAIR, snapshot);
 
 			// need deposit because of ENP
 			assert_eq!(
@@ -2326,7 +2332,7 @@ fn pool_open_positions_limit() {
 			);
 
 			assert_eq!(
-				PoolTraderInfos::get(MOCK_POOL, EUR_USD_PAIR).position_num as usize,
+				PositionsSnapshots::get(MOCK_POOL, EUR_USD_PAIR).positions_count as usize,
 				<Runtime as Trait>::GetTraderMaxOpenPositions::get()
 			);
 
@@ -2477,14 +2483,14 @@ fn ensure_can_enable_trading_pair_works() {
 
 			<Positions<Runtime>>::insert(0, eur_usd_long_1());
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), true);
-			let pool_info = pool_trader_info(
+			let snapshot = positions_snapshot(
 				1,
 				eur_usd_long_1().leveraged_held,
 				eur_usd_long_1().leveraged_debits,
 				FixedI128::saturating_from_integer(0),
 				FixedI128::saturating_from_integer(0),
 			);
-			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info);
+			PositionsSnapshots::insert(MOCK_POOL, EUR_USD_PAIR, snapshot);
 
 			assert_eq!(
 				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::OpenPosition(eur_usd_long_1())),
@@ -2560,22 +2566,22 @@ fn open_position_check_pool_works() {
 			<Positions<Runtime>>::insert(1, eur_jpy_short());
 			PositionsByPool::insert(MOCK_POOL, (EUR_USD_PAIR, 0), true);
 			PositionsByPool::insert(MOCK_POOL, (EUR_JPY_PAIR, 1), true);
-			let pool_info = pool_trader_info(
+			let snapshot = positions_snapshot(
 				1,
 				eur_usd_long_1().leveraged_held,
 				eur_usd_long_1().leveraged_debits,
 				FixedI128::saturating_from_integer(0),
 				FixedI128::saturating_from_integer(0),
 			);
-			PoolTraderInfos::insert(MOCK_POOL, EUR_USD_PAIR, pool_info);
-			let pool_info = pool_trader_info(
+			PositionsSnapshots::insert(MOCK_POOL, EUR_USD_PAIR, snapshot);
+			let snapshot = positions_snapshot(
 				1,
 				FixedI128::saturating_from_integer(0),
 				FixedI128::saturating_from_integer(0),
 				eur_jpy_short().leveraged_held,
 				eur_jpy_short().leveraged_debits,
 			);
-			PoolTraderInfos::insert(MOCK_POOL, EUR_JPY_PAIR, pool_info);
+			PositionsSnapshots::insert(MOCK_POOL, EUR_JPY_PAIR, snapshot);
 
 			assert_eq!(
 				MarginProtocol::_enp_and_ell_risk_threshold_of_pool(MOCK_POOL),
