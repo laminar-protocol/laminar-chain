@@ -27,7 +27,7 @@ use frame_system::{
 	ensure_none, ensure_root, ensure_signed,
 	offchain::{SendTransactionTypes, SubmitTransaction},
 };
-use orml_traits::{MultiCurrency, PriceProvider};
+use orml_traits::{BasicCurrency, PriceProvider};
 use primitives::{
 	arithmetic::{fixed_i128_from_fixed_u128, fixed_i128_from_u128, fixed_i128_mul_signum, u128_from_fixed_i128},
 	Balance, CurrencyId, Leverage, LiquidityPoolId, Price, TradingPair,
@@ -47,8 +47,12 @@ mod tests;
 const MODULE_ID: ModuleId = ModuleId(*b"lami/mgn");
 
 pub trait Trait: frame_system::Trait + SendTransactionTypes<Call<Self>> {
+	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
-	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
+
+	/// The currency used for liquidity.
+	type LiquidityCurrency: BasicCurrency<Self::AccountId, Balance = Balance>;
+
 	type LiquidityPools: MarginProtocolLiquidityPools<Self::AccountId>;
 	type PriceProvider: PriceProvider<CurrencyId, Price>;
 	type Treasury: Treasury<Self::AccountId>;
@@ -494,7 +498,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn _deposit(who: &T::AccountId, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
-		T::MultiCurrency::transfer(CurrencyId::AUSD, who, &Self::account_id(), amount)?;
+		T::LiquidityCurrency::transfer(who, &Self::account_id(), amount)?;
 		Self::_update_balance(who, pool_id, fixed_i128_from_u128(amount));
 
 		Ok(())
@@ -505,7 +509,7 @@ impl<T: Trait> Module<T> {
 		let amount_fixedi128 = fixed_i128_from_u128(amount);
 		ensure!(free_margin >= amount_fixedi128, Error::<T>::InsufficientFreeMargin);
 
-		T::MultiCurrency::transfer(CurrencyId::AUSD, &Self::account_id(), who, amount)?;
+		T::LiquidityCurrency::transfer(&Self::account_id(), who, amount)?;
 		Self::_update_balance(who, pool_id, fixed_i128_mul_signum(amount_fixedi128, -1));
 
 		Ok(())

@@ -1031,10 +1031,7 @@ fn liquidity_pool_force_close_works() {
 				fixedi128_saturating_from_integer_currency_cent(19_700_00)
 			);
 			assert_eq!(MockLiquidityPools::liquidity(MOCK_POOL), 299960000000000000000);
-			assert_eq!(
-				OrmlTokens::total_balance(CurrencyId::AUSD, &TREASURY_ACCOUNT),
-				40000000000000000
-			);
+			assert_eq!(LiquidityCurrency::total_balance(&TREASURY_ACCOUNT), 40000000000000000);
 		});
 }
 
@@ -1516,7 +1513,7 @@ fn close_loss_position_works() {
 			);
 			assert_eq!(MockLiquidityPools::liquidity(MOCK_POOL), 100584698964610000000000);
 			assert_eq!(
-				OrmlTokens::free_balance(CurrencyId::AUSD, &MarginProtocol::account_id()),
+				LiquidityCurrency::free_balance(&MarginProtocol::account_id()),
 				9415301035390000000000
 			);
 
@@ -1693,7 +1690,7 @@ fn close_profit_position_works() {
 			);
 			assert_eq!(MockLiquidityPools::liquidity(MOCK_POOL), 99561308976990000000000);
 			assert_eq!(
-				OrmlTokens::free_balance(CurrencyId::AUSD, &MarginProtocol::account_id()),
+				LiquidityCurrency::free_balance(&MarginProtocol::account_id()),
 				10438691023010000000000
 			);
 		});
@@ -1875,19 +1872,13 @@ fn close_short_position_fails_if_market_price_too_high() {
 #[test]
 fn deposit_works() {
 	ExtBuilder::default().alice_balance(1000).build().execute_with(|| {
-		assert_eq!(OrmlTokens::free_balance(CurrencyId::AUSD, &ALICE), 1000);
-		assert_eq!(
-			OrmlTokens::free_balance(CurrencyId::AUSD, &MarginProtocol::account_id()),
-			0
-		);
+		assert_eq!(LiquidityCurrency::free_balance(&ALICE), 1000);
+		assert_eq!(LiquidityCurrency::free_balance(&MarginProtocol::account_id()), 0);
 
 		assert_ok!(MarginProtocol::deposit(Origin::signed(ALICE), MOCK_POOL, 500));
 
-		assert_eq!(OrmlTokens::free_balance(CurrencyId::AUSD, &ALICE), 500);
-		assert_eq!(
-			OrmlTokens::free_balance(CurrencyId::AUSD, &MarginProtocol::account_id()),
-			500
-		);
+		assert_eq!(LiquidityCurrency::free_balance(&ALICE), 500);
+		assert_eq!(LiquidityCurrency::free_balance(&MarginProtocol::account_id()), 500);
 		assert_eq!(MarginProtocol::balances(&ALICE, MOCK_POOL), FixedI128::from_inner(500));
 
 		let event = TestEvent::margin_protocol(RawEvent::Deposited(ALICE, MOCK_POOL, 500));

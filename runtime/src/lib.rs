@@ -741,7 +741,7 @@ parameter_types! {
 
 impl margin_protocol::Trait for Runtime {
 	type Event = Event;
-	type MultiCurrency = orml_currencies::Module<Runtime>;
+	type LiquidityCurrency = LiquidityCurrency;
 	type LiquidityPools = margin_liquidity_pools::Module<Runtime>;
 	type PriceProvider = orml_prices::DefaultPriceProvider<CurrencyId, LaminarDataProvider>;
 	type Treasury = MockLaminarTreasury;
