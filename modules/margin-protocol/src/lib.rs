@@ -112,7 +112,7 @@ pub struct Position<T: Trait> {
 	margin_held: FixedI128,
 }
 
-/// Positions snapshot. Used for performance improvement.
+/// Positions snapshot.
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct PositionsSnapshot {
 	/// Positions count.
@@ -135,17 +135,27 @@ pub struct LeveragedAmounts {
 	debits: FixedI128,
 }
 
+/// Risk threshold.
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Copy, Clone, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct RiskThreshold {
+	/// Margin call threhold.
 	pub margin_call: Permill,
+
+	/// Stop out threshold.
 	pub stop_out: Permill,
 }
 
+/// Risk threshold for a trading pair.
 #[derive(Encode, Decode, Copy, Clone, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct TradingPairRiskThreshold {
+	/// Trader risk threshold.
 	pub trader: Option<RiskThreshold>,
+
+	/// Liquidity pool Equity to Net Position Ratio (ENP) threshold.
 	pub enp: Option<RiskThreshold>,
+
+	/// Liquidity pool Equity to Longest Leg Ratio (ELL) threshold.
 	pub ell: Option<RiskThreshold>,
 }
 impl TradingPairRiskThreshold {
@@ -156,15 +166,43 @@ impl TradingPairRiskThreshold {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as MarginProtocol {
+		/// Next available position ID.
 		NextPositionId get(fn next_position_id): PositionId;
+
+		/// Positions.
 		Positions get(fn positions): map hasher(twox_64_concat) PositionId => Option<Position<T>>;
+
+		/// Positions existence check by traders and liquidity pool IDs.
 		PositionsByTrader get(fn positions_by_trader): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) (LiquidityPoolId, PositionId) => Option<bool>;
+
+		/// Positions existence check by pools and trading pairs.
 		PositionsByPool get(fn positions_by_pool): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) (TradingPair, PositionId) => Option<bool>;
+
+		/// Positions snapshots.
+		///
+		/// Used for performance improvement.
 		PositionsSnapshots get(fn pool_positions_snapshots): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => PositionsSnapshot;
+
+		/// Balance of a trader in a liquidity pool.
+		///
+		/// The balance value could be positive or negative:
+		/// - If positive, it represents 'balance' the trader could use to open positions, withdraw etc.
+		/// - If negative, it represents how much the trader owns the pool. Owning could happen when realzing loss
+		/// but trader has not enough free margin at the moment; Then repayment would be done while realizing profit.
 		Balances get(fn balances): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) LiquidityPoolId => FixedI128;
+
+		/// Margin call check of a trader in a pool.
+		///
+		/// A trader may only open new positions if not in margin called state.
 		MarginCalledTraders get(fn margin_called_traders): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) LiquidityPoolId => Option<bool>;
+
+
+		/// Margin call pool.
+		///
+		/// New positions may only be opened in a pool if which not in margin called state.
 		MarginCalledPools get(fn margin_called_pools): map hasher(twox_64_concat) LiquidityPoolId => Option<bool>;
-		/// Risk thresholds of a trading pair, including trader risk threshold, pool ENP and ELL.
+
+		/// Risk thresholds of a trading pair, including trader risk threshold, pool ENP and ELL risk threshold.
 		///
 		/// DEFAULT-NOTE: `trader`, `enp`, and `ell` are all `None` by default.
 		RiskThresholds get(fn risk_thresholds): map hasher(twox_64_concat) TradingPair => TradingPairRiskThreshold;
@@ -190,55 +228,104 @@ decl_event! {
 		TradingPair = TradingPair,
 		Amount = Balance
 	{
-		/// Position opened: (who, position_id, pool_id, trading_pair, leverage, leveraged_amount, market_price)
+		/// Position opened: (who, position_id, pool_id, trading_pair, leverage, leveraged_amount, open_price)
 		PositionOpened(AccountId, PositionId, LiquidityPoolId, TradingPair, Leverage, Amount, Price),
-		/// Position closed: (who, position_id, pool_id, market_price)
+
+		/// Position closed: (who, position_id, pool_id, close_price)
 		PositionClosed(AccountId, PositionId, LiquidityPoolId, Price),
+
 		/// Deposited: (who, pool_id, amount)
 		Deposited(AccountId, LiquidityPoolId, Amount),
+
 		/// Withdrew: (who, pool_id, amount)
 		Withdrew(AccountId, LiquidityPoolId, Amount),
-		/// TraderMarginCalled: (who)
+
+		/// Trader margin called: (who)
 		TraderMarginCalled(AccountId),
-		/// TraderBecameSafe: (who)
+
+		/// Trader became safe: (who)
 		TraderBecameSafe(AccountId),
-		/// TraderStoppedOut: (who)
+
+		/// Trader stopped out: (who)
 		TraderStoppedOut(AccountId),
-		/// LiquidityPoolMarginCalled: (pool_id)
+
+		/// Liquidity pool margin called: (pool_id)
 		LiquidityPoolMarginCalled(LiquidityPoolId),
-		/// LiquidityPoolBecameSafe: (pool_id)
+
+		/// Liquidity pool became safe: (pool_id)
 		LiquidityPoolBecameSafe(LiquidityPoolId),
-		/// LiquidityPoolForceClosed: (pool_id)
+
+		/// Liquidity pool force closed: (pool_id)
 		LiquidityPoolForceClosed(LiquidityPoolId),
-		/// Set trading pair risk threshold (pair, trader_risk_threshold, liquidity_pool_enp_threshold, liquidity_pool_ell_threshold)
+
+		/// Trading pair risk threshold set (pair, trader_risk_threshold, liquidity_pool_enp_threshold, liquidity_pool_ell_threshold)
 		TradingPairRiskThresholdSet(TradingPair, Option<RiskThreshold>, Option<RiskThreshold>, Option<RiskThreshold>),
 	}
 }
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
+		/// No price from provider.
 		NoPrice,
+
+		/// Ask spread not set.
 		NoAskSpread,
+
+		/// Bid spread not set.
 		NoBidSpread,
+
+		/// Market price is too high.
 		MarketPriceTooHigh,
+
+		/// Market price is too low.
 		MarketPriceTooLow,
+
+		/// Number out of bound in calculation.
 		NumOutOfBound,
+
+		/// Trader is not safe.
 		UnsafeTrader,
-		TraderWouldBeUnsafe,
+
+		/// Liquidity pool is not safe.
 		UnsafePool,
+
+		/// Pool would be unsafe.
 		PoolWouldBeUnsafe,
+
+		/// Trader is safe.
 		SafeTrader,
+
+		/// Pool is safe.
 		SafePool,
+
+		/// Not reach risk threshold yet.
 		NotReachedRiskThreshold,
+
+		/// Trader has been margin called.
 		MarginCalledTrader,
+
+		/// Pool has been margin called.
 		MarginCalledPool,
+
+		/// No available position id.
 		NoAvailablePositionId,
+
+		/// Position not found.
 		PositionNotFound,
+
+		/// Position is not opened by caller.
 		PositionNotOpenedByTrader,
+
+		/// Position is not allow in pool.
 		PositionNotAllowed,
-		CannotOpenPosition,
+
+		/// Positions count reached maximum.
 		CannotOpenMorePosition,
+
+		/// Insufficient free margin.
 		InsufficientFreeMargin,
+
+		/// Risk threshold not set.
 		NoRiskThreshold,
 	}
 }
@@ -249,6 +336,7 @@ decl_module! {
 
 		fn deposit_event() = default;
 
+		/// Open a position in `pool_id`.
 		#[weight = 20_000]
 		pub fn open_position(
 			origin,
@@ -262,12 +350,14 @@ decl_module! {
 			Self::_open_position(&who, pool_id, pair, leverage, leveraged_amount, price)?;
 		}
 
+		/// Close position by id.
 		#[weight = 20_000]
 		pub fn close_position(origin, #[compact] position_id: PositionId, price: Price) {
 			let who = ensure_signed(origin)?;
 			Self::_close_position(&who, position_id, Some(price))?;
 		}
 
+		/// Deposit liquidity to caller's account.
 		#[weight = 10_000]
 		pub fn deposit(origin, #[compact] pool_id: LiquidityPoolId, #[compact] amount: Balance) {
 			let who = ensure_signed(origin)?;
@@ -276,6 +366,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::Deposited(who, pool_id, amount));
 		}
 
+		/// Withdraw liquidity from caller's account.
 		#[weight = 10_000]
 		pub fn withdraw(origin, #[compact] pool_id: LiquidityPoolId, #[compact] amount: Balance) {
 			let who = ensure_signed(origin)?;
@@ -284,6 +375,9 @@ decl_module! {
 			Self::deposit_event(RawEvent::Withdrew(who, pool_id, amount));
 		}
 
+		/// Margin call a trader.
+		///
+		/// May only be called from none origin. Would fail if the trader is still safe.
 		#[weight = (20_000, DispatchClass::Operational)]
 		pub fn trader_margin_call(
 			origin,
@@ -297,6 +391,9 @@ decl_module! {
 			Self::deposit_event(RawEvent::TraderMarginCalled(who));
 		}
 
+		/// Remove trader's margin-called status.
+		///
+		/// May only be called from none origin. Would fail if the trader is not safe yet.
 		#[weight = 20_000]
 		pub fn trader_become_safe(
 			origin,
@@ -310,6 +407,9 @@ decl_module! {
 			Self::deposit_event(RawEvent::TraderBecameSafe(who));
 		}
 
+		/// Stop out a trader.
+		///
+		/// May only be called from none origin. Would fail if stop out threshold not reached.
 		#[weight = (30_000, DispatchClass::Operational)]
 		pub fn trader_stop_out(
 			origin,
@@ -323,6 +423,9 @@ decl_module! {
 			Self::deposit_event(RawEvent::TraderStoppedOut(who));
 		}
 
+		/// Margin call a liqudity pool.
+		///
+		/// May only be called from none origin. Would fail if the pool still safe.
 		#[weight = (20_000, DispatchClass::Operational)]
 		pub fn liquidity_pool_margin_call(origin, #[compact] pool: LiquidityPoolId) {
 			ensure_none(origin)?;
@@ -330,6 +433,9 @@ decl_module! {
 			Self::deposit_event(RawEvent::LiquidityPoolMarginCalled(pool));
 		}
 
+		/// Remove a pool's margin-called status.
+		///
+		/// May only be called from none origin. Would fail if the pool is not safe yet.
 		#[weight = 20_000]
 		pub fn liquidity_pool_become_safe(origin, #[compact] pool: LiquidityPoolId) {
 			ensure_none(origin)?;
@@ -337,6 +443,9 @@ decl_module! {
 			Self::deposit_event(RawEvent::LiquidityPoolBecameSafe(pool));
 		}
 
+		/// Force close a liquidity pool.
+		///
+		/// May only be called from none origin. Would fail if pool ENP or ELL thresholds not reached.
 		#[weight = (30_000, DispatchClass::Operational)]
 		pub fn liquidity_pool_force_close(origin, #[compact] pool: LiquidityPoolId) {
 			ensure_none(origin)?;
@@ -344,6 +453,9 @@ decl_module! {
 			Self::deposit_event(RawEvent::LiquidityPoolForceClosed(pool));
 		}
 
+		/// Set risk thresholds of a trading pair.
+		///
+		/// May only be called from `UpdateOrigin` or root.
 		#[weight = 10_000]
 		pub fn set_trading_pair_risk_threshold(origin, pair: TradingPair, trader: Option<RiskThreshold>, enp: Option<RiskThreshold>, ell: Option<RiskThreshold>) {
 			T::UpdateOrigin::try_origin(origin)
@@ -444,7 +556,7 @@ impl<T: Trait> Module<T> {
 		let leveraged_held_in_usd = Self::_usd_value(pair.quote, leveraged_debits)?;
 		ensure!(
 			T::LiquidityPools::can_open_position(pool_id, pair, leverage, u128_from_fixed_i128(leveraged_held_in_usd)),
-			Error::<T>::CannotOpenPosition
+			Error::<T>::PositionNotAllowed
 		);
 
 		let margin_held = {

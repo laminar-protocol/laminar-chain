@@ -92,31 +92,31 @@ decl_event!(
 	pub enum Event<T, I=DefaultInstance> where
 		<T as system::Trait>::AccountId,
 	{
-		/// Liquidity pool created (who, pool_id)
+		/// Liquidity pool created: (who, pool_id)
 		LiquidityPoolCreated(AccountId, LiquidityPoolId),
 
-		/// Liquidity pool disabled (who, pool_id)
+		/// Liquidity pool disabled: (who, pool_id)
 		LiquidityPoolDisabled(AccountId, LiquidityPoolId),
 
-		/// Liquidity pool removed (who, pool_id)
+		/// Liquidity pool removed: (who, pool_id)
 		LiquidityPoolRemoved(AccountId, LiquidityPoolId),
 
-		/// Liquidity deposited (who, pool_id, amount)
+		/// Liquidity deposited: (who, pool_id, amount)
 		LiquidityDeposited(AccountId, LiquidityPoolId, Balance),
 
-		/// Liquidity withdrew (who, pool_id, amount)
+		/// Liquidity withdrew: (who, pool_id, amount)
 		LiquidityWithdrew(AccountId, LiquidityPoolId, Balance),
 
-		/// Identity set (who, pool_id)
+		/// Identity set: (who, pool_id)
 		IdentitySet(AccountId, LiquidityPoolId),
 
-		/// Identity verified (pool_id)
+		/// Identity verified: (pool_id)
 		IdentityVerified(LiquidityPoolId),
 
-		/// Identity cleared (who, pool_id)
+		/// Identity cleared: (who, pool_id)
 		IdentityCleared(AccountId, LiquidityPoolId),
 
-		/// Liquidity pool transffered to another owner (from, pool_id, to)
+		/// Liquidity pool transffered to another owner: (from, pool_id, to)
 		LiquidityPoolTransferred(AccountId, LiquidityPoolId, AccountId),
 	}
 );
