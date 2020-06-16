@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Eq, PartialEq, Default, RuntimeDebug)]
-pub struct PoolInfo {
+pub struct SyntheticPoolState {
 	pub collateral_ratio: FixedU128,
 	pub is_safe: bool,
 }
@@ -22,6 +22,6 @@ sp_api::decl_runtime_apis! {
 	pub trait SyntheticProtocolApi<AccountId> where
 		AccountId: Codec,
 	{
-		fn pool_info(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<PoolInfo>;
+		fn pool_state(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<SyntheticPoolState>;
 	}
 }

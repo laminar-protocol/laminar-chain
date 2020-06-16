@@ -46,8 +46,8 @@ pub use orml_oracle::AuthorityId as OracleId;
 use orml_traits::DataProvider;
 pub use sp_arithmetic::FixedI128;
 
-use margin_protocol_rpc_runtime_api::{PoolInfo, TraderInfo};
-use synthetic_protocol_rpc_runtime_api::PoolInfo as SyntheticProtocolPoolInfo;
+use margin_protocol_rpc_runtime_api::{MarginPoolState, MarginTraderState};
+use synthetic_protocol_rpc_runtime_api::SyntheticPoolState;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
@@ -980,14 +980,14 @@ impl_runtime_apis! {
 	}
 
 	impl margin_protocol_rpc_runtime_api::MarginProtocolApi<Block, AccountId> for Runtime {
-		fn trader_info(who: AccountId, pool_id: LiquidityPoolId) -> TraderInfo {
+		fn trader_state(who: AccountId, pool_id: LiquidityPoolId) -> MarginTraderState {
 			let equity = MarginProtocol::equity_of_trader(&who, pool_id).unwrap_or_default();
 			let margin_held = MarginProtocol::margin_held(&who, pool_id);
 			let margin_level = MarginProtocol::margin_level(&who, pool_id).unwrap_or_default();
 			let free_margin = MarginProtocol::free_margin(&who, pool_id).unwrap_or_default();
 			let unrealized_pl = MarginProtocol::unrealized_pl_of_trader(&who, pool_id).unwrap_or_default();
 
-			TraderInfo {
+			MarginTraderState {
 				equity,
 				margin_held,
 				margin_level,
@@ -996,20 +996,20 @@ impl_runtime_apis! {
 			}
 		}
 
-		fn pool_info(pool_id: LiquidityPoolId) -> Option<PoolInfo> {
+		fn pool_state(pool_id: LiquidityPoolId) -> Option<MarginPoolState> {
 			let (enp, ell) = MarginProtocol::enp_and_ell(pool_id)?;
 			let required_deposit = MarginProtocol::pool_required_deposit(pool_id)?;
 
-			Some(PoolInfo { enp, ell, required_deposit })
+			Some(MarginPoolState { enp, ell, required_deposit })
 		}
 	}
 
 	impl synthetic_protocol_rpc_runtime_api::SyntheticProtocolApi<Block, AccountId> for Runtime {
-		fn pool_info(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<SyntheticProtocolPoolInfo> {
+		fn pool_state(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<SyntheticPoolState> {
 			let collateral_ratio = SyntheticProtocol::collateral_ratio(pool_id, currency_id)?;
 			let is_safe = SyntheticProtocol::is_safe_collateral_ratio(currency_id, collateral_ratio);
 
-			Some(SyntheticProtocolPoolInfo { collateral_ratio, is_safe })
+			Some(SyntheticPoolState { collateral_ratio, is_safe })
 		}
 	}
 

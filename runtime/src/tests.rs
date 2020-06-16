@@ -316,8 +316,8 @@ pub fn synthetic_liquidate(who: &AccountId, currency_id: CurrencyId, amount: Bal
 	ModuleSyntheticProtocol::liquidate(origin_of(who), LIQUIDITY_POOL_ID_0, currency_id, amount)
 }
 
-pub fn synthetic_pool_info(currency_id: CurrencyId) -> Option<SyntheticProtocolPoolInfo> {
-	<Runtime as SyntheticProtocolApi<Block, AccountId>>::pool_info(LIQUIDITY_POOL_ID_0, currency_id)
+pub fn synthetic_pool_state(currency_id: CurrencyId) -> Option<SyntheticPoolState> {
+	<Runtime as SyntheticProtocolApi<Block, AccountId>>::pool_state(LIQUIDITY_POOL_ID_0, currency_id)
 }
 
 pub fn margin_create_pool() -> DispatchResult {
@@ -531,12 +531,12 @@ pub fn treasury_balance() -> Balance {
 	<Runtime as synthetic_protocol::Trait>::CollateralCurrency::free_balance(&account_id)
 }
 
-pub fn margin_trader_info(who: &AccountId) -> TraderInfo {
-	Runtime::trader_info(who.clone(), LIQUIDITY_POOL_ID_0)
+pub fn margin_trader_state(who: &AccountId) -> MarginTraderState {
+	Runtime::trader_state(who.clone(), LIQUIDITY_POOL_ID_0)
 }
 
-pub fn margin_pool_info() -> Option<PoolInfo> {
-	<Runtime as MarginProtocolApi<Block, AccountId>>::pool_info(LIQUIDITY_POOL_ID_0)
+pub fn margin_pool_state() -> Option<MarginPoolState> {
+	<Runtime as MarginProtocolApi<Block, AccountId>>::pool_state(LIQUIDITY_POOL_ID_0)
 }
 
 pub fn margin_set_identity() -> DispatchResult {
