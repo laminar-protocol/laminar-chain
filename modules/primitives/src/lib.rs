@@ -131,33 +131,49 @@ impl core::fmt::Debug for Leverage {
 	}
 }
 
-#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
-pub struct SwapPeriod<Moment> {
-	pub period: Moment,
-	pub start: Moment,
-}
-
+/// Swap accumulation configuration.
+///
+/// Swap would be accumulated every `frequency` time and on `now % offset == 0`.
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct AccumulateConfig<Moment> {
+	/// Accumulation frequency.
 	pub frequency: Moment,
+
+	/// Accumulation time offset.
 	pub offset: Moment,
 }
 
+/// Trading pair.
 #[derive(Encode, Decode, Copy, Clone, RuntimeDebug, Eq, PartialEq, Ord, PartialOrd)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct TradingPair {
+	/// The base currency.
 	pub base: CurrencyId,
+
+	/// The quote currency.
 	pub quote: CurrencyId,
 }
 
+/// Liquidity pool identity info.
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default, Clone)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct IdentityInfo {
-	pub legal: Vec<u8>,
-	pub display: Vec<u8>,
+	/// Legal name.
+	///
+	/// Legal name may be business entity name, or owner's personal legal_name name.
+	pub legal_name: Vec<u8>,
+
+	/// Display name.
+	pub display_name: Vec<u8>,
+
+	/// Website URL.
 	pub web: Vec<u8>,
+
+	/// Email.
 	pub email: Vec<u8>,
+
+	/// Image URL.
 	pub image_url: Vec<u8>,
 }
 

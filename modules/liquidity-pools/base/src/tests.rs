@@ -122,8 +122,8 @@ fn should_set_identity() {
 		assert_ok!(Instance1Module::create_pool(Origin::signed(ALICE)));
 
 		let mut identity = IdentityInfo {
-			legal: "laminar".as_bytes().to_vec(),
-			display: vec![0; 201],
+			legal_name: "laminar".as_bytes().to_vec(),
+			display_name: vec![0; 201],
 			web: "https://laminar.one".as_bytes().to_vec(),
 			email: vec![],
 			image_url: vec![],
@@ -133,7 +133,7 @@ fn should_set_identity() {
 			Error::<Runtime, Instance1>::IdentityInfoTooLong
 		);
 
-		identity.display = vec![];
+		identity.display_name = vec![];
 
 		assert_eq!(get_free_balance(&ALICE), 100000);
 		assert_ok!(Instance1Module::set_identity(
@@ -142,7 +142,7 @@ fn should_set_identity() {
 			identity.clone()
 		));
 
-		identity.display = "Open finance platform".as_bytes().to_vec();
+		identity.display_name = "Open finance platform".as_bytes().to_vec();
 		assert_ok!(Instance1Module::set_identity(Origin::signed(ALICE), 0, identity));
 		assert_eq!(get_free_balance(&ALICE), 99000);
 
@@ -157,8 +157,8 @@ fn should_verify_identity() {
 		assert_ok!(Instance1Module::create_pool(Origin::signed(ALICE)));
 
 		let identity = IdentityInfo {
-			legal: "laminar".as_bytes().to_vec(),
-			display: vec![],
+			legal_name: "laminar".as_bytes().to_vec(),
+			display_name: vec![],
 			web: "https://laminar.one".as_bytes().to_vec(),
 			email: vec![],
 			image_url: vec![],
@@ -208,8 +208,8 @@ fn should_clear_identity() {
 		assert_ok!(Instance1Module::create_pool(Origin::signed(ALICE)));
 
 		let identity = IdentityInfo {
-			legal: "laminar".as_bytes().to_vec(),
-			display: vec![],
+			legal_name: "laminar".as_bytes().to_vec(),
+			display_name: vec![],
 			web: "https://laminar.one".as_bytes().to_vec(),
 			email: vec![],
 			image_url: vec![],
@@ -275,8 +275,8 @@ fn should_transfer_liquidity_pool() {
 		assert_eq!(Instance1Module::liquidity(0), 1000);
 
 		let identity = IdentityInfo {
-			legal: "laminar".as_bytes().to_vec(),
-			display: vec![],
+			legal_name: "laminar".as_bytes().to_vec(),
+			display_name: vec![],
 			web: "https://laminar.one".as_bytes().to_vec(),
 			email: vec![],
 			image_url: vec![],

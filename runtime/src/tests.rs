@@ -212,8 +212,8 @@ pub fn synthetic_remove_pool(who: &AccountId) -> DispatchResult {
 
 pub fn synthetic_set_identity() -> DispatchResult {
 	let identity = IdentityInfo {
-		legal: "laminar".as_bytes().to_vec(),
-		display: vec![],
+		legal_name: "laminar".as_bytes().to_vec(),
+		display_name: vec![],
 		web: vec![],
 		email: vec![],
 		image_url: vec![],
@@ -541,8 +541,8 @@ pub fn margin_pool_info() -> Option<PoolInfo> {
 
 pub fn margin_set_identity() -> DispatchResult {
 	let identity = IdentityInfo {
-		legal: "laminar".as_bytes().to_vec(),
-		display: vec![],
+		legal_name: "laminar".as_bytes().to_vec(),
+		display_name: vec![],
 		web: vec![],
 		email: vec![],
 		image_url: vec![],

@@ -409,8 +409,8 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 	fn _set_identity(who: &T::AccountId, pool_id: LiquidityPoolId, identity_info: IdentityInfo) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, &who), Error::<T, I>::NoPermission);
 		ensure!(
-			identity_info.legal.len() <= 100
-				&& identity_info.display.len() <= 200
+			identity_info.legal_name.len() <= 100
+				&& identity_info.display_name.len() <= 200
 				&& identity_info.web.len() <= 100
 				&& identity_info.email.len() <= 50
 				&& identity_info.image_url.len() <= 100,
