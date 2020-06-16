@@ -615,8 +615,8 @@ impl base_liquidity_pools::Trait<BaseLiquidityPoolsMarginInstance> for Runtime {
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = MarginProtocol;
 	type ExistentialDeposit = LiquidityPoolExistentialDeposit;
-	type Deposit = IdentityDeposit;
-	type DepositCurrency = Balances;
+	type IdentityDeposit = IdentityDeposit;
+	type IdentityDepositCurrency = Balances;
 	type ModuleId = MarginLiquidityPoolsModuleId;
 	type OnDisableLiquidityPool = MarginLiquidityPools;
 	type OnRemoveLiquidityPool = MarginLiquidityPools;
@@ -632,8 +632,8 @@ impl base_liquidity_pools::Trait<BaseLiquidityPoolsSyntheticInstance> for Runtim
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = SyntheticTokens;
 	type ExistentialDeposit = LiquidityPoolExistentialDeposit;
-	type Deposit = IdentityDeposit;
-	type DepositCurrency = Balances;
+	type IdentityDeposit = IdentityDeposit;
+	type IdentityDepositCurrency = Balances;
 	type ModuleId = SyntheticLiquidityPoolsModuleId;
 	type OnDisableLiquidityPool = SyntheticLiquidityPools;
 	type OnRemoveLiquidityPool = SyntheticLiquidityPools;
@@ -644,9 +644,8 @@ impl margin_liquidity_pools::Trait for Runtime {
 	type Event = Event;
 	type BaseLiquidityPools = BaseLiquidityPoolsForMargin;
 	type PoolManager = MarginProtocol;
-	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
-	type MaxSwap = MaxSwap;
+	type MaxSwapRate = MaxSwap;
 	type UnixTime = Timestamp;
 	type Moment = Moment;
 }
@@ -654,7 +653,6 @@ impl margin_liquidity_pools::Trait for Runtime {
 impl synthetic_liquidity_pools::Trait for Runtime {
 	type Event = Event;
 	type BaseLiquidityPools = BaseLiquidityPoolsForSynthetic;
-	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
 }
 

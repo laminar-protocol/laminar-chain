@@ -7,11 +7,11 @@ use frame_support::{assert_noop, assert_ok};
 use traits::LiquidityPools;
 
 fn get_free_balance(who: &AccountId) -> Balance {
-	<Runtime as Trait>::DepositCurrency::free_balance(who)
+	<Runtime as Trait>::IdentityDepositCurrency::free_balance(who)
 }
 
 fn get_reserved_balance(who: &AccountId) -> Balance {
-	<Runtime as Trait>::DepositCurrency::reserved_balance(who)
+	<Runtime as Trait>::IdentityDepositCurrency::reserved_balance(who)
 }
 
 #[test]
@@ -104,7 +104,7 @@ fn should_fail_withdraw_liquidity() {
 		assert_eq!(Instance1Module::liquidity(0), 1000);
 		assert_eq!(
 			Instance1Module::withdraw_liquidity(Origin::signed(ALICE), 0, 5000),
-			Err(Error::<Runtime, Instance1>::CannotWithdrawAmount.into()),
+			Err(Error::<Runtime, Instance1>::NotEnoughBalance.into()),
 		);
 
 		assert_eq!(
@@ -146,7 +146,7 @@ fn should_set_identity() {
 		assert_ok!(Instance1Module::set_identity(Origin::signed(ALICE), 0, identity));
 		assert_eq!(get_free_balance(&ALICE), 99000);
 
-		let event = mock::Event::base_liquidity_pools_Instance1(RawEvent::SetIdentity(ALICE, 0));
+		let event = mock::Event::base_liquidity_pools_Instance1(RawEvent::IdentitySet(ALICE, 0));
 		assert!(System::events().iter().any(|record| record.event == event));
 	})
 }
@@ -197,7 +197,7 @@ fn should_verify_identity() {
 		assert_eq!(Instance1Module::identity_infos(0), Some((identity.clone(), 1000, true)));
 		assert_eq!(get_free_balance(&ALICE), 99000);
 
-		let event = mock::Event::base_liquidity_pools_Instance1(RawEvent::VerifyIdentity(0));
+		let event = mock::Event::base_liquidity_pools_Instance1(RawEvent::IdentityVerified(0));
 		assert!(System::events().iter().any(|record| record.event == event));
 	})
 }
@@ -233,7 +233,7 @@ fn should_clear_identity() {
 		assert_eq!(get_reserved_balance(&ALICE), 0);
 		assert_noop!(
 			Instance1Module::clear_identity(Origin::signed(ALICE), 0),
-			Error::<Runtime, Instance1>::IdentityNotFound
+			Error::<Runtime, Instance1>::IdentityInfoNotFound
 		);
 		assert_eq!(Instance1Module::identity_infos(0), None);
 
@@ -262,7 +262,7 @@ fn should_clear_identity() {
 		assert_eq!(get_reserved_balance(&ALICE), 0);
 		assert_eq!(get_free_balance(&ALICE), 100000);
 
-		let event = mock::Event::base_liquidity_pools_Instance1(RawEvent::VerifyIdentity(0));
+		let event = mock::Event::base_liquidity_pools_Instance1(RawEvent::IdentityVerified(0));
 		assert!(System::events().iter().any(|record| record.event == event));
 	})
 }
@@ -293,7 +293,7 @@ fn should_transfer_liquidity_pool() {
 		assert_ok!(Instance1Module::transfer_liquidity_pool(Origin::signed(ALICE), 0, BOB));
 		assert_eq!(get_free_balance(&ALICE), 100000);
 
-		let event = mock::Event::base_liquidity_pools_Instance1(RawEvent::TransferLiquidityPool(ALICE, 0, BOB));
+		let event = mock::Event::base_liquidity_pools_Instance1(RawEvent::LiquidityPoolTransferred(ALICE, 0, BOB));
 		assert!(System::events().iter().any(|record| record.event == event));
 
 		// remove pool

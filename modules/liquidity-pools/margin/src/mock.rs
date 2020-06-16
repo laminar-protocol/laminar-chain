@@ -124,8 +124,8 @@ impl module_base_liquidity_pools::Trait<MarginInstance> for Runtime {
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = PoolManager;
 	type ExistentialDeposit = ExistentialDeposit;
-	type Deposit = IdentityDeposit;
-	type DepositCurrency = pallet_balances::Module<Self>;
+	type IdentityDeposit = IdentityDeposit;
+	type IdentityDepositCurrency = pallet_balances::Module<Self>;
 	type ModuleId = MarginLiquidityPoolsModuleId;
 	type OnDisableLiquidityPool = ModuleLiquidityPools;
 	type OnRemoveLiquidityPool = ModuleLiquidityPools;
@@ -154,9 +154,8 @@ impl Trait for Runtime {
 	type Event = ();
 	type BaseLiquidityPools = module_base_liquidity_pools::Module<Runtime, MarginInstance>;
 	type PoolManager = DummyPoolManager;
-	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
-	type MaxSwap = MaxSwap;
+	type MaxSwapRate = MaxSwap;
 	type UnixTime = Timestamp;
 	type Moment = u64;
 }
