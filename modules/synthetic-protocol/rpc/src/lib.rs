@@ -6,17 +6,17 @@ use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 use std::sync::Arc;
-pub use synthetic_protocol_rpc_runtime_api::{PoolInfo, SyntheticProtocolApi as SyntheticProtocolRuntimeApi};
+pub use synthetic_protocol_rpc_runtime_api::{SyntheticPoolState, SyntheticProtocolApi as SyntheticProtocolRuntimeApi};
 
 #[rpc]
 pub trait SyntheticProtocolApi<BlockHash, AccountId> {
-	#[rpc(name = "synthetic_poolInfo")]
-	fn pool_info(
+	#[rpc(name = "synthetic_poolState")]
+	fn pool_state(
 		&self,
 		pool_id: LiquidityPoolId,
 		currency_id: CurrencyId,
 		at: Option<BlockHash>,
-	) -> Result<Option<PoolInfo>>;
+	) -> Result<Option<SyntheticPoolState>>;
 }
 
 /// A struct that implements the [`SyntheticProtocolApi`].
@@ -54,20 +54,20 @@ where
 	C::Api: SyntheticProtocolRuntimeApi<Block, AccountId>,
 	AccountId: Codec,
 {
-	fn pool_info(
+	fn pool_state(
 		&self,
 		pool_id: LiquidityPoolId,
 		currency_id: CurrencyId,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> Result<Option<PoolInfo>> {
+	) -> Result<Option<SyntheticPoolState>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
 			// If the block hash is not supplied assume the best block.
 			self.client.info().best_hash));
-		api.pool_info(&at, pool_id, currency_id)
+		api.pool_state(&at, pool_id, currency_id)
 			.map_err(|e| RpcError {
 				code: ErrorCode::ServerError(Error::RuntimeError.into()),
-				message: "Unable to get pool info.".into(),
+				message: "Unable to get pool state.".into(),
 				data: Some(format!("{:?}", e).into()),
 			})
 			.into()

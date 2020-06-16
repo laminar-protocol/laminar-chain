@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Eq, PartialEq, Default, RuntimeDebug)]
-pub struct TraderInfo {
+pub struct MarginTraderState {
 	pub equity: FixedI128,
 	pub margin_held: FixedI128,
 	pub margin_level: FixedI128,
@@ -23,7 +23,7 @@ pub struct TraderInfo {
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Eq, PartialEq, Default, RuntimeDebug)]
-pub struct PoolInfo {
+pub struct MarginPoolState {
 	pub enp: FixedI128,
 	pub ell: FixedI128,
 	pub required_deposit: FixedI128,
@@ -33,7 +33,7 @@ sp_api::decl_runtime_apis! {
 	pub trait MarginProtocolApi<AccountId> where
 		AccountId: Codec,
 	{
-		fn trader_info(who: AccountId, pool_id: LiquidityPoolId) -> TraderInfo;
-		fn pool_info(pool_id: LiquidityPoolId) -> Option<PoolInfo>;
+		fn trader_state(who: AccountId, pool_id: LiquidityPoolId) -> MarginTraderState;
+		fn pool_state(pool_id: LiquidityPoolId) -> Option<MarginPoolState>;
 	}
 }

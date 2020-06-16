@@ -4,13 +4,13 @@ use cucumber::cucumber;
 
 use frame_support::{assert_noop, assert_ok};
 use margin_protocol::RiskThreshold;
-use margin_protocol_rpc_runtime_api::{PoolInfo, TraderInfo};
+use margin_protocol_rpc_runtime_api::{MarginPoolState, MarginTraderState};
 use module_primitives::{Balance, Leverage, TradingPair};
 use runtime::{tests::*, AccountId, CurrencyId, Moment};
 use sp_arithmetic::{FixedI128, FixedPointNumber, FixedU128};
 use sp_runtime::{traits::Bounded, DispatchResult, Permill};
 use std::ops::Range;
-use synthetic_protocol_rpc_runtime_api::PoolInfo as SyntheticProtocolPoolInfo;
+use synthetic_protocol_rpc_runtime_api::SyntheticPoolState;
 
 #[derive(Default)]
 pub struct World {
@@ -549,8 +549,8 @@ mod steps {
 					});
 					for (name, equity, margin_held, margin_level, free_margin, unrealized_pl) in iter {
 						assert_eq!(
-							margin_trader_info(&name),
-							TraderInfo {
+							margin_trader_state(&name),
+							MarginTraderState {
 								equity: equity,
 								margin_held: margin_held,
 								margin_level: margin_level,
@@ -572,8 +572,8 @@ mod steps {
 					});
 					for (enp, ell, required_deposit) in iter {
 						assert_eq!(
-							margin_pool_info(),
-							Some(PoolInfo {
+							margin_pool_state(),
+							Some(MarginPoolState {
 								enp: enp,
 								ell: ell,
 								required_deposit: required_deposit,
@@ -710,8 +710,8 @@ mod steps {
 					});
 					for (currency_id, collateral_ratio, is_safe) in iter {
 						assert_eq!(
-							synthetic_pool_info(currency_id),
-							Some(SyntheticProtocolPoolInfo {
+							synthetic_pool_state(currency_id),
+							Some(SyntheticPoolState {
 								collateral_ratio: collateral_ratio,
 								is_safe: is_safe,
 							})

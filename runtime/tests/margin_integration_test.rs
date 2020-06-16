@@ -11,7 +11,7 @@ mod tests {
 		MaxSwap, MockLaminarTreasury, Runtime, DOLLARS,
 	};
 
-	use margin_protocol_rpc_runtime_api::{PoolInfo, TraderInfo};
+	use margin_protocol_rpc_runtime_api::{MarginPoolState, MarginTraderState};
 	use module_primitives::Leverage::*;
 	use module_traits::{MarginProtocolLiquidityPools, Treasury};
 	use orml_prices::Price;
@@ -111,16 +111,16 @@ mod tests {
 				assert_ok!(margin_enable_trading_pair(EUR_USD));
 				assert_ok!(margin_liquidity_pool_enable_trading_pair(EUR_USD));
 				assert_eq!(
-					margin_pool_info(),
-					Some(PoolInfo {
+					margin_pool_state(),
+					Some(MarginPoolState {
 						enp: FixedI128::max_value(),
 						ell: FixedI128::max_value(),
 						required_deposit: FixedI128::zero()
 					})
 				);
 				assert_eq!(
-					margin_trader_info(&ALICE::get()),
-					TraderInfo {
+					margin_trader_state(&ALICE::get()),
+					MarginTraderState {
 						equity: FixedI128::saturating_from_integer(5000),
 						margin_held: FixedI128::zero(),
 						margin_level: FixedI128::max_value(),
@@ -138,16 +138,16 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(5000));
 				assert_eq!(
-					margin_pool_info(),
-					Some(PoolInfo {
+					margin_pool_state(),
+					Some(MarginPoolState {
 						enp: FixedI128::from_inner(0_686666666666666667),
 						ell: FixedI128::from_inner(0_686666666666666667),
 						required_deposit: FixedI128::zero()
 					})
 				);
 				assert_eq!(
-					margin_trader_info(&ALICE::get()),
-					TraderInfo {
+					margin_trader_state(&ALICE::get()),
+					MarginTraderState {
 						equity: FixedI128::saturating_from_integer(4700),
 						margin_held: FixedI128::saturating_from_integer(1515),
 						margin_level: FixedI128::from_inner(310231023102310231),
@@ -169,16 +169,16 @@ mod tests {
 				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(4700));
 				assert_eq!(margin_liquidity(), dollar(10_300));
 				assert_eq!(
-					margin_pool_info(),
-					Some(PoolInfo {
+					margin_pool_state(),
+					Some(MarginPoolState {
 						enp: FixedI128::max_value(),
 						ell: FixedI128::max_value(),
 						required_deposit: FixedI128::zero()
 					})
 				);
 				assert_eq!(
-					margin_trader_info(&ALICE::get()),
-					TraderInfo {
+					margin_trader_state(&ALICE::get()),
+					MarginTraderState {
 						equity: FixedI128::saturating_from_integer(4700),
 						margin_held: FixedI128::zero(),
 						margin_level: FixedI128::max_value(),
@@ -346,8 +346,8 @@ mod tests {
 				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(5000));
 				// equity= FixedI128(10300.000000000000000000), net_position =FixedI128(15000.000000000000000000)
 				assert_eq!(
-					margin_pool_info(),
-					Some(PoolInfo {
+					margin_pool_state(),
+					Some(MarginPoolState {
 						enp: FixedI128::from_inner(0_686666666666666667),
 						ell: FixedI128::from_inner(0_686666666666666667),
 						required_deposit: FixedI128::zero()
@@ -363,8 +363,8 @@ mod tests {
 				);
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(21, 10))]));
 				assert_eq!(
-					margin_trader_info(&ALICE::get()),
-					TraderInfo {
+					margin_trader_state(&ALICE::get()),
+					MarginTraderState {
 						equity: FixedI128::saturating_from_integer(200),
 						margin_held: FixedI128::saturating_from_integer(1515),
 						margin_level: FixedI128::from_inner(0_013201320132013201),
@@ -373,10 +373,10 @@ mod tests {
 					}
 				);
 				// equity= FixedI128(14800.000000000000000000), net_position =FixedI128(10500.000000000000000000)
-				// net_position = base_amount * curr_price_usd = 5000 * 2.1 = 10500
+				// net_position = held * curr_price_usd = 5000 * 2.1 = 10500
 				assert_eq!(
-					margin_pool_info(),
-					Some(PoolInfo {
+					margin_pool_state(),
+					Some(MarginPoolState {
 						enp: FixedI128::from_inner(1_409523809523809524),
 						ell: FixedI128::from_inner(1_409523809523809524),
 						required_deposit: FixedI128::zero()
@@ -397,8 +397,8 @@ mod tests {
 				assert_ok!(margin_trader_become_safe(&ALICE::get()));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(21, 10))]));
 				assert_eq!(
-					margin_trader_info(&ALICE::get()),
-					TraderInfo {
+					margin_trader_state(&ALICE::get()),
+					MarginTraderState {
 						equity: FixedI128::saturating_from_integer(200),
 						margin_held: FixedI128::saturating_from_integer(1515),
 						margin_level: FixedI128::from_inner(0_013201320132013201),
@@ -407,8 +407,8 @@ mod tests {
 					}
 				);
 				assert_eq!(
-					margin_pool_info(),
-					Some(PoolInfo {
+					margin_pool_state(),
+					Some(MarginPoolState {
 						enp: FixedI128::from_inner(1_409523809523809524),
 						ell: FixedI128::from_inner(1_409523809523809524),
 						required_deposit: FixedI128::zero()
@@ -667,16 +667,16 @@ mod tests {
 				assert_ok!(margin_liquidity_pool_enable_trading_pair(JPY_EUR));
 
 				assert_eq!(
-					margin_pool_info(),
-					Some(PoolInfo {
+					margin_pool_state(),
+					Some(MarginPoolState {
 						enp: FixedI128::max_value(),
 						ell: FixedI128::max_value(),
 						required_deposit: FixedI128::zero()
 					})
 				);
 				assert_eq!(
-					margin_trader_info(&ALICE::get()),
-					TraderInfo {
+					margin_trader_state(&ALICE::get()),
+					MarginTraderState {
 						equity: FixedI128::saturating_from_integer(9000),
 						margin_held: FixedI128::zero(),
 						margin_level: FixedI128::max_value(),
@@ -685,8 +685,8 @@ mod tests {
 					}
 				);
 				assert_eq!(
-					margin_trader_info(&BOB::get()),
-					TraderInfo {
+					margin_trader_state(&BOB::get()),
+					MarginTraderState {
 						equity: FixedI128::saturating_from_integer(9000),
 						margin_held: FixedI128::zero(),
 						margin_level: FixedI128::max_value(),
@@ -704,8 +704,8 @@ mod tests {
 				));
 				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(9000));
 				assert_eq!(
-					margin_trader_info(&ALICE::get()),
-					TraderInfo {
+					margin_trader_state(&ALICE::get()),
+					MarginTraderState {
 						equity: FixedI128::saturating_from_integer(8700),
 						margin_held: FixedI128::saturating_from_integer(1515),
 						margin_level: FixedI128::from_inner(574257425742574257),
@@ -724,8 +724,8 @@ mod tests {
 				));
 				assert_eq!(margin_balance(&BOB::get()), fixed_i128_dollar(9000));
 				assert_eq!(
-					margin_trader_info(&BOB::get()),
-					TraderInfo {
+					margin_trader_state(&BOB::get()),
+					MarginTraderState {
 						equity: FixedI128::saturating_from_integer(7920),
 						margin_held: FixedI128::from_inner(2945999999999999998800),
 						margin_level: FixedI128::from_inner(268839103869653768),
@@ -757,8 +757,8 @@ mod tests {
 					FixedI128::from_inner(9483999999999999999600)
 				);
 				assert_eq!(
-					margin_trader_info(&ALICE::get()),
-					TraderInfo {
+					margin_trader_state(&ALICE::get()),
+					MarginTraderState {
 						equity: FixedI128::saturating_from_integer(9014),
 						margin_held: FixedI128::from_inner(1764649999999999999900),
 						margin_level: FixedI128::from_inner(447500372337784838),
@@ -767,8 +767,8 @@ mod tests {
 					}
 				);
 				assert_eq!(
-					margin_trader_info(&BOB::get()),
-					TraderInfo {
+					margin_trader_state(&BOB::get()),
+					MarginTraderState {
 						equity: FixedI128::from_inner(9483999999999999999600),
 						margin_held: FixedI128::zero(),
 						margin_level: FixedI128::max_value(),
@@ -800,8 +800,8 @@ mod tests {
 					FixedI128::from_inner(9483999999999999999600)
 				);
 				assert_eq!(
-					margin_trader_info(&ALICE::get()),
-					TraderInfo {
+					margin_trader_state(&ALICE::get()),
+					MarginTraderState {
 						equity: FixedI128::from_inner(8542_129032258064515700),
 						margin_held: FixedI128::from_inner(249_649999999999999900),
 						margin_level: FixedI128::from_inner(1_828808607913147372),
@@ -810,8 +810,8 @@ mod tests {
 					}
 				);
 				assert_eq!(
-					margin_trader_info(&BOB::get()),
-					TraderInfo {
+					margin_trader_state(&BOB::get()),
+					MarginTraderState {
 						equity: FixedI128::from_inner(9363999999999999999600),
 						margin_held: FixedI128::saturating_from_integer(287),
 						margin_level: FixedI128::from_inner(1631358885017421603),
@@ -847,16 +847,16 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(1000));
 				assert_eq!(collateral_balance(&BOB::get()), dollar(1000));
 				assert_eq!(
-					margin_pool_info(),
-					Some(PoolInfo {
+					margin_pool_state(),
+					Some(MarginPoolState {
 						enp: FixedI128::max_value(),
 						ell: FixedI128::max_value(),
 						required_deposit: FixedI128::zero()
 					})
 				);
 				assert_eq!(
-					margin_trader_info(&ALICE::get()),
-					TraderInfo {
+					margin_trader_state(&ALICE::get()),
+					MarginTraderState {
 						equity: FixedI128::from_inner(8806193548387096773600),
 						margin_held: FixedI128::zero(),
 						margin_level: FixedI128::max_value(),
@@ -865,8 +865,8 @@ mod tests {
 					}
 				);
 				assert_eq!(
-					margin_trader_info(&BOB::get()),
-					TraderInfo {
+					margin_trader_state(&BOB::get()),
+					MarginTraderState {
 						equity: FixedI128::from_inner(9563999999999999999600),
 						margin_held: FixedI128::zero(),
 						margin_level: FixedI128::max_value(),

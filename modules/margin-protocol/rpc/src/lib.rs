@@ -1,7 +1,9 @@
 use codec::Codec;
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
-pub use margin_protocol_rpc_runtime_api::{MarginProtocolApi as MarginProtocolRuntimeApi, PoolInfo, TraderInfo};
+pub use margin_protocol_rpc_runtime_api::{
+	MarginPoolState, MarginProtocolApi as MarginProtocolRuntimeApi, MarginTraderState,
+};
 use module_primitives::LiquidityPoolId;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
@@ -10,11 +12,16 @@ use std::sync::Arc;
 
 #[rpc]
 pub trait MarginProtocolApi<BlockHash, AccountId> {
-	#[rpc(name = "margin_traderInfo")]
-	fn trader_info(&self, who: AccountId, pool_id: LiquidityPoolId, at: Option<BlockHash>) -> Result<TraderInfo>;
+	#[rpc(name = "margin_traderState")]
+	fn trader_state(
+		&self,
+		who: AccountId,
+		pool_id: LiquidityPoolId,
+		at: Option<BlockHash>,
+	) -> Result<MarginTraderState>;
 
-	#[rpc(name = "margin_poolInfo")]
-	fn pool_info(&self, pool_id: LiquidityPoolId, at: Option<BlockHash>) -> Result<Option<PoolInfo>>;
+	#[rpc(name = "margin_poolState")]
+	fn pool_state(&self, pool_id: LiquidityPoolId, at: Option<BlockHash>) -> Result<Option<MarginPoolState>>;
 }
 
 /// A struct that implements the [`MarginProtocolApi`].
@@ -52,34 +59,38 @@ where
 	C::Api: MarginProtocolRuntimeApi<Block, AccountId>,
 	AccountId: Codec,
 {
-	fn trader_info(
+	fn trader_state(
 		&self,
 		who: AccountId,
 		pool_id: LiquidityPoolId,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> Result<TraderInfo> {
+	) -> Result<MarginTraderState> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
 			// If the block hash is not supplied assume the best block.
 			self.client.info().best_hash));
-		api.trader_info(&at, who, pool_id)
+		api.trader_state(&at, who, pool_id)
 			.map_err(|e| RpcError {
 				code: ErrorCode::ServerError(Error::RuntimeError.into()),
-				message: "Unable to get trader info.".into(),
+				message: "Unable to get trader state.".into(),
 				data: Some(format!("{:?}", e).into()),
 			})
 			.into()
 	}
 
-	fn pool_info(&self, pool_id: LiquidityPoolId, at: Option<<Block as BlockT>::Hash>) -> Result<Option<PoolInfo>> {
+	fn pool_state(
+		&self,
+		pool_id: LiquidityPoolId,
+		at: Option<<Block as BlockT>::Hash>,
+	) -> Result<Option<MarginPoolState>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
 			// If the block hash is not supplied assume the best block.
 			self.client.info().best_hash));
-		api.pool_info(&at, pool_id)
+		api.pool_state(&at, pool_id)
 			.map_err(|e| RpcError {
 				code: ErrorCode::ServerError(Error::RuntimeError.into()),
-				message: "Unable to get pool info.".into(),
+				message: "Unable to get pool state.".into(),
 				data: Some(format!("{:?}", e).into()),
 			})
 			.into()

@@ -92,31 +92,31 @@ decl_event!(
 	pub enum Event<T, I=DefaultInstance> where
 		<T as system::Trait>::AccountId,
 	{
-		/// Liquidity pool created (who, pool_id)
+		/// Liquidity pool created: (who, pool_id)
 		LiquidityPoolCreated(AccountId, LiquidityPoolId),
 
-		/// Liquidity pool disabled (who, pool_id)
+		/// Liquidity pool disabled: (who, pool_id)
 		LiquidityPoolDisabled(AccountId, LiquidityPoolId),
 
-		/// Liquidity pool removed (who, pool_id)
+		/// Liquidity pool removed: (who, pool_id)
 		LiquidityPoolRemoved(AccountId, LiquidityPoolId),
 
-		/// Liquidity deposited (who, pool_id, amount)
+		/// Liquidity deposited: (who, pool_id, amount)
 		LiquidityDeposited(AccountId, LiquidityPoolId, Balance),
 
-		/// Liquidity withdrew (who, pool_id, amount)
+		/// Liquidity withdrew: (who, pool_id, amount)
 		LiquidityWithdrew(AccountId, LiquidityPoolId, Balance),
 
-		/// Identity set (who, pool_id)
+		/// Identity set: (who, pool_id)
 		IdentitySet(AccountId, LiquidityPoolId),
 
-		/// Identity verified (pool_id)
+		/// Identity verified: (pool_id)
 		IdentityVerified(LiquidityPoolId),
 
-		/// Identity cleared (who, pool_id)
+		/// Identity cleared: (who, pool_id)
 		IdentityCleared(AccountId, LiquidityPoolId),
 
-		/// Liquidity pool transffered to another owner (from, pool_id, to)
+		/// Liquidity pool transffered to another owner: (from, pool_id, to)
 		LiquidityPoolTransferred(AccountId, LiquidityPoolId, AccountId),
 	}
 );
@@ -409,8 +409,8 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 	fn _set_identity(who: &T::AccountId, pool_id: LiquidityPoolId, identity_info: IdentityInfo) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, &who), Error::<T, I>::NoPermission);
 		ensure!(
-			identity_info.legal.len() <= 100
-				&& identity_info.display.len() <= 200
+			identity_info.legal_name.len() <= 100
+				&& identity_info.display_name.len() <= 200
 				&& identity_info.web.len() <= 100
 				&& identity_info.email.len() <= 50
 				&& identity_info.image_url.len() <= 100,

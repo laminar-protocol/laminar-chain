@@ -12,7 +12,7 @@ mod tests {
 	};
 	use orml_prices::Price;
 	use sp_runtime::{FixedPointNumber, FixedU128, Permill};
-	use synthetic_protocol_rpc_runtime_api::PoolInfo;
+	use synthetic_protocol_rpc_runtime_api::SyntheticPoolState;
 
 	#[test]
 	fn test_synthetic_buy_and_sell() {
@@ -38,8 +38,8 @@ mod tests {
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(synthetic_liquidity(), dollar(10_000));
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::zero(),
 						is_safe: false
 					})
@@ -62,8 +62,8 @@ mod tests {
 				//assert_eq!(liquidity(), dollar(9555));
 				assert_eq!(synthetic_liquidity(), 9554455445544554455444);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::saturating_from_rational(11, 10),
 						is_safe: true
 					})
@@ -83,8 +83,8 @@ mod tests {
 				// 9819 = 9555 + 264
 				assert_eq!(synthetic_liquidity(), 9818455445544554455444);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::saturating_from_rational(11, 10),
 						is_safe: true
 					})
@@ -112,8 +112,8 @@ mod tests {
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(synthetic_liquidity(), 1000);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::zero(),
 						is_safe: false
 					})
@@ -135,8 +135,8 @@ mod tests {
 				// 20 = 1000 - 980
 				assert_eq!(synthetic_liquidity(), 20);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::saturating_from_integer(2),
 						is_safe: true
 					})
@@ -157,8 +157,8 @@ mod tests {
 				// 1020 = 1000 + 20
 				assert_eq!(synthetic_liquidity(), 1020);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::zero(),
 						is_safe: false
 					})
@@ -190,8 +190,8 @@ mod tests {
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(synthetic_liquidity(), dollar(10_000));
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::zero(),
 						is_safe: false
 					})
@@ -206,8 +206,8 @@ mod tests {
 				//assert_eq!(synthetic_liquidity(), dollar(9555));
 				assert_eq!(synthetic_liquidity(), 9554455445544554455444);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::saturating_from_rational(11, 10),
 						is_safe: true
 					})
@@ -225,8 +225,8 @@ mod tests {
 				assert_eq!(synthetic_balance(), 0);
 				assert_eq!(synthetic_liquidity(), 9933993399339933993398);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::zero(),
 						is_safe: false
 					})
@@ -258,8 +258,8 @@ mod tests {
 				assert_eq!(collateral_balance(&POOL::get()), 0);
 				assert_eq!(synthetic_liquidity(), dollar(10_000));
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::zero(),
 						is_safe: false
 					})
@@ -274,8 +274,8 @@ mod tests {
 				//assert_eq!(synthetic_liquidity(), dollar(9555));
 				assert_eq!(synthetic_liquidity(), 9554455445544554455444);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::saturating_from_rational(11, 10),
 						is_safe: true
 					})
@@ -293,8 +293,8 @@ mod tests {
 				assert_eq!(synthetic_balance(), 0);
 				assert_eq!(synthetic_liquidity(), 11749174917491749174917);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::zero(),
 						is_safe: false
 					})
@@ -328,8 +328,8 @@ mod tests {
 				assert_eq!(collateral_balance(&BOB::get()), dollar(10_000));
 				assert_eq!(synthetic_liquidity(), dollar(20_000));
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::zero(),
 						is_safe: false
 					})
@@ -343,8 +343,8 @@ mod tests {
 				assert_eq!(synthetic_balance(), 5445544554455445544556);
 				assert_eq!(synthetic_liquidity(), 19554455445544554455444);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::saturating_from_rational(11, 10),
 						is_safe: true
 					})
@@ -357,8 +357,8 @@ mod tests {
 				assert_eq!(synthetic_balance(), 10891089108910891089112);
 				assert_eq!(synthetic_liquidity(), 19108910891089108910888);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::saturating_from_rational(11, 10),
 						is_safe: true
 					})
@@ -373,8 +373,8 @@ mod tests {
 				assert_eq!(synthetic_balance(), 13058576793639955128520);
 				assert_eq!(synthetic_liquidity(), 18941423206360044871480);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::from_inner(1523558421851289833),
 						is_safe: true
 					})
@@ -392,8 +392,8 @@ mod tests {
 				assert_eq!(synthetic_balance(), 5028213757336324765483);
 				assert_eq!(synthetic_liquidity(), 23031786242663675234517);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::from_inner(1100000000000000000),
 						is_safe: true
 					})
@@ -404,8 +404,8 @@ mod tests {
 				assert_eq!(synthetic_balance(), 7195701442065388804891);
 				assert_eq!(synthetic_liquidity(), 22864298557934611195109);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::from_inner(1100000000000000000),
 						is_safe: true
 					})
@@ -428,8 +428,8 @@ mod tests {
 				assert_eq!(synthetic_balance(), 0);
 				assert_eq!(synthetic_liquidity(), 23616576435968720024712);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::zero(),
 						is_safe: false
 					})
@@ -471,8 +471,8 @@ mod tests {
 				assert_eq!(collateral_balance(&BOB::get()), dollar(10_000));
 				assert_eq!(synthetic_liquidity(), dollar(40_000));
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::zero(),
 						is_safe: false
 					})
@@ -486,8 +486,8 @@ mod tests {
 				assert_eq!(synthetic_balance(), 5445544554455445544556);
 				assert_eq!(synthetic_liquidity(), 39554455445544554455444);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::saturating_from_rational(11, 10),
 						is_safe: true
 					})
@@ -499,8 +499,8 @@ mod tests {
 				assert_eq!(synthetic_balance(), 10891089108910891089109);
 				assert_eq!(synthetic_liquidity(), 39108910891089108910891);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::saturating_from_rational(11, 10),
 						is_safe: true
 					})
@@ -517,8 +517,8 @@ mod tests {
 				assert_eq!(synthetic_balance(), 13073628791450573628792);
 				assert_eq!(synthetic_liquidity(), 38926371208549426371208);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::from_inner(1650000000000000000),
 						is_safe: true
 					})
@@ -530,8 +530,8 @@ mod tests {
 				assert_eq!(synthetic_balance(), 15241116476179637668200);
 				assert_eq!(synthetic_liquidity(), 38758883523820362331800);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::from_inner(1444386181369524985),
 						is_safe: true
 					})
@@ -544,8 +544,8 @@ mod tests {
 				assert_eq!(synthetic_balance(), 13205934958027822486681);
 				assert_eq!(synthetic_liquidity(), 40597065041972177513319);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::from_inner(1100000000000000000),
 						is_safe: true
 					})
@@ -557,8 +557,8 @@ mod tests {
 				assert_eq!(synthetic_balance(), 12709934958027822486681);
 				assert_eq!(synthetic_liquidity(), 40597065041972177513319);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::from_inner(1100000000000000000),
 						is_safe: true
 					})
@@ -571,8 +571,8 @@ mod tests {
 				assert_eq!(synthetic_balance(), 12213934958027822486681);
 				assert_eq!(synthetic_liquidity(), 40597065041972177513319);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::from_inner(1100000000000000000),
 						is_safe: true
 					})
@@ -584,8 +584,8 @@ mod tests {
 				assert_eq!(synthetic_balance(), 11993934958027822486681);
 				assert_eq!(synthetic_liquidity(), 40620065041972177513319);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::from_inner(1100000000000000000),
 						is_safe: true
 					})
@@ -613,8 +613,8 @@ mod tests {
 				assert_ok!(synthetic_set_spread(FEUR, cent(3)));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::zero(),
 						is_safe: false
 					})
@@ -631,8 +631,8 @@ mod tests {
 				));
 				assert_eq!(synthetic_liquidity(), 19802957269411151641707);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::zero(),
 						is_safe: false
 					})
@@ -663,8 +663,8 @@ mod tests {
 				assert_ok!(synthetic_set_spread(FEUR, cent(3)));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::zero(),
 						is_safe: false
 					})
@@ -681,8 +681,8 @@ mod tests {
 					synthetic_protocol::Error::<Runtime>::StillInSafePosition
 				);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::from_inner(4626000000000000000),
 						is_safe: true
 					})
@@ -720,8 +720,8 @@ mod tests {
 				assert_eq!(synthetic_balance(), 2805544554455445544416);
 				assert_eq!(synthetic_liquidity(), 19674929129755080771467);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::from_inner(1045000000000000000),
 						is_safe: false
 					})
@@ -737,8 +737,8 @@ mod tests {
 				assert_eq!(synthetic_balance(), 0);
 				assert_eq!(synthetic_liquidity(), 19802957269411151641707);
 				assert_eq!(
-					synthetic_pool_info(FEUR),
-					Some(PoolInfo {
+					synthetic_pool_state(FEUR),
+					Some(SyntheticPoolState {
 						collateral_ratio: FixedU128::zero(),
 						is_safe: false
 					})

@@ -39,7 +39,7 @@ mod margin_protocol {
 
 impl_outer_event! {
 	pub enum TestEvent for Runtime {
-		frame_system<T>, orml_tokens<T>, margin_protocol<T>,
+		frame_system<T>, orml_tokens<T>, orml_currencies<T>, margin_protocol<T>, pallet_balances<T>,
 	}
 }
 
@@ -76,7 +76,7 @@ impl frame_system::Trait for Runtime {
 	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
 	type ModuleToIndex = ();
-	type AccountData = ();
+	type AccountData = pallet_balances::AccountData<Balance>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 }
@@ -93,7 +93,29 @@ impl orml_tokens::Trait for Runtime {
 	type OnReceived = ();
 }
 
-pub type OrmlTokens = orml_tokens::Module<Runtime>;
+parameter_types! {
+	pub const ExistentialDeposit: u128 = 50;
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::LAMI;
+	pub const GetLiquidityCurrencyId: CurrencyId = CurrencyId::AUSD;
+	pub const IdentityDeposit: u128 = 1000;
+}
+
+impl pallet_balances::Trait for Runtime {
+	type Balance = u128;
+	type DustRemoval = ();
+	type Event = TestEvent;
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = frame_system::Module<Runtime>;
+}
+
+pub type NativeCurrency = orml_currencies::BasicCurrencyAdapter<Runtime, pallet_balances::Module<Runtime>, Balance>;
+pub type LiquidityCurrency = orml_currencies::Currency<Runtime, GetLiquidityCurrencyId>;
+impl orml_currencies::Trait for Runtime {
+	type Event = TestEvent;
+	type MultiCurrency = orml_tokens::Module<Runtime>;
+	type NativeCurrency = NativeCurrency;
+	type GetNativeCurrencyId = GetNativeCurrencyId;
+}
 
 thread_local! {
 	static PRICES: RefCell<BTreeMap<CurrencyId, Price>> = RefCell::new(BTreeMap::new());
@@ -172,23 +194,13 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 	}
 
 	fn deposit_liquidity(source: &u64, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
-		<OrmlTokens as MultiCurrency<AccountId>>::transfer(
-			CurrencyId::AUSD,
-			source,
-			&MOCK_LIQUIDITY_LOCK_ACCOUNT,
-			amount,
-		)?;
+		LiquidityCurrency::transfer(source, &MOCK_LIQUIDITY_LOCK_ACCOUNT, amount)?;
 		Self::set_mock_liquidity(pool_id, amount + Self::liquidity(pool_id));
 		Ok(())
 	}
 
 	fn withdraw_liquidity(dest: &u64, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
-		<OrmlTokens as MultiCurrency<AccountId>>::transfer(
-			CurrencyId::AUSD,
-			&MOCK_LIQUIDITY_LOCK_ACCOUNT,
-			dest,
-			amount,
-		)?;
+		LiquidityCurrency::transfer(&MOCK_LIQUIDITY_LOCK_ACCOUNT, dest, amount)?;
 		Self::set_mock_liquidity(pool_id, Self::liquidity(pool_id) - amount);
 		Ok(())
 	}
@@ -255,7 +267,7 @@ parameter_types! {
 
 impl Trait for Runtime {
 	type Event = TestEvent;
-	type MultiCurrency = OrmlTokens;
+	type LiquidityCurrency = LiquidityCurrency;
 	type LiquidityPools = MockLiquidityPools;
 	type PriceProvider = DefaultPriceProvider<CurrencyId, MockPrices>;
 	type Treasury = MockTreasury;
