@@ -80,7 +80,7 @@ pub trait Trait: frame_system::Trait + SendTransactionTypes<Call<Self>> {
 
 pub type PositionId = u64;
 
-/// Position.
+/// Margin protocol Position.
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq)]
 pub struct Position<T: Trait> {
 	/// Owner.
