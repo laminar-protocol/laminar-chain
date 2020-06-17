@@ -1010,8 +1010,8 @@ mod tests {
 				assert_ok!(margin_set_additional_swap(one_percent()));
 				println!(
 					"long_rate = {:?}, short_rate = {:?}",
-					MarginLiquidityPools::get_swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD, true),
-					MarginLiquidityPools::get_swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD, false)
+					MarginLiquidityPools::swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD, true),
+					MarginLiquidityPools::swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD, false)
 				);
 				// LongTen
 				assert_ok!(margin_open_position(

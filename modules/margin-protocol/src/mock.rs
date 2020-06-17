@@ -207,29 +207,29 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 }
 
 impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
-	fn is_allowed_position(_pool_id: LiquidityPoolId, _pair: TradingPair, _leverage: Leverage) -> bool {
+	fn is_allowed_leverage(_pool_id: LiquidityPoolId, _pair: TradingPair, _leverage: Leverage) -> bool {
 		true
 	}
 
-	fn get_bid_spread(_pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance> {
+	fn bid_spread(_pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance> {
 		let base_price = MockPrices::prices(pair.base)?;
 		let quote_price = MockPrices::prices(pair.quote)?;
 		let price = base_price.checked_div(&quote_price).unwrap();
 		Some(Self::spread().mul_ceil(price.into_inner()))
 	}
 
-	fn get_ask_spread(_pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance> {
+	fn ask_spread(_pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance> {
 		let base_price = MockPrices::prices(pair.base)?;
 		let quote_price = MockPrices::prices(pair.quote)?;
 		let price = base_price.checked_div(&quote_price).unwrap();
 		Some(Self::spread().mul_ceil(price.into_inner()))
 	}
 
-	fn get_swap_rate(_pool_id: LiquidityPoolId, _pair: TradingPair, _is_long: bool) -> FixedI128 {
+	fn swap_rate(_pool_id: LiquidityPoolId, _pair: TradingPair, _is_long: bool) -> FixedI128 {
 		unimplemented!()
 	}
 
-	fn get_accumulated_swap_rate(_pool_id: LiquidityPoolId, pair: TradingPair, _is_long: bool) -> FixedI128 {
+	fn accumulated_swap_rate(_pool_id: LiquidityPoolId, pair: TradingPair, _is_long: bool) -> FixedI128 {
 		Self::accumulated_swap_rate(pair)
 	}
 

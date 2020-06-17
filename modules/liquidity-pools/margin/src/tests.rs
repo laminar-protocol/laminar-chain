@@ -9,11 +9,11 @@ use primitives::{CurrencyId, Leverage, Leverages};
 use traits::{LiquidityPools, MarginProtocolLiquidityPools};
 
 fn swap_rate(pair: TradingPair, is_long: bool) -> FixedI128 {
-	<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_swap_rate(0, pair, is_long)
+	<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::swap_rate(0, pair, is_long)
 }
 
 fn accumulated_rate(pair: TradingPair, is_long: bool) -> FixedI128 {
-	<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_accumulated_swap_rate(0, pair, is_long)
+	<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::accumulated_swap_rate(0, pair, is_long)
 }
 
 #[test]
@@ -44,7 +44,7 @@ fn is_enabled_should_work() {
 		);
 
 		assert_eq!(
-			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::is_allowed_position(
+			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::is_allowed_leverage(
 				0,
 				pair,
 				Leverage::ShortTen
@@ -135,11 +135,11 @@ fn should_set_spread() {
 		assert_eq!(ModuleLiquidityPools::pool_trading_pair_options(0, pair), pool_option);
 
 		assert_eq!(
-			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_bid_spread(0, pair),
+			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::bid_spread(0, pair),
 			Some(80)
 		);
 		assert_eq!(
-			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_ask_spread(0, pair),
+			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::ask_spread(0, pair),
 			Some(60)
 		);
 	})
@@ -303,11 +303,11 @@ fn should_get_swap() {
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
 		assert_ok!(ModuleLiquidityPools::set_swap_rate(Origin::ROOT, pair, rate.clone()));
 		assert_eq!(
-			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_swap_rate(0, pair, true),
+			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::swap_rate(0, pair, true),
 			rate.long
 		);
 		assert_eq!(
-			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_swap_rate(0, pair, false),
+			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::swap_rate(0, pair, false),
 			rate.short
 		);
 
@@ -319,11 +319,11 @@ fn should_get_swap() {
 			rate
 		));
 		assert_eq!(
-			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_swap_rate(0, pair, true),
+			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::swap_rate(0, pair, true),
 			FixedI128::saturating_from_integer(-2)
 		);
 		assert_eq!(
-			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_swap_rate(0, pair, false),
+			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::swap_rate(0, pair, false),
 			FixedI128::saturating_from_integer(0)
 		);
 
@@ -340,11 +340,11 @@ fn should_get_swap() {
 			rate
 		));
 		assert_eq!(
-			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_swap_rate(0, pair, true),
+			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::swap_rate(0, pair, true),
 			fixed_i128_mul_signum(MaxSwap::get(), -1)
 		);
 		assert_eq!(
-			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::get_swap_rate(0, pair, false),
+			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::swap_rate(0, pair, false),
 			FixedI128::saturating_from_integer(-1)
 		);
 	});

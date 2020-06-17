@@ -5,7 +5,7 @@
 use frame_support::{impl_outer_event, impl_outer_origin, ord_parameter_types, parameter_types};
 use frame_system as system;
 use sp_core::H256;
-use sp_runtime::{testing::Header, traits::IdentityLookup, DispatchResult, Perbill};
+use sp_runtime::{testing::Header, traits::IdentityLookup, DispatchResult, Perbill, Permill};
 use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
 use system::EnsureSignedBy;
 
@@ -210,17 +210,17 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 }
 
 impl SyntheticProtocolLiquidityPools<AccountId> for MockLiquidityPools {
-	fn get_bid_spread(_pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Balance> {
+	fn bid_spread(_pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Balance> {
 		let price = MockPrices::prices(currency_id)?;
 		Some(Self::spread().mul_ceil(price.into_inner()))
 	}
 
-	fn get_ask_spread(_pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Balance> {
+	fn ask_spread(_pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Balance> {
 		let price = MockPrices::prices(currency_id)?;
 		Some(Self::spread().mul_ceil(price.into_inner()))
 	}
 
-	fn get_additional_collateral_ratio(_pool_id: LiquidityPoolId, _currency_id: CurrencyId) -> Permill {
+	fn additional_collateral_ratio(_pool_id: LiquidityPoolId, _currency_id: CurrencyId) -> Permill {
 		Self::additional_collateral_ratio()
 	}
 

@@ -87,11 +87,11 @@ fn should_set_spread() {
 		);
 
 		assert_eq!(
-			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::get_bid_spread(0, CurrencyId::AUSD),
+			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::bid_spread(0, CurrencyId::AUSD),
 			Some(80)
 		);
 		assert_eq!(
-			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::get_ask_spread(0, CurrencyId::AUSD),
+			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::ask_spread(0, CurrencyId::AUSD),
 			Some(60)
 		);
 	})
@@ -176,14 +176,14 @@ fn should_set_additional_collateral_ratio() {
 		);
 
 		assert_eq!(
-			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::get_additional_collateral_ratio(
+			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::additional_collateral_ratio(
 				0,
 				CurrencyId::AUSD
 			),
 			Permill::from_percent(120)
 		);
 		assert_eq!(
-			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::get_additional_collateral_ratio(
+			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::additional_collateral_ratio(
 				0,
 				CurrencyId::FJPY
 			),
@@ -202,7 +202,7 @@ fn should_fail_set_additional_collateral_ratio() {
 			Default::default()
 		);
 		assert_eq!(
-			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::get_additional_collateral_ratio(
+			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::additional_collateral_ratio(
 				0,
 				CurrencyId::AUSD
 			),
@@ -217,7 +217,7 @@ fn should_fail_set_additional_collateral_ratio() {
 		));
 
 		assert_eq!(
-			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::get_additional_collateral_ratio(
+			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::additional_collateral_ratio(
 				0,
 				CurrencyId::AUSD
 			),
@@ -232,7 +232,7 @@ fn should_fail_set_additional_collateral_ratio() {
 		));
 
 		assert_eq!(
-			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::get_additional_collateral_ratio(
+			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::additional_collateral_ratio(
 				0,
 				CurrencyId::AUSD
 			),
@@ -245,7 +245,7 @@ fn should_fail_set_additional_collateral_ratio() {
 		));
 
 		assert_eq!(
-			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::get_additional_collateral_ratio(
+			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::additional_collateral_ratio(
 				0,
 				CurrencyId::AUSD
 			),
@@ -258,7 +258,7 @@ fn should_fail_set_additional_collateral_ratio() {
 		));
 
 		assert_eq!(
-			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::get_additional_collateral_ratio(
+			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::additional_collateral_ratio(
 				0,
 				CurrencyId::AUSD
 			),
@@ -266,7 +266,7 @@ fn should_fail_set_additional_collateral_ratio() {
 		);
 
 		assert_eq!(
-			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::get_additional_collateral_ratio(
+			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::additional_collateral_ratio(
 				0,
 				CurrencyId::FJPY
 			),

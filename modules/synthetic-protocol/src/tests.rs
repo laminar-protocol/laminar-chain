@@ -5,7 +5,7 @@
 use super::*;
 use frame_support::{assert_noop, assert_ok};
 use mock::*;
-use sp_runtime::DispatchResult;
+use sp_runtime::{DispatchResult, Permill};
 
 fn mint_feur(who: AccountId, amount: Balance) -> DispatchResult {
 	SyntheticProtocol::mint(
@@ -71,7 +71,7 @@ fn mint_fails_if_balance_too_low() {
 		.ten_percent_additional_collateral_ratio()
 		.build()
 		.execute_with(|| {
-			assert_noop!(mint_feur(ALICE, 1), Error::<Runtime>::BalanceTooLow);
+			assert_noop!(mint_feur(ALICE, 1), orml_tokens::Error::<Runtime>::BalanceTooLow);
 		});
 }
 
@@ -136,7 +136,7 @@ fn mint_fails_if_pool_has_no_liquidity() {
 		.execute_with(|| {
 			assert_noop!(
 				mint_feur(ALICE, ONE_MILL),
-				Error::<Runtime>::LiquidityProviderBalanceTooLow,
+				Error::<Runtime>::InsufficientLiquidityInPool,
 			);
 		});
 }
@@ -230,7 +230,10 @@ fn redeem_fails_if_not_enough_synthetic() {
 		.build()
 		.execute_with(|| {
 			assert_ok!(mint_feur(ALICE, ONE_MILL));
-			assert_noop!(redeem_ausd(ALICE, ONE_MILL + 1), Error::<Runtime>::BalanceTooLow);
+			assert_noop!(
+				redeem_ausd(ALICE, ONE_MILL + 1),
+				orml_tokens::Error::<Runtime>::BalanceTooLow
+			);
 		});
 }
 
@@ -302,7 +305,7 @@ fn redeem_fails_if_synthetic_position_too_low() {
 			// redeem all in one pool, synthetic position would be too low
 			assert_noop!(
 				redeem_ausd(ALICE, SyntheticCurrency::free_balance(&ALICE)),
-				Error::<Runtime>::LiquidityPoolSyntheticPositionTooLow
+				Error::<Runtime>::InsufficientSyntheticInPosition
 			);
 		});
 }
@@ -323,7 +326,7 @@ fn redeem_fails_if_collateral_position_too_low() {
 
 			assert_noop!(
 				redeem_ausd(ALICE, SyntheticCurrency::free_balance(&ALICE)),
-				Error::<Runtime>::LiquidityPoolCollateralPositionTooLow
+				Error::<Runtime>::InsufficientCollateralInPosition
 			);
 		});
 }
@@ -347,7 +350,7 @@ fn redeem_fails_if_not_enough_locked_collateral() {
 
 			assert_noop!(
 				redeem_ausd(ALICE, SyntheticCurrency::free_balance(&ALICE)),
-				Error::<Runtime>::NotEnoughLockedCollateralAvailable,
+				Error::<Runtime>::InsufficientLockedCollateral,
 			);
 		});
 }
@@ -546,7 +549,7 @@ fn liquidate_fails_if_liquidator_not_enough_synthetic() {
 			assert_ok!(mint_feur(ALICE, ONE_MILL));
 			set_mock_feur_price(32, 10);
 
-			assert_noop!(liquidate(BOB, 1), Error::<Runtime>::BalanceTooLow);
+			assert_noop!(liquidate(BOB, 1), orml_tokens::Error::<Runtime>::BalanceTooLow);
 		});
 }
 
@@ -591,7 +594,7 @@ fn liquidate_fails_if_synthetic_position_too_low() {
 			set_mock_feur_price(32, 10);
 			assert_noop!(
 				liquidate(ALICE, synthetic_balance(ALICE)),
-				Error::<Runtime>::LiquidityPoolSyntheticPositionTooLow
+				Error::<Runtime>::InsufficientSyntheticInPosition
 			);
 		});
 }
@@ -610,7 +613,7 @@ fn liquidate_fails_if_collateral_position_too_low() {
 
 			assert_noop!(
 				liquidate(ALICE, synthetic_balance(ALICE)),
-				Error::<Runtime>::LiquidityPoolCollateralPositionTooLow
+				Error::<Runtime>::InsufficientCollateralInPosition
 			);
 		});
 }
@@ -776,7 +779,7 @@ fn add_collateral_fails_if_balance_too_low() {
 		.build()
 		.execute_with(|| {
 			assert_ok!(mint_feur(ALICE, ONE_MILL));
-			assert_noop!(add_collateral(ALICE, 1), Error::<Runtime>::BalanceTooLow);
+			assert_noop!(add_collateral(ALICE, 1), orml_tokens::Error::<Runtime>::BalanceTooLow);
 		});
 }
 
@@ -847,7 +850,7 @@ fn only_owner_could_withdraw_collateral() {
 		.build()
 		.execute_with(|| {
 			assert_ok!(mint_feur(ALICE, ONE_MILL));
-			assert_noop!(withdraw_collateral(BOB), Error::<Runtime>::NotPoolOwner);
+			assert_noop!(withdraw_collateral(BOB), Error::<Runtime>::NoPermission);
 		});
 }
 
@@ -889,7 +892,7 @@ fn withdraw_collateral_fails_if_not_enough_locked_collateral() {
 
 			assert_noop!(
 				withdraw_collateral(ALICE),
-				Error::<Runtime>::NotEnoughLockedCollateralAvailable
+				Error::<Runtime>::InsufficientLockedCollateral
 			);
 		});
 }
@@ -978,7 +981,7 @@ fn mint_fails_if_not_allowed() {
 		.set_is_allowed(false)
 		.build()
 		.execute_with(|| {
-			assert_noop!(mint_feur(ALICE, 1), Error::<Runtime>::NotSupportedByLiquidityPool);
+			assert_noop!(mint_feur(ALICE, 1), Error::<Runtime>::CannotMintInPool);
 		});
 }
 
@@ -995,7 +998,7 @@ fn can_redeem_with_not_allowed_position() {
 
 			MockLiquidityPools::set_is_allowed(false);
 
-			assert_noop!(mint_feur(ALICE, 1), Error::<Runtime>::NotSupportedByLiquidityPool);
+			assert_noop!(mint_feur(ALICE, 1), Error::<Runtime>::CannotMintInPool);
 
 			assert_ok!(redeem_ausd(ALICE, 100));
 		});

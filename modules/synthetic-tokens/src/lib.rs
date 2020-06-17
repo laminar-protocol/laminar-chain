@@ -21,17 +21,32 @@ mod mock;
 mod tests;
 
 pub trait Trait: frame_system::Trait {
+	/// The overarching event type.
 	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
+
+	/// The default extreme liquidation ratio.
 	type DefaultExtremeRatio: Get<Permill>;
+
+	/// The default liquidation ratio.
 	type DefaultLiquidationRatio: Get<Permill>;
+
+	/// The default collateral ratio.
 	type DefaultCollateralRatio: Get<Permill>;
+
+	/// Synthetic currency IDs.
 	type SyntheticCurrencyIds: Get<Vec<CurrencyId>>;
+
+	/// Required origin for updating protocol options.
 	type UpdateOrigin: EnsureOrigin<Self::Origin>;
 }
 
+/// Synthetic token position.
 #[derive(Encode, Decode, Eq, PartialEq, RuntimeDebug)]
 pub struct Position {
+	/// Collateral amount.
 	collateral: Balance,
+
+	/// Synthetic amount.
 	synthetic: Balance,
 }
 
@@ -44,17 +59,26 @@ impl Default for Position {
 	}
 }
 
+/// Synthetic token ratio options.
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct SyntheticTokensRatio {
+	/// Extreme liquidation ratio.
 	pub extreme: Option<Permill>,
+
+	/// Liquidation ratio.
 	pub liquidation: Option<Permill>,
+
+	/// Collateral ratio.
 	pub collateral: Option<Permill>,
 }
 
 decl_storage! {
 	trait Store for Module<T: Trait> as SyntheticTokens {
+		/// Ratios for each currency.
 		Ratios get(fn ratios) config(): map hasher(twox_64_concat) CurrencyId => SyntheticTokensRatio;
+
+		/// Positions of a currency in a pool
 		Positions get(fn positions): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) CurrencyId => Position;
 	}
 }
@@ -67,8 +91,10 @@ decl_event! {
 	pub enum Event {
 		/// Extreme ratio updated. (currency_id, ratio)
 		ExtremeRatioUpdated(CurrencyId, Permill),
+
 		/// Liquidation ratio updated. (currency_id, ratio)
 		LiquidationRatioUpdated(CurrencyId, Permill),
+
 		/// Collateral ratio updated. (currency_id, ratio)
 		CollateralRatioUpdated(CurrencyId, Permill),
 	}
@@ -80,11 +106,9 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		const DefaultExtremeRatio: Permill = T::DefaultExtremeRatio::get();
-		const DefaultLiquidationRatio: Permill = T::DefaultLiquidationRatio::get();
-		const DefaultCollateralRatio: Permill = T::DefaultCollateralRatio::get();
-		const SyntheticCurrencyIds: Vec<CurrencyId> = T::SyntheticCurrencyIds::get();
-
+		/// Set extreme liquidation ratio.
+		///
+		/// May only be called from `UpdateOrigin` or root.
 		#[weight = 10_000]
 		pub fn set_extreme_ratio(origin, currency_id: CurrencyId, #[compact] ratio: Permill) {
 			T::UpdateOrigin::try_origin(origin)
@@ -96,6 +120,9 @@ decl_module! {
 			Self::deposit_event(Event::ExtremeRatioUpdated(currency_id, ratio));
 		}
 
+		/// Set liquidation ratio.
+		///
+		/// May only be called from `UpdateOrigin` or root.
 		#[weight = 10_000]
 		pub fn set_liquidation_ratio(origin, currency_id: CurrencyId, #[compact] ratio: Permill) {
 			T::UpdateOrigin::try_origin(origin)
@@ -107,6 +134,9 @@ decl_module! {
 			Self::deposit_event(Event::LiquidationRatioUpdated(currency_id, ratio));
 		}
 
+		/// Set collateral ratio.
+		///
+		/// May only be called from `UpdateOrigin` or root.
 		#[weight = 10_000]
 		pub fn set_collateral_ratio(origin, currency_id: CurrencyId, #[compact] ratio: Permill) {
 			T::UpdateOrigin::try_origin(origin)

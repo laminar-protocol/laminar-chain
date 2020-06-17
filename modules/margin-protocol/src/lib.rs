@@ -80,7 +80,7 @@ pub trait Trait: frame_system::Trait + SendTransactionTypes<Call<Self>> {
 
 pub type PositionId = u64;
 
-/// Position.
+/// Margin protocol Position.
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq)]
 pub struct Position<T: Trait> {
 	/// Owner.
@@ -537,7 +537,7 @@ impl<T: Trait> Module<T> {
 			Error::<T>::MarginCalledPool
 		);
 		ensure!(
-			T::LiquidityPools::is_allowed_position(pool_id, pair, leverage),
+			T::LiquidityPools::is_allowed_leverage(pool_id, pair, leverage),
 			Error::<T>::PositionNotAllowed
 		);
 
@@ -565,8 +565,7 @@ impl<T: Trait> Module<T> {
 				.checked_div(&leverage_value)
 				.expect("leveraged value cannot be zero; qed")
 		};
-		let open_accumulated_swap_rate =
-			T::LiquidityPools::get_accumulated_swap_rate(pool_id, pair, leverage.is_long());
+		let open_accumulated_swap_rate = T::LiquidityPools::accumulated_swap_rate(pool_id, pair, leverage.is_long());
 		let position: Position<T> = Position {
 			owner: who.clone(),
 			pool: pool_id,
@@ -915,7 +914,7 @@ impl<T: Trait> Module<T> {
 	/// ask_price = price + ask_spread
 	fn _ask_price(pool: LiquidityPoolId, pair: TradingPair, max: Option<Price>) -> Fixedi128Result {
 		let price = Self::_price(pair.base, pair.quote)?;
-		let spread = T::LiquidityPools::get_ask_spread(pool, pair)
+		let spread = T::LiquidityPools::ask_spread(pool, pair)
 			.ok_or(Error::<T>::NoAskSpread)
 			.map(Price::from_inner)?;
 		let ask_price: Price = price.saturating_add(spread);
@@ -932,7 +931,7 @@ impl<T: Trait> Module<T> {
 	/// bid_price = price - bid_spread
 	fn _bid_price(pool: LiquidityPoolId, pair: TradingPair, min: Option<Price>) -> Fixedi128Result {
 		let price = Self::_price(pair.base, pair.quote)?;
-		let spread = T::LiquidityPools::get_bid_spread(pool, pair)
+		let spread = T::LiquidityPools::bid_spread(pool, pair)
 			.ok_or(Error::<T>::NoBidSpread)
 			.map(Price::from_inner)?;
 		let bid_price = price.saturating_sub(spread);
@@ -1061,10 +1060,9 @@ impl<T: Trait> Module<T> {
 	///
 	/// accumulated_swap_rate_of_position = (current_accumulated - open_accumulated) * leveraged_held
 	fn _accumulated_swap_rate_of_position(position: &Position<T>) -> Fixedi128Result {
-		let rate =
-			T::LiquidityPools::get_accumulated_swap_rate(position.pool, position.pair, position.leverage.is_long())
-				.checked_sub(&position.open_accumulated_swap_rate)
-				.ok_or(Error::<T>::NumOutOfBound)?;
+		let rate = T::LiquidityPools::accumulated_swap_rate(position.pool, position.pair, position.leverage.is_long())
+			.checked_sub(&position.open_accumulated_swap_rate)
+			.ok_or(Error::<T>::NumOutOfBound)?;
 		let accumulated_swap_rate = position
 			.leveraged_debits
 			.saturating_abs()
@@ -1320,11 +1318,11 @@ impl<T: Trait> Module<T> {
 
 		let spread = {
 			if position.leverage.is_long() {
-				T::LiquidityPools::get_bid_spread(pool, position.pair)
+				T::LiquidityPools::bid_spread(pool, position.pair)
 					.ok_or(Error::<T>::NoBidSpread)
 					.map(fixed_i128_from_u128)?
 			} else {
-				T::LiquidityPools::get_ask_spread(pool, position.pair)
+				T::LiquidityPools::ask_spread(pool, position.pair)
 					.ok_or(Error::<T>::NoAskSpread)
 					.map(fixed_i128_from_u128)?
 			}
