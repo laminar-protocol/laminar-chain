@@ -186,15 +186,15 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 }
 
 impl<T: Trait> SyntheticProtocolLiquidityPools<T::AccountId> for Module<T> {
-	fn get_bid_spread(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Balance> {
+	fn bid_spread(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Balance> {
 		Self::pool_currency_options(&pool_id, &currency_id).bid_spread
 	}
 
-	fn get_ask_spread(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Balance> {
+	fn ask_spread(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Balance> {
 		Self::pool_currency_options(&pool_id, &currency_id).ask_spread
 	}
 
-	fn get_additional_collateral_ratio(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Permill {
+	fn additional_collateral_ratio(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Permill {
 		let min_ratio = Self::min_additional_collateral_ratio();
 		Self::pool_currency_options(&pool_id, &currency_id)
 			.additional_collateral_ratio

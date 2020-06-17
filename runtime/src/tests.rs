@@ -505,8 +505,8 @@ pub fn margin_execute_time(range: Range<Moment>) {
 		//println!(
 		//	"execute_block {:?}, accumulated_long_rate = {:?}, accumulated_short_rate = {:?}",
 		//	i,
-		//	MarginLiquidityPools::get_accumulated_swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD, true),
-		//	MarginLiquidityPools::get_accumulated_swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD, false)
+		//	MarginLiquidityPools::accumulated_swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD, true),
+		//	MarginLiquidityPools::accumulated_swap_rate(LIQUIDITY_POOL_ID_0, EUR_USD, false)
 		//);
 	}
 }

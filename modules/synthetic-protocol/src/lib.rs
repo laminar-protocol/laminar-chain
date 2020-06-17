@@ -370,7 +370,7 @@ impl<T: Trait> Module<T> {
 		max_price: Price,
 	) -> result::Result<Price, DispatchError> {
 		let ask_spread =
-			T::SyntheticProtocolLiquidityPools::get_ask_spread(pool_id, currency_id).ok_or(Error::<T>::NoAskSpread)?;
+			T::SyntheticProtocolLiquidityPools::ask_spread(pool_id, currency_id).ok_or(Error::<T>::NoAskSpread)?;
 		let ask_price = price
 			.checked_add(&Price::from_inner(ask_spread))
 			.ok_or(Error::<T>::NumOverflow)?;
@@ -389,7 +389,7 @@ impl<T: Trait> Module<T> {
 		min_price: Option<Price>,
 	) -> result::Result<Price, DispatchError> {
 		let bid_spread =
-			T::SyntheticProtocolLiquidityPools::get_bid_spread(pool_id, currency_id).ok_or(Error::<T>::NoBidSpread)?;
+			T::SyntheticProtocolLiquidityPools::bid_spread(pool_id, currency_id).ok_or(Error::<T>::NoBidSpread)?;
 		let bid_price = price
 			.checked_sub(&Price::from_inner(bid_spread))
 			.expect("price > spread_amount; qed");
@@ -424,7 +424,7 @@ impl<T: Trait> Module<T> {
 		currency_id: CurrencyId,
 		collateral: Balance,
 	) -> BalanceResult {
-		let ratio = T::SyntheticProtocolLiquidityPools::get_additional_collateral_ratio(pool_id, currency_id);
+		let ratio = T::SyntheticProtocolLiquidityPools::additional_collateral_ratio(pool_id, currency_id);
 		let additional = ratio * collateral;
 
 		collateral.checked_add(additional).ok_or(Error::<T>::NumOverflow.into())

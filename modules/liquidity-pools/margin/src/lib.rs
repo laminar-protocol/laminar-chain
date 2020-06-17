@@ -428,7 +428,7 @@ impl<T: Trait> Module<T> {
 		Self::trading_pair_options(pair).accumulate_config
 	}
 
-	pub fn swap_rate(pair: TradingPair) -> SwapRate {
+	pub fn swap_rate_of_pair(pair: TradingPair) -> SwapRate {
 		Self::trading_pair_options(pair).swap_rate
 	}
 
@@ -506,21 +506,21 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 }
 
 impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
-	fn is_allowed_position(pool_id: LiquidityPoolId, pair: TradingPair, leverage: Leverage) -> bool {
+	fn is_allowed_leverage(pool_id: LiquidityPoolId, pair: TradingPair, leverage: Leverage) -> bool {
 		Self::is_pool_trading_pair_leverage_enabled(pool_id, pair, leverage)
 	}
 
-	fn get_bid_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance> {
+	fn bid_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance> {
 		Self::pool_trading_pair_options(pool_id, pair).bid_spread
 	}
 
-	fn get_ask_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance> {
+	fn ask_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance> {
 		Self::pool_trading_pair_options(pool_id, pair).ask_spread
 	}
 
-	fn get_swap_rate(pool_id: LiquidityPoolId, pair: TradingPair, is_long: bool) -> FixedI128 {
+	fn swap_rate(pool_id: LiquidityPoolId, pair: TradingPair, is_long: bool) -> FixedI128 {
 		let max_swap = T::MaxSwapRate::get();
-		let swap_rate = Self::swap_rate(pair);
+		let swap_rate = Self::swap_rate_of_pair(pair);
 		let additional_swap_rate = Self::additional_swap_rate(pool_id);
 
 		let swap_rate = if is_long { swap_rate.long } else { swap_rate.short };
@@ -538,7 +538,7 @@ impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
 		}
 	}
 
-	fn get_accumulated_swap_rate(pool_id: LiquidityPoolId, pair: TradingPair, is_long: bool) -> FixedI128 {
+	fn accumulated_swap_rate(pool_id: LiquidityPoolId, pair: TradingPair, is_long: bool) -> FixedI128 {
 		let accumulated_swap_rate = Self::accumulated_swap_rate(pool_id, pair);
 		if is_long {
 			accumulated_swap_rate.long
@@ -590,8 +590,8 @@ impl<T: Trait> Module<T> {
 
 	fn _accumulate_rates(pair: TradingPair) {
 		for pool_id in T::BaseLiquidityPools::all() {
-			let long_rate = Self::get_swap_rate(pool_id, pair, true);
-			let short_rate = Self::get_swap_rate(pool_id, pair, false);
+			let long_rate = Self::swap_rate(pool_id, pair, true);
+			let short_rate = Self::swap_rate(pool_id, pair, false);
 
 			let mut accumulated = Self::accumulated_swap_rate(pool_id, pair);
 			accumulated.long = accumulated.long.saturating_add(long_rate);
