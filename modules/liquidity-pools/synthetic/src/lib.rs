@@ -7,7 +7,7 @@ use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::EnsureOrigin};
 use frame_system::{self as system, ensure_root, ensure_signed};
 use primitives::{Balance, CurrencyId, LiquidityPoolId};
-use sp_runtime::{traits::Zero, DispatchResult, ModuleId, Permill, RuntimeDebug};
+use sp_runtime::{DispatchResult, ModuleId, Permill, RuntimeDebug};
 use sp_std::prelude::*;
 use traits::{LiquidityPools, OnDisableLiquidityPool, OnRemoveLiquidityPool, SyntheticProtocolLiquidityPools};
 
@@ -51,13 +51,13 @@ pub trait Trait: frame_system::Trait {
 decl_storage! {
 	trait Store for Module<T: Trait> as SyntheticLiquidityPools {
 		/// Currency options in a liquidity pool.
-		pub PoolCurrencyOptions get(fn pool_currency_options): double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) CurrencyId => SyntheticPoolCurrencyOption;
+		pub PoolCurrencyOptions: double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) CurrencyId => SyntheticPoolCurrencyOption;
 
 		/// Minimum additional collateral ratio.
 		pub MinAdditionalCollateralRatio get(fn min_additional_collateral_ratio) config(): Permill;
 
 		/// Maximum spread of a currency.
-		pub MaxSpread get(fn max_spread): map hasher(twox_64_concat) CurrencyId => Balance;
+		pub MaxSpread get(fn max_spread): map hasher(twox_64_concat) CurrencyId => Option<Balance>;
 	}
 }
 
@@ -187,22 +187,35 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 
 impl<T: Trait> SyntheticProtocolLiquidityPools<T::AccountId> for Module<T> {
 	fn bid_spread(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Balance> {
-		Self::pool_currency_options(&pool_id, &currency_id).bid_spread
+		Self::pool_currency_options(pool_id, currency_id).bid_spread
 	}
 
 	fn ask_spread(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Balance> {
-		Self::pool_currency_options(&pool_id, &currency_id).ask_spread
+		Self::pool_currency_options(pool_id, currency_id).ask_spread
 	}
 
 	fn additional_collateral_ratio(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Permill {
 		let min_ratio = Self::min_additional_collateral_ratio();
-		Self::pool_currency_options(&pool_id, &currency_id)
+		Self::pool_currency_options(pool_id, currency_id)
 			.additional_collateral_ratio
 			.map_or(min_ratio, |ratio| ratio.max(min_ratio))
 	}
 
 	fn can_mint(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> bool {
-		Self::pool_currency_options(&pool_id, &currency_id).synthetic_enabled
+		Self::pool_currency_options(pool_id, currency_id).synthetic_enabled
+	}
+}
+
+// Storage getters.
+impl<T: Trait> Module<T> {
+	/// `PoolCurrencyOptions` getter. Bid/ask spread is capped by max spread.
+	pub fn pool_currency_options(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> SyntheticPoolCurrencyOption {
+		let mut option = PoolCurrencyOptions::get(pool_id, currency_id);
+		if let Some(max_spread) = Self::max_spread(currency_id) {
+			option.bid_spread = option.bid_spread.map(|s| s.min(max_spread));
+			option.ask_spread = option.ask_spread.map(|s| s.min(max_spread));
+		}
+		option
 	}
 }
 
@@ -216,8 +229,8 @@ impl<T: Trait> Module<T> {
 		ask: Balance,
 	) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, who), Error::<T>::NoPermission);
-		let max_spread = Self::max_spread(&currency_id);
-		if !max_spread.is_zero() {
+
+		if let Some(max_spread) = Self::max_spread(&currency_id) {
 			ensure!(ask <= max_spread && bid <= max_spread, Error::<T>::SpreadTooHigh);
 		}
 

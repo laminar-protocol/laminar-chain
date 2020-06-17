@@ -130,6 +130,8 @@ decl_storage! {
 		pub PoolOptions get(fn pool_options): map hasher(twox_64_concat) LiquidityPoolId => MarginPoolOption;
 
 		/// Trading pair options in a liquidity pool.
+		///
+		/// Getter is implemented manually to cap the spread with max spread.
 		pub PoolTradingPairOptions: double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) TradingPair => MarginPoolTradingPairOption;
 
 		/// The accumulated swap rate of trading pairs in liquidity pools.
