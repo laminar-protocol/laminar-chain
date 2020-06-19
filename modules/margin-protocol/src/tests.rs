@@ -1581,18 +1581,22 @@ fn close_loss_position_realizing_part_on_not_enough_equity() {
 }
 
 #[test]
-fn close_loss_position_realizing_nothing_on_negative_equity() {
+fn close_loss_position_owning_and_repayment() {
 	ExtBuilder::default()
 		.module_balance(fixedi128_saturating_from_integer_currency_cent(2_00))
 		.pool_liquidity(MOCK_POOL, balance_saturating_from_integer_currency_cent(1_000_00))
 		.spread(Permill::zero())
 		.accumulated_swap_rate(EUR_USD_PAIR, FixedI128::saturating_from_integer(1))
+		.accumulated_swap_rate(JPY_USD_PAIR, FixedI128::saturating_from_integer(1))
 		.price(CurrencyId::FEUR, (10, 1))
+		.price(CurrencyId::FJPY, (10, 1))
 		.build()
 		.execute_with(|| {
 			set_trader_risk_threshold(EUR_USD_PAIR, risk_threshold(100, 0));
 			<Balances<Runtime>>::insert(ALICE, MOCK_POOL, fixedi128_saturating_from_integer_currency_cent(2_00));
-			let position: Position<Runtime> = Position {
+
+			// position with 90 dollars loss
+			let loss_position: Position<Runtime> = Position {
 				owner: ALICE,
 				pool: MOCK_POOL,
 				pair: EUR_USD_PAIR,
@@ -1602,39 +1606,81 @@ fn close_loss_position_realizing_nothing_on_negative_equity() {
 				open_accumulated_swap_rate: FixedI128::saturating_from_integer(1),
 				margin_held: fixedi128_saturating_from_integer_currency_cent(1_00),
 			};
-			<Positions<Runtime>>::insert(0, position.clone());
-			<Positions<Runtime>>::insert(1, position.clone());
+			// position with 45 dollars profit
+			let profit_position: Position<Runtime> = Position {
+				owner: ALICE,
+				pool: MOCK_POOL,
+				pair: JPY_USD_PAIR,
+				leverage: Leverage::LongFive,
+				leveraged_held: fixedi128_saturating_from_integer_currency_cent(5_00),
+				leveraged_debits: fixedi128_saturating_from_integer_currency_cent(-5_00),
+				open_accumulated_swap_rate: FixedI128::saturating_from_integer(1),
+				margin_held: fixedi128_saturating_from_integer_currency_cent(1_00),
+			};
+			<Positions<Runtime>>::insert(0, loss_position.clone());
+			<Positions<Runtime>>::insert(1, profit_position.clone());
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), true);
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 1), true);
 
-			let snapshot = positions_snapshot(
-				2,
-				position.leveraged_held.checked_add(&position.leveraged_held).unwrap(),
-				position
-					.leveraged_debits
-					.checked_add(&position.leveraged_debits)
-					.unwrap(),
-				FixedI128::saturating_from_integer(0),
-				FixedI128::saturating_from_integer(0),
+			PositionsSnapshots::insert(
+				MOCK_POOL,
+				EUR_USD_PAIR,
+				positions_snapshot(
+					1,
+					loss_position.leveraged_held,
+					loss_position.leveraged_debits,
+					FixedI128::saturating_from_integer(0),
+					FixedI128::saturating_from_integer(0),
+				),
 			);
-			PositionsSnapshots::insert(MOCK_POOL, EUR_USD_PAIR, snapshot.clone());
+			PositionsSnapshots::insert(
+				MOCK_POOL,
+				JPY_USD_PAIR,
+				positions_snapshot(
+					1,
+					profit_position.leveraged_held,
+					profit_position.leveraged_debits,
+					FixedI128::saturating_from_integer(0),
+					FixedI128::saturating_from_integer(0),
+				),
+			);
 
 			MockPrices::set_mock_price(CurrencyId::FEUR, Some(Price::saturating_from_rational(1, 1)));
 			assert!(MarginProtocol::equity_of_trader(&ALICE, MOCK_POOL).unwrap() < FixedI128::zero());
+
+			// Balance: FixedI128(2.000000000000000000)
+			// Free margin: Ok(FixedI128(-45.000000000000000000))
+			// Unrealized PL: Ok(FixedI128(-45.000000000000000000))
+			// Equity: Ok(FixedI128(-43.000000000000000000))
+			// Margin level: Ok(FixedI128(-0.409523809523809523))
 
 			assert_ok!(MarginProtocol::close_position(
 				Origin::signed(ALICE),
 				0,
 				Price::saturating_from_integer(0)
 			));
+
+			// realizable = $47; $2 paid to pool; -$45 owning.
 			assert_eq!(
 				MockLiquidityPools::liquidity(MOCK_POOL),
-				balance_saturating_from_integer_currency_cent(1_000_00)
+				balance_saturating_from_integer_currency_cent(1_002_00)
 			);
 			assert_eq!(
 				MarginProtocol::balances(&ALICE, MOCK_POOL),
-				FixedI128::saturating_from_integer(-88)
+				FixedI128::saturating_from_integer(-45),
 			);
+
+			// realizable = $45; $45 repayment.
+			assert_ok!(MarginProtocol::close_position(
+				Origin::signed(ALICE),
+				1,
+				Price::saturating_from_integer(0)
+			));
+			assert_eq!(
+				MockLiquidityPools::liquidity(MOCK_POOL),
+				balance_saturating_from_integer_currency_cent(1_002_00)
+			);
+			assert_eq!(MarginProtocol::balances(&ALICE, MOCK_POOL), FixedI128::zero(),);
 		});
 }
 
