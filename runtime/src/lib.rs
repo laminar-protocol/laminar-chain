@@ -99,7 +99,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("laminar"),
 	impl_name: create_runtime_str!("laminar"),
 	authoring_version: 1,
-	spec_version: 103,
+	spec_version: 200,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,

@@ -1,6 +1,6 @@
 [package]
 name = "laminar-chain"
-version = "0.1.3"
+version = "0.2.0"
 authors = ["Laminar Developers <hello@laminar.one>"]
 build = "build.rs"
 edition = "2018"
