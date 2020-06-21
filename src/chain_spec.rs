@@ -215,7 +215,7 @@ pub fn laminar_turbulence_latest_config() -> ChainSpec {
 			)
 		},
 		vec![
-			"/dns4/testnet-bootnode-1.laminar-chain.laminar.one/tcp/30333/p2p/QmZKdYinGon2nUXgfkipdRuGSmQnmks3q6EhmXUSwULUFT".parse().unwrap(),
+			"/dns4/testnet-bootnode-1.laminar-chain.laminar.one/tcp/30333/p2p/12D3KooWNCe9dEpPhswckrX5ZHhdtZ3r5sg6CcgKfgyhw3seuwtB".parse().unwrap(),
 		],
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
 			.expect("Staging telemetry url is valid; qed")),
