@@ -35,7 +35,7 @@ use primitives::{
 use sp_std::{cmp, prelude::*, result};
 use traits::{
 	BaseLiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools, MarginProtocolLiquidityPoolsManager,
-	Treasury,
+	OpenPositionError, Treasury,
 };
 
 #[cfg(feature = "std")]
@@ -316,8 +316,17 @@ decl_error! {
 		/// Position is not opened by caller.
 		PositionNotOpenedByTrader,
 
-		/// Position is not allow in pool.
-		PositionNotAllowed,
+		/// Leverage not allowed in pool,
+		LeverageNotAllowedInPool,
+
+		/// Trading pair not enabled in protocol,
+		TradingPairNotEnabled,
+
+		/// Trading pair not enabled in pool,
+		TradingPairNotEnabledInPool,
+
+		/// Leveraged amount is below mininum,
+		BelowMinLeveragedAmount,
 
 		/// Positions count reached maximum.
 		CannotOpenMorePosition,
@@ -327,6 +336,17 @@ decl_error! {
 
 		/// Risk threshold not set.
 		NoRiskThreshold,
+	}
+}
+
+impl<T: Trait> From<OpenPositionError> for Error<T> {
+	fn from(error: OpenPositionError) -> Self {
+		match error {
+			OpenPositionError::LeverageNotAllowedInPool => Error::<T>::LeverageNotAllowedInPool,
+			OpenPositionError::TradingPairNotEnabled => Error::<T>::TradingPairNotEnabled,
+			OpenPositionError::TradingPairNotEnabledInPool => Error::<T>::TradingPairNotEnabledInPool,
+			OpenPositionError::BelowMinLeveragedAmount => Error::<T>::BelowMinLeveragedAmount,
+		}
 	}
 }
 
@@ -536,10 +556,6 @@ impl<T: Trait> Module<T> {
 			Self::margin_called_pools(pool_id).is_none(),
 			Error::<T>::MarginCalledPool
 		);
-		ensure!(
-			T::LiquidityPools::is_allowed_leverage(pool_id, pair, leverage),
-			Error::<T>::PositionNotAllowed
-		);
 
 		let (held_signum, debit_signum): (i128, i128) = if leverage.is_long() { (1, -1) } else { (-1, 1) };
 		let leveraged_held = fixed_i128_from_u128(leveraged_amount);
@@ -554,10 +570,13 @@ impl<T: Trait> Module<T> {
 			.checked_mul(&debits_price)
 			.ok_or(Error::<T>::NumOutOfBound)?;
 		let leveraged_held_in_usd = Self::_usd_value(pair.quote, leveraged_debits)?;
-		ensure!(
-			T::LiquidityPools::can_open_position(pool_id, pair, leverage, u128_from_fixed_i128(leveraged_held_in_usd)),
-			Error::<T>::PositionNotAllowed
-		);
+		T::LiquidityPools::ensure_can_open_position(
+			pool_id,
+			pair,
+			leverage,
+			u128_from_fixed_i128(leveraged_held_in_usd),
+		)
+		.map_err::<Error<T>, _>(|e| e.into())?;
 
 		let margin_held = {
 			let leverage_value = FixedI128::saturating_from_integer(leverage.value());

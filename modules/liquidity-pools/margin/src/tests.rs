@@ -44,11 +44,7 @@ fn is_enabled_should_work() {
 		);
 
 		assert_eq!(
-			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::is_allowed_leverage(
-				0,
-				pair,
-				Leverage::ShortTen
-			),
+			ModuleLiquidityPools::is_pool_trading_pair_leverage_enabled(0, pair, Leverage::ShortTen),
 			true
 		);
 	});
@@ -416,7 +412,7 @@ fn should_get_accumulated_swap() {
 }
 
 #[test]
-fn can_open_position() {
+fn ensure_can_open_position() {
 	new_test_ext().execute_with(|| {
 		let pair = TradingPair {
 			base: CurrencyId::AUSD,
@@ -430,14 +426,14 @@ fn can_open_position() {
 			0,
 			pair
 		));
-		assert_eq!(
-			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::can_open_position(
+		assert_noop!(
+			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::ensure_can_open_position(
 				0,
 				pair,
 				Leverage::ShortFive,
 				0
 			),
-			false
+			OpenPositionError::LeverageNotAllowedInPool,
 		);
 
 		assert_ok!(ModuleLiquidityPools::set_enabled_leverages(
@@ -453,14 +449,13 @@ fn can_open_position() {
 			Leverage::ShortFive.into(),
 		));
 
-		assert_eq!(
-			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::can_open_position(
+		assert_ok!(
+			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::ensure_can_open_position(
 				0,
 				pair,
 				Leverage::ShortFive,
 				0
-			),
-			true
+			)
 		);
 	});
 }

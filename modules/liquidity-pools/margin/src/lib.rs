@@ -20,10 +20,10 @@ use sp_runtime::{
 	traits::{AtLeast32Bit, Saturating},
 	DispatchResult, ModuleId, RuntimeDebug,
 };
-use sp_std::{cmp::max, prelude::*};
+use sp_std::{cmp::max, prelude::*, result};
 use traits::{
 	LiquidityPools, MarginProtocolLiquidityPools, MarginProtocolLiquidityPoolsManager, OnDisableLiquidityPool,
-	OnRemoveLiquidityPool,
+	OnRemoveLiquidityPool, OpenPositionError,
 };
 
 #[cfg(feature = "std")]
@@ -508,10 +508,6 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 }
 
 impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
-	fn is_allowed_leverage(pool_id: LiquidityPoolId, pair: TradingPair, leverage: Leverage) -> bool {
-		Self::is_pool_trading_pair_leverage_enabled(pool_id, pair, leverage)
-	}
-
 	fn bid_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance> {
 		Self::pool_trading_pair_options(pool_id, pair).bid_spread
 	}
@@ -549,16 +545,25 @@ impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
 		}
 	}
 
-	fn can_open_position(
+	fn ensure_can_open_position(
 		pool_id: LiquidityPoolId,
 		pair: TradingPair,
 		leverage: Leverage,
 		leveraged_amount: Balance,
-	) -> bool {
-		Self::is_pool_trading_pair_leverage_enabled(pool_id, pair, leverage)
-			&& Self::is_trading_pair_enabled(pair)
-			&& Self::is_pool_trading_pair_enabled(pool_id, pair)
-			&& leveraged_amount >= Self::min_leveraged_amount(pool_id)
+	) -> result::Result<(), OpenPositionError> {
+		if !Self::is_pool_trading_pair_leverage_enabled(pool_id, pair, leverage) {
+			return Err(OpenPositionError::LeverageNotAllowedInPool);
+		}
+		if !Self::is_trading_pair_enabled(pair) {
+			return Err(OpenPositionError::TradingPairNotEnabled);
+		}
+		if !Self::is_pool_trading_pair_enabled(pool_id, pair) {
+			return Err(OpenPositionError::TradingPairNotEnabledInPool);
+		}
+		if leveraged_amount < Self::min_leveraged_amount(pool_id) {
+			return Err(OpenPositionError::BelowMinLeveragedAmount);
+		}
+		Ok(())
 	}
 }
 
