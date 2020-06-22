@@ -508,10 +508,6 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 }
 
 impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
-	fn is_allowed_leverage(pool_id: LiquidityPoolId, pair: TradingPair, leverage: Leverage) -> bool {
-		Self::is_pool_trading_pair_leverage_enabled(pool_id, pair, leverage)
-	}
-
 	fn bid_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance> {
 		Self::pool_trading_pair_options(pool_id, pair).bid_spread
 	}

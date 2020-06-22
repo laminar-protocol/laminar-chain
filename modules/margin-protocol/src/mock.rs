@@ -207,10 +207,6 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 }
 
 impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
-	fn is_allowed_leverage(_pool_id: LiquidityPoolId, _pair: TradingPair, _leverage: Leverage) -> bool {
-		true
-	}
-
 	fn bid_spread(_pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance> {
 		let base_price = MockPrices::prices(pair.base)?;
 		let quote_price = MockPrices::prices(pair.quote)?;

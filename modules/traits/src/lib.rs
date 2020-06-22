@@ -61,9 +61,6 @@ pub enum OpenPositionError {
 
 /// An abstraction of liquidity pools for Margin Protocol.
 pub trait MarginProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
-	/// Returns `true` if `leverage` of `pair` is allowed in `pool_id`.
-	fn is_allowed_leverage(pool_id: LiquidityPoolId, pair: TradingPair, leverage: Leverage) -> bool;
-
 	/// Returns bid spread of `pair` in `pool_id`, or `None` if not set by pool owner.
 	fn bid_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance>;
 

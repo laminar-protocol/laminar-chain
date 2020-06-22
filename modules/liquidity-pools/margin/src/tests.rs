@@ -44,11 +44,7 @@ fn is_enabled_should_work() {
 		);
 
 		assert_eq!(
-			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::is_allowed_leverage(
-				0,
-				pair,
-				Leverage::ShortTen
-			),
+			ModuleLiquidityPools::is_pool_trading_pair_leverage_enabled(0, pair, Leverage::ShortTen),
 			true
 		);
 	});

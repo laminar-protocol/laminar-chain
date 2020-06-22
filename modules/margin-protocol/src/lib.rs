@@ -556,10 +556,6 @@ impl<T: Trait> Module<T> {
 			Self::margin_called_pools(pool_id).is_none(),
 			Error::<T>::MarginCalledPool
 		);
-		ensure!(
-			T::LiquidityPools::is_allowed_leverage(pool_id, pair, leverage),
-			Error::<T>::LeverageNotAllowedInPool,
-		);
 
 		let (held_signum, debit_signum): (i128, i128) = if leverage.is_long() { (1, -1) } else { (-1, 1) };
 		let leveraged_held = fixed_i128_from_u128(leveraged_amount);
