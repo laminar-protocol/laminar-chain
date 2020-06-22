@@ -15,7 +15,7 @@ use sp_runtime::{
 	Perbill,
 };
 use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
-use traits::LiquidityPools;
+use traits::{LiquidityPools, OpenPositionError};
 
 use super::*;
 
@@ -233,13 +233,13 @@ impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
 		Self::accumulated_swap_rate(pair)
 	}
 
-	fn can_open_position(
+	fn ensure_can_open_position(
 		_pool_id: LiquidityPoolId,
 		_pair: TradingPair,
 		_leverage: Leverage,
 		_leveraged_amount: Balance,
-	) -> bool {
-		true
+	) -> result::Result<(), OpenPositionError> {
+		Ok(())
 	}
 }
 

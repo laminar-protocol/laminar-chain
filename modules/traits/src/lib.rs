@@ -2,8 +2,8 @@
 
 use primitives::{Balance, CurrencyId, Leverage, LiquidityPoolId, TradingPair};
 use sp_arithmetic::FixedI128;
-use sp_runtime::{DispatchResult, Permill};
-use sp_std::prelude::*;
+use sp_runtime::{DispatchResult, Permill, RuntimeDebug};
+use sp_std::{prelude::*, result};
 
 /// An abstraction of liquidity pools basic functionalities.
 pub trait LiquidityPools<AccountId> {
@@ -51,6 +51,14 @@ pub trait SyntheticProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> 
 	fn can_mint(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> bool;
 }
 
+#[derive(PartialEq, Eq, RuntimeDebug)]
+pub enum OpenPositionError {
+	LeverageNotAllowedInPool,
+	TradingPairNotEnabled,
+	TradingPairNotEnabledInPool,
+	BelowMinLeveragedAmount,
+}
+
 /// An abstraction of liquidity pools for Margin Protocol.
 pub trait MarginProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
 	/// Returns `true` if `leverage` of `pair` is allowed in `pool_id`.
@@ -68,13 +76,13 @@ pub trait MarginProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
 	/// Return accumulated swap rate by USD.
 	fn accumulated_swap_rate(pool_id: LiquidityPoolId, pair: TradingPair, is_long: bool) -> FixedI128;
 
-	/// Return `true` if position can be opened in `pool_id`.
-	fn can_open_position(
+	/// Return `Ok` iff position can be opened in `pool_id`.
+	fn ensure_can_open_position(
 		pool_id: LiquidityPoolId,
 		pair: TradingPair,
 		leverage: Leverage,
 		leveraged_amount: Balance,
-	) -> bool;
+	) -> result::Result<(), OpenPositionError>;
 }
 
 /// Margin protocol liquidity pools manager.
