@@ -218,7 +218,7 @@ decl_module! {
 		#[weight = 10_000]
 		pub fn set_spread(origin, #[compact] pool_id: LiquidityPoolId, pair: TradingPair, #[compact] bid: Balance, #[compact] ask: Balance) {
 			let who = ensure_signed(origin)?;
-			Self::_set_spread(&who, pool_id, pair, bid, ask)?;
+			Self::do_set_spread(&who, pool_id, pair, bid, ask)?;
 			Self::deposit_event(RawEvent::SpreadSet(who, pool_id, pair, bid, ask));
 		}
 
@@ -228,7 +228,7 @@ decl_module! {
 		#[weight = 10_000]
 		pub fn set_enabled_leverages(origin, #[compact] pool_id: LiquidityPoolId, pair: TradingPair, enabled: Leverages) {
 			let who = ensure_signed(origin)?;
-			Self::_set_enabled_leverages(&who, pool_id, pair, enabled)?;
+			Self::do_set_enabled_leverages(&who, pool_id, pair, enabled)?;
 			Self::deposit_event(RawEvent::EnabledTradesSet(who, pool_id, pair, enabled));
 		}
 
@@ -392,7 +392,7 @@ decl_module! {
 						&& <LastAccumulateTime<T>>::get() != now_as_secs
 					{
 						<LastAccumulateTime<T>>::set(now_as_secs);
-						Self::_accumulate_rates(pair);
+						Self::accumulate_rates(pair);
 					}
 				}
 			});
@@ -567,9 +567,9 @@ impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
 	}
 }
 
-// Private methods
+// Dispatchable calls implementation
 impl<T: Trait> Module<T> {
-	fn _set_spread(
+	fn do_set_spread(
 		who: &T::AccountId,
 		pool_id: LiquidityPoolId,
 		pair: TradingPair,
@@ -584,7 +584,7 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	fn _set_enabled_leverages(
+	fn do_set_enabled_leverages(
 		who: &T::AccountId,
 		pool_id: LiquidityPoolId,
 		pair: TradingPair,
@@ -594,8 +594,11 @@ impl<T: Trait> Module<T> {
 		PoolTradingPairOptions::mutate(pool_id, pair, |o| o.enabled_trades = enabled);
 		Ok(())
 	}
+}
 
-	fn _accumulate_rates(pair: TradingPair) {
+// Private methods
+impl<T: Trait> Module<T> {
+	fn accumulate_rates(pair: TradingPair) {
 		for pool_id in T::BaseLiquidityPools::all() {
 			let long_rate = Self::swap_rate(pool_id, pair, true);
 			let short_rate = Self::swap_rate(pool_id, pair, false);
