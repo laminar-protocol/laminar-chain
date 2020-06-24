@@ -92,9 +92,15 @@ decl_module! {
 		///
 		/// May only be called from the pool owner.
 		#[weight = 10_000]
-		pub fn set_spread(origin, #[compact] pool_id: LiquidityPoolId, currency_id: CurrencyId, #[compact] bid: Balance, #[compact] ask: Balance) {
+		pub fn set_spread(
+			origin,
+			#[compact] pool_id: LiquidityPoolId,
+			currency_id: CurrencyId,
+			#[compact] bid: Balance,
+			#[compact] ask: Balance
+		) {
 			let who = ensure_signed(origin)?;
-			Self::_set_spread(&who, pool_id, currency_id, bid, ask)?;
+			Self::do_set_spread(&who, pool_id, currency_id, bid, ask)?;
 			Self::deposit_event(RawEvent::SpreadSet(who, pool_id, currency_id, bid, ask));
 		}
 
@@ -102,9 +108,14 @@ decl_module! {
 		///
 		/// May only be called from the pool owner.
 		#[weight = 10_000]
-		pub fn set_additional_collateral_ratio(origin, #[compact] pool_id: LiquidityPoolId, currency_id: CurrencyId, ratio: Option<Permill>) {
+		pub fn set_additional_collateral_ratio(
+			origin,
+			#[compact] pool_id: LiquidityPoolId,
+			currency_id: CurrencyId,
+			ratio: Option<Permill>
+		) {
 			let who = ensure_signed(origin)?;
-			Self::_set_additional_collateral_ratio(&who, pool_id, currency_id, ratio)?;
+			Self::do_set_additional_collateral_ratio(&who, pool_id, currency_id, ratio)?;
 			Self::deposit_event(RawEvent::AdditionalCollateralRatioSet(who, pool_id, currency_id, ratio));
 		}
 
@@ -124,9 +135,14 @@ decl_module! {
 		///
 		/// May only be called from the pool owner.
 		#[weight = 10_000]
-		pub fn set_synthetic_enabled(origin, #[compact] pool_id: LiquidityPoolId, currency_id: CurrencyId, enabled: bool) {
+		pub fn set_synthetic_enabled(
+			origin,
+			#[compact] pool_id: LiquidityPoolId,
+			currency_id: CurrencyId,
+			enabled: bool
+		) {
 			let who = ensure_signed(origin)?;
-			Self::_set_synthetic_enabled(&who, pool_id, currency_id, enabled)?;
+			Self::do_set_synthetic_enabled(&who, pool_id, currency_id, enabled)?;
 			Self::deposit_event(RawEvent::SyntheticEnabledSet(who, pool_id, currency_id, enabled));
 		}
 
@@ -219,9 +235,9 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-// Private methods
+// Dispatchable calls implementation
 impl<T: Trait> Module<T> {
-	fn _set_spread(
+	fn do_set_spread(
 		who: &T::AccountId,
 		pool_id: LiquidityPoolId,
 		currency_id: CurrencyId,
@@ -242,7 +258,7 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	fn _set_additional_collateral_ratio(
+	fn do_set_additional_collateral_ratio(
 		who: &T::AccountId,
 		pool_id: LiquidityPoolId,
 		currency_id: CurrencyId,
@@ -253,7 +269,7 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	fn _set_synthetic_enabled(
+	fn do_set_synthetic_enabled(
 		who: &T::AccountId,
 		pool_id: LiquidityPoolId,
 		currency_id: CurrencyId,

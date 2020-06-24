@@ -115,7 +115,7 @@ fn unrealized_pl_of_long_position_works() {
 		.build()
 		.execute_with(|| {
 			assert_eq!(
-				MarginProtocol::_unrealized_pl_of_position(&eur_jpy_long()),
+				MarginProtocol::unrealized_pl_of_position(&eur_jpy_long()),
 				Ok(FixedI128::from_inner(-1073545454545441750827)),
 			);
 		});
@@ -131,7 +131,7 @@ fn unrealized_pl_of_short_position_works() {
 		.build()
 		.execute_with(|| {
 			assert_eq!(
-				MarginProtocol::_unrealized_pl_of_position(&eur_jpy_short()),
+				MarginProtocol::unrealized_pl_of_position(&eur_jpy_short()),
 				Ok(FixedI128::from_inner(1470999999999987140173)),
 			);
 		});
@@ -254,7 +254,7 @@ fn accumulated_swap_rate_of_long_position_works() {
 		.build()
 		.execute_with(|| {
 			assert_eq!(
-				MarginProtocol::_accumulated_swap_rate_of_position(&eur_usd_long_1()),
+				MarginProtocol::accumulated_swap_rate_of_position(&eur_usd_long_1()),
 				Ok(FixedI128::from_inner(-44398964610000000000))
 			);
 		});
@@ -268,7 +268,7 @@ fn accumulated_swap_rate_of_short_position_works() {
 		.build()
 		.execute_with(|| {
 			assert_eq!(
-				MarginProtocol::_accumulated_swap_rate_of_position(&eur_usd_short_1()),
+				MarginProtocol::accumulated_swap_rate_of_position(&eur_usd_short_1()),
 				Ok(FixedI128::from_inner(-13127898960000000000))
 			);
 		});
@@ -286,7 +286,7 @@ fn accumulated_swap_rate_of_trader_sums_all_positions() {
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), true);
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 1), true);
 			assert_eq!(
-				MarginProtocol::_accumulated_swap_rate_of_trader(&ALICE, MOCK_POOL),
+				MarginProtocol::accumulated_swap_rate_of_trader(&ALICE, MOCK_POOL),
 				Ok(FixedI128::from_inner(-57526863570000000000))
 			);
 		});
@@ -387,13 +387,13 @@ fn ensure_trader_safe_works() {
 
 			// 100% == 100%, unsafe
 			assert_noop!(
-				MarginProtocol::_ensure_trader_safe(&ALICE, MOCK_POOL, Action::None),
+				MarginProtocol::ensure_trader_safe(&ALICE, MOCK_POOL, Action::None),
 				Error::<Runtime>::UnsafeTrader
 			);
 
 			// 100% > 99%, safe
 			set_trader_risk_threshold(EUR_USD_PAIR, risk_threshold(99, 0));
-			assert_ok!(MarginProtocol::_ensure_trader_safe(&ALICE, MOCK_POOL, Action::None));
+			assert_ok!(MarginProtocol::ensure_trader_safe(&ALICE, MOCK_POOL, Action::None));
 		});
 }
 
@@ -434,7 +434,7 @@ fn equity_of_pool_works() {
 			);
 			PositionsSnapshots::insert(MOCK_POOL, EUR_USD_PAIR, snapshot);
 			assert_eq!(
-				MarginProtocol::_equity_of_pool(MOCK_POOL),
+				MarginProtocol::equity_of_pool(MOCK_POOL),
 				Ok(FixedI128::from_inner(103297_100000000000000000))
 			);
 		});
@@ -479,7 +479,7 @@ fn enp_and_ell_without_new_position_works() {
 			PositionsSnapshots::insert(MOCK_POOL, EUR_USD_PAIR, snapshot);
 
 			assert_eq!(
-				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::None),
+				MarginProtocol::enp_and_ell_with_action(MOCK_POOL, Action::None),
 				Ok((
 					FixedI128::from_inner(0_860809166666666667),
 					FixedI128::from_inner(0_286936388888888889)
@@ -497,7 +497,7 @@ fn enp_and_ell_with_new_position_works() {
 		.execute_with(|| {
 			// enp = ell = 100_000_00 / 120_000_00
 			assert_eq!(
-				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::OpenPosition(eur_usd_long_1())),
+				MarginProtocol::enp_and_ell_with_action(MOCK_POOL, Action::OpenPosition(eur_usd_long_1())),
 				Ok((
 					FixedI128::from_inner(833333333333333333),
 					FixedI128::from_inner(833333333333333333)
@@ -544,7 +544,7 @@ fn enp_and_ell_without_position_with_liquidity_works() {
 			PositionsSnapshots::insert(MOCK_POOL, EUR_USD_PAIR, snapshot);
 
 			assert_eq!(
-				MarginProtocol::_enp_and_ell(
+				MarginProtocol::enp_and_ell_with_action(
 					MOCK_POOL,
 					Action::Withdraw(balance_saturating_from_integer_currency_cent(10))
 				),
@@ -624,7 +624,7 @@ fn ensure_pool_safe_works() {
 
 			// with new position
 			assert_eq!(
-				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::OpenPosition(position.clone())),
+				MarginProtocol::enp_and_ell_with_action(MOCK_POOL, Action::OpenPosition(position.clone())),
 				Ok((
 					FixedI128::saturating_from_integer(1),
 					FixedI128::saturating_from_integer(1)
@@ -632,7 +632,7 @@ fn ensure_pool_safe_works() {
 			);
 
 			// ENP 100% > 99%, ELL 100% > 99%, safe
-			assert_ok!(MarginProtocol::_ensure_pool_safe(
+			assert_ok!(MarginProtocol::ensure_pool_safe(
 				MOCK_POOL,
 				Action::OpenPosition(position.clone()),
 			));
@@ -640,7 +640,7 @@ fn ensure_pool_safe_works() {
 			// ENP 100% == 100%, unsafe
 			set_enp_risk_threshold(EUR_USD_PAIR, risk_threshold(100, 0));
 			assert_noop!(
-				MarginProtocol::_ensure_pool_safe(MOCK_POOL, Action::OpenPosition(position.clone())),
+				MarginProtocol::ensure_pool_safe(MOCK_POOL, Action::OpenPosition(position.clone())),
 				Error::<Runtime>::PoolWouldBeUnsafe
 			);
 
@@ -648,7 +648,7 @@ fn ensure_pool_safe_works() {
 			set_enp_risk_threshold(EUR_USD_PAIR, risk_threshold(99, 0));
 			set_ell_risk_threshold(EUR_USD_PAIR, risk_threshold(100, 0));
 			assert_noop!(
-				MarginProtocol::_ensure_pool_safe(MOCK_POOL, Action::OpenPosition(position.clone())),
+				MarginProtocol::ensure_pool_safe(MOCK_POOL, Action::OpenPosition(position.clone())),
 				Error::<Runtime>::PoolWouldBeUnsafe
 			);
 
@@ -667,7 +667,7 @@ fn ensure_pool_safe_works() {
 			PositionsSnapshots::insert(MOCK_POOL, EUR_USD_PAIR, snapshot);
 
 			assert_eq!(
-				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::None),
+				MarginProtocol::enp_and_ell_with_action(MOCK_POOL, Action::None),
 				Ok((
 					FixedI128::saturating_from_integer(1),
 					FixedI128::saturating_from_integer(1)
@@ -675,12 +675,12 @@ fn ensure_pool_safe_works() {
 			);
 
 			// ENP 100% > 99%, ELL 100% > 99%, safe
-			assert_ok!(MarginProtocol::_ensure_pool_safe(MOCK_POOL, Action::None));
+			assert_ok!(MarginProtocol::ensure_pool_safe(MOCK_POOL, Action::None));
 
 			// ENP 100% == 100%, unsafe
 			set_enp_risk_threshold(EUR_USD_PAIR, risk_threshold(100, 0));
 			assert_noop!(
-				MarginProtocol::_ensure_pool_safe(MOCK_POOL, Action::None),
+				MarginProtocol::ensure_pool_safe(MOCK_POOL, Action::None),
 				Error::<Runtime>::UnsafePool
 			);
 
@@ -688,7 +688,7 @@ fn ensure_pool_safe_works() {
 			set_enp_risk_threshold(EUR_USD_PAIR, risk_threshold(99, 0));
 			set_ell_risk_threshold(EUR_USD_PAIR, risk_threshold(100, 0));
 			assert_noop!(
-				MarginProtocol::_ensure_pool_safe(MOCK_POOL, Action::None),
+				MarginProtocol::ensure_pool_safe(MOCK_POOL, Action::None),
 				Error::<Runtime>::UnsafePool
 			);
 		});
@@ -946,7 +946,7 @@ fn liquidity_pool_margin_call_and_become_safe_work() {
 			);
 			PositionsSnapshots::insert(MOCK_POOL, EUR_USD_PAIR, snapshot);
 			assert_eq!(
-				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::None),
+				MarginProtocol::enp_and_ell_with_action(MOCK_POOL, Action::None),
 				Ok((
 					FixedI128::saturating_from_integer(1),
 					FixedI128::saturating_from_integer(1)
@@ -1733,7 +1733,7 @@ fn close_profit_position_works() {
 				snapshot
 			);
 			assert_eq!(
-				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::None),
+				MarginProtocol::enp_and_ell_with_action(MOCK_POOL, Action::None),
 				Ok((FixedI128::max_value(), FixedI128::max_value(),))
 			);
 			assert_eq!(
@@ -2086,7 +2086,7 @@ fn offchain_worker_should_work() {
 			FixedI128::saturating_from_rational(2, 100) // 2%
 		);
 
-		assert_ok!(MarginProtocol::_offchain_worker(1));
+		assert_ok!(MarginProtocol::offchain_worker(1));
 
 		assert_eq!(pool_state.read().transactions.len(), 1);
 		let trader_margin_call = pool_state.write().transactions.pop().unwrap();
@@ -2108,7 +2108,7 @@ fn offchain_worker_should_work() {
 			FixedI128::saturating_from_rational(1, 100) // 1%
 		);
 
-		assert_ok!(MarginProtocol::_offchain_worker(1));
+		assert_ok!(MarginProtocol::offchain_worker(1));
 
 		assert_eq!(pool_state.read().transactions.len(), 1);
 		let trader_stop_out_call = pool_state.write().transactions.pop().unwrap();
@@ -2127,7 +2127,7 @@ fn offchain_worker_should_work() {
 
 		<MarginCalledTraders<Runtime>>::insert(ALICE, MOCK_POOL, true);
 
-		assert_ok!(MarginProtocol::_offchain_worker(1));
+		assert_ok!(MarginProtocol::offchain_worker(1));
 
 		assert_eq!(pool_state.read().transactions.len(), 1);
 		let trader_become_safe = pool_state.write().transactions.pop().unwrap();
@@ -2146,7 +2146,7 @@ fn offchain_worker_should_work() {
 		// price goes up to EUR/USD 1.5/1
 		MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::saturating_from_rational(150, 100)));
 
-		assert_ok!(MarginProtocol::_offchain_worker(1));
+		assert_ok!(MarginProtocol::offchain_worker(1));
 
 		assert_eq!(pool_state.read().transactions.len(), 1);
 		let liquidity_pool_margin_call = pool_state.write().transactions.pop().unwrap();
@@ -2163,7 +2163,7 @@ fn offchain_worker_should_work() {
 		// price goes up to EUR/USD 1.8/1
 		MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::saturating_from_rational(180, 100)));
 
-		assert_ok!(MarginProtocol::_offchain_worker(1));
+		assert_ok!(MarginProtocol::offchain_worker(1));
 
 		assert_eq!(pool_state.read().transactions.len(), 1);
 		let liquidity_pool_force_close = pool_state.write().transactions.pop().unwrap();
@@ -2182,7 +2182,7 @@ fn offchain_worker_should_work() {
 
 		MarginCalledPools::insert(MOCK_POOL, true);
 
-		assert_ok!(MarginProtocol::_offchain_worker(1));
+		assert_ok!(MarginProtocol::offchain_worker(1));
 
 		assert_eq!(pool_state.read().transactions.len(), 1);
 		let liquidity_pool_become_safe = pool_state.write().transactions.pop().unwrap();
@@ -2539,7 +2539,7 @@ fn ensure_can_enable_trading_pair_works() {
 			PositionsSnapshots::insert(MOCK_POOL, EUR_USD_PAIR, snapshot);
 
 			assert_eq!(
-				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::OpenPosition(eur_usd_long_1())),
+				MarginProtocol::enp_and_ell_with_action(MOCK_POOL, Action::OpenPosition(eur_usd_long_1())),
 				Ok((
 					FixedI128::from_inner(0_107101500000000000),
 					FixedI128::from_inner(0_107101500000000000)
@@ -2577,15 +2577,15 @@ fn open_position_check_trader_works() {
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), true);
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 1), true);
 
-			assert_eq!(MarginProtocol::_risk_threshold_of_trader(&ALICE), risk_threshold(5, 5));
+			assert_eq!(MarginProtocol::risk_threshold_of_trader(&ALICE), risk_threshold(5, 5));
 
 			assert_eq!(
-				MarginProtocol::_check_trader(&ALICE, MOCK_POOL, Action::OpenPosition(eur_usd_long_1())),
+				MarginProtocol::check_trader(&ALICE, MOCK_POOL, Action::OpenPosition(eur_usd_long_1())),
 				Ok(Risk::None)
 			);
 
 			assert_eq!(
-				MarginProtocol::_check_trader(&ALICE, MOCK_POOL, Action::OpenPosition(jpy_usd_long_1())),
+				MarginProtocol::check_trader(&ALICE, MOCK_POOL, Action::OpenPosition(jpy_usd_long_1())),
 				Ok(Risk::StopOut)
 			);
 		});
@@ -2630,12 +2630,12 @@ fn open_position_check_pool_works() {
 			PositionsSnapshots::insert(MOCK_POOL, EUR_JPY_PAIR, snapshot);
 
 			assert_eq!(
-				MarginProtocol::_enp_and_ell_risk_threshold_of_pool(MOCK_POOL),
+				MarginProtocol::enp_and_ell_risk_threshold_of_pool(MOCK_POOL),
 				(risk_threshold(50, 50), risk_threshold(10, 20))
 			);
 
 			assert_eq!(
-				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::OpenPosition(eur_usd_short_1())),
+				MarginProtocol::enp_and_ell_with_action(MOCK_POOL, Action::OpenPosition(eur_usd_short_1())),
 				Ok((
 					FixedI128::from_inner(0_182650303333333332),
 					FixedI128::from_inner(0_182650303333333332)
@@ -2643,12 +2643,12 @@ fn open_position_check_pool_works() {
 			);
 
 			assert_eq!(
-				MarginProtocol::_check_pool(MOCK_POOL, Action::OpenPosition(eur_usd_short_1())),
+				MarginProtocol::check_pool(MOCK_POOL, Action::OpenPosition(eur_usd_short_1())),
 				Ok(Risk::StopOut)
 			);
 
 			assert_eq!(
-				MarginProtocol::_enp_and_ell(MOCK_POOL, Action::OpenPosition(jpy_usd_long_1())),
+				MarginProtocol::enp_and_ell_with_action(MOCK_POOL, Action::OpenPosition(jpy_usd_long_1())),
 				Ok((
 					FixedI128::from_inner(0_060487576858117431),
 					FixedI128::from_inner(0_060487576858117431)
@@ -2656,7 +2656,7 @@ fn open_position_check_pool_works() {
 			);
 
 			assert_eq!(
-				MarginProtocol::_check_pool(MOCK_POOL, Action::OpenPosition(jpy_usd_long_1())),
+				MarginProtocol::check_pool(MOCK_POOL, Action::OpenPosition(jpy_usd_long_1())),
 				Ok(Risk::StopOut)
 			);
 		});

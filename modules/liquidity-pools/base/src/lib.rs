@@ -137,7 +137,7 @@ decl_error! {
 
 		/// Liquidity amount overflows maximum.
 		///
-		/// Only happened when the liquity currency went wrong and liquidity amount overflows the integer type.
+		/// Only happened when the liquidity currency went wrong and liquidity amount overflows the integer type.
 		LiquidityOverflow,
 
 		/// Not enough balance to withdraw.
@@ -172,7 +172,7 @@ decl_module! {
 		#[weight = 10_000]
 		pub fn create_pool(origin) {
 			let who = ensure_signed(origin)?;
-			let pool_id = Self::_create_pool(&who)?;
+			let pool_id = Self::do_create_pool(&who)?;
 			Self::deposit_event(RawEvent::LiquidityPoolCreated(who, pool_id));
 		}
 
@@ -182,7 +182,7 @@ decl_module! {
 		#[weight = 10_000]
 		pub fn disable_pool(origin, #[compact] pool_id: LiquidityPoolId) {
 			let who = ensure_signed(origin)?;
-			Self::_disable_pool(&who, pool_id)?;
+			Self::do_disable_pool(&who, pool_id)?;
 			Self::deposit_event(RawEvent::LiquidityPoolDisabled(who, pool_id));
 		}
 
@@ -192,7 +192,7 @@ decl_module! {
 		#[weight = 50_000]
 		pub fn remove_pool(origin, #[compact] pool_id: LiquidityPoolId) {
 			let who = ensure_signed(origin)?;
-			Self::_remove_pool(&who, pool_id)?;
+			Self::do_remove_pool(&who, pool_id)?;
 			Self::deposit_event(RawEvent::LiquidityPoolRemoved(who, pool_id));
 		}
 
@@ -200,7 +200,7 @@ decl_module! {
 		#[weight = (10_000, DispatchClass::Operational)]
 		pub fn deposit_liquidity(origin, #[compact] pool_id: LiquidityPoolId, #[compact] amount: Balance) {
 			let who = ensure_signed(origin)?;
-			Self::_deposit_liquidity(&who, pool_id, amount)?;
+			Self::do_deposit_liquidity(&who, pool_id, amount)?;
 			Self::deposit_event(RawEvent::LiquidityDeposited(who, pool_id, amount));
 		}
 
@@ -219,7 +219,7 @@ decl_module! {
 				return Err(Error::<T, I>::CannotWithdrawExistentialDeposit.into());
 			}
 
-			Self::_withdraw_liquidity(&who, pool_id, amount)?;
+			Self::do_withdraw_liquidity(&who, pool_id, amount)?;
 			Self::deposit_event(RawEvent::LiquidityWithdrew(who, pool_id, amount));
 		}
 
@@ -229,7 +229,7 @@ decl_module! {
 		#[weight = 10_000]
 		pub fn set_identity(origin, #[compact] pool_id: LiquidityPoolId, identity_info: IdentityInfo) {
 			let who = ensure_signed(origin)?;
-			Self::_set_identity(&who, pool_id, identity_info)?;
+			Self::do_set_identity(&who, pool_id, identity_info)?;
 			Self::deposit_event(RawEvent::IdentitySet(who, pool_id));
 		}
 
@@ -242,7 +242,7 @@ decl_module! {
 				.map(|_| ())
 				.or_else(ensure_root)?;
 
-			Self::_verify_identity(pool_id)?;
+			Self::do_verify_identity(pool_id)?;
 			Self::deposit_event(RawEvent::IdentityVerified(pool_id));
 		}
 
@@ -258,7 +258,7 @@ decl_module! {
 				Error::<T, I>::IdentityInfoNotFound
 			);
 
-			Self::_clear_identity(&who, pool_id)?;
+			Self::do_clear_identity(&who, pool_id)?;
 			Self::deposit_event(RawEvent::IdentityCleared(who, pool_id));
 		}
 
@@ -268,7 +268,7 @@ decl_module! {
 		#[weight = 10_000]
 		pub fn transfer_liquidity_pool(origin, #[compact] pool_id: LiquidityPoolId, to: T::AccountId) {
 			let who = ensure_signed(origin)?;
-			Self::_transfer_liquidity_pool(&who, pool_id, &to)?;
+			Self::do_transfer_liquidity_pool(&who, pool_id, &to)?;
 			Self::deposit_event(RawEvent::LiquidityPoolTransferred(who, pool_id, to));
 		}
 	}
@@ -306,12 +306,12 @@ impl<T: Trait<I>, I: Instance> LiquidityPools<T::AccountId> for Module<T, I> {
 
 	/// Deposit some amount of collateral to `pool_id`, from `source`.
 	fn deposit_liquidity(source: &T::AccountId, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
-		Self::_deposit_liquidity(source, pool_id, amount)
+		Self::do_deposit_liquidity(source, pool_id, amount)
 	}
 
 	/// Withdraw some amount of collateral to `dest`, from `pool_id`.
 	fn withdraw_liquidity(dest: &T::AccountId, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
-		Self::_withdraw_liquidity(dest, pool_id, amount)
+		Self::do_withdraw_liquidity(dest, pool_id, amount)
 	}
 }
 
@@ -327,7 +327,7 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 		Self::pools(&pool_id).map(|pool| pool.owner)
 	}
 
-	fn _set_balance(pool_id: LiquidityPoolId, balance: Balance) {
+	fn set_balance(pool_id: LiquidityPoolId, balance: Balance) {
 		if let Some(mut pool) = Self::pools(pool_id) {
 			pool.balance = balance;
 			<Pools<T, I>>::insert(&pool_id, pool);
@@ -337,7 +337,7 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 
 // Dispatchable calls implementation
 impl<T: Trait<I>, I: Instance> Module<T, I> {
-	fn _create_pool(who: &T::AccountId) -> result::Result<LiquidityPoolId, Error<T, I>> {
+	fn do_create_pool(who: &T::AccountId) -> result::Result<LiquidityPoolId, Error<T, I>> {
 		let pool_id = Self::next_pool_id();
 		// increment next pool id
 		let next_pool_id = pool_id
@@ -349,7 +349,7 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 		Ok(pool_id)
 	}
 
-	fn _disable_pool(who: &T::AccountId, pool_id: LiquidityPoolId) -> DispatchResult {
+	fn do_disable_pool(who: &T::AccountId, pool_id: LiquidityPoolId) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, who), Error::<T, I>::NoPermission);
 
 		T::OnDisableLiquidityPool::on_disable(pool_id);
@@ -357,12 +357,12 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 		Ok(())
 	}
 
-	fn _remove_pool(who: &T::AccountId, pool_id: LiquidityPoolId) -> DispatchResult {
+	fn do_remove_pool(who: &T::AccountId, pool_id: LiquidityPoolId) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, who), Error::<T, I>::NoPermission);
 		ensure!(T::PoolManager::can_remove(pool_id), Error::<T, I>::CannotRemovePool);
 
 		// clear_identity
-		Self::_clear_identity(who, pool_id)?;
+		Self::do_clear_identity(who, pool_id)?;
 
 		let balance = Self::balance(pool_id);
 		// transfer balance to pool owner
@@ -375,7 +375,7 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 		Ok(())
 	}
 
-	fn _deposit_liquidity(who: &T::AccountId, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
+	fn do_deposit_liquidity(who: &T::AccountId, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
 		ensure!(Self::pool_exists(pool_id), Error::<T, I>::PoolNotFound);
 
 		let new_balance = Self::balance(pool_id)
@@ -385,12 +385,12 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 		// transfer amount to this pool
 		T::LiquidityCurrency::transfer(who, &Self::account_id(), amount)?;
 		// update balance
-		Self::_set_balance(pool_id, new_balance);
+		Self::set_balance(pool_id, new_balance);
 
 		Ok(())
 	}
 
-	fn _withdraw_liquidity(who: &T::AccountId, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
+	fn do_withdraw_liquidity(who: &T::AccountId, pool_id: LiquidityPoolId, amount: Balance) -> DispatchResult {
 		ensure!(Self::pool_exists(pool_id), Error::<T, I>::PoolNotFound);
 
 		let new_balance = Self::balance(pool_id)
@@ -401,12 +401,12 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 		T::LiquidityCurrency::transfer(&Self::account_id(), who, amount)?;
 
 		// update balance
-		Self::_set_balance(pool_id, new_balance);
+		Self::set_balance(pool_id, new_balance);
 
 		Ok(())
 	}
 
-	fn _set_identity(who: &T::AccountId, pool_id: LiquidityPoolId, identity_info: IdentityInfo) -> DispatchResult {
+	fn do_set_identity(who: &T::AccountId, pool_id: LiquidityPoolId, identity_info: IdentityInfo) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, &who), Error::<T, I>::NoPermission);
 		ensure!(
 			identity_info.legal_name.len() <= 100
@@ -429,7 +429,7 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 		Ok(())
 	}
 
-	fn _verify_identity(pool_id: LiquidityPoolId) -> DispatchResult {
+	fn do_verify_identity(pool_id: LiquidityPoolId) -> DispatchResult {
 		let (identity_info, deposit_amount, _) =
 			Self::identity_infos(pool_id).ok_or(Error::<T, I>::IdentityInfoNotFound)?;
 		<IdentityInfos<T, I>>::insert(&pool_id, (identity_info, deposit_amount, true));
@@ -437,7 +437,7 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 		Ok(())
 	}
 
-	fn _clear_identity(who: &T::AccountId, pool_id: LiquidityPoolId) -> DispatchResult {
+	fn do_clear_identity(who: &T::AccountId, pool_id: LiquidityPoolId) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, &who), Error::<T, I>::NoPermission);
 
 		if let Some((_, deposit_amount, _)) = Self::identity_infos(pool_id) {
@@ -448,9 +448,13 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 		Ok(())
 	}
 
-	pub fn _transfer_liquidity_pool(who: &T::AccountId, pool_id: LiquidityPoolId, to: &T::AccountId) -> DispatchResult {
+	pub fn do_transfer_liquidity_pool(
+		who: &T::AccountId,
+		pool_id: LiquidityPoolId,
+		to: &T::AccountId,
+	) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, &who), Error::<T, I>::NoPermission);
-		Self::_clear_identity(&who, pool_id)?;
+		Self::do_clear_identity(&who, pool_id)?;
 
 		let mut pool = Self::pools(pool_id).expect("is owner check ensures pool exist; qed");
 		pool.owner = to.clone();

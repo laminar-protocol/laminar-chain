@@ -41,22 +41,13 @@ pub trait Trait: frame_system::Trait {
 }
 
 /// Synthetic token position.
-#[derive(Encode, Decode, Eq, PartialEq, RuntimeDebug)]
+#[derive(Encode, Decode, Eq, PartialEq, RuntimeDebug, Default)]
 pub struct Position {
 	/// Collateral amount.
 	collateral: Balance,
 
 	/// Synthetic amount.
 	synthetic: Balance,
-}
-
-impl Default for Position {
-	fn default() -> Self {
-		Position {
-			collateral: Zero::zero(),
-			synthetic: Zero::zero(),
-		}
-	}
 }
 
 /// Synthetic token ratio options.
