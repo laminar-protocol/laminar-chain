@@ -1017,7 +1017,7 @@ fn liquidity_pool_force_close_works() {
 			);
 
 			// Open position spread is 100
-			// Current price is 20, close position spread is 200.
+			// Current price is 2, close position spread is 200.
 			// So liquidity remain 300. Total penalty is 200*2 = 400.
 			MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::saturating_from_rational(2, 1)));
 			// ENP 50% < 99%, unsafe
@@ -1030,8 +1030,11 @@ fn liquidity_pool_force_close_works() {
 				MarginProtocol::balances(ALICE, MOCK_POOL),
 				fixedi128_saturating_from_integer_currency_cent(19_700_00)
 			);
-			assert_eq!(MockLiquidityPools::liquidity(MOCK_POOL), 299960000000000000000);
-			assert_eq!(LiquidityCurrency::total_balance(&TREASURY_ACCOUNT), 40000000000000000);
+			assert_eq!(MockLiquidityPools::liquidity(MOCK_POOL), 0);
+			assert_eq!(
+				LiquidityCurrency::total_balance(&TREASURY_ACCOUNT),
+				300_000000000000000000
+			);
 		});
 }
 

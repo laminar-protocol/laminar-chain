@@ -1371,7 +1371,12 @@ impl<T: Trait> Module<T> {
 			}
 		};
 
-		let spread_profit_in_usd = Self::usd_value(position.pair.quote, spread)?;
+		let spread_profit = position
+			.leveraged_held
+			.checked_mul(&spread)
+			.ok_or(Error::<T>::NumOutOfBound)?;
+
+		let spread_profit_in_usd = Self::usd_value(position.pair.quote, spread_profit)?;
 		let penalty = spread_profit_in_usd;
 		let sub_amount = spread_profit_in_usd
 			.checked_add(&penalty)
