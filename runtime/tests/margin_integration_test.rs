@@ -508,10 +508,10 @@ mod tests {
 
 				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(14700));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
-				assert_eq!(margin_liquidity(), 2499940000000000000000);
+				assert_eq!(margin_liquidity(), 2200_000000000000000000);
 				assert_eq!(
 					collateral_balance(&MockLaminarTreasury::account_id()),
-					60000000000000000
+					300_000000000000000000
 				);
 			});
 	}
