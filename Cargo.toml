@@ -105,6 +105,7 @@ members = [
 	"modules/synthetic-tokens",
 
 	"orml/auction",
+	"orml/authority",
 	"orml/benchmarking",
 	"orml/currencies",
 	"orml/gradually-update",

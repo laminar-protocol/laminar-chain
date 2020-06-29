@@ -1023,8 +1023,9 @@ impl_runtime_apis! {
 			use frame_benchmarking::{Benchmarking, BenchmarkBatch};
 			use orml_benchmarking::add_benchmark;
 
+			let whitelist: Vec<Vec<u8>> = vec![];
 			let mut batches = Vec::<BenchmarkBatch>::new();
-			let params = (&pallet, &benchmark, &lowest_range_values, &highest_range_values, &steps, repeat);
+			let params = (&pallet, &benchmark, &lowest_range_values, &highest_range_values, &steps, repeat, &whitelist);
 
 			add_benchmark!(params, batches, b"base-liquidity-pools", benchmarking::base_liquidity_pools);
 			add_benchmark!(params, batches, b"margin-liquidity-pools", benchmarking::margin_liquidity_pools);
