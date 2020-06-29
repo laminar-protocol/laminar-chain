@@ -31,7 +31,7 @@ fn risk_threshold(margin_call_percent: u32, stop_out_percent: u32) -> RiskThresh
 
 fn set_trader_risk_threshold(pair: TradingPair, threshold: RiskThreshold) {
 	assert_ok!(MarginProtocol::set_trading_pair_risk_threshold(
-		Origin::ROOT,
+		Origin::root(),
 		pair,
 		Some(threshold),
 		None,
@@ -41,7 +41,7 @@ fn set_trader_risk_threshold(pair: TradingPair, threshold: RiskThreshold) {
 
 fn set_enp_risk_threshold(pair: TradingPair, threshold: RiskThreshold) {
 	assert_ok!(MarginProtocol::set_trading_pair_risk_threshold(
-		Origin::ROOT,
+		Origin::root(),
 		pair,
 		None,
 		Some(threshold),
@@ -51,7 +51,7 @@ fn set_enp_risk_threshold(pair: TradingPair, threshold: RiskThreshold) {
 
 fn set_ell_risk_threshold(pair: TradingPair, threshold: RiskThreshold) {
 	assert_ok!(MarginProtocol::set_trading_pair_risk_threshold(
-		Origin::ROOT,
+		Origin::root(),
 		pair,
 		None,
 		None,
@@ -722,7 +722,7 @@ fn trader_margin_call_should_work() {
 
 			// without position
 			assert_noop!(
-				MarginProtocol::trader_margin_call(Origin::NONE, ALICE, MOCK_POOL),
+				MarginProtocol::trader_margin_call(Origin::none(), ALICE, MOCK_POOL),
 				Error::<Runtime>::SafeTrader
 			);
 
@@ -739,7 +739,7 @@ fn trader_margin_call_should_work() {
 				Ok(FixedI128::saturating_from_rational(5, 100))
 			);
 
-			assert_ok!(MarginProtocol::trader_margin_call(Origin::NONE, ALICE, MOCK_POOL));
+			assert_ok!(MarginProtocol::trader_margin_call(Origin::none(), ALICE, MOCK_POOL));
 		});
 }
 
@@ -765,7 +765,7 @@ fn trader_become_safe_should_work() {
 			};
 
 			// without position
-			assert_ok!(MarginProtocol::trader_become_safe(Origin::NONE, ALICE, MOCK_POOL));
+			assert_ok!(MarginProtocol::trader_become_safe(Origin::none(), ALICE, MOCK_POOL));
 
 			<Positions<Runtime>>::insert(0, position);
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), true);
@@ -779,9 +779,9 @@ fn trader_become_safe_should_work() {
 				MarginProtocol::margin_level(&ALICE, MOCK_POOL),
 				Ok(FixedI128::saturating_from_rational(4, 100))
 			);
-			assert_ok!(MarginProtocol::trader_margin_call(Origin::NONE, ALICE, MOCK_POOL));
+			assert_ok!(MarginProtocol::trader_margin_call(Origin::none(), ALICE, MOCK_POOL));
 			assert_noop!(
-				MarginProtocol::trader_become_safe(Origin::NONE, ALICE, MOCK_POOL),
+				MarginProtocol::trader_become_safe(Origin::none(), ALICE, MOCK_POOL),
 				Error::<Runtime>::UnsafeTrader
 			);
 
@@ -791,7 +791,7 @@ fn trader_become_safe_should_work() {
 				Ok(FixedI128::saturating_from_rational(5, 100))
 			);
 			assert_noop!(
-				MarginProtocol::trader_become_safe(Origin::NONE, ALICE, MOCK_POOL),
+				MarginProtocol::trader_become_safe(Origin::none(), ALICE, MOCK_POOL),
 				Error::<Runtime>::UnsafeTrader
 			);
 
@@ -800,7 +800,7 @@ fn trader_become_safe_should_work() {
 				MarginProtocol::margin_level(&ALICE, MOCK_POOL),
 				Ok(FixedI128::saturating_from_rational(6, 100))
 			);
-			assert_ok!(MarginProtocol::trader_become_safe(Origin::NONE, ALICE, MOCK_POOL));
+			assert_ok!(MarginProtocol::trader_become_safe(Origin::none(), ALICE, MOCK_POOL));
 		});
 }
 #[test]
@@ -827,7 +827,7 @@ fn trader_stop_out_should_work() {
 
 			// without position
 			assert_noop!(
-				MarginProtocol::trader_stop_out(Origin::NONE, ALICE, MOCK_POOL),
+				MarginProtocol::trader_stop_out(Origin::none(), ALICE, MOCK_POOL),
 				Error::<Runtime>::NotReachedRiskThreshold
 			);
 
@@ -845,7 +845,7 @@ fn trader_stop_out_should_work() {
 				Ok(FixedI128::saturating_from_rational(3, 100))
 			);
 
-			assert_ok!(MarginProtocol::trader_stop_out(Origin::NONE, ALICE, MOCK_POOL));
+			assert_ok!(MarginProtocol::trader_stop_out(Origin::none(), ALICE, MOCK_POOL));
 
 			let event = TestEvent::margin_protocol(RawEvent::TraderStoppedOut(ALICE));
 			assert!(System::events().iter().any(|record| record.event == event));
@@ -905,7 +905,7 @@ fn trader_stop_out_close_bigger_loss_position() {
 			);
 			PositionsSnapshots::insert(MOCK_POOL, EUR_USD_PAIR, snapshot);
 
-			assert_ok!(MarginProtocol::trader_stop_out(Origin::NONE, ALICE, MOCK_POOL));
+			assert_ok!(MarginProtocol::trader_stop_out(Origin::none(), ALICE, MOCK_POOL));
 
 			// position with bigger loss is closed
 			assert!(<PositionsByTrader<Runtime>>::contains_key(ALICE, (MOCK_POOL, 0)));
@@ -955,26 +955,26 @@ fn liquidity_pool_margin_call_and_become_safe_work() {
 
 			// ENP 100% > 99%, ELL 100% > 99%, safe
 			assert_noop!(
-				MarginProtocol::liquidity_pool_margin_call(Origin::NONE, MOCK_POOL),
+				MarginProtocol::liquidity_pool_margin_call(Origin::none(), MOCK_POOL),
 				Error::<Runtime>::SafePool
 			);
-			assert_ok!(MarginProtocol::liquidity_pool_become_safe(Origin::NONE, MOCK_POOL));
+			assert_ok!(MarginProtocol::liquidity_pool_become_safe(Origin::none(), MOCK_POOL));
 
 			// ENP 100% == 100%, unsafe
 			set_enp_risk_threshold(EUR_USD_PAIR, risk_threshold(100, 0));
-			assert_ok!(MarginProtocol::liquidity_pool_margin_call(Origin::NONE, MOCK_POOL));
+			assert_ok!(MarginProtocol::liquidity_pool_margin_call(Origin::none(), MOCK_POOL));
 			let event = TestEvent::margin_protocol(RawEvent::LiquidityPoolMarginCalled(MOCK_POOL));
 			assert!(System::events().iter().any(|record| record.event == event));
 
 			assert_noop!(
-				MarginProtocol::liquidity_pool_become_safe(Origin::NONE, MOCK_POOL),
+				MarginProtocol::liquidity_pool_become_safe(Origin::none(), MOCK_POOL),
 				Error::<Runtime>::UnsafePool
 			);
 
 			// ENP 100% > 99%, ELL 100% > 99%, safe
 			set_enp_risk_threshold(EUR_USD_PAIR, risk_threshold(99, 0));
-			assert_ok!(MarginProtocol::liquidity_pool_margin_call(Origin::NONE, MOCK_POOL));
-			assert_ok!(MarginProtocol::liquidity_pool_become_safe(Origin::NONE, MOCK_POOL));
+			assert_ok!(MarginProtocol::liquidity_pool_margin_call(Origin::none(), MOCK_POOL));
+			assert_ok!(MarginProtocol::liquidity_pool_become_safe(Origin::none(), MOCK_POOL));
 			let event = TestEvent::margin_protocol(RawEvent::LiquidityPoolBecameSafe(MOCK_POOL));
 			assert!(System::events().iter().any(|record| record.event == event));
 		});
@@ -1012,7 +1012,7 @@ fn liquidity_pool_force_close_works() {
 
 			// ENP 100% > 99%, ELL 100% > 99%, safe
 			assert_noop!(
-				MarginProtocol::liquidity_pool_force_close(Origin::NONE, MOCK_POOL),
+				MarginProtocol::liquidity_pool_force_close(Origin::none(), MOCK_POOL),
 				Error::<Runtime>::NotReachedRiskThreshold
 			);
 
@@ -1021,7 +1021,7 @@ fn liquidity_pool_force_close_works() {
 			// So liquidity remain 300. Total penalty is 200*2 = 400.
 			MockPrices::set_mock_price(CurrencyId::FEUR, Some(FixedU128::saturating_from_rational(2, 1)));
 			// ENP 50% < 99%, unsafe
-			assert_ok!(MarginProtocol::liquidity_pool_force_close(Origin::NONE, MOCK_POOL));
+			assert_ok!(MarginProtocol::liquidity_pool_force_close(Origin::none(), MOCK_POOL));
 
 			let event = TestEvent::margin_protocol(RawEvent::LiquidityPoolForceClosed(MOCK_POOL));
 			assert!(System::events().iter().any(|record| record.event == event));
@@ -2420,7 +2420,7 @@ fn set_trading_pair_risk_threshold_works() {
 			);
 
 			assert_ok!(MarginProtocol::set_trading_pair_risk_threshold(
-				Origin::ROOT,
+				Origin::root(),
 				EUR_USD_PAIR,
 				None,
 				None,
@@ -2431,7 +2431,7 @@ fn set_trading_pair_risk_threshold_works() {
 			assert!(System::events().iter().any(|record| record.event == event));
 
 			assert_ok!(MarginProtocol::set_trading_pair_risk_threshold(
-				Origin::ROOT,
+				Origin::root(),
 				EUR_USD_PAIR,
 				Some(risk_threshold(1, 2)),
 				None,
@@ -2458,7 +2458,7 @@ fn set_trading_pair_risk_threshold_works() {
 			);
 
 			assert_ok!(MarginProtocol::set_trading_pair_risk_threshold(
-				Origin::ROOT,
+				Origin::root(),
 				EUR_USD_PAIR,
 				None,
 				Some(risk_threshold(3, 4)),
@@ -2485,7 +2485,7 @@ fn set_trading_pair_risk_threshold_works() {
 			);
 
 			assert_ok!(MarginProtocol::set_trading_pair_risk_threshold(
-				Origin::ROOT,
+				Origin::root(),
 				EUR_USD_PAIR,
 				None,
 				None,

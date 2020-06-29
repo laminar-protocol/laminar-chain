@@ -29,7 +29,7 @@ pub fn set_price(prices: sp_std::vec::Vec<(CurrencyId, Price)>) -> DispatchResul
 	Oracle::on_finalize(0);
 	for i in 1..=MinimumCount::get() {
 		Oracle::feed_values(
-			<Runtime as frame_system::Trait>::Origin::NONE,
+			<Runtime as frame_system::Trait>::Origin::none(),
 			prices.clone(),
 			i, // i as u32,
 			Default::default(),

@@ -75,6 +75,7 @@ impl frame_system::Trait for Runtime {
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type AccountData = ();
+	type BaseCallFilter = ();
 }
 pub type System = system::Module<Runtime>;
 

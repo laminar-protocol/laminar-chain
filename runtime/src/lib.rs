@@ -120,8 +120,6 @@ impl Filter<Call> for BaseFilter {
 		true
 	}
 }
-pub struct IsCallable;
-frame_support::impl_filter_stack!(IsCallable, BaseFilter, Call, is_callable);
 
 const AVERAGE_ON_INITIALIZE_WEIGHT: Perbill = Perbill::from_percent(10);
 parameter_types! {
@@ -138,6 +136,7 @@ parameter_types! {
 }
 
 impl system::Trait for Runtime {
+	type BaseCallFilter = BaseFilter;
 	/// The identifier used to distinguish between accounts.
 	type AccountId = AccountId;
 	/// The aggregated dispatch type that is available for extrinsics.
@@ -193,7 +192,6 @@ impl system::Trait for Runtime {
 impl pallet_utility::Trait for Runtime {
 	type Event = Event;
 	type Call = Call;
-	type IsCallable = IsCallable;
 }
 
 parameter_types! {
@@ -216,7 +214,6 @@ impl pallet_multisig::Trait for Runtime {
 	type DepositBase = DepositBase;
 	type DepositFactor = DepositFactor;
 	type MaxSignatories = MaxSignatories;
-	type IsCallable = IsCallable;
 }
 
 impl pallet_babe::Trait for Runtime {

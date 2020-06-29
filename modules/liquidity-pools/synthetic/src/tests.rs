@@ -116,7 +116,11 @@ fn should_set_max_spread() {
 		));
 
 		// set max spread to 30%
-		assert_ok!(ModuleLiquidityPools::set_max_spread(Origin::ROOT, CurrencyId::AUSD, 30));
+		assert_ok!(ModuleLiquidityPools::set_max_spread(
+			Origin::root(),
+			CurrencyId::AUSD,
+			30
+		));
 
 		assert_noop!(
 			ModuleLiquidityPools::set_spread(Origin::signed(ALICE), 0, CurrencyId::AUSD, 32, 28),
@@ -153,7 +157,7 @@ fn should_set_additional_collateral_ratio() {
 			Default::default()
 		);
 		assert_ok!(ModuleLiquidityPools::set_min_additional_collateral_ratio(
-			Origin::ROOT,
+			Origin::root(),
 			Permill::from_percent(120)
 		));
 		assert_ok!(ModuleLiquidityPools::set_additional_collateral_ratio(
@@ -240,7 +244,7 @@ fn should_fail_set_additional_collateral_ratio() {
 		);
 
 		assert_ok!(ModuleLiquidityPools::set_min_additional_collateral_ratio(
-			Origin::ROOT,
+			Origin::root(),
 			Permill::from_percent(150)
 		));
 
@@ -253,7 +257,7 @@ fn should_fail_set_additional_collateral_ratio() {
 		);
 
 		assert_ok!(ModuleLiquidityPools::set_min_additional_collateral_ratio(
-			Origin::ROOT,
+			Origin::root(),
 			Permill::from_percent(100)
 		));
 

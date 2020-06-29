@@ -10,9 +10,9 @@ jsonrpc-core = "14.0.5"
 jsonrpc-core-client = "14.0.5"
 jsonrpc-derive = "14.0.5"
 
-sp-runtime = { version = "2.0.0-rc3" }
-sp-api = { version = "2.0.0-rc3" }
-sp-blockchain = { version = "2.0.0-rc3" }
+sp-runtime = { version = "2.0.0-rc4" }
+sp-api = { version = "2.0.0-rc4" }
+sp-blockchain = { version = "2.0.0-rc4" }
 
 synthetic-protocol-rpc-runtime-api = { path = "runtime-api" }
 module-primitives = { path = "../../primitives" }

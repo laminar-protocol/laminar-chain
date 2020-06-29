@@ -1,12 +1,12 @@
+#![warn(unused_extern_crates)]
+
 //! Service implementation. Specialized wrapper over substrate service.
 
-use std::sync::Arc;
-
 use runtime::{opaque::Block, RuntimeApi};
-use sc_consensus_babe;
-use sc_finality_grandpa::{self, FinalityProofProvider as GrandpaFinalityProofProvider, StorageAndProofProvider};
+use sc_finality_grandpa::{FinalityProofProvider as GrandpaFinalityProofProvider, StorageAndProofProvider};
 use sc_service::{config::Configuration, error::Error as ServiceError, AbstractService, ServiceBuilder};
 use sp_inherents::InherentDataProviders;
+use std::sync::Arc;
 
 /// Starts a `ServiceBuilder` for a full service.
 ///
@@ -125,6 +125,7 @@ macro_rules! new_full_start {
 macro_rules! new_full {
 	($config:expr, $with_startup_data: expr) => {{
 		use sc_client_api::ExecutorProvider;
+		use sp_core::traits::BareCryptoStorePtr;
 
 		let (role, force_authoring, name, disable_grandpa) = (
 			$config.role.clone(),
@@ -138,10 +139,10 @@ macro_rules! new_full {
 		let service = builder
 			.with_finality_proof_provider(|client, backend| {
 				// GenesisAuthoritySetProvider is implemented for StorageAndProofProvider
-				let provider = client as Arc<dyn StorageAndProofProvider<_, _>>;
+				let provider = client as Arc<dyn sc_finality_grandpa::StorageAndProofProvider<_, _>>;
 				Ok(Arc::new(sc_finality_grandpa::FinalityProofProvider::new(backend, provider)) as _)
 			})?
-			.build()?;
+			.build_full()?;
 
 		let (block_import, grandpa_link, babe_link) = import_setup
 			.take()
@@ -151,7 +152,8 @@ macro_rules! new_full {
 			.take()
 			.expect("The SharedVoterState is present for Full Services or setup failed before. qed");
 
-		($with_startup_data)(&block_import, &babe_link);
+		let with_startup_data_closure = $with_startup_data;
+		with_startup_data_closure(&block_import, &babe_link);
 
 		if let sc_service::config::Role::Authority { .. } = &role {
 			let proposer = sc_basic_authorship::ProposerFactory::new(
@@ -179,13 +181,15 @@ macro_rules! new_full {
 			};
 
 			let babe = sc_consensus_babe::start_babe(babe_config)?;
-			service.spawn_essential_task("babe-proposer", babe);
+			service
+				.spawn_essential_task_handle()
+				.spawn_blocking("babe-proposer", babe);
 			}
 
 		// if the node isn't actively participating in consensus then it doesn't
 		// need a keystore, regardless of which protocol we use below.
 		let keystore = if role.is_authority() {
-			Some(service.keystore())
+			Some(service.keystore() as BareCryptoStorePtr)
 		} else {
 			None
 			};
@@ -221,7 +225,9 @@ macro_rules! new_full {
 
 			// the GRANDPA voter task is considered infallible, i.e.
 			// if it fails we take down the service with it.
-			service.spawn_essential_task("grandpa-voter", sc_finality_grandpa::run_grandpa_voter(grandpa_config)?);
+			service
+				.spawn_essential_task_handle()
+				.spawn_blocking("grandpa-voter", sc_finality_grandpa::run_grandpa_voter(grandpa_config)?);
 		} else {
 			sc_finality_grandpa::setup_disabled_grandpa(service.client(), &inherent_data_providers, service.network())?;
 			}
@@ -269,7 +275,6 @@ pub fn new_light(config: Configuration) -> Result<impl AbstractService, ServiceE
 					&(client.clone() as Arc<_>),
 					Arc::new(fetch_checker),
 				)?;
-
 				let finality_proof_import = grandpa_block_import.clone();
 				let finality_proof_request_builder = finality_proof_import.create_finality_proof_request_builder();
 
@@ -284,7 +289,7 @@ pub fn new_light(config: Configuration) -> Result<impl AbstractService, ServiceE
 					babe_block_import,
 					None,
 					Some(Box::new(finality_proof_import)),
-					client.clone(),
+					client,
 					inherent_data_providers.clone(),
 					spawn_task_handle,
 					registry,
@@ -312,9 +317,10 @@ pub fn new_light(config: Configuration) -> Result<impl AbstractService, ServiceE
 				client: builder.client().clone(),
 				pool: builder.pool(),
 			};
+
 			Ok(crate::rpc::create_light(light_deps))
 		})?
-		.build()?;
+		.build_light()?;
 
 	Ok(service)
 }

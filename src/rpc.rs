@@ -1,10 +1,11 @@
 #![warn(missing_docs)]
 
-use std::{fmt, sync::Arc};
+use std::sync::Arc;
 
 use runtime::{
 	opaque::Block, AccountId, Balance, BlockNumber, CurrencyId, Hash, Index, TimeStampedPrice, UncheckedExtrinsic,
 };
+
 use sc_consensus_babe::{Config, Epoch};
 use sc_consensus_babe_rpc::BabeRpcHandler;
 use sc_consensus_epochs::SharedEpochChanges;
@@ -13,6 +14,7 @@ use sc_finality_grandpa_rpc::GrandpaRpcHandler;
 use sc_keystore::KeyStorePtr;
 use sc_rpc_api::DenyUnsafe;
 use sp_api::ProvideRuntimeApi;
+use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sp_consensus::SelectChain;
 use sp_consensus_babe::BabeApi;
@@ -73,10 +75,10 @@ where
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance, UncheckedExtrinsic>,
 	C::Api: BabeApi<Block>,
+	C::Api: BlockBuilder<Block>,
 	C::Api: orml_oracle_rpc::OracleRuntimeApi<Block, CurrencyId, TimeStampedPrice>,
 	C::Api: margin_protocol_rpc::MarginProtocolRuntimeApi<Block, AccountId>,
 	C::Api: synthetic_protocol_rpc::SyntheticProtocolRuntimeApi<Block, AccountId>,
-	<C::Api as sp_api::ApiErrorExt>::Error: fmt::Debug,
 	P: TransactionPool + 'static,
 	M: jsonrpc_core::Metadata + Default,
 	SC: SelectChain<Block> + 'static,
@@ -106,7 +108,11 @@ where
 		shared_authority_set,
 	} = grandpa;
 
-	io.extend_with(SystemApi::to_delegate(FullSystem::new(client.clone(), pool)));
+	io.extend_with(SystemApi::to_delegate(FullSystem::new(
+		client.clone(),
+		pool,
+		deny_unsafe,
+	)));
 	io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(
 		client.clone(),
 	)));
@@ -146,7 +152,7 @@ where
 		fetcher,
 	} = deps;
 	let mut io = jsonrpc_core::IoHandler::default();
-	io.extend_with(SystemApi::<AccountId, Index>::to_delegate(LightSystem::new(
+	io.extend_with(SystemApi::<Hash, AccountId, Index>::to_delegate(LightSystem::new(
 		client,
 		remote_blockchain,
 		fetcher,
