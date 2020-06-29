@@ -25,7 +25,7 @@ fn root_set_extreme_ratio() {
 
 		let ratio = Permill::from_percent(1);
 		assert_ok!(SyntheticTokens::set_extreme_ratio(
-			Origin::ROOT,
+			Origin::root(),
 			CurrencyId::FEUR,
 			ratio
 		));
@@ -57,7 +57,7 @@ fn root_set_liquidation_ratio() {
 
 		let ratio = Permill::from_percent(1);
 		assert_ok!(SyntheticTokens::set_liquidation_ratio(
-			Origin::ROOT,
+			Origin::root(),
 			CurrencyId::FEUR,
 			ratio
 		));
@@ -88,7 +88,7 @@ fn root_set_collateral_ratio() {
 
 		let ratio = Permill::from_percent(1);
 		assert_ok!(SyntheticTokens::set_collateral_ratio(
-			Origin::ROOT,
+			Origin::root(),
 			CurrencyId::FEUR,
 			ratio
 		));
@@ -122,7 +122,7 @@ fn liquidation_ratio_or_default() {
 
 		let ratio = Permill::from_percent(1);
 		assert_ok!(SyntheticTokens::set_liquidation_ratio(
-			Origin::ROOT,
+			Origin::root(),
 			CurrencyId::FEUR,
 			ratio
 		));
@@ -140,7 +140,7 @@ fn extreme_ratio_or_default() {
 
 		let ratio = Permill::from_percent(1);
 		assert_ok!(SyntheticTokens::set_extreme_ratio(
-			Origin::ROOT,
+			Origin::root(),
 			CurrencyId::FEUR,
 			ratio
 		));
@@ -158,7 +158,7 @@ fn collateral_ratio_or_default() {
 
 		let ratio = Permill::from_percent(1);
 		assert_ok!(SyntheticTokens::set_collateral_ratio(
-			Origin::ROOT,
+			Origin::root(),
 			CurrencyId::FEUR,
 			ratio
 		));
@@ -231,12 +231,12 @@ fn full_incentive_if_equal_or_below_extreme_ratio() {
 fn proportional_incentive_between_extreme_and_liquidation() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_ok!(SyntheticTokens::set_extreme_ratio(
-			Origin::ROOT,
+			Origin::root(),
 			CurrencyId::FEUR,
 			Permill::zero()
 		));
 		assert_ok!(SyntheticTokens::set_liquidation_ratio(
-			Origin::ROOT,
+			Origin::root(),
 			CurrencyId::FEUR,
 			Permill::one()
 		));

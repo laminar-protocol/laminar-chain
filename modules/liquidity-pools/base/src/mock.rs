@@ -34,7 +34,7 @@ parameter_types! {
 
 impl system::Trait for Runtime {
 	type Origin = Origin;
-	type Call = ();
+	type Call = Call;
 	type Index = u64;
 	type BlockNumber = BlockNumber;
 	type Hash = H256;
@@ -56,6 +56,7 @@ impl system::Trait for Runtime {
 	type AccountData = pallet_balances::AccountData<Balance>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
+	type BaseCallFilter = ();
 }
 
 parameter_types! {

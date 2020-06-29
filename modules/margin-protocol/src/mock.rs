@@ -79,6 +79,7 @@ impl frame_system::Trait for Runtime {
 	type AccountData = pallet_balances::AccountData<Balance>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
+	type BaseCallFilter = ();
 }
 pub type System = system::Module<Runtime>;
 

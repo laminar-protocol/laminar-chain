@@ -7,7 +7,7 @@ use margin_protocol::RiskThreshold;
 use margin_protocol_rpc_runtime_api::{MarginPoolState, MarginTraderState};
 use module_primitives::{Balance, Leverage, TradingPair};
 use runtime::{tests::*, AccountId, CurrencyId, Moment};
-use sp_arithmetic::{FixedI128, FixedPointNumber, FixedU128};
+use sp_arithmetic::{FixedI128, FixedU128};
 use sp_runtime::{traits::Bounded, DispatchResult, Permill};
 use std::ops::Range;
 use synthetic_protocol_rpc_runtime_api::SyntheticPoolState;
