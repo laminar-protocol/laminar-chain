@@ -17,7 +17,7 @@ pub type BlockNumber = u64;
 pub type AccountId = u128;
 
 ord_parameter_types! {
-	pub const One: AccountId = 0;
+	pub const UpdateOrigin: AccountId = 0;
 }
 
 pub use crate as base_liquidity_pools;
@@ -128,7 +128,7 @@ impl Trait for Runtime {
 	type ModuleId = Instance1ModuleId;
 	type OnDisableLiquidityPool = DummyOnDisable;
 	type OnRemoveLiquidityPool = DummyOnRemove;
-	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
+	type UpdateOrigin = EnsureSignedBy<UpdateOrigin, AccountId>;
 }
 
 impl Trait<Instance1> for Runtime {
@@ -141,7 +141,7 @@ impl Trait<Instance1> for Runtime {
 	type ModuleId = Instance1ModuleId;
 	type OnDisableLiquidityPool = DummyOnDisable;
 	type OnRemoveLiquidityPool = DummyOnRemove;
-	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
+	type UpdateOrigin = EnsureSignedBy<UpdateOrigin, AccountId>;
 }
 pub type Instance1Module = Module<Runtime, Instance1>;
 
@@ -159,7 +159,7 @@ impl Trait<Instance2> for Runtime {
 	type ModuleId = Instance2ModuleId;
 	type OnDisableLiquidityPool = DummyOnDisable;
 	type OnRemoveLiquidityPool = DummyOnRemove;
-	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
+	type UpdateOrigin = EnsureSignedBy<UpdateOrigin, AccountId>;
 }
 pub type Instance2Module = Module<Runtime, Instance2>;
 

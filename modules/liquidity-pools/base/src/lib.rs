@@ -7,7 +7,7 @@ use frame_support::{
 	traits::{Currency, EnsureOrigin, Get, ReservableCurrency},
 	weights::DispatchClass,
 };
-use frame_system::{self as system, ensure_root, ensure_signed};
+use frame_system::{self as system, ensure_signed};
 use orml_traits::BasicCurrency;
 use primitives::{Balance, IdentityInfo, LiquidityPoolId};
 use sp_runtime::{
@@ -235,12 +235,10 @@ decl_module! {
 
 		/// Mark the identity of a liquidity pool as verified.
 		///
-		/// May only be called from `UpdateOrigin` or root.
+		/// May only be called from `UpdateOrigin`.
 		#[weight = 10_000]
 		pub fn verify_identity(origin, #[compact] pool_id: LiquidityPoolId) {
-			T::UpdateOrigin::try_origin(origin)
-				.map(|_| ())
-				.or_else(ensure_root)?;
+			T::UpdateOrigin::ensure_origin(origin)?;
 
 			Self::do_verify_identity(pool_id)?;
 			Self::deposit_event(RawEvent::IdentityVerified(pool_id));

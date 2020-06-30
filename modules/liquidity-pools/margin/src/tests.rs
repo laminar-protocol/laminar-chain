@@ -164,7 +164,11 @@ fn should_set_max_spread() {
 		));
 
 		// set max spread to 30%
-		assert_ok!(ModuleLiquidityPools::set_max_spread(Origin::root(), pair, 30,));
+		assert_ok!(ModuleLiquidityPools::set_max_spread(
+			Origin::signed(UpdateOrigin::get()),
+			pair,
+			30,
+		));
 
 		assert_eq!(
 			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
@@ -200,7 +204,11 @@ fn should_set_max_spread() {
 			}
 		);
 
-		assert_ok!(ModuleLiquidityPools::set_max_spread(Origin::root(), pair, 20));
+		assert_ok!(ModuleLiquidityPools::set_max_spread(
+			Origin::signed(UpdateOrigin::get()),
+			pair,
+			20
+		));
 
 		assert_eq!(
 			ModuleLiquidityPools::pool_trading_pair_options(0, pair),
@@ -269,17 +277,21 @@ fn should_set_swap_rate() {
 			short: FixedI128::saturating_from_integer(3),
 		};
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_ok!(ModuleLiquidityPools::set_swap_rate(Origin::root(), pair, rate));
+		assert_ok!(ModuleLiquidityPools::set_swap_rate(
+			Origin::signed(UpdateOrigin::get()),
+			pair,
+			rate
+		));
 		assert_noop!(
-			ModuleLiquidityPools::set_swap_rate(Origin::root(), pair, bad_rate),
+			ModuleLiquidityPools::set_swap_rate(Origin::signed(UpdateOrigin::get()), pair, bad_rate),
 			Error::<Runtime>::SwapRateTooHigh
 		);
 		assert_noop!(
-			ModuleLiquidityPools::set_swap_rate(Origin::root(), pair, bad_long_rate),
+			ModuleLiquidityPools::set_swap_rate(Origin::signed(UpdateOrigin::get()), pair, bad_long_rate),
 			Error::<Runtime>::SwapRateTooHigh
 		);
 		assert_noop!(
-			ModuleLiquidityPools::set_swap_rate(Origin::root(), pair, bad_short_rate),
+			ModuleLiquidityPools::set_swap_rate(Origin::signed(UpdateOrigin::get()), pair, bad_short_rate),
 			Error::<Runtime>::SwapRateTooHigh
 		);
 	});
@@ -297,7 +309,11 @@ fn should_get_swap() {
 			short: FixedI128::saturating_from_integer(1),
 		};
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_ok!(ModuleLiquidityPools::set_swap_rate(Origin::root(), pair, rate.clone()));
+		assert_ok!(ModuleLiquidityPools::set_swap_rate(
+			Origin::signed(UpdateOrigin::get()),
+			pair,
+			rate.clone()
+		));
 		assert_eq!(
 			<ModuleLiquidityPools as MarginProtocolLiquidityPools<AccountId>>::swap_rate(0, pair, true),
 			rate.long
@@ -324,7 +340,10 @@ fn should_get_swap() {
 		);
 
 		let rate = FixedI128::saturating_from_integer(2);
-		assert_ok!(ModuleLiquidityPools::enable_trading_pair(Origin::root(), pair));
+		assert_ok!(ModuleLiquidityPools::enable_trading_pair(
+			Origin::signed(UpdateOrigin::get()),
+			pair
+		));
 		assert_ok!(ModuleLiquidityPools::liquidity_pool_enable_trading_pair(
 			Origin::signed(ALICE),
 			0,
@@ -359,17 +378,21 @@ fn should_get_accumulated_swap() {
 		};
 
 		assert_noop!(
-			ModuleLiquidityPools::set_accumulate_config(Origin::root(), pair, 1, 0),
+			ModuleLiquidityPools::set_accumulate_config(Origin::signed(UpdateOrigin::get()), pair, 1, 0),
 			Error::<Runtime>::FrequencyTooLow
 		);
 		assert_ok!(ModuleLiquidityPools::set_accumulate_config(
-			Origin::root(),
+			Origin::signed(UpdateOrigin::get()),
 			pair,
 			1 * ONE_MINUTE,
 			0
 		));
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_ok!(ModuleLiquidityPools::set_swap_rate(Origin::root(), pair, rate.clone()));
+		assert_ok!(ModuleLiquidityPools::set_swap_rate(
+			Origin::signed(UpdateOrigin::get()),
+			pair,
+			rate.clone()
+		));
 		assert_eq!(
 			accumulated_rate(pair, true),
 			FixedI128::saturating_from_integer(0) // 0%
@@ -419,7 +442,10 @@ fn ensure_can_open_position() {
 			quote: CurrencyId::FEUR,
 		};
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_ok!(ModuleLiquidityPools::enable_trading_pair(Origin::root(), pair));
+		assert_ok!(ModuleLiquidityPools::enable_trading_pair(
+			Origin::signed(UpdateOrigin::get()),
+			pair
+		));
 		assert!(!ModuleLiquidityPools::is_pool_trading_pair_enabled(0, pair));
 		assert_ok!(ModuleLiquidityPools::liquidity_pool_enable_trading_pair(
 			Origin::signed(ALICE),
@@ -473,13 +499,17 @@ fn should_update_accumulated_rate() {
 		};
 
 		assert_ok!(ModuleLiquidityPools::set_accumulate_config(
-			Origin::root(),
+			Origin::signed(UpdateOrigin::get()),
 			pair,
 			1 * ONE_MINUTE,
 			0
 		));
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_ok!(ModuleLiquidityPools::set_swap_rate(Origin::root(), pair, rate.clone()));
+		assert_ok!(ModuleLiquidityPools::set_swap_rate(
+			Origin::signed(UpdateOrigin::get()),
+			pair,
+			rate.clone()
+		));
 		assert_eq!(swap_rate(pair, true), rate.long);
 		assert_eq!(swap_rate(pair, false), rate.short);
 
@@ -529,9 +559,15 @@ fn should_enable_disable_trading_pairs() {
 			quote: CurrencyId::FEUR,
 		};
 		assert!(!ModuleLiquidityPools::is_trading_pair_enabled(pair));
-		assert_ok!(ModuleLiquidityPools::enable_trading_pair(Origin::root(), pair));
+		assert_ok!(ModuleLiquidityPools::enable_trading_pair(
+			Origin::signed(UpdateOrigin::get()),
+			pair
+		));
 		assert!(ModuleLiquidityPools::is_trading_pair_enabled(pair));
-		assert_ok!(ModuleLiquidityPools::disable_trading_pair(Origin::root(), pair));
+		assert_ok!(ModuleLiquidityPools::disable_trading_pair(
+			Origin::signed(UpdateOrigin::get()),
+			pair
+		));
 		assert!(!ModuleLiquidityPools::is_trading_pair_enabled(pair));
 	})
 }
@@ -544,7 +580,10 @@ fn liquidity_provider_should_enable_disable_trading_pairs() {
 			quote: CurrencyId::FEUR,
 		};
 		assert_ok!(BaseLiquidityPools::create_pool(Origin::signed(ALICE)));
-		assert_ok!(ModuleLiquidityPools::enable_trading_pair(Origin::root(), pair));
+		assert_ok!(ModuleLiquidityPools::enable_trading_pair(
+			Origin::signed(UpdateOrigin::get()),
+			pair
+		));
 		assert!(!ModuleLiquidityPools::is_pool_trading_pair_enabled(0, pair));
 		assert_ok!(ModuleLiquidityPools::liquidity_pool_enable_trading_pair(
 			Origin::signed(ALICE),
@@ -571,7 +610,7 @@ fn should_set_default_min_leveraged_amount() {
 
 		// set default min leveraged amount
 		assert_ok!(ModuleLiquidityPools::set_default_min_leveraged_amount(
-			Origin::root(),
+			Origin::signed(UpdateOrigin::get()),
 			10
 		));
 		assert_eq!(ModuleLiquidityPools::default_min_leveraged_amount(), 10);
@@ -589,7 +628,7 @@ fn should_set_min_leveraged_amount() {
 
 		// set default min leveraged amount
 		assert_ok!(ModuleLiquidityPools::set_default_min_leveraged_amount(
-			Origin::root(),
+			Origin::signed(UpdateOrigin::get()),
 			10
 		));
 		assert_eq!(ModuleLiquidityPools::min_leveraged_amount(pool_id), 10);

@@ -11,7 +11,7 @@ use frame_support::{
 	weights::Weight,
 	Parameter,
 };
-use frame_system::{self as system, ensure_root, ensure_signed};
+use frame_system::{self as system, ensure_signed};
 use primitives::{
 	arithmetic::fixed_i128_mul_signum, AccumulateConfig, Balance, Leverage, Leverages, LiquidityPoolId, TradingPair,
 };
@@ -234,12 +234,10 @@ decl_module! {
 
 		/// Set swap rate for `pair`.
 		///
-		/// May only be called from `UpdateOrigin` or root.
+		/// May only be called from `UpdateOrigin`.
 		#[weight = 10_000]
 		pub fn set_swap_rate(origin, pair: TradingPair, rate: SwapRate) {
-			T::UpdateOrigin::try_origin(origin)
-				.map(|_| ())
-				.or_else(ensure_root)?;
+			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(rate.long.saturating_abs() <= T::MaxSwapRate::get(), Error::<T>::SwapRateTooHigh);
 			ensure!(rate.short.saturating_abs() <= T::MaxSwapRate::get(), Error::<T>::SwapRateTooHigh);
@@ -264,12 +262,10 @@ decl_module! {
 
 		/// Set maximum spread for `pair`.
 		///
-		/// May only be called from `UpdateOrigin` or root.
+		/// May only be called from `UpdateOrigin`.
 		#[weight = 10_000]
 		pub fn set_max_spread(origin, pair: TradingPair, #[compact] max_spread: Balance) {
-			T::UpdateOrigin::try_origin(origin)
-				.map(|_| ())
-				.or_else(ensure_root)?;
+			T::UpdateOrigin::ensure_origin(origin)?;
 
 			<TradingPairOptions<T>>::mutate(&pair, |o| o.max_spread = Some(max_spread));
 
@@ -278,12 +274,10 @@ decl_module! {
 
 		/// Set swap rate accumulation configuration.
 		///
-		/// May only be called from `UpdateOrigin` or root.
+		/// May only be called from `UpdateOrigin`.
 		#[weight = 10_000]
 		pub fn set_accumulate_config(origin, pair: TradingPair, frequency: T::Moment, offset: T::Moment) {
-			T::UpdateOrigin::try_origin(origin)
-				.map(|_| ())
-				.or_else(ensure_root)?;
+			T::UpdateOrigin::ensure_origin(origin)?;
 
 			ensure!(frequency >= ONE_MINUTE.into(), Error::<T>::FrequencyTooLow);
 
@@ -297,12 +291,10 @@ decl_module! {
 
 		/// Enable a trading pair.
 		///
-		/// May only be called from `UpdateOrigin` or root.
+		/// May only be called from `UpdateOrigin`.
 		#[weight = 10_000]
 		pub fn enable_trading_pair(origin, pair: TradingPair) {
-			T::UpdateOrigin::try_origin(origin)
-				.map(|_| ())
-				.or_else(ensure_root)?;
+			T::UpdateOrigin::ensure_origin(origin)?;
 
 			<TradingPairOptions<T>>::mutate(&pair, |o| o.enabled = true);
 
@@ -311,12 +303,10 @@ decl_module! {
 
 		/// Disable a trading pair.
 		///
-		/// May only be called from `UpdateOrigin` or root.
+		/// May only be called from `UpdateOrigin`.
 		#[weight = 10_000]
 		pub fn disable_trading_pair(origin, pair: TradingPair) {
-			T::UpdateOrigin::try_origin(origin)
-				.map(|_| ())
-				.or_else(ensure_root)?;
+			T::UpdateOrigin::ensure_origin(origin)?;
 
 			<TradingPairOptions<T>>::mutate(&pair, |o| o.enabled = false);
 
@@ -354,12 +344,10 @@ decl_module! {
 
 		/// Set default minimum leveraged amount to open a position.
 		///
-		/// May only be called from `UpdateOrigin` or root.
+		/// May only be called from `UpdateOrigin`.
 		#[weight = 10_000]
 		pub fn set_default_min_leveraged_amount(origin, #[compact] amount: Balance) {
-			T::UpdateOrigin::try_origin(origin)
-				.map(|_| ())
-				.or_else(ensure_root)?;
+			T::UpdateOrigin::ensure_origin(origin)?;
 			DefaultMinLeveragedAmount::put(amount);
 			Self::deposit_event(RawEvent::DefaultMinLeveragedAmountSet(amount))
 		}
