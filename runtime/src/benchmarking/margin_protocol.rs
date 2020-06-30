@@ -239,7 +239,7 @@ runtime_benchmarks! {
 		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(1))])?;
 	}: _(RawOrigin::None, lookup_of_account(trader.clone()), 0)
 	verify {
-		assert_eq!(MarginProtocol::margin_called_traders(&trader, 0), Some(true));
+		assert_eq!(MarginProtocol::margin_called_traders(&trader, 0), Some(()));
 	}
 
 	trader_become_safe {
@@ -275,7 +275,7 @@ runtime_benchmarks! {
 			0
 		)?;
 
-		assert_eq!(MarginProtocol::margin_called_traders(&trader, 0), Some(true));
+		assert_eq!(MarginProtocol::margin_called_traders(&trader, 0), Some(()));
 
 		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(2))])?;
 	}: _(RawOrigin::None, lookup_of_account(trader.clone()), 0)
@@ -308,7 +308,7 @@ runtime_benchmarks! {
 			balance,
 			Price::saturating_from_integer(3)
 		)?;
-		assert_eq!(MarginProtocol::positions_by_trader(&trader, (0, 0)), Some(true));
+		assert_eq!(MarginProtocol::positions_by_trader(&trader, (0, 0)), Some(()));
 
 		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(1))])?;
 	}: _(RawOrigin::None, lookup_of_account(trader.clone()), 0)
@@ -345,7 +345,7 @@ runtime_benchmarks! {
 		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(2))])?;
 	}: _(RawOrigin::None, 0)
 	verify {
-		assert_eq!(MarginProtocol::margin_called_pools(0), Some(true))
+		assert_eq!(MarginProtocol::margin_called_pools(0), Some(()))
 	}
 
 	liquidity_pool_become_safe {
@@ -376,7 +376,7 @@ runtime_benchmarks! {
 
 		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(2))])?;
 		MarginProtocol::liquidity_pool_margin_call(RawOrigin::None.into(), 0)?;
-		assert_eq!(MarginProtocol::margin_called_pools(0), Some(true));
+		assert_eq!(MarginProtocol::margin_called_pools(0), Some(()));
 
 		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(1))])?;
 	}: _(RawOrigin::None, 0)
@@ -409,7 +409,7 @@ runtime_benchmarks! {
 			balance,
 			Price::saturating_from_integer(2)
 		)?;
-		assert_eq!(MarginProtocol::positions_by_pool(0, (EUR_USD, 0)), Some(true));
+		assert_eq!(MarginProtocol::positions_by_pool(0, (EUR_USD, 0)), Some(()));
 
 		set_price(vec![(CurrencyId::FEUR, Price::saturating_from_integer(2))])?;
 	}: _(RawOrigin::None, 0)
