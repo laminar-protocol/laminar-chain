@@ -20,7 +20,7 @@ use traits::{LiquidityPools, OpenPositionError};
 use super::*;
 
 ord_parameter_types! {
-	pub const One: AccountId = 0;
+	pub const UpdateOrigin: AccountId = 0;
 }
 
 impl_outer_origin! {
@@ -270,7 +270,7 @@ impl Trait for Runtime {
 	type Treasury = MockTreasury;
 	type GetTraderMaxOpenPositions = GetTraderMaxOpenPositions;
 	type GetPoolMaxOpenPositions = GetPoolMaxOpenPositions;
-	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
+	type UpdateOrigin = EnsureSignedBy<UpdateOrigin, AccountId>;
 	type UnsignedPriority = UnsignedPriority;
 }
 pub type MarginProtocol = Module<Runtime>;

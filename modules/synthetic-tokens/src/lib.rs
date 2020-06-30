@@ -5,7 +5,7 @@ use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
 	traits::{EnsureOrigin, Get},
 };
-use frame_system::{self as system, ensure_root};
+use frame_system as system;
 use module_primitives::{Balance, CurrencyId, LiquidityPoolId};
 use module_traits::BaseLiquidityPoolManager;
 use sp_runtime::{
@@ -99,12 +99,10 @@ decl_module! {
 
 		/// Set extreme liquidation ratio.
 		///
-		/// May only be called from `UpdateOrigin` or root.
+		/// May only be called from `UpdateOrigin`.
 		#[weight = 10_000]
 		pub fn set_extreme_ratio(origin, currency_id: CurrencyId, #[compact] ratio: Permill) {
-			T::UpdateOrigin::try_origin(origin)
-				.map(|_| ())
-				.or_else(ensure_root)?;
+			T::UpdateOrigin::ensure_origin(origin)?;
 
 			Ratios::mutate(currency_id, |r| r.extreme = Some(ratio));
 
@@ -113,12 +111,10 @@ decl_module! {
 
 		/// Set liquidation ratio.
 		///
-		/// May only be called from `UpdateOrigin` or root.
+		/// May only be called from `UpdateOrigin`.
 		#[weight = 10_000]
 		pub fn set_liquidation_ratio(origin, currency_id: CurrencyId, #[compact] ratio: Permill) {
-			T::UpdateOrigin::try_origin(origin)
-				.map(|_| ())
-				.or_else(ensure_root)?;
+			T::UpdateOrigin::ensure_origin(origin)?;
 
 			Ratios::mutate(currency_id, |r| r.liquidation = Some(ratio));
 
@@ -127,12 +123,10 @@ decl_module! {
 
 		/// Set collateral ratio.
 		///
-		/// May only be called from `UpdateOrigin` or root.
+		/// May only be called from `UpdateOrigin`.
 		#[weight = 10_000]
 		pub fn set_collateral_ratio(origin, currency_id: CurrencyId, #[compact] ratio: Permill) {
-			T::UpdateOrigin::try_origin(origin)
-				.map(|_| ())
-				.or_else(ensure_root)?;
+			T::UpdateOrigin::ensure_origin(origin)?;
 
 			Ratios::mutate(currency_id, |r| r.collateral = Some(ratio));
 

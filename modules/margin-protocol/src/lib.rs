@@ -24,7 +24,7 @@ use sp_runtime::{
 // #3295 https://github.com/paritytech/substrate/issues/3295
 use frame_system as system;
 use frame_system::{
-	ensure_none, ensure_root, ensure_signed,
+	ensure_none, ensure_signed,
 	offchain::{SendTransactionTypes, SubmitTransaction},
 };
 use orml_traits::{BasicCurrency, PriceProvider};
@@ -139,7 +139,7 @@ pub struct LeveragedAmounts {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Copy, Clone, RuntimeDebug, Eq, PartialEq, Default)]
 pub struct RiskThreshold {
-	/// Margin call threhold.
+	/// Margin call threshold.
 	pub margin_call: Permill,
 
 	/// Stop out threshold.
@@ -475,7 +475,7 @@ decl_module! {
 
 		/// Set risk thresholds of a trading pair.
 		///
-		/// May only be called from `UpdateOrigin` or root.
+		/// May only be called from `UpdateOrigin`.
 		#[weight = 10_000]
 		pub fn set_trading_pair_risk_threshold(
 			origin,
@@ -484,9 +484,7 @@ decl_module! {
 			enp: Option<RiskThreshold>,
 			ell: Option<RiskThreshold>
 		) {
-			T::UpdateOrigin::try_origin(origin)
-				.map(|_| ())
-				.or_else(ensure_root)?;
+			T::UpdateOrigin::ensure_origin(origin)?;
 
 			RiskThresholds::mutate(pair, |r| {
 				if trader.is_some() {

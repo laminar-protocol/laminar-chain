@@ -26,7 +26,7 @@ impl_outer_event! {
 }
 
 ord_parameter_types! {
-	pub const One: AccountId = 0;
+	pub const UpdateOrigin: AccountId = 0;
 }
 
 // Workaround for https://github.com/rust-lang/rust/issues/26925 . Remove when sorted.
@@ -78,7 +78,7 @@ impl Trait for Runtime {
 	type DefaultExtremeRatio = DefaultExtremeRatio;
 	type DefaultLiquidationRatio = DefaultLiquidationRatio;
 	type DefaultCollateralRatio = DefaultCollateralRatio;
-	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
+	type UpdateOrigin = EnsureSignedBy<UpdateOrigin, AccountId>;
 }
 
 pub type SyntheticTokens = Module<Runtime>;

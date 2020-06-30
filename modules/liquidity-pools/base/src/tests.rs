@@ -179,7 +179,7 @@ fn should_verify_identity() {
 			Instance1Module::identity_infos(0),
 			Some((identity.clone(), 1000, false))
 		);
-		assert_ok!(Instance1Module::verify_identity(Origin::root(), 0));
+		assert_ok!(Instance1Module::verify_identity(Origin::signed(UpdateOrigin::get()), 0));
 		assert_eq!(Instance1Module::identity_infos(0), Some((identity.clone(), 1000, true)));
 		assert_eq!(get_reserved_balance(&ALICE), 1000);
 		// verify then modify
@@ -192,7 +192,7 @@ fn should_verify_identity() {
 			Instance1Module::identity_infos(0),
 			Some((identity.clone(), 1000, false))
 		);
-		assert_ok!(Instance1Module::verify_identity(Origin::root(), 0));
+		assert_ok!(Instance1Module::verify_identity(Origin::signed(UpdateOrigin::get()), 0));
 		assert_eq!(get_reserved_balance(&ALICE), 1000);
 		assert_eq!(Instance1Module::identity_infos(0), Some((identity.clone(), 1000, true)));
 		assert_eq!(get_free_balance(&ALICE), 99000);
@@ -244,7 +244,7 @@ fn should_clear_identity() {
 			identity.clone()
 		));
 		assert_eq!(get_reserved_balance(&ALICE), 1000);
-		assert_ok!(Instance1Module::verify_identity(Origin::root(), 0));
+		assert_ok!(Instance1Module::verify_identity(Origin::signed(UpdateOrigin::get()), 0));
 		assert_eq!(Instance1Module::identity_infos(0), Some((identity.clone(), 1000, true)));
 		assert_ok!(Instance1Module::clear_identity(Origin::signed(ALICE), 0));
 		assert_eq!(get_reserved_balance(&ALICE), 0);
@@ -256,7 +256,7 @@ fn should_clear_identity() {
 			identity.clone()
 		));
 		assert_eq!(get_reserved_balance(&ALICE), 1000);
-		assert_ok!(Instance1Module::verify_identity(Origin::root(), 0));
+		assert_ok!(Instance1Module::verify_identity(Origin::signed(UpdateOrigin::get()), 0));
 		assert_eq!(Instance1Module::identity_infos(0), Some((identity.clone(), 1000, true)));
 		assert_ok!(Instance1Module::remove_pool(Origin::signed(ALICE), 0));
 		assert_eq!(get_reserved_balance(&ALICE), 0);

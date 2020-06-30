@@ -5,7 +5,7 @@ mod tests;
 
 use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::EnsureOrigin};
-use frame_system::{self as system, ensure_root, ensure_signed};
+use frame_system::{self as system, ensure_signed};
 use primitives::{Balance, CurrencyId, LiquidityPoolId};
 use sp_runtime::{DispatchResult, ModuleId, Permill, RuntimeDebug};
 use sp_std::prelude::*;
@@ -121,12 +121,10 @@ decl_module! {
 
 		/// Set minimum additional collateral ratio.
 		///
-		/// May only be called from `UpdateOrigin` or root.
+		/// May only be called from `UpdateOrigin`.
 		#[weight = 10_000]
 		pub fn set_min_additional_collateral_ratio(origin, #[compact] ratio: Permill) {
-			T::UpdateOrigin::try_origin(origin)
-				.map(|_| ())
-				.or_else(ensure_root)?;
+			T::UpdateOrigin::ensure_origin(origin)?;
 			MinAdditionalCollateralRatio::put(ratio);
 			Self::deposit_event(RawEvent::MinAdditionalCollateralRatioSet(ratio));
 		}
@@ -148,12 +146,10 @@ decl_module! {
 
 		/// Set max spread of `currency_id`.
 		///
-		/// May only be called from `UpdateOrigin` or root.
+		/// May only be called from `UpdateOrigin`.
 		#[weight = 10_000]
 		pub fn set_max_spread(origin, currency_id: CurrencyId, #[compact] max_spread: Balance) {
-			T::UpdateOrigin::try_origin(origin)
-				.map(|_| ())
-				.or_else(ensure_root)?;
+			T::UpdateOrigin::ensure_origin(origin)?;
 			MaxSpread::insert(currency_id, max_spread);
 			Self::deposit_event(RawEvent::MaxSpreadUpdated(currency_id, max_spread));
 		}

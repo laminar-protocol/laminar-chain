@@ -19,7 +19,7 @@ pub type BlockNumber = u64;
 pub type AccountId = u64;
 
 ord_parameter_types! {
-	pub const One: AccountId = 0;
+	pub const UpdateOrigin: AccountId = 0;
 }
 
 impl_outer_origin! {
@@ -127,14 +127,14 @@ impl module_base_liquidity_pools::Trait<SyntheticInstance> for Runtime {
 	type ModuleId = SyntheticLiquidityPoolsModuleId;
 	type OnDisableLiquidityPool = ModuleLiquidityPools;
 	type OnRemoveLiquidityPool = ModuleLiquidityPools;
-	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
+	type UpdateOrigin = EnsureSignedBy<UpdateOrigin, AccountId>;
 }
 pub type BaseLiquidityPools = module_base_liquidity_pools::Module<Runtime, SyntheticInstance>;
 
 impl Trait for Runtime {
 	type Event = ();
 	type BaseLiquidityPools = module_base_liquidity_pools::Module<Runtime, SyntheticInstance>;
-	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
+	type UpdateOrigin = EnsureSignedBy<UpdateOrigin, AccountId>;
 }
 pub type ModuleLiquidityPools = Module<Runtime>;
 

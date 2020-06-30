@@ -14,6 +14,7 @@ pub mod tests;
 mod types;
 
 use codec::Encode;
+use pallet_collective::{EnsureMembers, EnsureProportionMoreThan};
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 use pallet_session::historical as pallet_session_historical;
@@ -39,7 +40,7 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
-pub use frame_system::{self as system, Call as SystemCall};
+pub use frame_system::{self as system, Call as SystemCall, EnsureOneOf, EnsureRoot};
 pub use module_primitives::{Balance, CurrencyId, LiquidityPoolId, Price};
 use orml_currencies::BasicCurrencyAdapter;
 pub use orml_oracle::AuthorityId as OracleId;
@@ -328,14 +329,23 @@ impl pallet_collective::Trait<GeneralCouncilInstance> for Runtime {
 	type MaxProposals = GeneralCouncilMaxProposals;
 }
 
+type EnsureThreeFourthGeneralCouncilOrRoot =
+	EnsureOneOf<AccountId, EnsureProportionMoreThan<_3, _4, AccountId, GeneralCouncilInstance>, EnsureRoot<AccountId>>;
+
+type EnsureHalfGeneralCouncilOrRoot =
+	EnsureOneOf<AccountId, EnsureProportionMoreThan<_1, _2, AccountId, GeneralCouncilInstance>, EnsureRoot<AccountId>>;
+
+type EnsureOneThirdGeneralCouncilOrRoot =
+	EnsureOneOf<AccountId, EnsureProportionMoreThan<_1, _3, AccountId, GeneralCouncilInstance>, EnsureRoot<AccountId>>;
+
 type GeneralCouncilMembershipInstance = pallet_membership::Instance1;
 impl pallet_membership::Trait<GeneralCouncilMembershipInstance> for Runtime {
 	type Event = Event;
-	type AddOrigin = pallet_collective::EnsureProportionMoreThan<_3, _4, AccountId, GeneralCouncilInstance>;
-	type RemoveOrigin = pallet_collective::EnsureProportionMoreThan<_3, _4, AccountId, GeneralCouncilInstance>;
-	type SwapOrigin = pallet_collective::EnsureProportionMoreThan<_3, _4, AccountId, GeneralCouncilInstance>;
-	type ResetOrigin = pallet_collective::EnsureProportionMoreThan<_3, _4, AccountId, GeneralCouncilInstance>;
-	type PrimeOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, GeneralCouncilInstance>;
+	type AddOrigin = EnsureThreeFourthGeneralCouncilOrRoot;
+	type RemoveOrigin = EnsureThreeFourthGeneralCouncilOrRoot;
+	type SwapOrigin = EnsureThreeFourthGeneralCouncilOrRoot;
+	type ResetOrigin = EnsureThreeFourthGeneralCouncilOrRoot;
+	type PrimeOrigin = EnsureHalfGeneralCouncilOrRoot;
 	type MembershipInitialized = GeneralCouncil;
 	type MembershipChanged = GeneralCouncil;
 }
@@ -354,14 +364,20 @@ impl pallet_collective::Trait<FinancialCouncilInstance> for Runtime {
 	type MaxProposals = FinancialCouncilMaxProposals;
 }
 
+type EnsureHalfFinancialCouncilOrRoot = EnsureOneOf<
+	AccountId,
+	EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>,
+	EnsureRoot<AccountId>,
+>;
+
 type FinancialCouncilMembershipInstance = pallet_membership::Instance2;
 impl pallet_membership::Trait<FinancialCouncilMembershipInstance> for Runtime {
 	type Event = Event;
-	type AddOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
-	type RemoveOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
-	type SwapOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
-	type ResetOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
-	type PrimeOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
+	type AddOrigin = EnsureHalfFinancialCouncilOrRoot;
+	type RemoveOrigin = EnsureHalfFinancialCouncilOrRoot;
+	type SwapOrigin = EnsureHalfFinancialCouncilOrRoot;
+	type ResetOrigin = EnsureHalfFinancialCouncilOrRoot;
+	type PrimeOrigin = EnsureHalfFinancialCouncilOrRoot;
 	type MembershipInitialized = FinancialCouncil;
 	type MembershipChanged = FinancialCouncil;
 }
@@ -369,11 +385,11 @@ impl pallet_membership::Trait<FinancialCouncilMembershipInstance> for Runtime {
 type OperatorMembershipInstance = pallet_membership::Instance3;
 impl pallet_membership::Trait<OperatorMembershipInstance> for Runtime {
 	type Event = Event;
-	type AddOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, GeneralCouncilInstance>;
-	type RemoveOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, GeneralCouncilInstance>;
-	type SwapOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, GeneralCouncilInstance>;
-	type ResetOrigin = pallet_collective::EnsureProportionMoreThan<_1, _3, AccountId, GeneralCouncilInstance>;
-	type PrimeOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, GeneralCouncilInstance>;
+	type AddOrigin = EnsureOneThirdGeneralCouncilOrRoot;
+	type RemoveOrigin = EnsureOneThirdGeneralCouncilOrRoot;
+	type SwapOrigin = EnsureOneThirdGeneralCouncilOrRoot;
+	type ResetOrigin = EnsureOneThirdGeneralCouncilOrRoot;
+	type PrimeOrigin = EnsureHalfGeneralCouncilOrRoot;
 	type MembershipInitialized = Oracle;
 	type MembershipChanged = Oracle;
 }
@@ -415,8 +431,10 @@ parameter_types! {
 
 impl pallet_treasury::Trait for Runtime {
 	type Currency = Balances;
-	type ApproveOrigin = pallet_collective::EnsureMembers<_4, AccountId, GeneralCouncilInstance>;
-	type RejectOrigin = pallet_collective::EnsureMembers<_2, AccountId, GeneralCouncilInstance>;
+	type ApproveOrigin =
+		EnsureOneOf<AccountId, EnsureMembers<_4, AccountId, GeneralCouncilInstance>, EnsureRoot<AccountId>>;
+	type RejectOrigin =
+		EnsureOneOf<AccountId, EnsureMembers<_2, AccountId, GeneralCouncilInstance>, EnsureRoot<AccountId>>;
 	type Tippers = GeneralCouncilProvider;
 	type TipCountdown = TipCountdown;
 	type TipFindersFee = TipFindersFee;
@@ -509,7 +527,7 @@ impl pallet_staking::Trait for Runtime {
 	type BondingDuration = BondingDuration;
 	type SlashDeferDuration = SlashDeferDuration;
 	/// A super-majority of the council can cancel the slash.
-	type SlashCancelOrigin = pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, GeneralCouncilInstance>;
+	type SlashCancelOrigin = EnsureThreeFourthGeneralCouncilOrRoot;
 	type SessionInterface = Self;
 	type RewardCurve = RewardCurve;
 	type NextNewSession = Session;
@@ -590,7 +608,7 @@ impl synthetic_tokens::Trait for Runtime {
 	type DefaultLiquidationRatio = DefaultLiquidationRatio;
 	type DefaultCollateralRatio = DefaultCollateralRatio;
 	type SyntheticCurrencyIds = SyntheticCurrencyIds;
-	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
+	type UpdateOrigin = EnsureHalfFinancialCouncilOrRoot;
 }
 
 parameter_types! {
@@ -617,7 +635,7 @@ impl base_liquidity_pools::Trait<BaseLiquidityPoolsMarginInstance> for Runtime {
 	type ModuleId = MarginLiquidityPoolsModuleId;
 	type OnDisableLiquidityPool = MarginLiquidityPools;
 	type OnRemoveLiquidityPool = MarginLiquidityPools;
-	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
+	type UpdateOrigin = EnsureHalfFinancialCouncilOrRoot;
 }
 
 pub type BaseLiquidityPoolsSyntheticInstance = base_liquidity_pools::Instance2;
@@ -634,14 +652,14 @@ impl base_liquidity_pools::Trait<BaseLiquidityPoolsSyntheticInstance> for Runtim
 	type ModuleId = SyntheticLiquidityPoolsModuleId;
 	type OnDisableLiquidityPool = SyntheticLiquidityPools;
 	type OnRemoveLiquidityPool = SyntheticLiquidityPools;
-	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
+	type UpdateOrigin = EnsureHalfFinancialCouncilOrRoot;
 }
 
 impl margin_liquidity_pools::Trait for Runtime {
 	type Event = Event;
 	type BaseLiquidityPools = BaseLiquidityPoolsForMargin;
 	type PoolManager = MarginProtocol;
-	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
+	type UpdateOrigin = EnsureHalfFinancialCouncilOrRoot;
 	type MaxSwapRate = MaxSwap;
 	type UnixTime = Timestamp;
 	type Moment = Moment;
@@ -650,7 +668,7 @@ impl margin_liquidity_pools::Trait for Runtime {
 impl synthetic_liquidity_pools::Trait for Runtime {
 	type Event = Event;
 	type BaseLiquidityPools = BaseLiquidityPoolsForSynthetic;
-	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
+	type UpdateOrigin = EnsureHalfFinancialCouncilOrRoot;
 }
 
 parameter_types! {
@@ -744,7 +762,7 @@ impl margin_protocol::Trait for Runtime {
 	type Treasury = MockLaminarTreasury;
 	type GetTraderMaxOpenPositions = GetTraderMaxOpenPositions;
 	type GetPoolMaxOpenPositions = GetPoolMaxOpenPositions;
-	type UpdateOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, FinancialCouncilInstance>;
+	type UpdateOrigin = EnsureHalfFinancialCouncilOrRoot;
 	type UnsignedPriority = MarginProtocolUnsignedPriority;
 }
 

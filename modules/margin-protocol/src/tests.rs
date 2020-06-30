@@ -31,7 +31,7 @@ fn risk_threshold(margin_call_percent: u32, stop_out_percent: u32) -> RiskThresh
 
 fn set_trader_risk_threshold(pair: TradingPair, threshold: RiskThreshold) {
 	assert_ok!(MarginProtocol::set_trading_pair_risk_threshold(
-		Origin::root(),
+		Origin::signed(UpdateOrigin::get()),
 		pair,
 		Some(threshold),
 		None,
@@ -41,7 +41,7 @@ fn set_trader_risk_threshold(pair: TradingPair, threshold: RiskThreshold) {
 
 fn set_enp_risk_threshold(pair: TradingPair, threshold: RiskThreshold) {
 	assert_ok!(MarginProtocol::set_trading_pair_risk_threshold(
-		Origin::root(),
+		Origin::signed(UpdateOrigin::get()),
 		pair,
 		None,
 		Some(threshold),
@@ -51,7 +51,7 @@ fn set_enp_risk_threshold(pair: TradingPair, threshold: RiskThreshold) {
 
 fn set_ell_risk_threshold(pair: TradingPair, threshold: RiskThreshold) {
 	assert_ok!(MarginProtocol::set_trading_pair_risk_threshold(
-		Origin::root(),
+		Origin::signed(UpdateOrigin::get()),
 		pair,
 		None,
 		None,
@@ -2423,7 +2423,7 @@ fn set_trading_pair_risk_threshold_works() {
 			);
 
 			assert_ok!(MarginProtocol::set_trading_pair_risk_threshold(
-				Origin::root(),
+				Origin::signed(UpdateOrigin::get()),
 				EUR_USD_PAIR,
 				None,
 				None,
@@ -2434,7 +2434,7 @@ fn set_trading_pair_risk_threshold_works() {
 			assert!(System::events().iter().any(|record| record.event == event));
 
 			assert_ok!(MarginProtocol::set_trading_pair_risk_threshold(
-				Origin::root(),
+				Origin::signed(UpdateOrigin::get()),
 				EUR_USD_PAIR,
 				Some(risk_threshold(1, 2)),
 				None,
@@ -2461,7 +2461,7 @@ fn set_trading_pair_risk_threshold_works() {
 			);
 
 			assert_ok!(MarginProtocol::set_trading_pair_risk_threshold(
-				Origin::root(),
+				Origin::signed(UpdateOrigin::get()),
 				EUR_USD_PAIR,
 				None,
 				Some(risk_threshold(3, 4)),
@@ -2488,7 +2488,7 @@ fn set_trading_pair_risk_threshold_works() {
 			);
 
 			assert_ok!(MarginProtocol::set_trading_pair_risk_threshold(
-				Origin::root(),
+				Origin::signed(UpdateOrigin::get()),
 				EUR_USD_PAIR,
 				None,
 				None,
