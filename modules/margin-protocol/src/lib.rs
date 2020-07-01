@@ -1542,7 +1542,7 @@ const TAG: &str = "MARGIN_PROTOCOL_OFFCHAIN_WORKER";
 impl sp_std::fmt::Debug for OffchainErr {
 	fn fmt(&self, fmt: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
 		match *self {
-			OffchainErr::OffchainLock => write!(fmt, "Failed to acquire lock"),
+			OffchainErr::OffchainLock => write!(fmt, "Failed to get or extend lock"),
 			OffchainErr::SubmitTransaction => write!(fmt, "Failed to submit transaction"),
 			OffchainErr::NotValidator => write!(fmt, "Not validator"),
 			OffchainErr::CheckFail => write!(fmt, "Check fail"),
@@ -1674,10 +1674,10 @@ impl<T: Trait> Module<T> {
 			guard.extend_lock().map_err(|_| OffchainErr::OffchainLock)?;
 		}
 
-		// drop `guard` implicitly at end of scope.
-
 		debug::native::trace!(target: TAG, "Finished [block_number = {:?}]", block_number);
 		Ok(())
+
+		// drop `guard` and unlock implicitly at end of scope.
 	}
 
 	fn is_trader_margin_called(who: &T::AccountId, pool_id: LiquidityPoolId) -> bool {
