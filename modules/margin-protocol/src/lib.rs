@@ -12,7 +12,10 @@ use sp_arithmetic::{
 	FixedI128, FixedPointNumber, FixedU128, Permill,
 };
 use sp_runtime::{
-	offchain::{storage::StorageValueRef, Duration, Timestamp},
+	offchain::{
+		storage_lock::{StorageLock, Time},
+		Duration,
+	},
 	traits::{AccountIdConversion, StaticLookup},
 	transaction_validity::{
 		InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity, ValidTransaction,
@@ -504,7 +507,7 @@ decl_module! {
 		fn offchain_worker(block_number: T::BlockNumber) {
 			if let Err(error) = Self::offchain_worker(block_number) {
 				match error {
-					OffchainErr::NotValidator | OffchainErr::FailedToAcquireLock => {
+					OffchainErr::NotValidator | OffchainErr::OffchainLock => {
 						debug::native::info!(
 							target: TAG,
 							"{:?} [block_number = {:?}]",
@@ -1524,27 +1527,24 @@ impl<T: Trait> MarginProtocolLiquidityPoolsManager for Module<T> {
 /// Error which may occur while executing the off-chain code.
 #[cfg_attr(test, derive(PartialEq))]
 enum OffchainErr {
-	FailedToAcquireLock,
+	OffchainLock,
 	SubmitTransaction,
 	NotValidator,
-	LockStillInLocked,
 	CheckFail,
 }
 
 // constant for offchain worker
-const LOCK_EXPIRE_DURATION: u64 = 60_000; // 60 sec
-const LOCK_UPDATE_DURATION: u64 = 40_000; // 40 sec
-const DB_PREFIX: &[u8] = b"laminar/margin-protocol-offchain-worker/";
+const LOCK_DURATION: u64 = 40_000; // 40 sec
+const OFFCHAIN_WORKER_LOCK: &[u8] = b"laminar/margin-protocol/offchain-worker-lock";
 #[cfg(feature = "std")]
 const TAG: &str = "MARGIN_PROTOCOL_OFFCHAIN_WORKER";
 
 impl sp_std::fmt::Debug for OffchainErr {
 	fn fmt(&self, fmt: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
 		match *self {
-			OffchainErr::FailedToAcquireLock => write!(fmt, "Failed to acquire lock"),
+			OffchainErr::OffchainLock => write!(fmt, "Failed to get or extend lock"),
 			OffchainErr::SubmitTransaction => write!(fmt, "Failed to submit transaction"),
 			OffchainErr::NotValidator => write!(fmt, "Not validator"),
-			OffchainErr::LockStillInLocked => write!(fmt, "Lock is still in locked"),
 			OffchainErr::CheckFail => write!(fmt, "Check fail"),
 		}
 	}
@@ -1577,8 +1577,9 @@ impl<T: Trait> Module<T> {
 		}
 
 		// Acquire offchain worker lock.
-		// If succeeded, update the lock, otherwise return error
-		let _ = Self::acquire_offchain_worker_lock()?;
+		let lock_expiration = Duration::from_millis(LOCK_DURATION);
+		let mut lock = StorageLock::<'_, Time>::with_deadline(&OFFCHAIN_WORKER_LOCK, lock_expiration);
+		let mut guard = lock.try_lock().map_err(|_| OffchainErr::OffchainLock)?;
 
 		debug::native::trace!(target: TAG, "Started [block_number = {:?}]", block_number);
 
@@ -1626,7 +1627,7 @@ impl<T: Trait> Module<T> {
 				}
 			}
 
-			Self::extend_offchain_worker_lock_if_needed();
+			guard.extend_lock().map_err(|_| OffchainErr::OffchainLock)?;
 		}
 
 		for pool_id in Self::get_pools() {
@@ -1670,13 +1671,13 @@ impl<T: Trait> Module<T> {
 				}
 			}
 
-			Self::extend_offchain_worker_lock_if_needed();
+			guard.extend_lock().map_err(|_| OffchainErr::OffchainLock)?;
 		}
-
-		Self::release_offchain_worker_lock();
 
 		debug::native::trace!(target: TAG, "Finished [block_number = {:?}]", block_number);
 		Ok(())
+
+		// drop `guard` and unlock implicitly at end of scope.
 	}
 
 	fn is_trader_margin_called(who: &T::AccountId, pool_id: LiquidityPoolId) -> bool {
@@ -1698,47 +1699,6 @@ impl<T: Trait> Module<T> {
 		match Self::check_pool(pool_id, Action::None).map_err(|_| OffchainErr::CheckFail)? {
 			Risk::StopOut => Ok(true),
 			_ => Ok(false),
-		}
-	}
-
-	fn acquire_offchain_worker_lock() -> Result<Timestamp, OffchainErr> {
-		let storage_key = DB_PREFIX.to_vec();
-		let storage = StorageValueRef::persistent(&storage_key);
-
-		let acquire_lock = storage.mutate(|lock: Option<Option<Timestamp>>| {
-			let now = sp_io::offchain::timestamp();
-			match lock {
-				None => {
-					let expire_timestamp = now.add(Duration::from_millis(LOCK_EXPIRE_DURATION));
-					Ok(expire_timestamp)
-				}
-				Some(Some(expire_timestamp)) if now >= expire_timestamp => {
-					let expire_timestamp = now.add(Duration::from_millis(LOCK_EXPIRE_DURATION));
-					Ok(expire_timestamp)
-				}
-				_ => Err(OffchainErr::LockStillInLocked),
-			}
-		})?;
-
-		acquire_lock.map_err(|_| OffchainErr::FailedToAcquireLock)
-	}
-
-	fn release_offchain_worker_lock() {
-		let storage_key = DB_PREFIX.to_vec();
-		let storage = StorageValueRef::persistent(&storage_key);
-		let now = sp_io::offchain::timestamp();
-		storage.set(&now);
-	}
-
-	fn extend_offchain_worker_lock_if_needed() {
-		let storage_key = DB_PREFIX.to_vec();
-		let storage = StorageValueRef::persistent(&storage_key);
-
-		if let Some(Some(current_expire)) = storage.get::<Timestamp>() {
-			if current_expire <= sp_io::offchain::timestamp().add(Duration::from_millis(LOCK_UPDATE_DURATION)) {
-				let future_expire = sp_io::offchain::timestamp().add(Duration::from_millis(LOCK_EXPIRE_DURATION));
-				storage.set(&future_expire);
-			}
 		}
 	}
 }
