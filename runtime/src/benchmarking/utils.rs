@@ -23,7 +23,7 @@ pub fn dollars<T: Into<u128>>(d: T) -> Balance {
 	DOLLARS.saturating_mul(d.into())
 }
 
-type Prices = orml_prices::DefaultPriceProvider<CurrencyId, Oracle>;
+type Prices = orml_traits::DefaultPriceProvider<CurrencyId, Oracle>;
 
 pub fn set_price(prices: sp_std::vec::Vec<(CurrencyId, Price)>) -> DispatchResult {
 	Oracle::on_finalize(0);

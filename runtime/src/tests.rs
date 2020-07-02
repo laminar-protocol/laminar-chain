@@ -13,9 +13,8 @@ use frame_support::{assert_ok, parameter_types, traits::OnFinalize, traits::OnIn
 use margin_liquidity_pools::SwapRate;
 use margin_protocol::RiskThreshold;
 use margin_protocol_rpc_runtime_api::runtime_decl_for_MarginProtocolApi::MarginProtocolApi;
-use module_primitives::{Balance, IdentityInfo, Leverage, Leverages, TradingPair};
+use module_primitives::{Balance, IdentityInfo, Leverage, Leverages, Price, TradingPair};
 use module_traits::{LiquidityPools, Treasury};
-use orml_prices::Price;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
 use pallet_indices::address::Address;
 use sp_arithmetic::{FixedI128, FixedPointNumber};
@@ -28,7 +27,7 @@ pub type ModuleSyntheticProtocol = synthetic_protocol::Module<Runtime>;
 pub type ModuleMarginProtocol = margin_protocol::Module<Runtime>;
 pub type ModuleTokens = synthetic_tokens::Module<Runtime>;
 pub type ModuleOracle = orml_oracle::Module<Runtime>;
-pub type ModulePrices = orml_prices::DefaultPriceProvider<CurrencyId, ModuleOracle>;
+pub type OraclePriceProvider = orml_traits::DefaultPriceProvider<CurrencyId, ModuleOracle>;
 pub type MarginLiquidityPools = margin_liquidity_pools::Module<Runtime>;
 pub type SyntheticLiquidityPools = synthetic_liquidity_pools::Module<Runtime>;
 pub type Timestamp = pallet_timestamp::Module<Runtime>;
@@ -62,19 +61,6 @@ parameter_types! {
 	pub POOL: AccountId = AccountId::from([0u8; 32]);
 	pub ALICE: AccountId = AccountId::from([1u8; 32]);
 	pub BOB: AccountId = AccountId::from([2u8; 32]);
-
-	pub OracleList: Vec<AccountId> = vec![
-		AccountId::from([100u8; 32]),
-		AccountId::from([101u8; 32]),
-		AccountId::from([102u8; 32]),
-		AccountId::from([103u8; 32]),
-		AccountId::from([104u8; 32]),
-		AccountId::from([105u8; 32]),
-		AccountId::from([106u8; 32]),
-		AccountId::from([107u8; 32]),
-		AccountId::from([108u8; 32]),
-		AccountId::from([109u8; 32]),
-	];
 }
 
 pub fn origin_of(who: &AccountId) -> <Runtime as system::Trait>::Origin {
@@ -114,9 +100,9 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		pallet_membership::GenesisConfig::<Runtime, pallet_membership::Instance3> {
-			members: OracleList::get(),
-			phantom: Default::default(),
+		orml_oracle::GenesisConfig::<Runtime> {
+			members: vec![Default::default()].into(),
+			session_keys: vec![(Default::default(), Default::default())].into(),
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
@@ -152,12 +138,13 @@ impl ExtBuilder {
 
 pub fn set_oracle_price(prices: Vec<(CurrencyId, Price)>) -> DispatchResult {
 	ModuleOracle::on_finalize(0);
-	for i in 1..=MinimumCount::get() {
+	for i in 0..MinimumCount::get() {
+		let now = System::block_number();
 		assert_ok!(ModuleOracle::feed_values(
-			<Runtime as system::Trait>::Origin::none(),
-			// origin_of(&OracleList::get()[i as usize]),
+			<Runtime as system::Trait>::Origin::root(),
 			prices.clone(),
 			i as u32,
+			now,
 			Default::default()
 		));
 	}
@@ -166,7 +153,7 @@ pub fn set_oracle_price(prices: Vec<(CurrencyId, Price)>) -> DispatchResult {
 }
 
 pub fn get_price() {
-	ModulePrices::get_price(FEUR, AUSD);
+	OraclePriceProvider::get_price(FEUR, AUSD);
 }
 
 pub fn dollar(amount: u128) -> u128 {

@@ -110,7 +110,6 @@ members = [
 	"orml/currencies",
 	"orml/gradually-update",
 	"orml/oracle",
-	"orml/prices",
 	"orml/schedule-update",
 	"orml/tokens",
 	"orml/traits",

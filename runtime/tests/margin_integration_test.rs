@@ -12,9 +12,8 @@ mod tests {
 	};
 
 	use margin_protocol_rpc_runtime_api::{MarginPoolState, MarginTraderState};
-	use module_primitives::Leverage::*;
+	use module_primitives::{Leverage::*, Price};
 	use module_traits::{MarginProtocolLiquidityPools, Treasury};
-	use orml_prices::Price;
 	use sp_arithmetic::{FixedI128, FixedPointNumber};
 	use sp_runtime::traits::{Bounded, CheckedAdd};
 

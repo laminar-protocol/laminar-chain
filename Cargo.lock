@@ -2356,7 +2356,6 @@ dependencies = [
  "orml-currencies",
  "orml-oracle",
  "orml-oracle-rpc-runtime-api",
- "orml-prices",
  "orml-tokens",
  "orml-traits",
  "pallet-babe",
@@ -3087,7 +3086,6 @@ dependencies = [
  "module-primitives",
  "module-traits",
  "orml-currencies",
- "orml-prices",
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
@@ -3105,7 +3103,6 @@ name = "module-primitives"
 version = "0.2.0"
 dependencies = [
  "bitmask",
- "orml-prices",
  "parity-scale-codec",
  "serde",
  "sp-arithmetic",
@@ -3143,7 +3140,6 @@ dependencies = [
  "module-synthetic-tokens",
  "module-traits",
  "orml-currencies",
- "orml-prices",
  "orml-tokens",
  "orml-traits",
  "parity-scale-codec",
@@ -3544,18 +3540,6 @@ version = "0.1.3-dev"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
- "sp-std",
-]
-
-[[package]]
-name = "orml-prices"
-version = "0.1.3-dev"
-dependencies = [
- "clear_on_drop",
- "frame-support",
- "orml-traits",
- "serde",
- "sp-runtime",
  "sp-std",
 ]
 
