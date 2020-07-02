@@ -680,7 +680,7 @@ impl synthetic_protocol::Trait for Runtime {
 	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type CollateralCurrency = CollateralCurrency;
 	type GetCollateralCurrencyId = GetCollateralCurrencyId;
-	type PriceProvider = orml_prices::DefaultPriceProvider<CurrencyId, LaminarDataProvider>;
+	type PriceProvider = orml_traits::DefaultPriceProvider<CurrencyId, LaminarDataProvider>;
 	type LiquidityPools = synthetic_liquidity_pools::Module<Runtime>;
 	type SyntheticProtocolLiquidityPools = synthetic_liquidity_pools::Module<Runtime>;
 }
@@ -758,7 +758,7 @@ impl margin_protocol::Trait for Runtime {
 	type Event = Event;
 	type LiquidityCurrency = LiquidityCurrency;
 	type LiquidityPools = margin_liquidity_pools::Module<Runtime>;
-	type PriceProvider = orml_prices::DefaultPriceProvider<CurrencyId, LaminarDataProvider>;
+	type PriceProvider = orml_traits::DefaultPriceProvider<CurrencyId, LaminarDataProvider>;
 	type Treasury = MockLaminarTreasury;
 	type GetTraderMaxOpenPositions = GetTraderMaxOpenPositions;
 	type GetPoolMaxOpenPositions = GetPoolMaxOpenPositions;

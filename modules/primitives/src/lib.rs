@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode, Error, Input};
-use sp_runtime::RuntimeDebug;
+use sp_runtime::{FixedU128, RuntimeDebug};
 use sp_std::{prelude::*, vec};
 
 #[macro_use]
@@ -11,8 +11,6 @@ extern crate bitmask;
 use serde::{Deserialize, Serialize};
 
 pub mod arithmetic;
-
-pub use orml_prices::Price;
 
 pub type LiquidityPoolId = u32;
 
@@ -33,6 +31,7 @@ pub enum CurrencyId {
 }
 
 pub type Balance = u128;
+pub type Price = FixedU128;
 
 bitmask! {
 	#[derive(Encode, Decode, Default)]

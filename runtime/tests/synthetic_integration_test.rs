@@ -10,7 +10,7 @@ mod tests {
 		CurrencyId::{AUSD, FEUR, FJPY},
 		Runtime, DOLLARS,
 	};
-	use orml_prices::Price;
+	use module_primitives::Price;
 	use sp_runtime::{FixedPointNumber, FixedU128, Permill};
 	use synthetic_protocol_rpc_runtime_api::SyntheticPoolState;
 

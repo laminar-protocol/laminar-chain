@@ -10,8 +10,7 @@ use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
 use system::EnsureSignedBy;
 
 use orml_currencies::Currency;
-use orml_prices::DefaultPriceProvider;
-use orml_traits::DataProvider;
+use orml_traits::{DataProvider, DefaultPriceProvider};
 
 use module_primitives::LiquidityPoolId;
 use module_traits::{LiquidityPools, SyntheticProtocolLiquidityPools};

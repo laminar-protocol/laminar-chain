@@ -11,10 +11,9 @@ use sp_std::result;
 // #3295 https://github.com/paritytech/substrate/issues/3295
 use frame_system::{self as system, ensure_signed};
 
-use orml_prices::Price;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
 
-use module_primitives::{Balance, CurrencyId, LiquidityPoolId};
+use module_primitives::{Balance, CurrencyId, LiquidityPoolId, Price};
 use module_traits::{LiquidityPools, SyntheticProtocolLiquidityPools};
 
 mod mock;
