@@ -572,7 +572,7 @@ fn turbulence_genesis(
 		pallet_balances: Some(BalancesConfig {
 			balances: initial_authorities
 				.iter()
-				.map(|x| (x.0.clone(), INITIAL_STAKING))
+				.map(|x| (x.0.clone(), INITIAL_STAKING + 1 * DOLLARS)) // add bit more for tx fee
 				.chain(endowed_accounts.iter().cloned().map(|k| (k, INITIAL_BALANCE)))
 				.collect(),
 		}),
@@ -583,8 +583,8 @@ fn turbulence_genesis(
 				.collect::<Vec<_>>(),
 		}),
 		pallet_staking: Some(StakingConfig {
-			validator_count: 3,
-			minimum_validator_count: 3,
+			validator_count: 5,
+			minimum_validator_count: 1,
 			stakers: initial_authorities
 				.iter()
 				.map(|x| (x.0.clone(), x.1.clone(), INITIAL_STAKING, StakerStatus::Validator))
