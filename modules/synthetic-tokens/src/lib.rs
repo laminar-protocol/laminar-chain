@@ -8,6 +8,7 @@ use frame_support::{
 use frame_system as system;
 use module_primitives::{Balance, CurrencyId, LiquidityPoolId};
 use module_traits::BaseLiquidityPoolManager;
+use orml_utilities::with_transaction_result;
 use sp_runtime::{
 	traits::{AccountIdConversion, CheckedDiv, CheckedSub, Zero},
 	DispatchResult, FixedPointNumber, FixedU128, ModuleId, Permill, RuntimeDebug,
@@ -102,11 +103,12 @@ decl_module! {
 		/// May only be called from `UpdateOrigin`.
 		#[weight = 10_000]
 		pub fn set_extreme_ratio(origin, currency_id: CurrencyId, #[compact] ratio: Permill) {
-			T::UpdateOrigin::ensure_origin(origin)?;
-
-			Ratios::mutate(currency_id, |r| r.extreme = Some(ratio));
-
-			Self::deposit_event(Event::ExtremeRatioUpdated(currency_id, ratio));
+			with_transaction_result(|| {
+				T::UpdateOrigin::ensure_origin(origin)?;
+				Ratios::mutate(currency_id, |r| r.extreme = Some(ratio));
+				Self::deposit_event(Event::ExtremeRatioUpdated(currency_id, ratio));
+				Ok(())
+			})?;
 		}
 
 		/// Set liquidation ratio.
@@ -114,11 +116,12 @@ decl_module! {
 		/// May only be called from `UpdateOrigin`.
 		#[weight = 10_000]
 		pub fn set_liquidation_ratio(origin, currency_id: CurrencyId, #[compact] ratio: Permill) {
-			T::UpdateOrigin::ensure_origin(origin)?;
-
-			Ratios::mutate(currency_id, |r| r.liquidation = Some(ratio));
-
-			Self::deposit_event(Event::LiquidationRatioUpdated(currency_id, ratio));
+			with_transaction_result(|| {
+				T::UpdateOrigin::ensure_origin(origin)?;
+				Ratios::mutate(currency_id, |r| r.liquidation = Some(ratio));
+				Self::deposit_event(Event::LiquidationRatioUpdated(currency_id, ratio));
+				Ok(())
+			})?;
 		}
 
 		/// Set collateral ratio.
@@ -126,11 +129,12 @@ decl_module! {
 		/// May only be called from `UpdateOrigin`.
 		#[weight = 10_000]
 		pub fn set_collateral_ratio(origin, currency_id: CurrencyId, #[compact] ratio: Permill) {
-			T::UpdateOrigin::ensure_origin(origin)?;
-
-			Ratios::mutate(currency_id, |r| r.collateral = Some(ratio));
-
-			Self::deposit_event(Event::CollateralRatioUpdated(currency_id, ratio));
+			with_transaction_result(|| {
+				T::UpdateOrigin::ensure_origin(origin)?;
+				Ratios::mutate(currency_id, |r| r.collateral = Some(ratio));
+				Self::deposit_event(Event::CollateralRatioUpdated(currency_id, ratio));
+				Ok(())
+			})?;
 		}
 	}
 }

@@ -20,6 +20,7 @@ primitives = { package = "module-primitives", path = "../../primitives", default
 
 orml-currencies = { path = "../../../orml/currencies", default-features = false }
 orml-tokens = { path = "../../../orml/tokens", default-features = false }
+orml-utilities = { path = "../../../orml/utilities", default-features = false }
 
 [dev-dependencies]
 pallet-timestamp = { version = "2.0.0-rc4" }
@@ -42,4 +43,5 @@ std = [
 	"primitives/std",
 	"orml-currencies/std",
 	"orml-tokens/std",
+	"orml-utilities/std",
 ]

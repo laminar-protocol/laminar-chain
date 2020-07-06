@@ -9,6 +9,7 @@ use frame_support::{
 };
 use frame_system::{self as system, ensure_signed};
 use orml_traits::BasicCurrency;
+use orml_utilities::with_transaction_result;
 use primitives::{Balance, IdentityInfo, LiquidityPoolId};
 use sp_runtime::{
 	traits::{AccountIdConversion, One},
@@ -171,9 +172,12 @@ decl_module! {
 		/// Caller would be the owner of created pool.
 		#[weight = 10_000]
 		pub fn create_pool(origin) {
-			let who = ensure_signed(origin)?;
-			let pool_id = Self::do_create_pool(&who)?;
-			Self::deposit_event(RawEvent::LiquidityPoolCreated(who, pool_id));
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				let pool_id = Self::do_create_pool(&who)?;
+				Self::deposit_event(RawEvent::LiquidityPoolCreated(who, pool_id));
+				Ok(())
+			})?;
 		}
 
 		/// Disable a liquidity pool.
@@ -181,9 +185,12 @@ decl_module! {
 		/// May only be called from the pool owner.
 		#[weight = 10_000]
 		pub fn disable_pool(origin, #[compact] pool_id: LiquidityPoolId) {
-			let who = ensure_signed(origin)?;
-			Self::do_disable_pool(&who, pool_id)?;
-			Self::deposit_event(RawEvent::LiquidityPoolDisabled(who, pool_id));
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				Self::do_disable_pool(&who, pool_id)?;
+				Self::deposit_event(RawEvent::LiquidityPoolDisabled(who, pool_id));
+				Ok(())
+			})?;
 		}
 
 		/// Remove a liquidity pool.
@@ -191,36 +198,46 @@ decl_module! {
 		/// May only be called from the pool owner. Pools may only be removed when there is no liability.
 		#[weight = 50_000]
 		pub fn remove_pool(origin, #[compact] pool_id: LiquidityPoolId) {
-			let who = ensure_signed(origin)?;
-			Self::do_remove_pool(&who, pool_id)?;
-			Self::deposit_event(RawEvent::LiquidityPoolRemoved(who, pool_id));
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				Self::do_remove_pool(&who, pool_id)?;
+				Self::deposit_event(RawEvent::LiquidityPoolRemoved(who, pool_id));
+				Ok(())
+			})?;
 		}
 
 		/// Deposit liquidity to a pool.
 		#[weight = (10_000, DispatchClass::Operational)]
 		pub fn deposit_liquidity(origin, #[compact] pool_id: LiquidityPoolId, #[compact] amount: Balance) {
-			let who = ensure_signed(origin)?;
-			Self::do_deposit_liquidity(&who, pool_id, amount)?;
-			Self::deposit_event(RawEvent::LiquidityDeposited(who, pool_id, amount));
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				Self::do_deposit_liquidity(&who, pool_id, amount)?;
+				Self::deposit_event(RawEvent::LiquidityDeposited(who, pool_id, amount));
+				Ok(())
+			})?;
 		}
 
 		/// Withdraw liquidity from a pool.
 		#[weight = 10_000]
 		pub fn withdraw_liquidity(origin, #[compact] pool_id: LiquidityPoolId, #[compact] amount: Balance) {
-			let who = ensure_signed(origin)?;
-			ensure!(Self::is_owner(pool_id, &who), Error::<T, I>::NoPermission);
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				ensure!(Self::is_owner(pool_id, &who), Error::<T, I>::NoPermission);
 
-			T::PoolManager::ensure_can_withdraw(pool_id, amount)?;
+				T::PoolManager::ensure_can_withdraw(pool_id, amount)?;
 
-			let new_balance = Self::balance(pool_id).checked_sub(amount).ok_or(Error::<T, I>::NotEnoughBalance)?;
+				let new_balance = Self::balance(pool_id).checked_sub(amount).ok_or(Error::<T, I>::NotEnoughBalance)?;
 
-			// check minimum balance
-			if new_balance < T::ExistentialDeposit::get() {
-				return Err(Error::<T, I>::CannotWithdrawExistentialDeposit.into());
-			}
+				// check minimum balance
+				if new_balance < T::ExistentialDeposit::get() {
+					return Err(Error::<T, I>::CannotWithdrawExistentialDeposit.into());
+				}
 
-			Self::do_withdraw_liquidity(&who, pool_id, amount)?;
-			Self::deposit_event(RawEvent::LiquidityWithdrew(who, pool_id, amount));
+				Self::do_withdraw_liquidity(&who, pool_id, amount)?;
+				Self::deposit_event(RawEvent::LiquidityWithdrew(who, pool_id, amount));
+
+				Ok(())
+			})?;
 		}
 
 		/// Set identity of a liquidity pool.
@@ -228,9 +245,12 @@ decl_module! {
 		/// May only be called from the pool owner. `IdentityDeposit` amount of balance would be reserved.
 		#[weight = 10_000]
 		pub fn set_identity(origin, #[compact] pool_id: LiquidityPoolId, identity_info: IdentityInfo) {
-			let who = ensure_signed(origin)?;
-			Self::do_set_identity(&who, pool_id, identity_info)?;
-			Self::deposit_event(RawEvent::IdentitySet(who, pool_id));
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				Self::do_set_identity(&who, pool_id, identity_info)?;
+				Self::deposit_event(RawEvent::IdentitySet(who, pool_id));
+				Ok(())
+			})?;
 		}
 
 		/// Mark the identity of a liquidity pool as verified.
@@ -238,10 +258,12 @@ decl_module! {
 		/// May only be called from `UpdateOrigin`.
 		#[weight = 10_000]
 		pub fn verify_identity(origin, #[compact] pool_id: LiquidityPoolId) {
-			T::UpdateOrigin::ensure_origin(origin)?;
-
-			Self::do_verify_identity(pool_id)?;
-			Self::deposit_event(RawEvent::IdentityVerified(pool_id));
+			with_transaction_result(|| {
+				T::UpdateOrigin::ensure_origin(origin)?;
+				Self::do_verify_identity(pool_id)?;
+				Self::deposit_event(RawEvent::IdentityVerified(pool_id));
+				Ok(())
+			})?;
 		}
 
 		/// Remove the identity info of a liquidity pool.
@@ -249,15 +271,19 @@ decl_module! {
 		/// May only be called from the pool owner. The reserved balance would be released.
 		#[weight = 10_000]
 		pub fn clear_identity(origin, #[compact] pool_id: LiquidityPoolId) {
-			let who = ensure_signed(origin)?;
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
 
-			ensure!(
-				<IdentityInfos<T, I>>::contains_key(&pool_id),
-				Error::<T, I>::IdentityInfoNotFound
-			);
+				ensure!(
+					<IdentityInfos<T, I>>::contains_key(&pool_id),
+					Error::<T, I>::IdentityInfoNotFound
+				);
 
-			Self::do_clear_identity(&who, pool_id)?;
-			Self::deposit_event(RawEvent::IdentityCleared(who, pool_id));
+				Self::do_clear_identity(&who, pool_id)?;
+				Self::deposit_event(RawEvent::IdentityCleared(who, pool_id));
+
+				Ok(())
+			})?;
 		}
 
 		/// Transfer the ownership of the liquidity pool to `to`.
@@ -265,9 +291,12 @@ decl_module! {
 		/// May only be called from the pool owner.
 		#[weight = 10_000]
 		pub fn transfer_liquidity_pool(origin, #[compact] pool_id: LiquidityPoolId, to: T::AccountId) {
-			let who = ensure_signed(origin)?;
-			Self::do_transfer_liquidity_pool(&who, pool_id, &to)?;
-			Self::deposit_event(RawEvent::LiquidityPoolTransferred(who, pool_id, to));
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				Self::do_transfer_liquidity_pool(&who, pool_id, &to)?;
+				Self::deposit_event(RawEvent::LiquidityPoolTransferred(who, pool_id, to));
+				Ok(())
+			})?;
 		}
 	}
 }
