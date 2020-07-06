@@ -3,7 +3,9 @@
   "id": "turbulence1",
   "chainType": "Live",
   "bootNodes": [
-    "/dns4/testnet-bootnode-1.laminar-chain.laminar.one/tcp/30333/p2p/12D3KooWNCe9dEpPhswckrX5ZHhdtZ3r5sg6CcgKfgyhw3seuwtB"
+	"/dns4/testnet-bootnode-1.laminar-chain.laminar.one/tcp/30333/p2p/12D3KooWNCe9dEpPhswckrX5ZHhdtZ3r5sg6CcgKfgyhw3seuwtB",
+	"/dns/libp2p.jm.onfinality.io/tcp/20511/p2p/12D3KooWMS6vJdwJE7DFABssH1sMbiMVXSHdWoFSivm6Go7op8Bc",
+	"/dns/libp2p.rz.onfinality.io/tcp/20001/p2p/12D3KooWNCe9dEpPhswckrX5ZHhdtZ3r5sg6CcgKfgyhw3seuwtB"
   ],
   "telemetryEndpoints": [
     [
