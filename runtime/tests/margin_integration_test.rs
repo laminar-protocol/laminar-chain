@@ -8,12 +8,12 @@ mod tests {
 		tests::*,
 		BaseLiquidityPoolsMarginInstance,
 		CurrencyId::{AUSD, FEUR, FJPY},
-		MaxSwap, MockLaminarTreasury, Runtime, DOLLARS,
+		GetTreasuryAccountId, MaxSwap, Runtime, DOLLARS,
 	};
 
 	use margin_protocol_rpc_runtime_api::{MarginPoolState, MarginTraderState};
 	use module_primitives::{Leverage::*, Price};
-	use module_traits::{MarginProtocolLiquidityPools, Treasury};
+	use module_traits::MarginProtocolLiquidityPools;
 	use sp_arithmetic::{FixedI128, FixedPointNumber};
 	use sp_runtime::traits::{Bounded, CheckedAdd};
 
@@ -501,17 +501,14 @@ mod tests {
 				assert_ok!(margin_liquidity_pool_become_safe());
 
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(50, 10))]));
-				assert_eq!(collateral_balance(&MockLaminarTreasury::account_id()), 0);
+				assert_eq!(collateral_balance(&GetTreasuryAccountId::get()), 0);
 				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(5000));
 				assert_ok!(margin_liquidity_pool_force_close());
 
 				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(14700));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(margin_liquidity(), 2200_000000000000000000);
-				assert_eq!(
-					collateral_balance(&MockLaminarTreasury::account_id()),
-					300_000000000000000000
-				);
+				assert_eq!(collateral_balance(&GetTreasuryAccountId::get()), 300_000000000000000000);
 			});
 	}
 

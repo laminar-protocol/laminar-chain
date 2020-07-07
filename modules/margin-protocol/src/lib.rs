@@ -39,7 +39,7 @@ use primitives::{
 use sp_std::{cmp, prelude::*, result};
 use traits::{
 	BaseLiquidityPoolManager, LiquidityPools, MarginProtocolLiquidityPools, MarginProtocolLiquidityPoolsManager,
-	OpenPositionError, Treasury,
+	OpenPositionError,
 };
 
 #[cfg(feature = "std")]
@@ -63,8 +63,8 @@ pub trait Trait: frame_system::Trait + SendTransactionTypes<Call<Self>> {
 	/// Provides market prices.
 	type PriceProvider: PriceProvider<CurrencyId, Price>;
 
-	/// The `Treasury` implementation.
-	type Treasury: Treasury<Self::AccountId>;
+	/// The account ID of treasury.
+	type GetTreasuryAccountId: Get<Self::AccountId>;
 
 	/// Maximum number of positions one trader could open.
 	type GetTraderMaxOpenPositions: Get<usize>;
@@ -1426,7 +1426,7 @@ impl<T: Trait> Module<T> {
 			u128_from_fixed_i128(sub_amount),
 		);
 		<T::LiquidityPools as LiquidityPools<T::AccountId>>::withdraw_liquidity(
-			&T::Treasury::account_id(),
+			&T::GetTreasuryAccountId::get(),
 			position.pool,
 			realized,
 		)?;

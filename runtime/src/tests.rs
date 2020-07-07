@@ -14,7 +14,7 @@ use margin_liquidity_pools::SwapRate;
 use margin_protocol::RiskThreshold;
 use margin_protocol_rpc_runtime_api::runtime_decl_for_MarginProtocolApi::MarginProtocolApi;
 use module_primitives::{Balance, IdentityInfo, Leverage, Leverages, Price, TradingPair};
-use module_traits::{LiquidityPools, Treasury};
+use module_traits::LiquidityPools;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
 use pallet_indices::address::Address;
 use sp_arithmetic::{FixedI128, FixedPointNumber};
@@ -514,7 +514,7 @@ pub fn margin_set_risk_threshold(
 }
 
 pub fn treasury_balance() -> Balance {
-	let account_id = MockLaminarTreasury::account_id();
+	let account_id = GetTreasuryAccountId::get();
 	<Runtime as synthetic_protocol::Trait>::CollateralCurrency::free_balance(&account_id)
 }
 

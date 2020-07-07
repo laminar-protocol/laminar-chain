@@ -238,13 +238,6 @@ impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
 	}
 }
 
-pub struct MockTreasury;
-impl Treasury<AccountId> for MockTreasury {
-	fn account_id() -> AccountId {
-		TREASURY_ACCOUNT
-	}
-}
-
 pub type Extrinsic = TestXt<Call, ()>;
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
 where
@@ -257,6 +250,7 @@ where
 parameter_types! {
 	pub const GetTraderMaxOpenPositions: usize = 200;
 	pub const GetPoolMaxOpenPositions: usize = 1000;
+	pub const GetTreasuryAccountId: AccountId = TREASURY_ACCOUNT;
 	pub const UnsignedPriority: u64 = 1 << 20;
 }
 
@@ -265,7 +259,7 @@ impl Trait for Runtime {
 	type LiquidityCurrency = LiquidityCurrency;
 	type LiquidityPools = MockLiquidityPools;
 	type PriceProvider = DefaultPriceProvider<CurrencyId, MockPrices>;
-	type Treasury = MockTreasury;
+	type GetTreasuryAccountId = GetTreasuryAccountId;
 	type GetTraderMaxOpenPositions = GetTraderMaxOpenPositions;
 	type GetPoolMaxOpenPositions = GetPoolMaxOpenPositions;
 	type UpdateOrigin = EnsureSignedBy<UpdateOrigin, AccountId>;
