@@ -528,15 +528,10 @@ impl<T: Trait> Module<T> {
 		);
 
 		// with_current_ratio = new_synthetic_position * price * current_ratio
-		let with_current_ratio = {
-			let new_synthetic_position_value = price
-				.checked_mul_int(new_synthetic_position)
-				.ok_or(Error::<T>::NumOverflow)?;
-			let with_current_ratio = current_ratio
-				.checked_mul_int(new_synthetic_position_value)
-				.ok_or(Error::<T>::NumOverflow)?;
-			with_current_ratio
-		};
+		let with_current_ratio = price
+			.checked_mul_int(new_synthetic_position)
+			.and_then(|v| current_ratio.checked_mul_int(v))
+			.ok_or(Error::<T>::NumOverflow)?;
 
 		if new_collateral_position > with_current_ratio {
 			// available_for_incentive = new_collateral_position - with_current_ratio
@@ -549,14 +544,15 @@ impl<T: Trait> Module<T> {
 				.checked_mul_int(available_for_incentive)
 				.ok_or(Error::<T>::NumOverflow)?;
 
+			// pool_refund_collateral = available_for_incentive - incentive
 			let pool_refund_collateral = available_for_incentive
 				.checked_sub(incentive)
 				.expect("available_for_incentive > incentive; qed");
-			let collateral_with_incentive = liquidized_collateral
+
+			// collateral_with_incentive_and_refund = liquidized_collateral + incentive + pool_refund_collateral
+			let collateral_with_incentive_and_refund = liquidized_collateral
 				.checked_add(incentive)
-				.ok_or(Error::<T>::NumOverflow)?;
-			let collateral_with_incentive_and_refund = collateral_with_incentive
-				.checked_add(pool_refund_collateral)
+				.and_then(|v| v.checked_add(pool_refund_collateral))
 				.ok_or(Error::<T>::NumOverflow)?;
 			Ok((collateral_with_incentive_and_refund, pool_refund_collateral, incentive))
 		} else {
