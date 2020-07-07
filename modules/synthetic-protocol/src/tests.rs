@@ -71,7 +71,7 @@ fn mint_fails_if_balance_too_low() {
 		.ten_percent_additional_collateral_ratio()
 		.build()
 		.execute_with(|| {
-			assert_noop!(mint_feur(ALICE, 1), orml_tokens::Error::<Runtime>::BalanceTooLow);
+			assert_noop!(mint_feur(ALICE, 100), orml_tokens::Error::<Runtime>::BalanceTooLow);
 		});
 }
 
@@ -83,7 +83,7 @@ fn mint_fails_if_no_price() {
 		.ten_percent_additional_collateral_ratio()
 		.build()
 		.execute_with(|| {
-			assert_noop!(mint_feur(ALICE, 1), Error::<Runtime>::NoPrice);
+			assert_noop!(mint_feur(ALICE, 100), Error::<Runtime>::NoPrice);
 		});
 }
 
@@ -114,12 +114,12 @@ fn mint_fails_if_wrong_spread_ratio_config() {
 	ExtBuilder::default()
 		.one_million_for_alice_n_mock_pool()
 		.synthetic_price_three()
-		.one_percent_spread()
+		.spread(Permill::from_percent(2))
 		.additional_collateral_ratio(Permill::from_percent(1))
 		.build()
 		.execute_with(|| {
 			assert_noop!(
-				mint_feur(ALICE, 1),
+				mint_feur(ALICE, 100),
 				Error::<Runtime>::NegativeAdditionalCollateralAmount
 			);
 		});
@@ -981,7 +981,7 @@ fn mint_fails_if_not_allowed() {
 		.set_is_allowed(false)
 		.build()
 		.execute_with(|| {
-			assert_noop!(mint_feur(ALICE, 1), Error::<Runtime>::CannotMintInPool);
+			assert_noop!(mint_feur(ALICE, 100), Error::<Runtime>::CannotMintInPool);
 		});
 }
 
@@ -998,7 +998,7 @@ fn can_redeem_with_not_allowed_position() {
 
 			MockLiquidityPools::set_is_allowed(false);
 
-			assert_noop!(mint_feur(ALICE, 1), Error::<Runtime>::CannotMintInPool);
+			assert_noop!(mint_feur(ALICE, 100), Error::<Runtime>::CannotMintInPool);
 
 			assert_ok!(redeem_ausd(ALICE, 100));
 		});

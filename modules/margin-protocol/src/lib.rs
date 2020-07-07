@@ -31,6 +31,7 @@ use frame_system::{
 	offchain::{SendTransactionTypes, SubmitTransaction},
 };
 use orml_traits::{BasicCurrency, PriceProvider};
+use orml_utilities::with_transaction_result;
 use primitives::{
 	arithmetic::{fixed_i128_from_fixed_u128, fixed_i128_from_u128, fixed_i128_mul_signum, u128_from_fixed_i128},
 	Balance, CurrencyId, Leverage, LiquidityPoolId, Price, TradingPair,
@@ -369,33 +370,43 @@ decl_module! {
 			#[compact] leveraged_amount: Balance,
 			price: Price,
 		) {
-			let who = ensure_signed(origin)?;
-			Self::do_open_position(&who, pool_id, pair, leverage, leveraged_amount, price)?;
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				Self::do_open_position(&who, pool_id, pair, leverage, leveraged_amount, price)?;
+				Ok(())
+			})?;
 		}
 
 		/// Close position by id.
 		#[weight = 20_000]
 		pub fn close_position(origin, #[compact] position_id: PositionId, price: Price) {
-			let who = ensure_signed(origin)?;
-			Self::do_close_position(&who, position_id, Some(price))?;
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				Self::do_close_position(&who, position_id, Some(price))?;
+				Ok(())
+			})?;
 		}
 
 		/// Deposit liquidity to caller's account.
 		#[weight = 10_000]
 		pub fn deposit(origin, #[compact] pool_id: LiquidityPoolId, #[compact] amount: Balance) {
-			let who = ensure_signed(origin)?;
-			Self::do_deposit(&who, pool_id, amount)?;
-
-			Self::deposit_event(RawEvent::Deposited(who, pool_id, amount));
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				Self::do_deposit(&who, pool_id, amount)?;
+				Self::deposit_event(RawEvent::Deposited(who, pool_id, amount));
+				Ok(())
+			})?;
 		}
 
 		/// Withdraw liquidity from caller's account.
 		#[weight = 10_000]
 		pub fn withdraw(origin, #[compact] pool_id: LiquidityPoolId, #[compact] amount: Balance) {
-			let who = ensure_signed(origin)?;
-			Self::do_withdraw(&who, pool_id, amount)?;
-
-			Self::deposit_event(RawEvent::Withdrew(who, pool_id, amount));
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				Self::do_withdraw(&who, pool_id, amount)?;
+				Self::deposit_event(RawEvent::Withdrew(who, pool_id, amount));
+				Ok(())
+			})?;
 		}
 
 		/// Margin call a trader.
@@ -407,11 +418,15 @@ decl_module! {
 			who: <T::Lookup as StaticLookup>::Source,
 			#[compact] pool_id: LiquidityPoolId
 		) {
-			ensure_none(origin)?;
-			let who = T::Lookup::lookup(who)?;
+			with_transaction_result(|| {
+				ensure_none(origin)?;
+				let who = T::Lookup::lookup(who)?;
 
-			Self::do_trader_margin_call(&who, pool_id)?;
-			Self::deposit_event(RawEvent::TraderMarginCalled(who));
+				Self::do_trader_margin_call(&who, pool_id)?;
+				Self::deposit_event(RawEvent::TraderMarginCalled(who));
+
+				Ok(())
+			})?;
 		}
 
 		/// Remove trader's margin-called status.
@@ -423,11 +438,15 @@ decl_module! {
 			who: <T::Lookup as StaticLookup>::Source,
 			#[compact] pool_id: LiquidityPoolId
 		) {
-			ensure_none(origin)?;
-			let who = T::Lookup::lookup(who)?;
+			with_transaction_result(|| {
+				ensure_none(origin)?;
+				let who = T::Lookup::lookup(who)?;
 
-			Self::do_trader_become_safe(&who, pool_id)?;
-			Self::deposit_event(RawEvent::TraderBecameSafe(who));
+				Self::do_trader_become_safe(&who, pool_id)?;
+				Self::deposit_event(RawEvent::TraderBecameSafe(who));
+
+				Ok(())
+			})?;
 		}
 
 		/// Stop out a trader.
@@ -439,21 +458,28 @@ decl_module! {
 			who: <T::Lookup as StaticLookup>::Source,
 			#[compact] pool_id: LiquidityPoolId
 		) {
-			ensure_none(origin)?;
-			let who = T::Lookup::lookup(who)?;
+			with_transaction_result(|| {
+				ensure_none(origin)?;
+				let who = T::Lookup::lookup(who)?;
 
-			Self::do_trader_stop_out(&who, pool_id)?;
-			Self::deposit_event(RawEvent::TraderStoppedOut(who));
+				Self::do_trader_stop_out(&who, pool_id)?;
+				Self::deposit_event(RawEvent::TraderStoppedOut(who));
+
+				Ok(())
+			})?;
 		}
 
-		/// Margin call a liqudity pool.
+		/// Margin call a liquidity pool.
 		///
 		/// May only be called from none origin. Would fail if the pool still safe.
 		#[weight = (20_000, DispatchClass::Operational)]
 		pub fn liquidity_pool_margin_call(origin, #[compact] pool: LiquidityPoolId) {
-			ensure_none(origin)?;
-			Self::do_liquidity_pool_margin_call(pool)?;
-			Self::deposit_event(RawEvent::LiquidityPoolMarginCalled(pool));
+			with_transaction_result(|| {
+				ensure_none(origin)?;
+				Self::do_liquidity_pool_margin_call(pool)?;
+				Self::deposit_event(RawEvent::LiquidityPoolMarginCalled(pool));
+				Ok(())
+			})?;
 		}
 
 		/// Remove a pool's margin-called status.
@@ -461,9 +487,12 @@ decl_module! {
 		/// May only be called from none origin. Would fail if the pool is not safe yet.
 		#[weight = 20_000]
 		pub fn liquidity_pool_become_safe(origin, #[compact] pool: LiquidityPoolId) {
-			ensure_none(origin)?;
-			Self::do_liquidity_pool_become_safe(pool)?;
-			Self::deposit_event(RawEvent::LiquidityPoolBecameSafe(pool));
+			with_transaction_result(|| {
+				ensure_none(origin)?;
+				Self::do_liquidity_pool_become_safe(pool)?;
+				Self::deposit_event(RawEvent::LiquidityPoolBecameSafe(pool));
+				Ok(())
+			})?;
 		}
 
 		/// Force close a liquidity pool.
@@ -471,9 +500,12 @@ decl_module! {
 		/// May only be called from none origin. Would fail if pool ENP or ELL thresholds not reached.
 		#[weight = (30_000, DispatchClass::Operational)]
 		pub fn liquidity_pool_force_close(origin, #[compact] pool: LiquidityPoolId) {
-			ensure_none(origin)?;
-			Self::do_liquidity_pool_force_close(pool)?;
-			Self::deposit_event(RawEvent::LiquidityPoolForceClosed(pool));
+			with_transaction_result(|| {
+				ensure_none(origin)?;
+				Self::do_liquidity_pool_force_close(pool)?;
+				Self::deposit_event(RawEvent::LiquidityPoolForceClosed(pool));
+				Ok(())
+			})?;
 		}
 
 		/// Set risk thresholds of a trading pair.
@@ -487,21 +519,25 @@ decl_module! {
 			enp: Option<RiskThreshold>,
 			ell: Option<RiskThreshold>
 		) {
-			T::UpdateOrigin::ensure_origin(origin)?;
+			with_transaction_result(|| {
+				T::UpdateOrigin::ensure_origin(origin)?;
 
-			RiskThresholds::mutate(pair, |r| {
-				if trader.is_some() {
-					r.trader = trader;
-				}
-				if enp.is_some() {
-					r.enp = enp;
-				}
-				if ell.is_some() {
-					r.ell = ell;
-				}
-			});
+				RiskThresholds::mutate(pair, |r| {
+					if trader.is_some() {
+						r.trader = trader;
+					}
+					if enp.is_some() {
+						r.enp = enp;
+					}
+					if ell.is_some() {
+						r.ell = ell;
+					}
+				});
 
-			Self::deposit_event(RawEvent::TradingPairRiskThresholdSet(pair, trader, enp, ell));
+				Self::deposit_event(RawEvent::TradingPairRiskThresholdSet(pair, trader, enp, ell));
+
+				Ok(())
+			})?;
 		}
 
 		fn offchain_worker(block_number: T::BlockNumber) {

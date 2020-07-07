@@ -21,6 +21,9 @@ use sp_runtime::{
 	DispatchResult, ModuleId, RuntimeDebug,
 };
 use sp_std::{cmp::max, prelude::*, result};
+
+use orml_utilities::with_transaction_result;
+
 use traits::{
 	LiquidityPools, MarginProtocolLiquidityPools, MarginProtocolLiquidityPoolsManager, OnDisableLiquidityPool,
 	OnRemoveLiquidityPool, OpenPositionError,
@@ -217,9 +220,12 @@ decl_module! {
 		/// May only be called from the pool owner.
 		#[weight = 10_000]
 		pub fn set_spread(origin, #[compact] pool_id: LiquidityPoolId, pair: TradingPair, #[compact] bid: Balance, #[compact] ask: Balance) {
-			let who = ensure_signed(origin)?;
-			Self::do_set_spread(&who, pool_id, pair, bid, ask)?;
-			Self::deposit_event(RawEvent::SpreadSet(who, pool_id, pair, bid, ask));
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				Self::do_set_spread(&who, pool_id, pair, bid, ask)?;
+				Self::deposit_event(RawEvent::SpreadSet(who, pool_id, pair, bid, ask));
+				Ok(())
+			})?;
 		}
 
 		/// Set enabled leverages for `pair` in `pool_id`.
@@ -227,9 +233,12 @@ decl_module! {
 		/// May only be called from the pool owner.
 		#[weight = 10_000]
 		pub fn set_enabled_leverages(origin, #[compact] pool_id: LiquidityPoolId, pair: TradingPair, enabled: Leverages) {
-			let who = ensure_signed(origin)?;
-			Self::do_set_enabled_leverages(&who, pool_id, pair, enabled)?;
-			Self::deposit_event(RawEvent::EnabledTradesSet(who, pool_id, pair, enabled));
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				Self::do_set_enabled_leverages(&who, pool_id, pair, enabled)?;
+				Self::deposit_event(RawEvent::EnabledTradesSet(who, pool_id, pair, enabled));
+				Ok(())
+			})?;
 		}
 
 		/// Set swap rate for `pair`.
@@ -237,14 +246,18 @@ decl_module! {
 		/// May only be called from `UpdateOrigin`.
 		#[weight = 10_000]
 		pub fn set_swap_rate(origin, pair: TradingPair, rate: SwapRate) {
-			T::UpdateOrigin::ensure_origin(origin)?;
+			with_transaction_result(|| {
+				T::UpdateOrigin::ensure_origin(origin)?;
 
-			ensure!(rate.long.saturating_abs() <= T::MaxSwapRate::get(), Error::<T>::SwapRateTooHigh);
-			ensure!(rate.short.saturating_abs() <= T::MaxSwapRate::get(), Error::<T>::SwapRateTooHigh);
+				ensure!(rate.long.saturating_abs() <= T::MaxSwapRate::get(), Error::<T>::SwapRateTooHigh);
+				ensure!(rate.short.saturating_abs() <= T::MaxSwapRate::get(), Error::<T>::SwapRateTooHigh);
 
-			<TradingPairOptions<T>>::mutate(&pair, |o| o.swap_rate = rate.clone());
+				<TradingPairOptions<T>>::mutate(&pair, |o| o.swap_rate = rate.clone());
 
-			Self::deposit_event(RawEvent::SwapRateUpdated(pair, rate));
+				Self::deposit_event(RawEvent::SwapRateUpdated(pair, rate));
+
+				Ok(())
+			})?;
 		}
 
 		/// Set additional swap rate for `pool_id`.
@@ -252,12 +265,16 @@ decl_module! {
 		/// May only be called from the pool owner.
 		#[weight = 10_000]
 		pub fn set_additional_swap_rate(origin, #[compact] pool_id: LiquidityPoolId, rate: FixedI128) {
-			let who = ensure_signed(origin)?;
-			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
 
-			PoolOptions::mutate(&pool_id, |o| o.additional_swap_rate = rate);
+				PoolOptions::mutate(&pool_id, |o| o.additional_swap_rate = rate);
 
-			Self::deposit_event(RawEvent::AdditionalSwapRateUpdated(who, pool_id, rate));
+				Self::deposit_event(RawEvent::AdditionalSwapRateUpdated(who, pool_id, rate));
+
+				Ok(())
+			})?;
 		}
 
 		/// Set maximum spread for `pair`.
@@ -265,11 +282,12 @@ decl_module! {
 		/// May only be called from `UpdateOrigin`.
 		#[weight = 10_000]
 		pub fn set_max_spread(origin, pair: TradingPair, #[compact] max_spread: Balance) {
-			T::UpdateOrigin::ensure_origin(origin)?;
-
-			<TradingPairOptions<T>>::mutate(&pair, |o| o.max_spread = Some(max_spread));
-
-			Self::deposit_event(RawEvent::MaxSpreadUpdated(pair, max_spread));
+			with_transaction_result(|| {
+				T::UpdateOrigin::ensure_origin(origin)?;
+				<TradingPairOptions<T>>::mutate(&pair, |o| o.max_spread = Some(max_spread));
+				Self::deposit_event(RawEvent::MaxSpreadUpdated(pair, max_spread));
+				Ok(())
+			})?;
 		}
 
 		/// Set swap rate accumulation configuration.
@@ -277,16 +295,20 @@ decl_module! {
 		/// May only be called from `UpdateOrigin`.
 		#[weight = 10_000]
 		pub fn set_accumulate_config(origin, pair: TradingPair, frequency: T::Moment, offset: T::Moment) {
-			T::UpdateOrigin::ensure_origin(origin)?;
+			with_transaction_result(|| {
+				T::UpdateOrigin::ensure_origin(origin)?;
 
-			ensure!(frequency >= ONE_MINUTE.into(), Error::<T>::FrequencyTooLow);
+				ensure!(frequency >= ONE_MINUTE.into(), Error::<T>::FrequencyTooLow);
 
-			<TradingPairOptions<T>>::mutate(
-				&pair,
-				|o| o.accumulate_config = Some(AccumulateConfig { frequency, offset })
-			);
+				<TradingPairOptions<T>>::mutate(
+					&pair,
+					|o| o.accumulate_config = Some(AccumulateConfig { frequency, offset })
+				);
 
-			Self::deposit_event(RawEvent::AccumulateConfigSet(pair, frequency, offset));
+				Self::deposit_event(RawEvent::AccumulateConfigSet(pair, frequency, offset));
+
+				Ok(())
+			})?;
 		}
 
 		/// Enable a trading pair.
@@ -294,11 +316,12 @@ decl_module! {
 		/// May only be called from `UpdateOrigin`.
 		#[weight = 10_000]
 		pub fn enable_trading_pair(origin, pair: TradingPair) {
-			T::UpdateOrigin::ensure_origin(origin)?;
-
-			<TradingPairOptions<T>>::mutate(&pair, |o| o.enabled = true);
-
-			Self::deposit_event(RawEvent::TradingPairEnabled(pair))
+			with_transaction_result(|| {
+				T::UpdateOrigin::ensure_origin(origin)?;
+				<TradingPairOptions<T>>::mutate(&pair, |o| o.enabled = true);
+				Self::deposit_event(RawEvent::TradingPairEnabled(pair));
+				Ok(())
+			})?;
 		}
 
 		/// Disable a trading pair.
@@ -306,11 +329,12 @@ decl_module! {
 		/// May only be called from `UpdateOrigin`.
 		#[weight = 10_000]
 		pub fn disable_trading_pair(origin, pair: TradingPair) {
-			T::UpdateOrigin::ensure_origin(origin)?;
-
-			<TradingPairOptions<T>>::mutate(&pair, |o| o.enabled = false);
-
-			Self::deposit_event(RawEvent::TradingPairDisabled(pair))
+			with_transaction_result(|| {
+				T::UpdateOrigin::ensure_origin(origin)?;
+				<TradingPairOptions<T>>::mutate(&pair, |o| o.enabled = false);
+				Self::deposit_event(RawEvent::TradingPairDisabled(pair));
+				Ok(())
+			})?;
 		}
 
 		/// Enable `pair` in `pool_id`.
@@ -318,15 +342,19 @@ decl_module! {
 		/// May only be called from the pool owner.
 		#[weight = 10_000]
 		pub fn liquidity_pool_enable_trading_pair(origin, #[compact] pool_id: LiquidityPoolId, pair: TradingPair) {
-			let who = ensure_signed(origin)?;
-			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
-			ensure!(Self::is_trading_pair_enabled(pair), Error::<T>::TradingPairNotEnabled);
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
+				ensure!(Self::is_trading_pair_enabled(pair), Error::<T>::TradingPairNotEnabled);
 
-			<T::PoolManager as MarginProtocolLiquidityPoolsManager>::ensure_can_enable_trading_pair(pool_id, pair)?;
+				<T::PoolManager as MarginProtocolLiquidityPoolsManager>::ensure_can_enable_trading_pair(pool_id, pair)?;
 
-			PoolTradingPairOptions::mutate(&pool_id, &pair, |o| o.enabled = true);
+				PoolTradingPairOptions::mutate(&pool_id, &pair, |o| o.enabled = true);
 
-			Self::deposit_event(RawEvent::LiquidityPoolTradingPairEnabled(pool_id, pair))
+				Self::deposit_event(RawEvent::LiquidityPoolTradingPairEnabled(pool_id, pair));
+
+				Ok(())
+			})?;
 		}
 
 		/// Disable `pair` in `pool_id`.
@@ -334,12 +362,16 @@ decl_module! {
 		/// May only be called from the pool owner.
 		#[weight = 10_000]
 		pub fn liquidity_pool_disable_trading_pair(origin, #[compact] pool_id: LiquidityPoolId, pair: TradingPair) {
-			let who = ensure_signed(origin)?;
-			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
 
-			PoolTradingPairOptions::mutate(&pool_id, &pair, |o| o.enabled = false);
+				PoolTradingPairOptions::mutate(&pool_id, &pair, |o| o.enabled = false);
 
-			Self::deposit_event(RawEvent::LiquidityPoolTradingPairDisabled(pool_id, pair))
+				Self::deposit_event(RawEvent::LiquidityPoolTradingPairDisabled(pool_id, pair));
+
+				Ok(())
+			})?;
 		}
 
 		/// Set default minimum leveraged amount to open a position.
@@ -347,9 +379,12 @@ decl_module! {
 		/// May only be called from `UpdateOrigin`.
 		#[weight = 10_000]
 		pub fn set_default_min_leveraged_amount(origin, #[compact] amount: Balance) {
-			T::UpdateOrigin::ensure_origin(origin)?;
-			DefaultMinLeveragedAmount::put(amount);
-			Self::deposit_event(RawEvent::DefaultMinLeveragedAmountSet(amount))
+			with_transaction_result(|| {
+				T::UpdateOrigin::ensure_origin(origin)?;
+				DefaultMinLeveragedAmount::put(amount);
+				Self::deposit_event(RawEvent::DefaultMinLeveragedAmountSet(amount));
+				Ok(())
+			})?;
 		}
 
 		/// Set minimum leveraged amount to open a position in `pool_id`.
@@ -357,12 +392,16 @@ decl_module! {
 		/// May only be called from the pool owner.
 		#[weight = 10_000]
 		pub fn set_min_leveraged_amount(origin, #[compact] pool_id: LiquidityPoolId, #[compact] amount: Balance) {
-			let who = ensure_signed(origin)?;
-			ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				ensure!(Self::is_owner(pool_id, &who), Error::<T>::NoPermission);
 
-			PoolOptions::mutate(&pool_id, |o| o.min_leveraged_amount = amount);
+				PoolOptions::mutate(&pool_id, |o| o.min_leveraged_amount = amount);
 
-			Self::deposit_event(RawEvent::MinLeveragedAmountSet(pool_id, amount))
+				Self::deposit_event(RawEvent::MinLeveragedAmountSet(pool_id, amount));
+
+				Ok(())
+			})?;
 		}
 
 		fn on_initialize() -> Weight {

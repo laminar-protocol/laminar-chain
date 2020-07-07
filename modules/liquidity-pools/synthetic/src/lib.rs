@@ -6,6 +6,7 @@ mod tests;
 use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::EnsureOrigin};
 use frame_system::{self as system, ensure_signed};
+use orml_utilities::with_transaction_result;
 use primitives::{Balance, CurrencyId, LiquidityPoolId};
 use sp_runtime::{DispatchResult, ModuleId, Permill, RuntimeDebug};
 use sp_std::prelude::*;
@@ -99,9 +100,12 @@ decl_module! {
 			#[compact] bid: Balance,
 			#[compact] ask: Balance
 		) {
-			let who = ensure_signed(origin)?;
-			Self::do_set_spread(&who, pool_id, currency_id, bid, ask)?;
-			Self::deposit_event(RawEvent::SpreadSet(who, pool_id, currency_id, bid, ask));
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				Self::do_set_spread(&who, pool_id, currency_id, bid, ask)?;
+				Self::deposit_event(RawEvent::SpreadSet(who, pool_id, currency_id, bid, ask));
+				Ok(())
+			})?;
 		}
 
 		/// Set additional collateral ratio of `currency_id` in `pool_id`.
@@ -114,9 +118,12 @@ decl_module! {
 			currency_id: CurrencyId,
 			ratio: Option<Permill>
 		) {
-			let who = ensure_signed(origin)?;
-			Self::do_set_additional_collateral_ratio(&who, pool_id, currency_id, ratio)?;
-			Self::deposit_event(RawEvent::AdditionalCollateralRatioSet(who, pool_id, currency_id, ratio));
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				Self::do_set_additional_collateral_ratio(&who, pool_id, currency_id, ratio)?;
+				Self::deposit_event(RawEvent::AdditionalCollateralRatioSet(who, pool_id, currency_id, ratio));
+				Ok(())
+			})?;
 		}
 
 		/// Set minimum additional collateral ratio.
@@ -124,9 +131,12 @@ decl_module! {
 		/// May only be called from `UpdateOrigin`.
 		#[weight = 10_000]
 		pub fn set_min_additional_collateral_ratio(origin, #[compact] ratio: Permill) {
-			T::UpdateOrigin::ensure_origin(origin)?;
-			MinAdditionalCollateralRatio::put(ratio);
-			Self::deposit_event(RawEvent::MinAdditionalCollateralRatioSet(ratio));
+			with_transaction_result(|| {
+				T::UpdateOrigin::ensure_origin(origin)?;
+				MinAdditionalCollateralRatio::put(ratio);
+				Self::deposit_event(RawEvent::MinAdditionalCollateralRatioSet(ratio));
+				Ok(())
+			})?;
 		}
 
 		/// Enable or disable synthetic of `currency_id` in `pool_id`.
@@ -139,9 +149,12 @@ decl_module! {
 			currency_id: CurrencyId,
 			enabled: bool
 		) {
-			let who = ensure_signed(origin)?;
-			Self::do_set_synthetic_enabled(&who, pool_id, currency_id, enabled)?;
-			Self::deposit_event(RawEvent::SyntheticEnabledSet(who, pool_id, currency_id, enabled));
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				Self::do_set_synthetic_enabled(&who, pool_id, currency_id, enabled)?;
+				Self::deposit_event(RawEvent::SyntheticEnabledSet(who, pool_id, currency_id, enabled));
+				Ok(())
+			})?;
 		}
 
 		/// Set max spread of `currency_id`.
@@ -149,9 +162,12 @@ decl_module! {
 		/// May only be called from `UpdateOrigin`.
 		#[weight = 10_000]
 		pub fn set_max_spread(origin, currency_id: CurrencyId, #[compact] max_spread: Balance) {
-			T::UpdateOrigin::ensure_origin(origin)?;
-			MaxSpread::insert(currency_id, max_spread);
-			Self::deposit_event(RawEvent::MaxSpreadUpdated(currency_id, max_spread));
+			with_transaction_result(|| {
+				T::UpdateOrigin::ensure_origin(origin)?;
+				MaxSpread::insert(currency_id, max_spread);
+				Self::deposit_event(RawEvent::MaxSpreadUpdated(currency_id, max_spread));
+				Ok(())
+			})?;
 		}
 	}
 }

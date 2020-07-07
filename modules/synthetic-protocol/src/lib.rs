@@ -12,6 +12,7 @@ use sp_std::result;
 use frame_system::{self as system, ensure_signed};
 
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
+use orml_utilities::with_transaction_result;
 
 use module_primitives::{Balance, CurrencyId, LiquidityPoolId, Price};
 use module_traits::{LiquidityPools, SyntheticProtocolLiquidityPools};
@@ -84,10 +85,12 @@ decl_module! {
 			#[compact] collateral_amount: Balance,
 			max_price: Price,
 		) {
-			let who = ensure_signed(origin)?;
-			let synthetic_amount = Self::do_mint(&who, pool_id, currency_id, collateral_amount, max_price)?;
-
-			Self::deposit_event(RawEvent::Minted(who, currency_id, pool_id, collateral_amount, synthetic_amount));
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				let synthetic_amount = Self::do_mint(&who, pool_id, currency_id, collateral_amount, max_price)?;
+				Self::deposit_event(RawEvent::Minted(who, currency_id, pool_id, collateral_amount, synthetic_amount));
+				Ok(())
+			})?;
 		}
 
 		/// Redeem collateral.
@@ -99,10 +102,12 @@ decl_module! {
 			#[compact] synthetic_amount: Balance,
 			min_price: Price,
 		) {
-			let who = ensure_signed(origin)?;
-			let collateral_amount = Self::do_redeem(&who, pool_id, currency_id, synthetic_amount, min_price)?;
-
-			Self::deposit_event(RawEvent::Redeemed(who, currency_id, pool_id, collateral_amount, synthetic_amount));
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				let collateral_amount = Self::do_redeem(&who, pool_id, currency_id, synthetic_amount, min_price)?;
+				Self::deposit_event(RawEvent::Redeemed(who, currency_id, pool_id, collateral_amount, synthetic_amount));
+				Ok(())
+			})?;
 		}
 
 		/// Liquidite `currency_id` in `pool_id` by `synthetic_amount`.
@@ -113,10 +118,12 @@ decl_module! {
 			currency_id: CurrencyId,
 			#[compact] synthetic_amount: Balance,
 		) {
-			let who = ensure_signed(origin)?;
-			let collateral_amount = Self::do_liquidate(&who, pool_id, currency_id, synthetic_amount)?;
-
-			Self::deposit_event(RawEvent::Liquidated(who, currency_id, pool_id, collateral_amount, synthetic_amount));
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				let collateral_amount = Self::do_liquidate(&who, pool_id, currency_id, synthetic_amount)?;
+				Self::deposit_event(RawEvent::Liquidated(who, currency_id, pool_id, collateral_amount, synthetic_amount));
+				Ok(())
+			})?;
 		}
 
 		/// Add collateral to `currency_id` in `pool_id` by `collateral_amount`.
@@ -127,10 +134,12 @@ decl_module! {
 			currency_id: CurrencyId,
 			#[compact] collateral_amount: Balance,
 		) {
-			let who = ensure_signed(origin)?;
-			Self::do_add_collateral(&who, pool_id, currency_id, collateral_amount)?;
-
-			Self::deposit_event(RawEvent::CollateralAdded(who, currency_id, pool_id, collateral_amount));
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				Self::do_add_collateral(&who, pool_id, currency_id, collateral_amount)?;
+				Self::deposit_event(RawEvent::CollateralAdded(who, currency_id, pool_id, collateral_amount));
+				Ok(())
+			})?;
 		}
 
 		/// Withdraw all available collateral.
@@ -142,10 +151,12 @@ decl_module! {
 			#[compact] pool_id: LiquidityPoolId,
 			currency_id: CurrencyId,
 		) {
-			let who = ensure_signed(origin)?;
-			let withdrew_collateral_amount = Self::do_withdraw_collateral(&who, pool_id, currency_id)?;
-
-			Self::deposit_event(RawEvent::CollateralWithdrew(who, currency_id, pool_id, withdrew_collateral_amount));
+			with_transaction_result(|| {
+				let who = ensure_signed(origin)?;
+				let withdrew_collateral_amount = Self::do_withdraw_collateral(&who, pool_id, currency_id)?;
+				Self::deposit_event(RawEvent::CollateralWithdrew(who, currency_id, pool_id, withdrew_collateral_amount));
+				Ok(())
+			})?;
 		}
 	}
 }
@@ -223,8 +234,6 @@ impl<T: Trait> Module<T> {
 			Error::<T>::CannotMintInPool
 		);
 
-		T::CollateralCurrency::ensure_can_withdraw(who, collateral)?;
-
 		let price =
 			T::PriceProvider::get_price(currency_id, T::GetCollateralCurrencyId::get()).ok_or(Error::<T>::NoPrice)?;
 		let ask_price = Self::ask_price(pool_id, currency_id, price, max_price)?;
@@ -242,22 +251,15 @@ impl<T: Trait> Module<T> {
 		let additional_collateral =
 			Self::additional_collateral_amount(pool_id, currency_id, collateral, synthetic_value)?;
 
-		ensure!(
-			T::LiquidityPools::liquidity(pool_id) >= additional_collateral,
-			Error::<T>::InsufficientLiquidityInPool,
-		);
+		// collateralise
+		T::CollateralCurrency::transfer(who, &<SyntheticTokens<T>>::account_id(), collateral)?;
+		T::LiquidityPools::withdraw_liquidity(&<SyntheticTokens<T>>::account_id(), pool_id, additional_collateral)
+			.map_err(|_| Error::<T>::InsufficientLiquidityInPool)?;
 
 		// mint synthetic
 		T::MultiCurrency::deposit(currency_id, who, synthetic)?;
 
-		// collateralise
-		T::CollateralCurrency::transfer(who, &<SyntheticTokens<T>>::account_id(), collateral)
-			.expect("ensured enough balance of sender; qed");
-		T::LiquidityPools::withdraw_liquidity(&<SyntheticTokens<T>>::account_id(), pool_id, additional_collateral)
-			.expect("ensured enough collateral in liquidity pool; qed");
-
 		let total_collateral = collateral + additional_collateral;
-
 		<SyntheticTokens<T>>::add_position(pool_id, currency_id, total_collateral, synthetic);
 
 		Ok(synthetic)
@@ -275,7 +277,8 @@ impl<T: Trait> Module<T> {
 			Error::<T>::NotValidSyntheticCurrencyId
 		);
 
-		T::MultiCurrency::ensure_can_withdraw(currency_id, who, synthetic)?;
+		// burn synthetic
+		T::MultiCurrency::withdraw(currency_id, who, synthetic)?;
 
 		let price =
 			T::PriceProvider::get_price(currency_id, T::GetCollateralCurrencyId::get()).ok_or(Error::<T>::NoPrice)?;
@@ -284,24 +287,14 @@ impl<T: Trait> Module<T> {
 
 		// collateral = synthetic * bid_price
 		let redeemed_collateral = bid_price.checked_mul_int(synthetic).ok_or(Error::<T>::NumOverflow)?;
-
 		let (collateral_position_delta, pool_refund_collateral) =
 			Self::collateral_change_on_remove_position(pool_id, currency_id, price, synthetic, redeemed_collateral)?;
 
-		T::CollateralCurrency::ensure_can_withdraw(
-			&<SyntheticTokens<T>>::account_id(),
-			redeemed_collateral + pool_refund_collateral,
-		)
-		.map_err(|_| Error::<T>::InsufficientLockedCollateral)?;
-
-		// burn synthetic
-		T::MultiCurrency::withdraw(currency_id, who, synthetic)?;
-
 		// redeem collateral
 		T::CollateralCurrency::transfer(&<SyntheticTokens<T>>::account_id(), who, redeemed_collateral)
-			.expect("ensured enough locked collateral; qed");
+			.map_err(|_| Error::<T>::InsufficientLockedCollateral)?;
 		T::LiquidityPools::deposit_liquidity(&<SyntheticTokens<T>>::account_id(), pool_id, pool_refund_collateral)
-			.expect("ensured enough locked collateral; qed");
+			.map_err(|_| Error::<T>::InsufficientLockedCollateral)?;
 
 		<SyntheticTokens<T>>::remove_position(pool_id, currency_id, collateral_position_delta, synthetic);
 
@@ -319,8 +312,6 @@ impl<T: Trait> Module<T> {
 			Error::<T>::NotValidSyntheticCurrencyId
 		);
 
-		T::MultiCurrency::ensure_can_withdraw(currency_id, who, synthetic)?;
-
 		let price =
 			T::PriceProvider::get_price(currency_id, T::GetCollateralCurrencyId::get()).ok_or(Error::<T>::NoPrice)?;
 		let bid_price = Self::bid_price(pool_id, currency_id, price, None)?;
@@ -336,11 +327,11 @@ impl<T: Trait> Module<T> {
 		// Give liquidator collateral and incentive.
 		let collateral_with_incentive = collateral.checked_add(incentive).ok_or(Error::<T>::NumOverflow)?;
 		T::CollateralCurrency::transfer(&<SyntheticTokens<T>>::account_id(), who, collateral_with_incentive)
-			.expect("ensured enough locked collateral; qed");
+			.map_err(|_| Error::<T>::InsufficientLockedCollateral)?;
 
 		// refund to pool
 		T::LiquidityPools::deposit_liquidity(&<SyntheticTokens<T>>::account_id(), pool_id, pool_refund_collateral)
-			.expect("ensured enough locked collateral; qed");
+			.map_err(|_| Error::<T>::InsufficientLockedCollateral)?;
 
 		<SyntheticTokens<T>>::remove_position(pool_id, currency_id, collateral_position_delta, synthetic);
 
@@ -358,11 +349,8 @@ impl<T: Trait> Module<T> {
 			Error::<T>::NotValidSyntheticCurrencyId
 		);
 
-		T::CollateralCurrency::ensure_can_withdraw(who, collateral)?;
-
-		T::LiquidityPools::deposit_liquidity(who, pool_id, collateral).expect("ensured enough balance; qed");
-		T::LiquidityPools::withdraw_liquidity(&<SyntheticTokens<T>>::account_id(), pool_id, collateral)
-			.expect("have deposited equal amount; qed");
+		T::LiquidityPools::deposit_liquidity(who, pool_id, collateral)?;
+		T::LiquidityPools::withdraw_liquidity(&<SyntheticTokens<T>>::account_id(), pool_id, collateral)?;
 
 		<SyntheticTokens<T>>::add_position(pool_id, currency_id, collateral, Zero::zero());
 
@@ -382,13 +370,9 @@ impl<T: Trait> Module<T> {
 		let (collateral_position_delta, pool_refund_collateral) =
 			Self::collateral_change_on_remove_position(pool_id, currency_id, price, Zero::zero(), Zero::zero())?;
 
-		T::CollateralCurrency::ensure_can_withdraw(&<SyntheticTokens<T>>::account_id(), pool_refund_collateral)
-			.map_err(|_| Error::<T>::InsufficientLockedCollateral)?;
-
 		T::LiquidityPools::deposit_liquidity(&<SyntheticTokens<T>>::account_id(), pool_id, pool_refund_collateral)
-			.expect("ensured enough locked collateral; qed");
-		T::LiquidityPools::withdraw_liquidity(who, pool_id, pool_refund_collateral)
-			.expect("have deposited equal amount; qed");
+			.map_err(|_| Error::<T>::InsufficientLockedCollateral)?;
+		T::LiquidityPools::withdraw_liquidity(who, pool_id, pool_refund_collateral)?;
 
 		<SyntheticTokens<T>>::remove_position(pool_id, currency_id, collateral_position_delta, Zero::zero());
 
@@ -449,7 +433,7 @@ impl<T: Trait> Module<T> {
 	) -> BalanceResult {
 		let with_additional_collateral = Self::with_additional_collateral(pool_id, currency_id, synthetic_value)?;
 
-		// Cannot overflow as long as `ratio` bigger than `ask_spread`, not likely to happen with reasonable config in
+		// Cannot overflow as long as `ratio >= ask_spread`, not likely to happen with reasonable config in
 		// pool, but better to be safe than sorry.
 		with_additional_collateral
 			.checked_sub(collateral)
@@ -478,13 +462,9 @@ impl<T: Trait> Module<T> {
 	) -> result::Result<(Balance, Balance), DispatchError> {
 		let (collateral_position, synthetic_position) = <SyntheticTokens<T>>::get_position(pool_id, currency_id);
 
-		ensure!(
-			synthetic_position >= burned_synthetic,
-			Error::<T>::InsufficientSyntheticInPosition,
-		);
 		let new_synthetic_position = synthetic_position
 			.checked_sub(burned_synthetic)
-			.expect("ensured high enough synthetic position; qed");
+			.ok_or(Error::<T>::InsufficientSyntheticInPosition)?;
 
 		// new_synthetic_value = new_synthetic_position * price
 		let new_synthetic_value = price
@@ -520,14 +500,13 @@ impl<T: Trait> Module<T> {
 		liquidized_collateral: Balance,
 	) -> result::Result<(Balance, Balance, Balance), DispatchError> {
 		let (collateral_position, synthetic_position) = <SyntheticTokens<T>>::get_position(pool_id, currency_id);
-		ensure!(
-			synthetic_position >= burned_synthetic,
-			Error::<T>::InsufficientSyntheticInPosition,
-		);
-		ensure!(
-			collateral_position >= liquidized_collateral,
-			Error::<T>::InsufficientCollateralInPosition,
-		);
+
+		let new_synthetic_position = synthetic_position
+			.checked_sub(burned_synthetic)
+			.ok_or(Error::<T>::InsufficientSyntheticInPosition)?;
+		let new_collateral_position = collateral_position
+			.checked_sub(liquidized_collateral)
+			.ok_or(Error::<T>::InsufficientCollateralInPosition)?;
 
 		// synthetic_position_value = synthetic_position * price
 		let synthetic_position_value = price
@@ -548,23 +527,11 @@ impl<T: Trait> Module<T> {
 			Error::<T>::StillInSafePosition
 		);
 
-		let new_synthetic_position = synthetic_position
-			.checked_sub(burned_synthetic)
-			.expect("ensured high enough synthetic position; qed");
-		let new_collateral_position = collateral_position
-			.checked_sub(liquidized_collateral)
-			.expect("ensured high enough collateral position; qed");
-
 		// with_current_ratio = new_synthetic_position * price * current_ratio
-		let with_current_ratio = {
-			let new_synthetic_position_value = price
-				.checked_mul_int(new_synthetic_position)
-				.ok_or(Error::<T>::NumOverflow)?;
-			let with_current_ratio = current_ratio
-				.checked_mul_int(new_synthetic_position_value)
-				.ok_or(Error::<T>::NumOverflow)?;
-			with_current_ratio
-		};
+		let with_current_ratio = price
+			.checked_mul_int(new_synthetic_position)
+			.and_then(|v| current_ratio.checked_mul_int(v))
+			.ok_or(Error::<T>::NumOverflow)?;
 
 		if new_collateral_position > with_current_ratio {
 			// available_for_incentive = new_collateral_position - with_current_ratio
@@ -577,14 +544,15 @@ impl<T: Trait> Module<T> {
 				.checked_mul_int(available_for_incentive)
 				.ok_or(Error::<T>::NumOverflow)?;
 
+			// pool_refund_collateral = available_for_incentive - incentive
 			let pool_refund_collateral = available_for_incentive
 				.checked_sub(incentive)
 				.expect("available_for_incentive > incentive; qed");
-			let collateral_with_incentive = liquidized_collateral
+
+			// collateral_with_incentive_and_refund = liquidized_collateral + incentive + pool_refund_collateral
+			let collateral_with_incentive_and_refund = liquidized_collateral
 				.checked_add(incentive)
-				.ok_or(Error::<T>::NumOverflow)?;
-			let collateral_with_incentive_and_refund = collateral_with_incentive
-				.checked_add(pool_refund_collateral)
+				.and_then(|v| v.checked_add(pool_refund_collateral))
 				.ok_or(Error::<T>::NumOverflow)?;
 			Ok((collateral_with_incentive_and_refund, pool_refund_collateral, incentive))
 		} else {
