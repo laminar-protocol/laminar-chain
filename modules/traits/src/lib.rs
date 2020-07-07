@@ -99,9 +99,3 @@ pub trait OnRemoveLiquidityPool {
 	/// Invoked when the liquiditiy pool has been removed.
 	fn on_remove(pool_id: LiquidityPoolId);
 }
-
-/// The laminar treasury abstraction.
-pub trait Treasury<AccountId> {
-	/// Account ID of treasury.
-	fn account_id() -> AccountId;
-}

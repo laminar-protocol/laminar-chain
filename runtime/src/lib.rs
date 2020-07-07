@@ -740,17 +740,10 @@ where
 	type Extrinsic = UncheckedExtrinsic;
 }
 
-// TODO: implement LaminarTreasury
-pub struct MockLaminarTreasury;
-impl module_traits::Treasury<AccountId> for MockLaminarTreasury {
-	fn account_id() -> AccountId {
-		pallet_treasury::Module::<Runtime>::account_id()
-	}
-}
-
 parameter_types! {
 	pub const GetTraderMaxOpenPositions: usize = 200;
 	pub const GetPoolMaxOpenPositions: usize = 1000;
+	pub GetTreasuryAccountId: AccountId = pallet_treasury::Module::<Runtime>::account_id();
 }
 
 impl margin_protocol::Trait for Runtime {
@@ -758,7 +751,7 @@ impl margin_protocol::Trait for Runtime {
 	type LiquidityCurrency = LiquidityCurrency;
 	type LiquidityPools = margin_liquidity_pools::Module<Runtime>;
 	type PriceProvider = orml_traits::DefaultPriceProvider<CurrencyId, LaminarDataProvider>;
-	type Treasury = MockLaminarTreasury;
+	type GetTreasuryAccountId = GetTreasuryAccountId;
 	type GetTraderMaxOpenPositions = GetTraderMaxOpenPositions;
 	type GetPoolMaxOpenPositions = GetPoolMaxOpenPositions;
 	type UpdateOrigin = EnsureHalfFinancialCouncilOrRoot;
