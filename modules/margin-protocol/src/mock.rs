@@ -89,7 +89,6 @@ impl orml_tokens::Trait for Runtime {
 	type Balance = u128;
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
-	type DustRemoval = ();
 	type OnReceived = ();
 }
 
