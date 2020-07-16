@@ -98,6 +98,11 @@ decl_module! {
 
 		fn deposit_event() = default;
 
+		const DefaultExtremeRatio: Permill = T::DefaultExtremeRatio::get();
+		const DefaultLiquidationRatio: Permill = T::DefaultLiquidationRatio::get();
+		const DefaultCollateralRatio: Permill = T::DefaultCollateralRatio::get();
+		const SyntheticCurrencyIds: Vec<CurrencyId> = T::SyntheticCurrencyIds::get();
+
 		/// Set extreme liquidation ratio.
 		///
 		/// May only be called from `UpdateOrigin`.
