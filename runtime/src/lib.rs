@@ -583,7 +583,7 @@ parameter_types! {
 	pub const DefaultCollateralRatio: Permill = Permill::from_percent(10);
 }
 
-pub type LaminarToken = BasicCurrencyAdapter<Runtime, pallet_balances::Module<Runtime>, Balance>;
+pub type LaminarToken = BasicCurrencyAdapter<pallet_balances::Module<Runtime>, Balance, Balance, Amount, BlockNumber>;
 
 impl orml_currencies::Trait for Runtime {
 	type Event = Event;
