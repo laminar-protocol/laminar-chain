@@ -74,7 +74,7 @@ impl pallet_balances::Trait for Runtime {
 	type AccountStore = frame_system::Module<Runtime>;
 }
 
-pub type NativeCurrency = orml_currencies::BasicCurrencyAdapter<Runtime, Balances, Balance>;
+pub type NativeCurrency = orml_currencies::BasicCurrencyAdapter<Balances, Balance, Balance, Amount, BlockNumber>;
 pub type LiquidityCurrency = orml_currencies::Currency<Runtime, GetLiquidityCurrencyId>;
 
 impl orml_currencies::Trait for Runtime {

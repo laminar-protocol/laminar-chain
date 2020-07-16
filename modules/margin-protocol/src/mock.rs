@@ -107,7 +107,8 @@ impl pallet_balances::Trait for Runtime {
 	type AccountStore = frame_system::Module<Runtime>;
 }
 
-pub type NativeCurrency = orml_currencies::BasicCurrencyAdapter<Runtime, pallet_balances::Module<Runtime>, Balance>;
+pub type NativeCurrency =
+	orml_currencies::BasicCurrencyAdapter<pallet_balances::Module<Runtime>, Balance, Balance, Amount, u64>;
 pub type LiquidityCurrency = orml_currencies::Currency<Runtime, GetLiquidityCurrencyId>;
 impl orml_currencies::Trait for Runtime {
 	type Event = TestEvent;
