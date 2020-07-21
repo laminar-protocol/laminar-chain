@@ -191,7 +191,7 @@ decl_storage! {
 		///
 		/// The balance value could be positive or negative:
 		/// - If positive, it represents 'balance' the trader could use to open positions, withdraw etc.
-		/// - If negative, it represents how much the trader owns the pool. Owning could happen when realizing loss.
+		/// - If negative, it represents how much the trader owes the pool. Owning could happen when realizing loss.
 		/// but trader has not enough free margin at the moment; Then repayment would be done while realizing profit.
 		Balances get(fn balances): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) LiquidityPoolId => FixedI128;
 
@@ -681,8 +681,8 @@ impl<T: Trait> Module<T> {
 			let realizable = cmp::min(pool_liquidity, unrealized);
 
 			let mut pool_withdraw = realizable;
-			// If negative balance, the trader owns pool and then repay (the amount of negative balance).
-			// Note less withdraw(owning < realizable) or no withdraw(owning >= realizable) is the way of repayment.
+			// If negative balance, the trader owes pool and then repay (the amount of negative balance).
+			// Note less withdraw(owing < realizable) or no withdraw(owing >= realizable) is the way of repayment.
 			let balance = Self::balances(who, position.pool);
 			if balance.is_negative() {
 				pool_withdraw = cmp::max(pool_withdraw.saturating_add(balance), FixedI128::zero());
