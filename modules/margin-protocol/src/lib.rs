@@ -191,7 +191,7 @@ decl_storage! {
 		///
 		/// The balance value could be positive or negative:
 		/// - If positive, it represents 'balance' the trader could use to open positions, withdraw etc.
-		/// - If negative, it represents how much the trader owes the pool. Owning could happen when realizing loss.
+		/// - If negative, it represents how much the trader owes the pool. Owing could happen when realizing loss.
 		/// but trader has not enough free margin at the moment; Then repayment would be done while realizing profit.
 		Balances get(fn balances): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) LiquidityPoolId => FixedI128;
 
