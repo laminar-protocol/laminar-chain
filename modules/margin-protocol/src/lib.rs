@@ -360,6 +360,11 @@ decl_module! {
 
 		fn deposit_event() = default;
 
+		const GetTreasuryAccountId: T::AccountId = T::GetTreasuryAccountId::get();
+		const GetTraderMaxOpenPositions: u32 = T::GetTraderMaxOpenPositions::get() as u32;
+		const GetPoolMaxOpenPositions: u32 = T::GetPoolMaxOpenPositions::get() as u32;
+		const UnsignedPriority: TransactionPriority = T::UnsignedPriority::get();
+
 		/// Open a position in `pool_id`.
 		#[weight = 20_000]
 		pub fn open_position(
