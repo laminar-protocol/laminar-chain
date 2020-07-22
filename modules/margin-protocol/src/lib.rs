@@ -360,6 +360,11 @@ decl_module! {
 
 		fn deposit_event() = default;
 
+		const GetTreasuryAccountId: T::AccountId = T::GetTreasuryAccountId::get();
+		const GetTraderMaxOpenPositions: u32 = T::GetTraderMaxOpenPositions::get() as u32;
+		const GetPoolMaxOpenPositions: u32 = T::GetPoolMaxOpenPositions::get() as u32;
+		const UnsignedPriority: TransactionPriority = T::UnsignedPriority::get();
+
 		/// Open a position in `pool_id`.
 		#[weight = 20_000]
 		pub fn open_position(
@@ -1752,7 +1757,7 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 
 				ValidTransaction::with_tag_prefix("margin_protocol/trader_margin_call")
 					.priority(T::UnsignedPriority::get())
-					.and_provides(who)
+					.and_provides((who, pool_id))
 					.longevity(64_u64)
 					.propagate(true)
 					.build()
@@ -1765,7 +1770,7 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 
 				ValidTransaction::with_tag_prefix("margin_protocol/trader_become_safe")
 					.priority(T::UnsignedPriority::get())
-					.and_provides(who)
+					.and_provides((who, pool_id))
 					.longevity(64_u64)
 					.propagate(true)
 					.build()
@@ -1775,7 +1780,7 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 				if Self::should_stop_out_trader(&trader, *pool_id).ok() == Some(true) {
 					return ValidTransaction::with_tag_prefix("margin_protocol/trader_stop_out")
 						.priority(T::UnsignedPriority::get())
-						.and_provides(who)
+						.and_provides((who, pool_id))
 						.longevity(64_u64)
 						.propagate(true)
 						.build();
