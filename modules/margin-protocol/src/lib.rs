@@ -232,37 +232,37 @@ decl_event! {
 		TradingPair = TradingPair,
 		Amount = Balance
 	{
-		/// Position opened: (who, position_id, pool_id, trading_pair, leverage, leveraged_amount, open_price)
+		/// Position opened: [who, position_id, pool_id, pair, leverage, leveraged_amount, open_price]
 		PositionOpened(AccountId, PositionId, LiquidityPoolId, TradingPair, Leverage, Amount, Price),
 
-		/// Position closed: (who, position_id, pool_id, close_price)
+		/// Position closed: [who, position_id, pool_id, close_price]
 		PositionClosed(AccountId, PositionId, LiquidityPoolId, Price),
 
-		/// Deposited: (who, pool_id, amount)
+		/// Deposited: [who, pool_id, amount]
 		Deposited(AccountId, LiquidityPoolId, Amount),
 
-		/// Withdrew: (who, pool_id, amount)
+		/// Withdrew: [who, pool_id, amount]
 		Withdrew(AccountId, LiquidityPoolId, Amount),
 
-		/// Trader margin called: (who)
+		/// Trader margin called: [who]
 		TraderMarginCalled(AccountId),
 
-		/// Trader became safe: (who)
+		/// Trader became safe: [who]
 		TraderBecameSafe(AccountId),
 
-		/// Trader stopped out: (who)
+		/// Trader stopped out: [who]
 		TraderStoppedOut(AccountId),
 
-		/// Liquidity pool margin called: (pool_id)
+		/// Liquidity pool margin called: [pool_id]
 		LiquidityPoolMarginCalled(LiquidityPoolId),
 
-		/// Liquidity pool became safe: (pool_id)
+		/// Liquidity pool became safe: [pool_id]
 		LiquidityPoolBecameSafe(LiquidityPoolId),
 
-		/// Liquidity pool force closed: (pool_id)
+		/// Liquidity pool force closed: [pool_id]
 		LiquidityPoolForceClosed(LiquidityPoolId),
 
-		/// Trading pair risk threshold set (pair, trader_risk_threshold, liquidity_pool_enp_threshold, liquidity_pool_ell_threshold)
+		/// Trading pair risk threshold set: [pair, trader_risk_threshold, liquidity_pool_enp_threshold, liquidity_pool_ell_threshold]
 		TradingPairRiskThresholdSet(TradingPair, Option<RiskThreshold>, Option<RiskThreshold>, Option<RiskThreshold>),
 	}
 }

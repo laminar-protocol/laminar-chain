@@ -66,19 +66,19 @@ decl_event!(
 	pub enum Event<T> where
 		<T as system::Trait>::AccountId,
 	{
-		/// Spread set: (who, pool_id, currency_id, bid, ask)
+		/// Spread set: [who, pool_id, currency_id, bid, ask]
 		SpreadSet(AccountId, LiquidityPoolId, CurrencyId, Balance, Balance),
 
-		/// Additional collateral ratio set: (who, pool_id, currency_id, ratio)
+		/// Additional collateral ratio set: [who, pool_id, currency_id, ratio]
 		AdditionalCollateralRatioSet(AccountId, LiquidityPoolId, CurrencyId, Option<Permill>),
 
-		/// Min additional collateral ratio set: (min_additional_collateral_ratio)
+		/// Min additional collateral ratio set: [min_additional_collateral_ratio]
 		MinAdditionalCollateralRatioSet(Permill),
 
-		/// Synthetic enabled set: (who, pool_id, currency_id, is_enabled)
+		/// Synthetic enabled set: [who, pool_id, currency_id, is_enabled]
 		SyntheticEnabledSet(AccountId, LiquidityPoolId, CurrencyId, bool),
 
-		/// Max spread updated: (currency_id, spread)
+		/// Max spread updated: [currency_id, spread]
 		MaxSpreadUpdated(CurrencyId, Balance),
 	}
 );
