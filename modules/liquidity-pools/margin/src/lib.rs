@@ -168,43 +168,43 @@ decl_event!(
 		<T as system::Trait>::AccountId,
 		<T as Trait>::Moment,
 	{
-		/// Spread set: (who, pool_id, pair, bid, ask)
+		/// Spread set: [who, pool_id, pair, bid, ask]
 		SpreadSet(AccountId, LiquidityPoolId, TradingPair, Balance, Balance),
 
-		/// Enabled trades set: (who, pool_id, pair, enabled_leverages)
+		/// Enabled trades set: [who, pool_id, pair, enabled_leverages]
 		EnabledTradesSet(AccountId, LiquidityPoolId, TradingPair, Leverages),
 
-		/// Swap rate updated: (pair, swap_rate)
+		/// Swap rate updated: [pair, swap_rate]
 		SwapRateUpdated(TradingPair, SwapRate),
 
-		/// Accumulated swap rate updated: (pool_id, pair, accumulated_swap_rate)
+		/// Accumulated swap rate updated: [pool_id, pair, accumulated_swap_rate]
 		AccumulatedSwapRateUpdated(LiquidityPoolId, TradingPair, SwapRate),
 
-		/// Additional swap rate updated: (who, pool_id, additional_swap_rate)
+		/// Additional swap rate updated: [who, pool_id, additional_swap_rate]
 		AdditionalSwapRateUpdated(AccountId, LiquidityPoolId, FixedI128),
 
-		/// Max spread updated: (pair, spread)
+		/// Max spread updated: [pair, spread]
 		MaxSpreadUpdated(TradingPair, Balance),
 
-		/// Accumulate set: (pair, frequency, offset)
+		/// Accumulate set: [pair, frequency, offset]
 		AccumulateConfigSet(TradingPair, Moment, Moment),
 
-		/// Trading pair enabled: (pair)
+		/// Trading pair enabled: [pair]
 		TradingPairEnabled(TradingPair),
 
-		/// Trading pair disabled: (pair)
+		/// Trading pair disabled: [pair]
 		TradingPairDisabled(TradingPair),
 
-		/// Trading pair enabled in pool: (pool_id, pair)
+		/// Trading pair enabled in pool: [pool_id, pair]
 		LiquidityPoolTradingPairEnabled(LiquidityPoolId, TradingPair),
 
-		/// Trading pair disabled in pool: (pool_id, pair)
+		/// Trading pair disabled in pool: [pool_id, pair]
 		LiquidityPoolTradingPairDisabled(LiquidityPoolId, TradingPair),
 
-		/// Default min leveraged amount set: (default_min_leveraged_amount)
+		/// Default min leveraged amount set: [default_min_leveraged_amount]
 		DefaultMinLeveragedAmountSet(Balance),
 
-		/// Pool min leveraged amount set: (pool_id, min_leveraged_amount)
+		/// Pool min leveraged amount set: [pool_id, min_leveraged_amount]
 		MinLeveragedAmountSet(LiquidityPoolId, Balance),
 	}
 );
