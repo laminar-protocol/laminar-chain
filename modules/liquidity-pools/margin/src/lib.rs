@@ -67,8 +67,8 @@ pub struct MarginPoolOption {
 	/// DEFAULT-NOTE: no adjustment for this pool.
 	pub additional_swap_rate: FixedI128,
 
-	/// Min leveraged amount to open a position. If not set or smaller than default min leveraged amount,
-	/// the default value will be used instead.
+	/// Min leveraged amount to open a position. If not set or smaller than default min leveraged
+	/// amount, the default value will be used instead.
 	///
 	/// DEFAULT-NOTE: no min requirement for this pool.
 	pub min_leveraged_amount: Balance,
@@ -471,7 +471,8 @@ impl<T: Trait> Module<T> {
 		Self::pool_options(pool_id).additional_swap_rate
 	}
 
-	/// Min leveraged amount. `max(min_leveraged_amount, default_min_leveraged_amount)` will be used.
+	/// Min leveraged amount. `max(min_leveraged_amount, default_min_leveraged_amount)` will be
+	/// used.
 	pub fn min_leveraged_amount(pool_id: LiquidityPoolId) -> Balance {
 		let pool_min_leveraged_amount = Self::pool_options(pool_id).min_leveraged_amount;
 		max(pool_min_leveraged_amount, Self::default_min_leveraged_amount())

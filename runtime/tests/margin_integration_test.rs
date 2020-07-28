@@ -926,7 +926,8 @@ mod tests {
 				// close_price = 3 - 0.03 = 2.97
 				// profit = leveraged_held * (close_price - open_price)
 				// -300 = 5000 * (2.97 - 3.03)
-				// accumulated_swap_usd_value = leveraged_debits * (accumulated_swap_rate - open_accumulated_swap_rate))
+				// accumulated_swap_usd_value
+				//   = leveraged_debits * (accumulated_swap_rate - open_accumulated_swap_rate))
 				// -151.5 = 5000 * 3.03 * (-0.01 - 0)
 				assert_eq!(
 					margin_balance(&ALICE::get()),
@@ -960,7 +961,8 @@ mod tests {
 				// close_price = 3 - 0.03 = 2.97
 				// profit = leveraged_held * (close_price - open_price)
 				// -300 = 5000 * (2.97 - 3.03)
-				// accumulated_swap_usd_value = leveraged_debits * (accumulated_swap_rate - open_accumulated_swap_rate)
+				// accumulated_swap_usd_value =
+				//   leveraged_debits * (accumulated_swap_rate - open_accumulated_swap_rate)
 				// 304.515 = 5000 * 2.97 * (0.03 - 0.01)
 				assert_eq!(
 					margin_balance(&ALICE::get()),
@@ -1032,7 +1034,8 @@ mod tests {
 				// close_price = 3 - 0.03 = 2.97
 				// profit = leveraged_held * (close_price - open_price)
 				// -300 = 5000 * (2.97 - 3.03)
-				// accumulated_swap_usd_value = leveraged_debits * (accumulated_swap_rate - open_accumulated_swap_rate)
+				// accumulated_swap_usd_value =
+				//   leveraged_debits * (accumulated_swap_rate - open_accumulated_swap_rate)
 				// -153.015 = 5000 * 3.03 * (-0.0101 - 0)
 				assert_eq!(
 					margin_balance(&ALICE::get()),
@@ -1066,7 +1069,8 @@ mod tests {
 				// close_price = 3 - 0.03 = 2.97
 				// profit = leveraged_held * (close_price - open_price)
 				// -300 = 5000 * (2.97 - 3.03)
-				// accumulated_swap_usd_value = leveraged_debits * (accumulated_swap_rate - open_accumulated_swap_rate)
+				// accumulated_swap_usd_value =
+				//   leveraged_debits * (accumulated_swap_rate - open_accumulated_swap_rate)
 				// 294.03 = 5000 * 2.97 * (0.0297 - 0.0099)
 				assert_eq!(
 					margin_balance(&ALICE::get()),
