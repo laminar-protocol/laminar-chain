@@ -169,7 +169,8 @@ impl<T: Trait> Module<T> {
 		});
 	}
 
-	/// Get position under `pool_id` and `currency_id`. Returns `(collateral_amount, synthetic_amount)`.
+	/// Get position under `pool_id` and `currency_id`. Returns `(collateral_amount,
+	/// synthetic_amount)`.
 	pub fn get_position(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> (Balance, Balance) {
 		let Position { collateral, synthetic } = Positions::get(&pool_id, currency_id);
 		(collateral, synthetic)
@@ -177,8 +178,8 @@ impl<T: Trait> Module<T> {
 
 	/// Calculate incentive ratio.
 	///
-	/// If `ratio < extreme_ratio`, return `1`; if `ratio >= liquidation_ratio`, return `0`; Otherwise return
-	/// `(liquidation_ratio - ratio) / (liquidation_ratio - extreme_ratio)`.
+	/// If `ratio < extreme_ratio`, return `1`; if `ratio >= liquidation_ratio`, return `0`;
+	/// Otherwise return `(liquidation_ratio - ratio) / (liquidation_ratio - extreme_ratio)`.
 	pub fn incentive_ratio(currency_id: CurrencyId, current_ratio: FixedU128) -> FixedU128 {
 		let one = FixedU128::one();
 		if current_ratio < one {

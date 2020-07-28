@@ -382,7 +382,8 @@ impl<T: Trait> Module<T> {
 
 // Private methods
 impl<T: Trait> Module<T> {
-	/// Get ask price from liquidity pool for a given currency. Would fail if price could not meet max slippage.
+	/// Get ask price from liquidity pool for a given currency. Would fail if price could not meet
+	/// max slippage.
 	///
 	/// ask_price = price + ask_spread
 	fn ask_price(
@@ -401,7 +402,8 @@ impl<T: Trait> Module<T> {
 		Ok(ask_price)
 	}
 
-	/// Get bid price from liquidity pool for a given currency. Would fail if price could not meet max slippage.
+	/// Get bid price from liquidity pool for a given currency. Would fail if price could not meet
+	/// max slippage.
 	///
 	/// bid_price = price - bid_spread
 	fn bid_price(
@@ -452,7 +454,8 @@ impl<T: Trait> Module<T> {
 		collateral.checked_add(additional).ok_or(Error::<T>::NumOverflow.into())
 	}
 
-	/// Calculate position change for a remove, if ok, return with `(collateral_position_delta, pool_refund_collateral)`
+	/// Calculate position change for a remove, if ok, return with `(collateral_position_delta,
+	/// pool_refund_collateral)`
 	fn collateral_change_on_remove_position(
 		pool_id: LiquidityPoolId,
 		currency_id: CurrencyId,

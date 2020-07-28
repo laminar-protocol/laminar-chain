@@ -687,7 +687,8 @@ impl<T: Trait> Module<T> {
 
 			let mut pool_withdraw = realizable;
 			// If negative balance, the trader owes pool and then repay (the amount of negative balance).
-			// Note less withdraw(owing < realizable) or no withdraw(owing >= realizable) is the way of repayment.
+			// Note less withdraw(owing < realizable) or no withdraw(owing >= realizable) is the way of
+			// repayment.
 			let balance = Self::balances(who, position.pool);
 			if balance.is_negative() {
 				pool_withdraw = cmp::max(pool_withdraw.saturating_add(balance), FixedI128::zero());
@@ -712,8 +713,8 @@ impl<T: Trait> Module<T> {
 				unrealized_abs,
 			);
 
-			// If trader has not enough balance to pay the loss, pool won't get full payment for now. Repayment will
-			// happen on close profitable positions later.
+			// If trader has not enough balance to pay the loss, pool won't get full payment for now. Repayment
+			// will happen on close profitable positions later.
 			let pool_deposit = cmp::min(
 				cmp::max(Self::balances(who, position.pool), FixedI128::zero()),
 				realizable,
@@ -1053,8 +1054,8 @@ impl<T: Trait> Module<T> {
 		Ok(unrealized)
 	}
 
-	/// Returns `Ok((unrealized_pl, market_price))` of a given position. If `price`, market price must fit this bound,
-	/// else returns `None`.
+	/// Returns `Ok((unrealized_pl, market_price))` of a given position. If `price`, market price
+	/// must fit this bound, else returns `None`.
 	fn unrealized_pl_and_market_price_of_position(
 		position: &Position<T>,
 		price: Option<Price>,
@@ -1121,8 +1122,8 @@ impl<T: Trait> Module<T> {
 		})
 	}
 
-	/// Unrealized profit and loss of a given trader in a pool(USD value). It is the sum of unrealized profit and loss
-	/// of all positions opened by a trader.
+	/// Unrealized profit and loss of a given trader in a pool(USD value). It is the sum of
+	/// unrealized profit and loss of all positions opened by a trader.
 	pub fn unrealized_pl_of_trader(who: &T::AccountId, pool_id: LiquidityPoolId) -> FixedI128Result {
 		<PositionsByTrader<T>>::iter_prefix(who)
 			.filter_map(|((_, position_id), _)| Self::positions(position_id))
@@ -1146,7 +1147,8 @@ impl<T: Trait> Module<T> {
 
 	/// Accumulated swap rate of a position(USD value).
 	///
-	/// accumulated_swap_rate_of_position = (current_accumulated - open_accumulated) * leveraged_held
+	/// accumulated_swap_rate_of_position =
+	///   (current_accumulated - open_accumulated) * leveraged_held
 	fn accumulated_swap_rate_of_position(position: &Position<T>) -> FixedI128Result {
 		let rate = T::LiquidityPools::accumulated_swap_rate(position.pool, position.pair, position.leverage.is_long())
 			.checked_sub(&position.open_accumulated_swap_rate)
@@ -1465,7 +1467,8 @@ impl<T: Trait> Module<T> {
 		}
 	}
 
-	/// Return risk threshold of liquidity pool based on opened positions after performing an action.
+	/// Return risk threshold of liquidity pool based on opened positions after performing an
+	/// action.
 	///
 	/// Return `RiskThreshold` or `Default` value.
 	fn enp_and_ell_risk_threshold_of_pool(pool_id: LiquidityPoolId) -> (RiskThreshold, RiskThreshold) {

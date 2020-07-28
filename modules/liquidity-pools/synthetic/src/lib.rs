@@ -27,7 +27,8 @@ pub struct SyntheticPoolCurrencyOption {
 
 	/// Additional collateral ratio.
 	///
-	/// DEFAULT-NOTE: `None`. If not set or smaller than min additional swap rate, min value will be used instead.
+	/// DEFAULT-NOTE: `None`. If not set or smaller than min additional swap rate, min value will be
+	/// used instead.
 	pub additional_collateral_ratio: Option<Permill>,
 
 	/// Is a synthetic currency enabled to mint in the pool.

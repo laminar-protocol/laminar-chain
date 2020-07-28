@@ -40,7 +40,8 @@ fn parse_dollar(value: Option<&String>) -> Balance {
 	let value = value.replace(" ", "").replace("_", "");
 	if value.starts_with("$") {
 		let num = value[1..].parse::<f64>().expect("Invalid dollar value");
-		((num * (10u64.pow(10) as f64)) as Balance) * 10u128.pow(8) // to avoid accuracy issue when doing conversion
+		// to avoid accuracy issue when doing conversion
+		((num * (10u64.pow(10) as f64)) as Balance) * 10u128.pow(8)
 	} else {
 		value.parse::<Balance>().expect("invalid dollar value")
 	}
@@ -51,7 +52,8 @@ fn parse_fixed_i128_dollar(value: Option<&String>) -> FixedI128 {
 	let value = value.replace(" ", "").replace("_", "");
 	let dollar = if value.starts_with("$") {
 		let num = value[1..].parse::<f64>().expect("Invalid dollar value");
-		((num * (10u64.pow(10) as f64)) as i128) * 10i128.pow(8) // to avoid accuracy issue when doing conversion
+		// to avoid accuracy issue when doing conversion
+		((num * (10u64.pow(10) as f64)) as i128) * 10i128.pow(8)
 	} else {
 		value.parse::<i128>().expect("invalid dollar value")
 	};
