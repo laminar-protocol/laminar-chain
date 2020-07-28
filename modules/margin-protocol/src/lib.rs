@@ -1230,7 +1230,7 @@ impl<T: Trait> Module<T> {
 			_ => RiskThreshold::default(),
 		};
 
-		let trader_threshold = Self::risk_threshold_of_trader(who);
+		let trader_threshold = Self::risk_threshold_of_trader(who, pool_id);
 		let risk = if margin_level <= cmp::max(trader_threshold.stop_out, new_pair_risk_threshold.stop_out).into() {
 			Risk::StopOut
 		} else if margin_level
@@ -1442,8 +1442,9 @@ impl<T: Trait> Module<T> {
 	/// Return risk threshold of trader based on opened positions after performing an action.
 	///
 	/// Return `RiskThreshold` or `Default` value.
-	fn risk_threshold_of_trader(who: &T::AccountId) -> RiskThreshold {
+	fn risk_threshold_of_trader(who: &T::AccountId, pool_id: LiquidityPoolId) -> RiskThreshold {
 		let (trader_margin_call, trader_stop_out) = <PositionsByTrader<T>>::iter_prefix(who)
+			.filter(|((p, _), _)| *p == pool_id)
 			.fold(vec![], |mut v, ((_, position_id), _)| {
 				if let Some(position) = Self::positions(position_id) {
 					if !v.contains(&position.pair) {

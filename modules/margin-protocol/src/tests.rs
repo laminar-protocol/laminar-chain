@@ -2580,7 +2580,10 @@ fn open_position_check_trader_works() {
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
 			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 1), ());
 
-			assert_eq!(MarginProtocol::risk_threshold_of_trader(&ALICE), risk_threshold(5, 5));
+			assert_eq!(
+				MarginProtocol::risk_threshold_of_trader(&ALICE, MOCK_POOL),
+				risk_threshold(5, 5)
+			);
 
 			assert_eq!(
 				MarginProtocol::check_trader(&ALICE, MOCK_POOL, Action::OpenPosition(eur_usd_long_1())),
