@@ -7,7 +7,7 @@ use runtime::{
 	GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, IndicesConfig, MarginLiquidityPoolsConfig,
 	MarginProtocolConfig, Moment, OperatorMembershipConfig, OracleConfig, OracleId, SessionConfig, Signature,
 	StakerStatus, StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SyntheticTokensConfig, SystemConfig,
-	TokensConfig, CENTS, DOLLARS, WASM_BINARY,
+	TokensConfig, CENTS, DOLLARS, MILLICENTS, WASM_BINARY,
 };
 use sc_chain_spec::ChainSpecExtension;
 use sc_service;
@@ -668,7 +668,7 @@ fn turbulence_genesis(
 					// TradingPair
 					USD_JPY,
 					// MaxSpread
-					1 * CENTS,
+					100 * MILLICENTS,
 					// Accumulates
 					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
@@ -720,7 +720,7 @@ fn turbulence_genesis(
 					// TradingPair
 					XAU_USD,
 					// MaxSpread
-					1 * CENTS,
+					1 * DOLLARS,
 					// Accumulates
 					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
