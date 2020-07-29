@@ -2667,3 +2667,34 @@ fn open_position_check_pool_works() {
 			);
 		});
 }
+
+#[test]
+fn risk_threshold_of_trader_is_per_pool() {
+	ExtBuilder::default()
+		.spread(Permill::zero())
+		.accumulated_swap_rate(EUR_USD_PAIR, FixedI128::saturating_from_integer(1))
+		.accumulated_swap_rate(EUR_JPY_PAIR, FixedI128::saturating_from_integer(1))
+		.price(CurrencyId::FEUR, (1, 1))
+		.price(CurrencyId::FJPY, (1, 105))
+		.pool_liquidity(MOCK_POOL, balance_saturating_from_integer_currency_cent(1000_00))
+		.build()
+		.execute_with(|| {
+			set_trader_risk_threshold(EUR_USD_PAIR, risk_threshold(3, 5));
+			set_trader_risk_threshold(EUR_JPY_PAIR, risk_threshold(5, 3));
+			set_trader_risk_threshold(JPY_USD_PAIR, risk_threshold(6, 7));
+
+			<Positions<Runtime>>::insert(0, eur_usd_long_1());
+			<Positions<Runtime>>::insert(1, eur_jpy_short());
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 0), ());
+			<PositionsByTrader<Runtime>>::insert(ALICE, (MOCK_POOL, 1), ());
+
+			assert_eq!(
+				MarginProtocol::risk_threshold_of_trader(&ALICE, MOCK_POOL),
+				risk_threshold(5, 5)
+			);
+			assert_eq!(
+				MarginProtocol::risk_threshold_of_trader(&ALICE, MOCK_POOL_1),
+				risk_threshold(0, 0)
+			);
+		});
+}
