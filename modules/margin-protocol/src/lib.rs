@@ -804,7 +804,7 @@ impl<T: Trait> Module<T> {
 						Some((position_id, unrealized))
 					})
 					.collect();
-				positions.sort_unstable_by(|x, y| x.1.cmp(&y.1));
+				positions.sort_by(|x, y| x.1.cmp(&y.1));
 
 				for (id, _) in positions {
 					let _ = Self::do_close_position(who, id, None);
