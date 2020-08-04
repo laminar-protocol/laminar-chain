@@ -3,10 +3,10 @@
 #![cfg(test)]
 
 use frame_support::{impl_outer_event, impl_outer_origin, ord_parameter_types, parameter_types};
+use frame_system::EnsureSignedBy;
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup, DispatchResult, Perbill, Permill};
 use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
-use frame_system::EnsureSignedBy;
 
 use orml_currencies::Currency;
 use orml_traits::{DataProvider, DefaultPriceProvider};
