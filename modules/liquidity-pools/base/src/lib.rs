@@ -7,7 +7,7 @@ use frame_support::{
 	traits::{Currency, EnsureOrigin, Get, ReservableCurrency},
 	weights::DispatchClass,
 };
-use frame_system::{self as system, ensure_signed};
+use frame_system::ensure_signed;
 use orml_traits::BasicCurrency;
 use orml_utilities::with_transaction_result;
 use primitives::{Balance, IdentityInfo, LiquidityPoolId};
@@ -24,7 +24,7 @@ mod tests;
 type IdentityDepositBalanceOf<T, I> =
 	<<T as Trait<I>>::IdentityDepositCurrency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 
-pub trait Trait<I: Instance = DefaultInstance>: system::Trait {
+pub trait Trait<I: Instance = DefaultInstance>: frame_system::Trait {
 	/// The overarching event type.
 	type Event: From<Event<Self, I>> + Into<<Self as frame_system::Trait>::Event>;
 
@@ -91,7 +91,7 @@ decl_storage! {
 
 decl_event!(
 	pub enum Event<T, I=DefaultInstance> where
-		<T as system::Trait>::AccountId,
+		<T as frame_system::Trait>::AccountId,
 	{
 		/// Liquidity pool created: [who, pool_id]
 		LiquidityPoolCreated(AccountId, LiquidityPoolId),

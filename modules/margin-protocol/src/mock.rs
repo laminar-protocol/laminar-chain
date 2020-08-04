@@ -3,7 +3,6 @@
 #![cfg(test)]
 
 use frame_support::{impl_outer_dispatch, impl_outer_event, impl_outer_origin, ord_parameter_types, parameter_types};
-use frame_system as system;
 use frame_system::EnsureSignedBy;
 use orml_traits::{DataProvider, DefaultPriceProvider};
 use primitives::{Balance, CurrencyId, LiquidityPoolId, TradingPair};
@@ -79,8 +78,9 @@ impl frame_system::Trait for Runtime {
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type BaseCallFilter = ();
+	type SystemWeightInfo = ();
 }
-pub type System = system::Module<Runtime>;
+pub type System = frame_system::Module<Runtime>;
 
 type Amount = i128;
 
@@ -105,6 +105,7 @@ impl pallet_balances::Trait for Runtime {
 	type Event = TestEvent;
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = frame_system::Module<Runtime>;
+	type WeightInfo = ();
 }
 
 pub type NativeCurrency =

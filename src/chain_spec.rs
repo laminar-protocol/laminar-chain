@@ -25,6 +25,7 @@ use synthetic_tokens::SyntheticTokensRatio;
 
 type AccountPublic = <Signature as Verify>::Signer;
 
+// The URL for the telemetry server.
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 /// Node `ChainSpec` extensions.
@@ -40,21 +41,21 @@ pub struct Extensions {
 	pub bad_blocks: sc_client_api::BadBlocks<Block>,
 }
 
-/// Specialized `ChainSpec`.
+/// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
 
 fn session_keys(grandpa: GrandpaId, babe: BabeId) -> SessionKeys {
 	SessionKeys { grandpa, babe }
 }
 
-/// Helper function to generate a crypto pair from seed
+/// Generate a crypto pair from seed.
 pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
 	TPublic::Pair::from_string(&format!("//{}", seed), None)
 		.expect("static values are valid; qed")
 		.public()
 }
 
-/// Helper function to generate an account ID from seed
+/// Generate an account ID from seed.
 pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
 where
 	AccountPublic: From<<TPublic::Pair as Pair>::Public>,
@@ -62,7 +63,7 @@ where
 	AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
 
-/// Helper function to generate stash, controller and session key from seed
+/// Generate an Aura authority key.
 pub fn authority_keys_from_seed(seed: &str) -> (AccountId, AccountId, GrandpaId, BabeId) {
 	(
 		get_account_id_from_seed::<sr25519::Public>(&format!("{}//stash", seed)),
@@ -79,19 +80,27 @@ pub fn get_oracle_keys_from_seed(seed: &str) -> (AccountId, OracleId) {
 	)
 }
 
-pub fn development_config() -> ChainSpec {
+pub fn development_config() -> Result<ChainSpec, String> {
 	let mut properties = Map::new();
 	properties.insert("tokenSymbol".into(), "LAMI".into());
 	properties.insert("tokenDecimals".into(), 18.into());
 
-	ChainSpec::from_genesis(
+	let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
+
+	Ok(ChainSpec::from_genesis(
+		// Name
 		"Development",
+		// ID
 		"dev",
 		ChainType::Development,
-		|| {
+		move || {
 			dev_genesis(
+				wasm_binary,
+				// Initial PoA authorities
 				vec![authority_keys_from_seed("Alice")],
+				// Sudo account
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				// Pre-funded accounts
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -101,27 +110,38 @@ pub fn development_config() -> ChainSpec {
 				vec![get_oracle_keys_from_seed("Alice")],
 			)
 		},
+		// Bootnodes
 		vec![],
+		// Telemetry
 		None,
+		// Protocol ID
 		None,
+		// Properties
 		Some(properties),
+		// Extensions
 		Default::default(),
-	)
+	))
 }
 
-pub fn local_testnet_config() -> ChainSpec {
+pub fn local_testnet_config() -> Result<ChainSpec, String> {
 	let mut properties = Map::new();
 	properties.insert("tokenSymbol".into(), "LAMI".into());
 	properties.insert("tokenDecimals".into(), 18.into());
 
-	ChainSpec::from_genesis(
+	let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
+
+	Ok(ChainSpec::from_genesis(
 		"Local Testnet",
 		"local_testnet",
 		ChainType::Local,
-		|| {
+		move || {
 			dev_genesis(
+				wasm_binary,
+				// Initial PoA authorities
 				vec![authority_keys_from_seed("Alice"), authority_keys_from_seed("Bob")],
+				// Sudo account
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				// Pre-funded accounts
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -139,24 +159,31 @@ pub fn local_testnet_config() -> ChainSpec {
 				vec![get_oracle_keys_from_seed("Alice")],
 			)
 		},
+		// Bootnodes
 		vec![],
+		// Telemetry
 		None,
+		// Protocol ID
 		None,
+		// Properties
 		Some(properties),
+		// Extensions
 		Default::default(),
-	)
+	))
 }
 
 pub fn laminar_turbulence_config() -> Result<ChainSpec, String> {
 	ChainSpec::from_json_bytes(&include_bytes!("../resources/turbulence-dist.json")[..])
 }
 
-pub fn laminar_turbulence_latest_config() -> ChainSpec {
+pub fn laminar_turbulence_latest_config() -> Result<ChainSpec, String> {
 	let mut properties = Map::new();
 	properties.insert("tokenSymbol".into(), "LAMI".into());
 	properties.insert("tokenDecimals".into(), 18.into());
 
-	ChainSpec::from_genesis(
+	let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
+
+	Ok(ChainSpec::from_genesis(
 		"Laminar Turbulence TC1",
 		"turbulence1",
 		ChainType::Live,
@@ -172,57 +199,64 @@ pub fn laminar_turbulence_latest_config() -> ChainSpec {
 		// ./target/debug/subkey --sr25519 inspect "$SECRET//laminar//3//validator"
 		// ./target/debug/subkey --sr25519 inspect "$SECRET//laminar//3//babe"
 		// ./target/debug/subkey --ed25519 inspect "$SECRET//laminar//3//grandpa"
-		|| {
-			turbulence_genesis(
-				vec![
-					(
-						// 5E6jm6dgDZQBFW79gd3uvTKymjqUSzAPfkvD7Exx5GvdbHZ6
-						hex!["5a055df2cbdebc8fce61a70db71fcf64c1853dca54d8c3e52b2d65cb8cf7e533"].into(),
-						hex!["5a055df2cbdebc8fce61a70db71fcf64c1853dca54d8c3e52b2d65cb8cf7e533"].into(),
-						hex!["b48963cb1572aa90e4202db400e7b5aa887b3c6aaf7e61de3a6beb14dae2c97b"].unchecked_into(),
-						hex!["f2415a6cedee17c766c7e8f696fb3499519d85a3248b05de35bc7b58d59e4149"].unchecked_into(),
-					),
-					(
-						// 5GGqathCVPRvwTTMEvURf2f16iKu4i8SccxCc6UNGDF4g447
-						hex!["ba31e4b5576a5d60b2dbdb4d4144f6478636b84313fe6f41a44e002ddc64ec6c"].into(),
-						hex!["ba31e4b5576a5d60b2dbdb4d4144f6478636b84313fe6f41a44e002ddc64ec6c"].into(),
-						hex!["293bd01494343a94520531d844953e947e4a1ff84bdae948565e49bdf3304c09"].unchecked_into(),
-						hex!["cade610afbc4ce7ca0c6972f5c774c2c4710eed431cc23ac6e5e806870a8dd02"].unchecked_into(),
-					),
-					(
-						// 5GmrbvqhDBp7jmaRB5SsiY5kfkLPXMbELm6MTVsMpbCX19tD
-						hex!["d0536fc56cac85d6b61e128becdc367e8d7652d9a95663c7e88cb6119aea966d"].into(),
-						hex!["d0536fc56cac85d6b61e128becdc367e8d7652d9a95663c7e88cb6119aea966d"].into(),
-						hex!["849c1ea65bc37705aafd4e753fde8395612e9da8d88240d27b2dfc4a2e115599"].unchecked_into(),
-						hex!["d84cdabe21cead3f88de87b63116405182cf78ef97d3d590011bc235a983447a"].unchecked_into(),
-					),
-				],
+		move || turbulence_genesis(
+			wasm_binary,
+			// Initial PoA authorities
+			vec![
+				(
+					// 5E6jm6dgDZQBFW79gd3uvTKymjqUSzAPfkvD7Exx5GvdbHZ6
+					hex!["5a055df2cbdebc8fce61a70db71fcf64c1853dca54d8c3e52b2d65cb8cf7e533"].into(),
+					hex!["5a055df2cbdebc8fce61a70db71fcf64c1853dca54d8c3e52b2d65cb8cf7e533"].into(),
+					hex!["b48963cb1572aa90e4202db400e7b5aa887b3c6aaf7e61de3a6beb14dae2c97b"].unchecked_into(),
+					hex!["f2415a6cedee17c766c7e8f696fb3499519d85a3248b05de35bc7b58d59e4149"].unchecked_into(),
+				),
+				(
+					// 5GGqathCVPRvwTTMEvURf2f16iKu4i8SccxCc6UNGDF4g447
+					hex!["ba31e4b5576a5d60b2dbdb4d4144f6478636b84313fe6f41a44e002ddc64ec6c"].into(),
+					hex!["ba31e4b5576a5d60b2dbdb4d4144f6478636b84313fe6f41a44e002ddc64ec6c"].into(),
+					hex!["293bd01494343a94520531d844953e947e4a1ff84bdae948565e49bdf3304c09"].unchecked_into(),
+					hex!["cade610afbc4ce7ca0c6972f5c774c2c4710eed431cc23ac6e5e806870a8dd02"].unchecked_into(),
+				),
+				(
+					// 5GmrbvqhDBp7jmaRB5SsiY5kfkLPXMbELm6MTVsMpbCX19tD
+					hex!["d0536fc56cac85d6b61e128becdc367e8d7652d9a95663c7e88cb6119aea966d"].into(),
+					hex!["d0536fc56cac85d6b61e128becdc367e8d7652d9a95663c7e88cb6119aea966d"].into(),
+					hex!["849c1ea65bc37705aafd4e753fde8395612e9da8d88240d27b2dfc4a2e115599"].unchecked_into(),
+					hex!["d84cdabe21cead3f88de87b63116405182cf78ef97d3d590011bc235a983447a"].unchecked_into(),
+				),
+			],
+			// Sudo account
+			// 5FySxAHYXDzgDY8BTVnbZ6dygkXJwG27pKmgCLeSRSFEG2dy
+			hex!["acee87f3026e9ef8cf334fe94bc9eb9e9e689318611eca21e5aef919e3e5bc30"].into(),
+			// Pre-funded accounts
+			vec![
 				// 5FySxAHYXDzgDY8BTVnbZ6dygkXJwG27pKmgCLeSRSFEG2dy
 				hex!["acee87f3026e9ef8cf334fe94bc9eb9e9e689318611eca21e5aef919e3e5bc30"].into(),
-				vec![
-					// 5FySxAHYXDzgDY8BTVnbZ6dygkXJwG27pKmgCLeSRSFEG2dy
-					hex!["acee87f3026e9ef8cf334fe94bc9eb9e9e689318611eca21e5aef919e3e5bc30"].into(),
+				// 5DyXntuH5dBcf2dpjTojzfV6GDypx8CyTuVFm84qB7a4BkYT
+				hex!["54865b9eff8c291658e3fbda202f4260536618c31a0056372d121a5206010d53"].into(),
+			],
+			vec![
+				(
 					// 5DyXntuH5dBcf2dpjTojzfV6GDypx8CyTuVFm84qB7a4BkYT
 					hex!["54865b9eff8c291658e3fbda202f4260536618c31a0056372d121a5206010d53"].into(),
-				],
-				vec![
-					(
-						// 5DyXntuH5dBcf2dpjTojzfV6GDypx8CyTuVFm84qB7a4BkYT
-						hex!["54865b9eff8c291658e3fbda202f4260536618c31a0056372d121a5206010d53"].into(),
-						hex!["54865b9eff8c291658e3fbda202f4260536618c31a0056372d121a5206010d53"].unchecked_into(),
-					)
-				]
-			)
-		},
+					hex!["54865b9eff8c291658e3fbda202f4260536618c31a0056372d121a5206010d53"].unchecked_into(),
+				)
+			]
+		),
+		// Bootnodes
 		vec![
 			"/dns4/testnet-bootnode-1.laminar-chain.laminar.one/tcp/30333/p2p/12D3KooWNCe9dEpPhswckrX5ZHhdtZ3r5sg6CcgKfgyhw3seuwtB".parse().unwrap(),
 		],
+		// Telemetry
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
 			.expect("Staging telemetry url is valid; qed")),
+		// Protocol ID
 		Some("turbulence1"),
+		// Properties
 		Some(properties),
+		// Extensions
 		Default::default(),
-	)
+	))
 }
 
 const INITIAL_BALANCE: u128 = 1_000_000 * DOLLARS;
@@ -281,6 +315,7 @@ fn risk_threshold(margin_call_percent: u32, stop_out_percent: u32) -> RiskThresh
 }
 
 fn dev_genesis(
+	wasm_binary: &[u8],
 	initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId)>,
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
@@ -288,7 +323,7 @@ fn dev_genesis(
 ) -> GenesisConfig {
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
-			code: WASM_BINARY.to_vec(),
+			code: wasm_binary.to_vec(),
 			changes_trie_config: Default::default(),
 		}),
 		pallet_indices: Some(IndicesConfig { indices: vec![] }),
@@ -558,6 +593,7 @@ fn dev_genesis(
 }
 
 fn turbulence_genesis(
+	wasm_binary: &[u8],
 	initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId)>,
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
@@ -565,7 +601,7 @@ fn turbulence_genesis(
 ) -> GenesisConfig {
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
-			code: WASM_BINARY.to_vec(),
+			code: wasm_binary.to_vec(),
 			changes_trie_config: Default::default(),
 		}),
 		pallet_indices: Some(IndicesConfig { indices: vec![] }),

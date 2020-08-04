@@ -5,7 +5,6 @@ use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
 	traits::{EnsureOrigin, Get},
 };
-use frame_system as system;
 use module_primitives::{Balance, CurrencyId, LiquidityPoolId};
 use module_traits::BaseLiquidityPoolManager;
 use orml_utilities::with_transaction_result;
