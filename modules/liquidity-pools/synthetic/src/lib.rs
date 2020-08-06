@@ -5,7 +5,7 @@ mod tests;
 
 use codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::EnsureOrigin};
-use frame_system::{self as system, ensure_signed};
+use frame_system::ensure_signed;
 use orml_utilities::with_transaction_result;
 use primitives::{Balance, CurrencyId, LiquidityPoolId};
 use sp_runtime::{DispatchResult, ModuleId, Permill, RuntimeDebug};
@@ -41,7 +41,7 @@ pub const MODULE_ID: ModuleId = ModuleId(*b"lami/slp");
 
 pub trait Trait: frame_system::Trait {
 	/// The overarching event type.
-	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
 	/// The `LiquidityPools` implementation.
 	type BaseLiquidityPools: LiquidityPools<Self::AccountId>;
@@ -65,7 +65,7 @@ decl_storage! {
 
 decl_event!(
 	pub enum Event<T> where
-		<T as system::Trait>::AccountId,
+		<T as frame_system::Trait>::AccountId,
 	{
 		/// Spread set: [who, pool_id, currency_id, bid, ask]
 		SpreadSet(AccountId, LiquidityPoolId, CurrencyId, Balance, Balance),

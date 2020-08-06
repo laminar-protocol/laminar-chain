@@ -3,10 +3,9 @@
 #![cfg(test)]
 
 use frame_support::{impl_outer_event, impl_outer_origin, ord_parameter_types, parameter_types};
-use frame_system as system;
+use frame_system::EnsureSignedBy;
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
-use system::EnsureSignedBy;
 
 use super::*;
 
@@ -69,8 +68,9 @@ impl frame_system::Trait for Runtime {
 	type OnKilledAccount = ();
 	type AccountData = ();
 	type BaseCallFilter = ();
+	type SystemWeightInfo = ();
 }
-pub type System = system::Module<Runtime>;
+pub type System = frame_system::Module<Runtime>;
 
 impl Trait for Runtime {
 	type Event = TestEvent;

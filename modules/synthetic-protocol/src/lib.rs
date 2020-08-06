@@ -1,15 +1,12 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get, weights::DispatchClass};
+use frame_system::ensure_signed;
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedSub, Saturating, Zero},
 	DispatchError, DispatchResult, FixedPointNumber, FixedU128,
 };
 use sp_std::result;
-// FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
-// would cause compiling error in `decl_module!` and `construct_runtime!`
-// #3295 https://github.com/paritytech/substrate/issues/3295
-use frame_system::{self as system, ensure_signed};
 
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
 use orml_utilities::with_transaction_result;

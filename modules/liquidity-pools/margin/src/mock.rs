@@ -39,7 +39,7 @@ parameter_types! {
 	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
 
-impl system::Trait for Runtime {
+impl frame_system::Trait for Runtime {
 	type Origin = Origin;
 	type Call = ();
 	type Index = u64;
@@ -64,9 +64,10 @@ impl system::Trait for Runtime {
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type BaseCallFilter = ();
+	type SystemWeightInfo = ();
 }
 
-pub type System = system::Module<Runtime>;
+pub type System = frame_system::Module<Runtime>;
 
 parameter_types! {
 	pub const ExistentialDeposit: u128 = 50;
@@ -81,6 +82,7 @@ impl pallet_balances::Trait for Runtime {
 	type Event = ();
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = frame_system::Module<Runtime>;
+	type WeightInfo = ();
 }
 
 type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
@@ -147,6 +149,7 @@ impl pallet_timestamp::Trait for Runtime {
 	type Moment = u64;
 	type OnTimestampSet = ();
 	type MinimumPeriod = MinimumPeriod;
+	type WeightInfo = ();
 }
 pub type Timestamp = pallet_timestamp::Module<Runtime>;
 
@@ -164,7 +167,7 @@ pub type ModuleLiquidityPools = Module<Runtime>;
 // This function basically just builds a genesis storage key/value store according to
 // our desired mockup.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let mut t = system::GenesisConfig::default()
+	let mut t = frame_system::GenesisConfig::default()
 		.build_storage::<Runtime>()
 		.unwrap()
 		.into();

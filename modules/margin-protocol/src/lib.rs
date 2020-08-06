@@ -7,6 +7,16 @@ use frame_support::{
 	weights::DispatchClass,
 	IterableStorageDoubleMap, IterableStorageMap,
 };
+use frame_system::{
+	ensure_none, ensure_signed,
+	offchain::{SendTransactionTypes, SubmitTransaction},
+};
+use orml_traits::{BasicCurrency, PriceProvider};
+use orml_utilities::with_transaction_result;
+use primitives::{
+	arithmetic::{fixed_i128_from_fixed_u128, fixed_i128_from_u128, fixed_i128_mul_signum, u128_from_fixed_i128},
+	Balance, CurrencyId, Leverage, LiquidityPoolId, Price, TradingPair,
+};
 use sp_arithmetic::{
 	traits::{Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Saturating},
 	FixedI128, FixedPointNumber, FixedU128, Permill,
@@ -21,20 +31,6 @@ use sp_runtime::{
 		InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity, ValidTransaction,
 	},
 	DispatchError, DispatchResult, ModuleId, RuntimeDebug,
-};
-// FIXME: `pallet/frame-` prefix should be used for all pallet modules, but currently `frame_system`
-// would cause compiling error in `decl_module!` and `construct_runtime!`
-// #3295 https://github.com/paritytech/substrate/issues/3295
-use frame_system as system;
-use frame_system::{
-	ensure_none, ensure_signed,
-	offchain::{SendTransactionTypes, SubmitTransaction},
-};
-use orml_traits::{BasicCurrency, PriceProvider};
-use orml_utilities::with_transaction_result;
-use primitives::{
-	arithmetic::{fixed_i128_from_fixed_u128, fixed_i128_from_u128, fixed_i128_mul_signum, u128_from_fixed_i128},
-	Balance, CurrencyId, Leverage, LiquidityPoolId, Price, TradingPair,
 };
 use sp_std::{cmp, prelude::*, result};
 use traits::{
