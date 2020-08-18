@@ -1,4 +1,4 @@
-//! The LaminarChain runtime. This can be compiled with `#[no_std]`, ready for Wasm.
+//! The LaminarChain dev runtime. This can be compiled with `#[no_std]`, ready for Wasm.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
@@ -11,7 +11,6 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 mod benchmarking;
 mod constants;
 pub mod tests;
-mod types;
 
 use codec::Encode;
 use pallet_collective::{EnsureMembers, EnsureProportionMoreThan};
@@ -41,10 +40,12 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
 pub use frame_system::{Call as SystemCall, EnsureOneOf, EnsureRoot};
-pub use module_primitives::{Balance, CurrencyId, LiquidityPoolId, Price};
 use orml_currencies::BasicCurrencyAdapter;
-pub use orml_oracle::AuthorityId as OracleId;
 use orml_traits::DataProvider;
+pub use primitives::{
+	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, EraIndex, Hash, LiquidityPoolId, Moment, Nonce,
+	Price, Signature,
+};
 pub use sp_arithmetic::FixedI128;
 
 use margin_protocol_rpc_runtime_api::{MarginPoolState, MarginTraderState};
@@ -66,7 +67,6 @@ pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Percent, Permill};
 
 pub use constants::{currency::*, fee::*, time::*};
-pub use types::*;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -93,7 +93,6 @@ pub mod opaque {
 }
 
 pub use constants::time::*;
-pub use types::*;
 
 /// This runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
@@ -145,7 +144,7 @@ impl frame_system::Trait for Runtime {
 	/// The lookup mechanism to get account ID from whatever is passed in dispatchers.
 	type Lookup = Indices;
 	/// The index type for storing how many extrinsics an account has signed.
-	type Index = Index;
+	type Index = Nonce;
 	/// The index type for blocks.
 	type BlockNumber = BlockNumber;
 	/// The type for hashing blocks and tries.
@@ -726,7 +725,7 @@ where
 		call: Call,
 		public: <Signature as Verify>::Signer,
 		account: AccountId,
-		nonce: Index,
+		nonce: Nonce,
 	) -> Option<(Call, <UncheckedExtrinsic as Extrinsic>::SignaturePayload)> {
 		// take the biggest period possible.
 		let period = BlockHashCount::get()
@@ -863,6 +862,7 @@ pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Call, SignedExt
 pub type Executive =
 	frame_executive::Executive<Runtime, Block, frame_system::ChainContext<Runtime>, Runtime, AllModules>;
 
+#[cfg(not(feature = "disable-runtime-api"))]
 impl_runtime_apis! {
 	impl sp_api::Core<Block> for Runtime {
 		fn version() -> RuntimeVersion {
@@ -1013,8 +1013,8 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Index> for Runtime {
-		fn account_nonce(account: AccountId) -> Index {
+	impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce> for Runtime {
+		fn account_nonce(account: AccountId) -> Nonce {
 			System::account_nonce(account)
 		}
 	}

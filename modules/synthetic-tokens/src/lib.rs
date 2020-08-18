@@ -5,7 +5,7 @@ use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
 	traits::{EnsureOrigin, Get},
 };
-use module_primitives::{Balance, CurrencyId, LiquidityPoolId};
+use laminar_primitives::{Balance, CurrencyId, LiquidityPoolId};
 use module_traits::BaseLiquidityPoolManager;
 use orml_utilities::with_transaction_result;
 use sp_runtime::{

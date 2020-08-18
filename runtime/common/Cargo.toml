@@ -1,0 +1,14 @@
+[package]
+name = "runtime-common"
+version = "0.2.1"
+authors = ["Laminar Developers <hello@laminar.one>"]
+edition = "2018"
+
+[dependencies]
+orml-oracle = { path = "../../orml/oracle", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+	"orml-oracle/std",
+]

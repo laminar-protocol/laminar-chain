@@ -1,16 +1,76 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode, Error, Input};
-use sp_runtime::{FixedU128, RuntimeDebug};
-use sp_std::{prelude::*, vec};
+use sp_runtime::{
+	generic,
+	traits::{BlakeTwo256, IdentifyAccount, Verify},
+	FixedU128, MultiSignature, RuntimeDebug,
+};
 
-#[macro_use]
-extern crate bitmask;
+use sp_arithmetic::FixedI128;
+use sp_std::{prelude::*, vec};
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
+#[macro_use]
+extern crate bitmask;
+
 pub mod arithmetic;
+
+/// An index to a block.
+pub type BlockNumber = u32;
+
+/// Alias to 512-bit hash when used in the context of a transaction signature on
+/// the chain.
+pub type Signature = MultiSignature;
+
+/// Alias to the public key used for this chain, actually a `MultiSigner`. Like
+/// the signature, this also isn't a fixed size when encoded, as different
+/// cryptos have different size public keys.
+pub type AccountPublic = <Signature as Verify>::Signer;
+
+/// Alias to the opaque account ID type for this chain, actually a
+/// `AccountId32`. This is always 32 bytes.
+pub type AccountId = <AccountPublic as IdentifyAccount>::AccountId;
+
+/// The type for looking up accounts. We don't expect more than 4 billion of
+/// them.
+pub type AccountIndex = u32;
+
+/// Index of a transaction in the chain. 32-bit should be plenty.
+pub type Nonce = u32;
+
+/// A hash of some data used by the chain.
+pub type Hash = sp_core::H256;
+
+/// An instant or duration in time.
+pub type Moment = u64;
+
+/// Counter for the number of eras that have passed.
+pub type EraIndex = u32;
+
+/// Balance of an account.
+pub type Balance = u128;
+
+/// Signed version of Balance
+pub type Amount = i128;
+
+pub type AuctionId = u32;
+
+pub type Share = u128;
+
+/// Header type.
+pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
+
+/// Block type.
+pub type Block = generic::Block<Header, UncheckedExtrinsic>;
+
+/// Block ID.
+pub type BlockId = generic::BlockId<Block>;
+
+/// Opaque, encoded, unchecked extrinsic.
+pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
 
 pub type LiquidityPoolId = u32;
 
@@ -30,7 +90,6 @@ pub enum CurrencyId {
 	FOIL,
 }
 
-pub type Balance = u128;
 pub type Price = FixedU128;
 
 bitmask! {
@@ -174,6 +233,13 @@ pub struct IdentityInfo {
 
 	/// Image URL.
 	pub image_url: Vec<u8>,
+}
+
+#[derive(Clone, Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct SwapRate {
+	pub long: FixedI128,
+	pub short: FixedI128,
 }
 
 #[cfg(test)]

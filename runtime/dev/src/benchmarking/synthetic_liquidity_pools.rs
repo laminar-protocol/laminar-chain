@@ -7,7 +7,7 @@ use sp_std::prelude::*;
 use frame_benchmarking::account;
 use orml_benchmarking::runtime_benchmarks;
 
-use module_primitives::CurrencyId::*;
+use laminar_primitives::CurrencyId::*;
 
 const SEED: u32 = 0;
 const MAX_POOL_INDEX: u32 = 1000;

@@ -2,7 +2,7 @@
 
 /// Money matters.
 pub mod currency {
-	use crate::types::Balance;
+	use primitives::Balance;
 
 	pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
 	pub const CENTS: Balance = DOLLARS / 100;
@@ -15,7 +15,7 @@ pub mod currency {
 
 /// Time.
 pub mod time {
-	use crate::types::{BlockNumber, Moment};
+	use primitives::{BlockNumber, Moment};
 
 	pub const MILLISECS_PER_BLOCK: Moment = 4000;
 
@@ -42,7 +42,7 @@ pub mod fee {
 	use frame_support::weights::{
 		constants::ExtrinsicBaseWeight, WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
 	};
-	use module_primitives::Balance;
+	use primitives::Balance;
 	use smallvec::smallvec;
 	pub use sp_runtime::Perbill;
 

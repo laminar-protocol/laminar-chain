@@ -1,7 +1,7 @@
 use codec::Codec;
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
-use module_primitives::{CurrencyId, LiquidityPoolId};
+use laminar_primitives::{CurrencyId, LiquidityPoolId};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};

@@ -1,10 +1,10 @@
 use codec::Codec;
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
+use laminar_primitives::LiquidityPoolId;
 pub use margin_protocol_rpc_runtime_api::{
 	MarginPoolState, MarginProtocolApi as MarginProtocolRuntimeApi, MarginTraderState,
 };
-use module_primitives::LiquidityPoolId;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
