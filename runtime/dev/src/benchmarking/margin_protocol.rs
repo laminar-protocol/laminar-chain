@@ -9,8 +9,8 @@ use sp_std::prelude::*;
 use frame_benchmarking::account;
 use orml_benchmarking::runtime_benchmarks;
 
-use laminar_primitives::*;
 use margin_protocol::RiskThreshold;
+use primitives::*;
 
 const SEED: u32 = 0;
 const MAX_TRADER_INDEX: u32 = 1000;

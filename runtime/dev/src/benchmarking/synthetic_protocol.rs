@@ -11,8 +11,8 @@ use sp_std::prelude::*;
 use frame_benchmarking::account;
 use orml_benchmarking::runtime_benchmarks;
 
-use laminar_primitives::CurrencyId::FEUR;
-use laminar_primitives::*;
+use primitives::CurrencyId::FEUR;
+use primitives::*;
 
 const SEED: u32 = 0;
 const MAX_TRADER_INDEX: u32 = 1000;

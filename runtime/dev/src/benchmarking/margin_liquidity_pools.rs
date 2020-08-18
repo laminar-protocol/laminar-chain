@@ -8,9 +8,8 @@ use sp_std::prelude::*;
 use frame_benchmarking::account;
 use orml_benchmarking::runtime_benchmarks;
 
-use laminar_primitives::*;
-use margin_liquidity_pools::SwapRate;
 use margin_protocol::RiskThreshold;
+use primitives::*;
 
 const SEED: u32 = 0;
 const MAX_POOL_INDEX: u32 = 1000;
