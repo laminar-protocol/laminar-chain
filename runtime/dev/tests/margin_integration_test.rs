@@ -3,17 +3,17 @@
 #[cfg(test)]
 
 mod tests {
-	use frame_support::{assert_noop, assert_ok};
-	use laminar_runtime::{
+	use dev_runtime::{
 		tests::*,
 		BaseLiquidityPoolsMarginInstance,
 		CurrencyId::{AUSD, FEUR, FJPY},
 		GetTreasuryAccountId, MaxSwap, Runtime, DOLLARS,
 	};
+	use frame_support::{assert_noop, assert_ok};
 
 	use margin_protocol_rpc_runtime_api::{MarginPoolState, MarginTraderState};
-	use module_primitives::{Leverage::*, Price};
 	use module_traits::MarginProtocolLiquidityPools;
+	use primitives::{Leverage::*, Price};
 	use sp_arithmetic::{FixedI128, FixedPointNumber};
 	use sp_runtime::traits::{Bounded, CheckedAdd};
 

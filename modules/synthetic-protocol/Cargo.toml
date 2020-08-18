@@ -17,7 +17,7 @@ frame-system = { version = "2.0.0-rc5", default-features = false }
 orml-traits = { path = "../../orml/traits", default-features = false }
 orml-utilities = { path = "../../orml/utilities", default-features = false }
 
-module-primitives = { path = "../primitives", default-features = false }
+laminar-primitives = { path = "../../primitives", default-features = false }
 module-traits = { path = "../traits", default-features = false }
 module-synthetic-tokens = { path = "../synthetic-tokens", default-features = false }
 
@@ -38,7 +38,7 @@ std = [
 	"frame-system/std",
 	"orml-traits/std",
 	"orml-utilities/std",
-	"module-primitives/std",
+	"laminar-primitives/std",
 	"module-traits/std",
 	"module-synthetic-tokens/std",
 ]

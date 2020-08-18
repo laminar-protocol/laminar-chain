@@ -1,14 +1,14 @@
-use hex_literal::hex;
-use margin_liquidity_pools::SwapRate;
-use margin_protocol::RiskThreshold;
-use module_primitives::{AccumulateConfig, TradingPair};
-use runtime::{
+use dev_runtime::{
 	opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, Block, CurrencyId, FinancialCouncilMembershipConfig,
 	GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, IndicesConfig, MarginLiquidityPoolsConfig,
-	MarginProtocolConfig, Moment, OperatorMembershipConfig, OracleConfig, OracleId, SessionConfig, Signature,
-	StakerStatus, StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SyntheticTokensConfig, SystemConfig,
-	TokensConfig, CENTS, DOLLARS, MILLICENTS, WASM_BINARY,
+	MarginProtocolConfig, Moment, OperatorMembershipConfig, OracleConfig, SessionConfig, Signature, StakerStatus,
+	StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SyntheticTokensConfig, SystemConfig, TokensConfig, CENTS,
+	DOLLARS, MILLICENTS, WASM_BINARY,
 };
+use hex_literal::hex;
+use laminar_primitives::{AccumulateConfig, SwapRate, TradingPair};
+use margin_protocol::RiskThreshold;
+use runtime_common::OracleId;
 use sc_chain_spec::ChainSpecExtension;
 use sc_service;
 use sc_service::ChainType;
@@ -41,8 +41,8 @@ pub struct Extensions {
 	pub bad_blocks: sc_client_api::BadBlocks<Block>,
 }
 
-/// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
-pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
+/// Specialized `DevChainSpec`. This is a specialization of the general Substrate ChainSpec type.
+pub type DevChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
 
 fn session_keys(grandpa: GrandpaId, babe: BabeId) -> SessionKeys {
 	SessionKeys { grandpa, babe }
@@ -80,14 +80,14 @@ pub fn get_oracle_keys_from_seed(seed: &str) -> (AccountId, OracleId) {
 	)
 }
 
-pub fn development_config() -> Result<ChainSpec, String> {
+pub fn development_testnet_config() -> Result<DevChainSpec, String> {
 	let mut properties = Map::new();
 	properties.insert("tokenSymbol".into(), "LAMI".into());
 	properties.insert("tokenDecimals".into(), 18.into());
 
 	let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
 
-	Ok(ChainSpec::from_genesis(
+	Ok(DevChainSpec::from_genesis(
 		// Name
 		"Development",
 		// ID
@@ -123,14 +123,14 @@ pub fn development_config() -> Result<ChainSpec, String> {
 	))
 }
 
-pub fn local_testnet_config() -> Result<ChainSpec, String> {
+pub fn local_testnet_config() -> Result<DevChainSpec, String> {
 	let mut properties = Map::new();
 	properties.insert("tokenSymbol".into(), "LAMI".into());
 	properties.insert("tokenDecimals".into(), 18.into());
 
 	let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
 
-	Ok(ChainSpec::from_genesis(
+	Ok(DevChainSpec::from_genesis(
 		"Local Testnet",
 		"local_testnet",
 		ChainType::Local,
@@ -172,18 +172,18 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 	))
 }
 
-pub fn laminar_turbulence_config() -> Result<ChainSpec, String> {
-	ChainSpec::from_json_bytes(&include_bytes!("../resources/turbulence-dist.json")[..])
+pub fn turbulence_testnet_config() -> Result<DevChainSpec, String> {
+	DevChainSpec::from_json_bytes(&include_bytes!("../../resources/turbulence-dist.json")[..])
 }
 
-pub fn laminar_turbulence_latest_config() -> Result<ChainSpec, String> {
+pub fn latest_turbulence_testnet_config() -> Result<DevChainSpec, String> {
 	let mut properties = Map::new();
 	properties.insert("tokenSymbol".into(), "LAMI".into());
 	properties.insert("tokenDecimals".into(), 18.into());
 
 	let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
 
-	Ok(ChainSpec::from_genesis(
+	Ok(DevChainSpec::from_genesis(
 		"Laminar Turbulence TC1",
 		"turbulence1",
 		ChainType::Live,

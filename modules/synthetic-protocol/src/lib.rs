@@ -11,7 +11,7 @@ use sp_std::result;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
 use orml_utilities::with_transaction_result;
 
-use module_primitives::{Balance, CurrencyId, LiquidityPoolId, Price};
+use laminar_primitives::{Balance, CurrencyId, LiquidityPoolId, Price};
 use module_traits::{LiquidityPools, SyntheticProtocolLiquidityPools};
 
 mod mock;

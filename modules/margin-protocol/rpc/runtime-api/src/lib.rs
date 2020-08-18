@@ -3,7 +3,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Codec, Decode, Encode};
-use module_primitives::LiquidityPoolId;
+use laminar_primitives::LiquidityPoolId;
 use sp_arithmetic::FixedI128;
 use sp_core::RuntimeDebug;
 use sp_std::prelude::*;

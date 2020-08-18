@@ -13,7 +13,8 @@ use frame_support::{
 };
 use frame_system::ensure_signed;
 use primitives::{
-	arithmetic::fixed_i128_mul_signum, AccumulateConfig, Balance, Leverage, Leverages, LiquidityPoolId, TradingPair,
+	arithmetic::fixed_i128_mul_signum, AccumulateConfig, Balance, Leverage, Leverages, LiquidityPoolId, SwapRate,
+	TradingPair,
 };
 use sp_arithmetic::{FixedI128, FixedPointNumber};
 use sp_runtime::{
@@ -28,16 +29,6 @@ use traits::{
 	LiquidityPools, MarginProtocolLiquidityPools, MarginProtocolLiquidityPoolsManager, OnDisableLiquidityPool,
 	OnRemoveLiquidityPool, OpenPositionError,
 };
-
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
-
-#[derive(Clone, Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct SwapRate {
-	pub long: FixedI128,
-	pub short: FixedI128,
-}
 
 /// Trading pair option of margin liquidity pools.
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]

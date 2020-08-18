@@ -11,12 +11,12 @@ use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
 use orml_currencies::Currency;
 use orml_traits::{DataProvider, DefaultPriceProvider};
 
-use module_primitives::LiquidityPoolId;
+use laminar_primitives::LiquidityPoolId;
 use module_traits::{LiquidityPools, SyntheticProtocolLiquidityPools};
 
 use super::*;
 
-pub use module_primitives::{Balance, CurrencyId, Leverage};
+pub use laminar_primitives::{Balance, CurrencyId, Leverage};
 
 impl_outer_origin! {
 	pub enum Origin for Runtime {}

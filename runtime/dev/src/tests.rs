@@ -1,5 +1,4 @@
 #![cfg(feature = "std")]
-// #[cfg(test)] doesn't work for some reason
 
 use super::*;
 
@@ -10,13 +9,12 @@ use crate::{
 };
 use frame_support::{assert_ok, parameter_types, traits::OnFinalize, traits::OnInitialize};
 
-use margin_liquidity_pools::SwapRate;
 use margin_protocol::RiskThreshold;
 use margin_protocol_rpc_runtime_api::runtime_decl_for_MarginProtocolApi::MarginProtocolApi;
-use module_primitives::{Balance, IdentityInfo, Leverage, Leverages, Price, TradingPair};
 use module_traits::LiquidityPools;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
 use pallet_indices::address::Address;
+use primitives::{Balance, IdentityInfo, Leverage, Leverages, Price, SwapRate, TradingPair};
 use sp_arithmetic::{FixedI128, FixedPointNumber};
 use sp_runtime::{DispatchResult, Permill};
 use std::ops::Range;
