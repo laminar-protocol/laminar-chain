@@ -3703,6 +3703,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "orml-traits",
+ "pallet-scheduler",
  "parity-scale-codec",
  "serde",
  "sp-core",
@@ -4058,6 +4059,22 @@ dependencies = [
  "frame-system",
  "parity-scale-codec",
  "safe-mix",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-scheduler"
+version = "2.0.0-rc5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "17ca75a78e023cbf71ed17092e8158ee2ce5b62ecca24db7de41f3e7215c515b"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "serde",
+ "sp-io",
  "sp-runtime",
  "sp-std",
 ]
