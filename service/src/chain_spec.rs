@@ -1,9 +1,10 @@
+use cumulus_primitives::ParaId;
 use dev_runtime::{
 	opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, Block, CurrencyId, FinancialCouncilMembershipConfig,
 	GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, IndicesConfig, MarginLiquidityPoolsConfig,
-	MarginProtocolConfig, Moment, OperatorMembershipConfig, OracleConfig, SessionConfig, Signature, StakerStatus,
-	StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SyntheticTokensConfig, SystemConfig, TokensConfig, CENTS,
-	DOLLARS, MILLICENTS, WASM_BINARY,
+	MarginProtocolConfig, Moment, OperatorMembershipConfig, OracleConfig, ParachainInfoConfig, SessionConfig,
+	Signature, StakerStatus, StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SyntheticTokensConfig,
+	SystemConfig, TokensConfig, CENTS, DOLLARS, MILLICENTS, WASM_BINARY,
 };
 use hex_literal::hex;
 use laminar_primitives::{AccumulateConfig, SwapRate, TradingPair};
@@ -39,6 +40,17 @@ pub struct Extensions {
 	pub fork_blocks: sc_client_api::ForkBlocks<Block>,
 	/// Known bad block hashes.
 	pub bad_blocks: sc_client_api::BadBlocks<Block>,
+	/// The relay chain of the Parachain.
+	pub relay_chain: Option<String>,
+	/// The id of the Parachain.
+	pub para_id: Option<u32>,
+}
+
+impl Extensions {
+	/// Try to get the extension from the given `ChainSpec`.
+	pub fn try_get(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Option<&Self> {
+		sc_chain_spec::get_extension(chain_spec.extensions())
+	}
 }
 
 /// Specialized `DevChainSpec`. This is a specialization of the general Substrate ChainSpec type.
@@ -80,7 +92,7 @@ pub fn get_oracle_keys_from_seed(seed: &str) -> (AccountId, OracleId) {
 	)
 }
 
-pub fn development_testnet_config() -> Result<DevChainSpec, String> {
+pub fn development_testnet_config(para_id: ParaId) -> Result<DevChainSpec, String> {
 	let mut properties = Map::new();
 	properties.insert("tokenSymbol".into(), "LAMI".into());
 	properties.insert("tokenDecimals".into(), 18.into());
@@ -108,6 +120,7 @@ pub fn development_testnet_config() -> Result<DevChainSpec, String> {
 					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
 				],
 				vec![get_oracle_keys_from_seed("Alice")],
+				para_id,
 			)
 		},
 		// Bootnodes
@@ -119,11 +132,15 @@ pub fn development_testnet_config() -> Result<DevChainSpec, String> {
 		// Properties
 		Some(properties),
 		// Extensions
-		Default::default(),
+		Extensions {
+			relay_chain: Some("rococo-local".into()),
+			para_id: Some(para_id.into()),
+			..Default::default()
+		},
 	))
 }
 
-pub fn local_testnet_config() -> Result<DevChainSpec, String> {
+pub fn local_testnet_config(para_id: ParaId) -> Result<DevChainSpec, String> {
 	let mut properties = Map::new();
 	properties.insert("tokenSymbol".into(), "LAMI".into());
 	properties.insert("tokenDecimals".into(), 18.into());
@@ -157,6 +174,7 @@ pub fn local_testnet_config() -> Result<DevChainSpec, String> {
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
 				vec![get_oracle_keys_from_seed("Alice")],
+				para_id,
 			)
 		},
 		// Bootnodes
@@ -176,7 +194,7 @@ pub fn turbulence_testnet_config() -> Result<DevChainSpec, String> {
 	DevChainSpec::from_json_bytes(&include_bytes!("../../resources/turbulence-dist.json")[..])
 }
 
-pub fn latest_turbulence_testnet_config() -> Result<DevChainSpec, String> {
+pub fn latest_turbulence_testnet_config(para_id: ParaId) -> Result<DevChainSpec, String> {
 	let mut properties = Map::new();
 	properties.insert("tokenSymbol".into(), "LAMI".into());
 	properties.insert("tokenDecimals".into(), 18.into());
@@ -241,7 +259,8 @@ pub fn latest_turbulence_testnet_config() -> Result<DevChainSpec, String> {
 					hex!["54865b9eff8c291658e3fbda202f4260536618c31a0056372d121a5206010d53"].into(),
 					hex!["54865b9eff8c291658e3fbda202f4260536618c31a0056372d121a5206010d53"].unchecked_into(),
 				)
-			]
+			],
+			para_id,
 		),
 		// Bootnodes
 		vec![
@@ -255,7 +274,11 @@ pub fn latest_turbulence_testnet_config() -> Result<DevChainSpec, String> {
 		// Properties
 		Some(properties),
 		// Extensions
-		Default::default(),
+		Extensions {
+			relay_chain: Some("rococo".into()),
+			para_id: Some(para_id.into()),
+			..Default::default()
+		},
 	))
 }
 
@@ -320,6 +343,7 @@ fn dev_genesis(
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
 	oracle_session_keys: Vec<(AccountId, OracleId)>,
+	para_id: ParaId,
 ) -> GenesisConfig {
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
@@ -589,6 +613,9 @@ fn dev_genesis(
 			members: Default::default(), // initialized by OperatorMembership
 			session_keys: oracle_session_keys,
 		}),
+		parachain_info: Some(ParachainInfoConfig {
+			parachain_id: para_id.into(),
+		}),
 	}
 }
 
@@ -598,6 +625,7 @@ fn turbulence_genesis(
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
 	oracle_session_keys: Vec<(AccountId, OracleId)>,
+	para_id: ParaId,
 ) -> GenesisConfig {
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
@@ -870,6 +898,9 @@ fn turbulence_genesis(
 		orml_oracle: Some(OracleConfig {
 			members: Default::default(), // initialized by OperatorMembership
 			session_keys: oracle_session_keys,
+		}),
+		parachain_info: Some(ParachainInfoConfig {
+			parachain_id: para_id.into(),
 		}),
 	}
 }

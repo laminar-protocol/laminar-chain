@@ -61,13 +61,13 @@ pub struct FullDeps<C, P, SC> {
 }
 
 /// Instantiate all Full RPC extensions.
-pub fn create_full<C, P, SC, UncheckedExtrinsic>(deps: FullDeps<C, P, SC>) -> RpcExtension
+pub fn create_full<C, P, SC>(deps: FullDeps<C, P, SC>) -> RpcExtension
 where
 	C: ProvideRuntimeApi<Block>,
 	C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError>,
 	C: Send + Sync + 'static,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
-	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance, UncheckedExtrinsic>,
+	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: orml_oracle_rpc::OracleRuntimeApi<Block, CurrencyId, dev_runtime::TimeStampedPrice>,
 	C::Api: margin_protocol_rpc::MarginProtocolRuntimeApi<Block, AccountId>,
 	C::Api: synthetic_protocol_rpc::SyntheticProtocolRuntimeApi<Block, AccountId>,
@@ -75,7 +75,6 @@ where
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + Sync + Send + 'static,
 	SC: SelectChain<Block> + 'static,
-	UncheckedExtrinsic: codec::Codec + Send + Sync + 'static,
 {
 	use margin_protocol_rpc::{MarginProtocol, MarginProtocolApi};
 	use orml_oracle_rpc::{Oracle, OracleApi};
@@ -132,16 +131,15 @@ where
 }
 
 /// Instantiate all RPC extensions for light node.
-pub fn create_light<C, P, F, UncheckedExtrinsic>(deps: LightDeps<C, F, P>) -> RpcExtension
+pub fn create_light<C, P, F>(deps: LightDeps<C, F, P>) -> RpcExtension
 where
 	C: ProvideRuntimeApi<Block>,
 	C: HeaderBackend<Block>,
 	C: Send + Sync + 'static,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
-	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance, UncheckedExtrinsic>,
+	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	F: Fetcher<Block> + 'static,
 	P: TransactionPool + 'static,
-	UncheckedExtrinsic: codec::Codec + Send + Sync + 'static,
 {
 	use substrate_frame_rpc_system::{LightSystem, SystemApi};
 

@@ -5,14 +5,21 @@ authors = ["Laminar Developers <hello@laminar.one>"]
 edition = "2018"
 
 [dependencies]
+codec = { package = "parity-scale-codec", version = "1.3.0" }
 structopt = "0.3.8"
 sp-core = { version = "2.0.0-rc5", optional = true }
 sc-cli = { version = "0.8.0-rc5", optional = true }
 sc-service = { version = "0.8.0-rc5", optional = true }
+sp-runtime = { version = "2.0.0-rc5", optional = true }
 frame-benchmarking-cli = { version = "2.0.0-rc5", optional = true }
 
 inspect = { package = "laminar-inspect", path = "../inspect" }
 service = { package = "laminar-service", path = "../service", default-features = false, optional = true }
+
+dev-runtime = { path = "../runtime/dev" }
+
+cumulus-primitives = { git = "https://github.com/paritytech/cumulus" }
+polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "rococo-branch" }
 
 [build-dependencies]
 substrate-build-script-utils = { version = "2.0.0-rc5", default-features = false }
@@ -25,6 +32,7 @@ cli = [
 	"sp-core",
 	"sc-cli",
 	"sc-service",
+	"sp-runtime",
 	"frame-benchmarking-cli",
 ]
 runtime-benchmarks = [ "service/runtime-benchmarks" ]
