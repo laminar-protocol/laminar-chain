@@ -2944,6 +2944,7 @@ name = "laminar-service"
 version = "0.2.1"
 dependencies = [
  "ansi_term 0.12.1",
+ "cumulus-consensus",
  "cumulus-network",
  "cumulus-primitives",
  "cumulus-service",

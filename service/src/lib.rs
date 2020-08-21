@@ -201,15 +201,15 @@ where
 				pool: transaction_pool.clone(),
 				select_chain: select_chain.clone(),
 				deny_unsafe,
-				babe: laminar_rpc::BabeDeps {
+				babe: Some(laminar_rpc::BabeDeps {
 					babe_config: babe_config.clone(),
 					shared_epoch_changes: shared_epoch_changes.clone(),
 					keystore: keystore.clone(),
-				},
-				grandpa: laminar_rpc::GrandpaDeps {
+				}),
+				grandpa: Some(laminar_rpc::GrandpaDeps {
 					shared_voter_state: shared_voter_state.clone(),
 					shared_authority_set: shared_authority_set.clone(),
-				},
+				}),
 			};
 
 			laminar_rpc::create_full(deps)
@@ -519,6 +519,80 @@ where
 	Ok((client, backend, import_queue, task_manager))
 }
 
+fn new_collator_partial<RuntimeApi, Executor>(
+	config: &mut Configuration,
+) -> Result<
+	sc_service::PartialComponents<
+		FullClient<RuntimeApi, Executor>,
+		FullBackend,
+		(),
+		sp_consensus::DefaultImportQueue<Block, FullClient<RuntimeApi, Executor>>,
+		sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>,
+		impl Fn(laminar_rpc::DenyUnsafe) -> laminar_rpc::RpcExtension,
+	>,
+	sc_service::Error,
+>
+where
+	RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+	RuntimeApi::RuntimeApi: RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+	Executor: NativeExecutionDispatch + 'static,
+{
+	set_prometheus_registry(config)?;
+
+	let inherent_data_providers = sp_inherents::InherentDataProviders::new();
+
+	let (client, backend, keystore, task_manager) = sc_service::new_full_parts::<Block, RuntimeApi, Executor>(&config)?;
+	let client = Arc::new(client);
+
+	let transaction_pool = sc_transaction_pool::BasicPool::new_full(
+		config.transaction_pool.clone(),
+		config.prometheus_registry(),
+		task_manager.spawn_handle(),
+		client.clone(),
+	);
+
+	let registry = config.prometheus_registry();
+
+	let import_queue = cumulus_consensus::import_queue::import_queue(
+		client.clone(),
+		client.clone(),
+		inherent_data_providers.clone(),
+		&task_manager.spawn_handle(),
+		registry.clone(),
+	)?;
+
+	let rpc_extensions_builder = {
+		let client = client.clone();
+		let transaction_pool = transaction_pool.clone();
+		let select_chain = sc_consensus::LongestChain::new(backend.clone());
+
+		move |deny_unsafe| -> laminar_rpc::RpcExtension {
+			let deps = laminar_rpc::FullDeps {
+				client: client.clone(),
+				pool: transaction_pool.clone(),
+				select_chain: select_chain.clone(),
+				deny_unsafe,
+				babe: None,
+				grandpa: None,
+			};
+
+			laminar_rpc::create_full(deps)
+		}
+	};
+
+	Ok(sc_service::PartialComponents {
+		client,
+		backend,
+		task_manager,
+		keystore,
+		select_chain: (),
+		import_queue,
+		transaction_pool,
+		inherent_data_providers,
+		other: rpc_extensions_builder,
+	})
+}
+
 fn new_collator_impl<RuntimeApi, Executor>(
 	parachain_config: Configuration,
 	collator_key: Arc<CollatorPair>,
@@ -543,7 +617,7 @@ where
 		prefix: format!("[{}] ", Color::Blue.bold().paint("Relaychain")),
 	};
 
-	let params = new_partial::<RuntimeApi, Executor>(&mut parachain_config)?;
+	let params = new_collator_partial::<RuntimeApi, Executor>(&mut parachain_config)?;
 	params
 		.inherent_data_providers
 		.register_provider(sp_timestamp::InherentDataProvider)
@@ -577,7 +651,7 @@ where
 	sc_service::spawn_tasks(sc_service::SpawnTasksParams {
 		on_demand: None,
 		remote_blockchain: None,
-		rpc_extensions_builder: Box::new(params.other.0),
+		rpc_extensions_builder: Box::new(params.other),
 		client: client.clone(),
 		transaction_pool: transaction_pool.clone(),
 		task_manager: &mut task_manager,

@@ -58,6 +58,7 @@ laminar-rpc = { path = "../rpc" }
 cumulus-primitives = { git = "https://github.com/paritytech/cumulus" }
 cumulus-network = { git = "https://github.com/paritytech/cumulus" }
 cumulus-service = { git = "https://github.com/paritytech/cumulus" }
+cumulus-consensus = { git = "https://github.com/paritytech/cumulus" }
 prometheus-endpoint = { package = "substrate-prometheus-endpoint", git = "https://github.com/paritytech/substrate", branch = "rococo-branch" }
 polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "rococo-branch" }
 polkadot-collator = { git = "https://github.com/paritytech/polkadot", branch = "rococo-branch" }
