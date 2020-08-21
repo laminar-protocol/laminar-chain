@@ -80,6 +80,7 @@ sc-consensus-epochs = { git = "https://github.com/paritytech/substrate", branch 
 sc-executor = { git = "https://github.com/paritytech/substrate", branch = "rococo-branch" }
 sc-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "rococo-branch" }
 sc-finality-grandpa-rpc = { git = "https://github.com/paritytech/substrate", branch = "rococo-branch" }
+sc-informant = { git = "https://github.com/paritytech/substrate", branch = "rococo-branch" }
 sc-keystore = { git = "https://github.com/paritytech/substrate", branch = "rococo-branch" }
 sc-network = { git = "https://github.com/paritytech/substrate", branch = "rococo-branch" }
 sc-offchain = { git = "https://github.com/paritytech/substrate", branch = "rococo-branch" }

@@ -92,7 +92,7 @@ pub fn get_oracle_keys_from_seed(seed: &str) -> (AccountId, OracleId) {
 	)
 }
 
-pub fn development_testnet_config(para_id: ParaId) -> Result<DevChainSpec, String> {
+pub fn development_testnet_config(para_id: Option<ParaId>) -> Result<DevChainSpec, String> {
 	let mut properties = Map::new();
 	properties.insert("tokenSymbol".into(), "LAMI".into());
 	properties.insert("tokenDecimals".into(), 18.into());
@@ -133,14 +133,14 @@ pub fn development_testnet_config(para_id: ParaId) -> Result<DevChainSpec, Strin
 		Some(properties),
 		// Extensions
 		Extensions {
-			relay_chain: Some("rococo-local".into()),
-			para_id: Some(para_id.into()),
+			relay_chain: para_id.map(|_| "rococo".into()),
+			para_id: para_id.map(Into::into),
 			..Default::default()
 		},
 	))
 }
 
-pub fn local_testnet_config(para_id: ParaId) -> Result<DevChainSpec, String> {
+pub fn local_testnet_config(para_id: Option<ParaId>) -> Result<DevChainSpec, String> {
 	let mut properties = Map::new();
 	properties.insert("tokenSymbol".into(), "LAMI".into());
 	properties.insert("tokenDecimals".into(), 18.into());
@@ -194,7 +194,7 @@ pub fn turbulence_testnet_config() -> Result<DevChainSpec, String> {
 	DevChainSpec::from_json_bytes(&include_bytes!("../../resources/turbulence-dist.json")[..])
 }
 
-pub fn latest_turbulence_testnet_config(para_id: ParaId) -> Result<DevChainSpec, String> {
+pub fn latest_turbulence_testnet_config(para_id: Option<ParaId>) -> Result<DevChainSpec, String> {
 	let mut properties = Map::new();
 	properties.insert("tokenSymbol".into(), "LAMI".into());
 	properties.insert("tokenDecimals".into(), 18.into());
@@ -275,8 +275,8 @@ pub fn latest_turbulence_testnet_config(para_id: ParaId) -> Result<DevChainSpec,
 		Some(properties),
 		// Extensions
 		Extensions {
-			relay_chain: Some("rococo".into()),
-			para_id: Some(para_id.into()),
+			relay_chain: para_id.map(|_| "rococo".into()),
+			para_id: para_id.map(Into::into),
 			..Default::default()
 		},
 	))
@@ -343,7 +343,7 @@ fn dev_genesis(
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
 	oracle_session_keys: Vec<(AccountId, OracleId)>,
-	para_id: ParaId,
+	para_id: Option<ParaId>,
 ) -> GenesisConfig {
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
@@ -614,7 +614,7 @@ fn dev_genesis(
 			session_keys: oracle_session_keys,
 		}),
 		parachain_info: Some(ParachainInfoConfig {
-			parachain_id: para_id.into(),
+			parachain_id: para_id.unwrap_or(5001.into()),
 		}),
 	}
 }
@@ -625,7 +625,7 @@ fn turbulence_genesis(
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
 	oracle_session_keys: Vec<(AccountId, OracleId)>,
-	para_id: ParaId,
+	para_id: Option<ParaId>,
 ) -> GenesisConfig {
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
@@ -900,7 +900,7 @@ fn turbulence_genesis(
 			session_keys: oracle_session_keys,
 		}),
 		parachain_info: Some(ParachainInfoConfig {
-			parachain_id: para_id.into(),
+			parachain_id: para_id.unwrap_or(5001.into()),
 		}),
 	}
 }
