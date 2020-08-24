@@ -202,8 +202,8 @@ pub fn latest_turbulence_testnet_config(para_id: Option<ParaId>) -> Result<DevCh
 	let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
 
 	Ok(DevChainSpec::from_genesis(
-		"Laminar Turbulence TC1",
-		"turbulence1",
+		"Laminar Turbulence PC1",
+		"turbulencepc1",
 		ChainType::Live,
 		// SECRET="..."
 		// ./target/debug/subkey inspect "$SECRET//laminar//root"
@@ -217,60 +217,64 @@ pub fn latest_turbulence_testnet_config(para_id: Option<ParaId>) -> Result<DevCh
 		// ./target/debug/subkey --sr25519 inspect "$SECRET//laminar//3//validator"
 		// ./target/debug/subkey --sr25519 inspect "$SECRET//laminar//3//babe"
 		// ./target/debug/subkey --ed25519 inspect "$SECRET//laminar//3//grandpa"
-		move || turbulence_genesis(
-			wasm_binary,
-			// Initial PoA authorities
-			vec![
-				(
-					// 5E6jm6dgDZQBFW79gd3uvTKymjqUSzAPfkvD7Exx5GvdbHZ6
-					hex!["5a055df2cbdebc8fce61a70db71fcf64c1853dca54d8c3e52b2d65cb8cf7e533"].into(),
-					hex!["5a055df2cbdebc8fce61a70db71fcf64c1853dca54d8c3e52b2d65cb8cf7e533"].into(),
-					hex!["b48963cb1572aa90e4202db400e7b5aa887b3c6aaf7e61de3a6beb14dae2c97b"].unchecked_into(),
-					hex!["f2415a6cedee17c766c7e8f696fb3499519d85a3248b05de35bc7b58d59e4149"].unchecked_into(),
-				),
-				(
-					// 5GGqathCVPRvwTTMEvURf2f16iKu4i8SccxCc6UNGDF4g447
-					hex!["ba31e4b5576a5d60b2dbdb4d4144f6478636b84313fe6f41a44e002ddc64ec6c"].into(),
-					hex!["ba31e4b5576a5d60b2dbdb4d4144f6478636b84313fe6f41a44e002ddc64ec6c"].into(),
-					hex!["293bd01494343a94520531d844953e947e4a1ff84bdae948565e49bdf3304c09"].unchecked_into(),
-					hex!["cade610afbc4ce7ca0c6972f5c774c2c4710eed431cc23ac6e5e806870a8dd02"].unchecked_into(),
-				),
-				(
-					// 5GmrbvqhDBp7jmaRB5SsiY5kfkLPXMbELm6MTVsMpbCX19tD
-					hex!["d0536fc56cac85d6b61e128becdc367e8d7652d9a95663c7e88cb6119aea966d"].into(),
-					hex!["d0536fc56cac85d6b61e128becdc367e8d7652d9a95663c7e88cb6119aea966d"].into(),
-					hex!["849c1ea65bc37705aafd4e753fde8395612e9da8d88240d27b2dfc4a2e115599"].unchecked_into(),
-					hex!["d84cdabe21cead3f88de87b63116405182cf78ef97d3d590011bc235a983447a"].unchecked_into(),
-				),
-			],
-			// Sudo account
-			// 5FySxAHYXDzgDY8BTVnbZ6dygkXJwG27pKmgCLeSRSFEG2dy
-			hex!["acee87f3026e9ef8cf334fe94bc9eb9e9e689318611eca21e5aef919e3e5bc30"].into(),
-			// Pre-funded accounts
-			vec![
+		move || {
+			turbulence_genesis(
+				wasm_binary,
+				// Initial PoA authorities
+				vec![
+					(
+						// 5E6jm6dgDZQBFW79gd3uvTKymjqUSzAPfkvD7Exx5GvdbHZ6
+						hex!["5a055df2cbdebc8fce61a70db71fcf64c1853dca54d8c3e52b2d65cb8cf7e533"].into(),
+						hex!["5a055df2cbdebc8fce61a70db71fcf64c1853dca54d8c3e52b2d65cb8cf7e533"].into(),
+						hex!["b48963cb1572aa90e4202db400e7b5aa887b3c6aaf7e61de3a6beb14dae2c97b"].unchecked_into(),
+						hex!["f2415a6cedee17c766c7e8f696fb3499519d85a3248b05de35bc7b58d59e4149"].unchecked_into(),
+					),
+					(
+						// 5GGqathCVPRvwTTMEvURf2f16iKu4i8SccxCc6UNGDF4g447
+						hex!["ba31e4b5576a5d60b2dbdb4d4144f6478636b84313fe6f41a44e002ddc64ec6c"].into(),
+						hex!["ba31e4b5576a5d60b2dbdb4d4144f6478636b84313fe6f41a44e002ddc64ec6c"].into(),
+						hex!["293bd01494343a94520531d844953e947e4a1ff84bdae948565e49bdf3304c09"].unchecked_into(),
+						hex!["cade610afbc4ce7ca0c6972f5c774c2c4710eed431cc23ac6e5e806870a8dd02"].unchecked_into(),
+					),
+					(
+						// 5GmrbvqhDBp7jmaRB5SsiY5kfkLPXMbELm6MTVsMpbCX19tD
+						hex!["d0536fc56cac85d6b61e128becdc367e8d7652d9a95663c7e88cb6119aea966d"].into(),
+						hex!["d0536fc56cac85d6b61e128becdc367e8d7652d9a95663c7e88cb6119aea966d"].into(),
+						hex!["849c1ea65bc37705aafd4e753fde8395612e9da8d88240d27b2dfc4a2e115599"].unchecked_into(),
+						hex!["d84cdabe21cead3f88de87b63116405182cf78ef97d3d590011bc235a983447a"].unchecked_into(),
+					),
+				],
+				// Sudo account
 				// 5FySxAHYXDzgDY8BTVnbZ6dygkXJwG27pKmgCLeSRSFEG2dy
 				hex!["acee87f3026e9ef8cf334fe94bc9eb9e9e689318611eca21e5aef919e3e5bc30"].into(),
-				// 5DyXntuH5dBcf2dpjTojzfV6GDypx8CyTuVFm84qB7a4BkYT
-				hex!["54865b9eff8c291658e3fbda202f4260536618c31a0056372d121a5206010d53"].into(),
-			],
-			vec![
-				(
+				// Pre-funded accounts
+				vec![
+					// 5FySxAHYXDzgDY8BTVnbZ6dygkXJwG27pKmgCLeSRSFEG2dy
+					hex!["acee87f3026e9ef8cf334fe94bc9eb9e9e689318611eca21e5aef919e3e5bc30"].into(),
+					// 5DyXntuH5dBcf2dpjTojzfV6GDypx8CyTuVFm84qB7a4BkYT
+					hex!["54865b9eff8c291658e3fbda202f4260536618c31a0056372d121a5206010d53"].into(),
+				],
+				vec![(
 					// 5DyXntuH5dBcf2dpjTojzfV6GDypx8CyTuVFm84qB7a4BkYT
 					hex!["54865b9eff8c291658e3fbda202f4260536618c31a0056372d121a5206010d53"].into(),
 					hex!["54865b9eff8c291658e3fbda202f4260536618c31a0056372d121a5206010d53"].unchecked_into(),
-				)
-			],
-			para_id,
-		),
+				)],
+				para_id,
+			)
+		},
 		// Bootnodes
 		vec![
-			"/dns4/testnet-bootnode-1.laminar-chain.laminar.one/tcp/30333/p2p/12D3KooWNCe9dEpPhswckrX5ZHhdtZ3r5sg6CcgKfgyhw3seuwtB".parse().unwrap(),
+			"/ipv4/54.254.37.221/tcp/30338/p2p/12D3KooWHz7hcTuARq57pbrfTwzPhqJ99dYmKUmPT4AcCGS5qXte"
+				.parse()
+				.unwrap(),
 		],
 		// Telemetry
-		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
-			.expect("Staging telemetry url is valid; qed")),
+		Some(
+			TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
+				.expect("Staging telemetry url is valid; qed"),
+		),
 		// Protocol ID
-		Some("turbulence1"),
+		Some("turbulencepc1"),
 		// Properties
 		Some(properties),
 		// Extensions

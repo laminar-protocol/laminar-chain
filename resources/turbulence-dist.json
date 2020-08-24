@@ -1,9 +1,9 @@
 {
-  "name": "Laminar Turbulence TC1",
+  "name": "Laminar Turbulence PC1",
   "id": "turbulence1",
   "chainType": "Live",
   "bootNodes": [
-    "/dns4/testnet-bootnode-1.laminar-chain.laminar.one/tcp/30333/p2p/12D3KooWNCe9dEpPhswckrX5ZHhdtZ3r5sg6CcgKfgyhw3seuwtB"
+    "/ipv4/54.254.37.221/tcp/30338/p2p/12D3KooWHz7hcTuARq57pbrfTwzPhqJ99dYmKUmPT4AcCGS5qXte"
   ],
   "telemetryEndpoints": [
     [
@@ -11,7 +11,7 @@
       0
     ]
   ],
-  "protocolId": "turbulence1",
+  "protocolId": "turbulencepc1",
   "properties": {
     "tokenDecimals": 18,
     "tokenSymbol": "LAMI"
@@ -19,7 +19,7 @@
   "forkBlocks": null,
   "badBlocks": null,
   "relayChain": null,
-  "paraId": null,
+  "paraId": 5001,
   "consensusEngine": null,
   "genesis": {
     "raw": {
