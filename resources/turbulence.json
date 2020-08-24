@@ -3,7 +3,7 @@
   "id": "turbulence1",
   "chainType": "Live",
   "bootNodes": [
-    "/ipv4/54.254.37.221/tcp/30338/p2p/12D3KooWHz7hcTuARq57pbrfTwzPhqJ99dYmKUmPT4AcCGS5qXte"
+    "/ip4/54.254.37.221/tcp/30338/p2p/12D3KooWHz7hcTuARq57pbrfTwzPhqJ99dYmKUmPT4AcCGS5qXte"
   ],
   "telemetryEndpoints": [
     [

@@ -264,7 +264,7 @@ pub fn latest_turbulence_testnet_config(para_id: Option<ParaId>) -> Result<DevCh
 		},
 		// Bootnodes
 		vec![
-			"/ipv4/54.254.37.221/tcp/30338/p2p/12D3KooWHz7hcTuARq57pbrfTwzPhqJ99dYmKUmPT4AcCGS5qXte"
+			"/ip4/54.254.37.221/tcp/30338/p2p/12D3KooWHz7hcTuARq57pbrfTwzPhqJ99dYmKUmPT4AcCGS5qXte"
 				.parse()
 				.unwrap(),
 		],
