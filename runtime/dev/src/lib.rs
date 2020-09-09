@@ -811,7 +811,6 @@ impl parachain_info::Trait for Runtime {}
 
 parameter_types! {
 	pub const RelayChainCurrencyId: CurrencyId = CurrencyId::DOT;
-	pub GetParaId: ParaId = 5001.into();
 }
 
 pub struct RelayToNative;
@@ -843,7 +842,7 @@ impl orml_xtokens::Trait for Runtime {
 	type FromRelayChainBalance = RelayToNative;
 	type ToRelayChainBalance = NativeToRelay;
 	type UpwardMessage = cumulus_upward_message::RococoUpwardMessage;
-	type ParaId = GetParaId;
+	type ParaId = ParachainInfo;
 }
 
 construct_runtime!(
