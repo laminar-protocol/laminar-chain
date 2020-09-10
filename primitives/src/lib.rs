@@ -8,7 +8,7 @@ use sp_runtime::{
 };
 
 use sp_arithmetic::FixedI128;
-use sp_std::{prelude::*, vec};
+use sp_std::{convert::TryFrom, prelude::*, vec};
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -88,6 +88,49 @@ pub enum CurrencyId {
 	FCHF,
 	FXAU,
 	FOIL,
+	DOT,
+}
+
+impl Into<Vec<u8>> for CurrencyId {
+	fn into(self) -> Vec<u8> {
+		use CurrencyId::*;
+		match self {
+			LAMI => b"LAMI".to_vec(),
+			AUSD => b"AUSD".to_vec(),
+			FEUR => b"FEUR".to_vec(),
+			FJPY => b"FJPY".to_vec(),
+			FBTC => b"FBTC".to_vec(),
+			FETH => b"FETH".to_vec(),
+			FAUD => b"FAUD".to_vec(),
+			FCAD => b"FCAD".to_vec(),
+			FCHF => b"FCHF".to_vec(),
+			FXAU => b"FXAU".to_vec(),
+			FOIL => b"FOIL".to_vec(),
+			DOT => b"DOT".to_vec(),
+		}
+	}
+}
+
+impl TryFrom<Vec<u8>> for CurrencyId {
+	type Error = ();
+	fn try_from(v: Vec<u8>) -> Result<CurrencyId, ()> {
+		use CurrencyId::*;
+		match v.as_slice() {
+			b"LAMI" => Ok(LAMI),
+			b"AUSD" => Ok(AUSD),
+			b"FEUR" => Ok(FEUR),
+			b"FJPY" => Ok(FJPY),
+			b"FBTC" => Ok(FBTC),
+			b"FETH" => Ok(FETH),
+			b"FAUD" => Ok(FAUD),
+			b"FCAD" => Ok(FCAD),
+			b"FCHF" => Ok(FCHF),
+			b"FXAU" => Ok(FXAU),
+			b"FOIL" => Ok(FOIL),
+			b"DOT" => Ok(DOT),
+			_ => Err(()),
+		}
+	}
 }
 
 pub type Price = FixedU128;

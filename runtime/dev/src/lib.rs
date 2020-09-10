@@ -49,6 +49,7 @@ pub use primitives::{
 pub use sp_arithmetic::FixedI128;
 
 use margin_protocol_rpc_runtime_api::{MarginPoolState, MarginTraderState};
+use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 use synthetic_protocol_rpc_runtime_api::SyntheticPoolState;
 
 // A few exports that help ease life for downstream crates.
@@ -67,6 +68,8 @@ pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Percent, Permill};
 
 pub use constants::{currency::*, fee::*, time::*};
+
+use cumulus_primitives::{relay_chain::Balance as RelayChainBalance, ParaId};
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -99,7 +102,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("laminar"),
 	impl_name: create_runtime_str!("laminar"),
 	authoring_version: 1,
-	spec_version: 201,
+	spec_version: 202,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -790,6 +793,58 @@ impl margin_protocol::Trait for Runtime {
 	type UnsignedPriority = MarginProtocolUnsignedPriority;
 }
 
+impl cumulus_parachain_upgrade::Trait for Runtime {
+	type Event = Event;
+	type OnValidationFunctionParams = ();
+}
+
+impl cumulus_message_broker::Trait for Runtime {
+	type Event = Event;
+	type DownwardMessageHandlers = XTokens;
+	type UpwardMessage = cumulus_upward_message::RococoUpwardMessage;
+	type ParachainId = ParachainInfo;
+	type XCMPMessage = orml_xtokens::XCMPTokenMessage<AccountId, Balance>;
+	type XCMPMessageHandlers = XTokens;
+}
+
+impl parachain_info::Trait for Runtime {}
+
+parameter_types! {
+	pub const RelayChainCurrencyId: CurrencyId = CurrencyId::DOT;
+}
+
+pub struct RelayToNative;
+impl Convert<RelayChainBalance, Balance> for RelayToNative {
+	fn convert(val: u128) -> Balance {
+		// native is 18
+		// relay is 12
+		val * 1_000_000
+	}
+}
+
+pub struct NativeToRelay;
+impl Convert<Balance, RelayChainBalance> for NativeToRelay {
+	fn convert(val: u128) -> Balance {
+		// native is 18
+		// relay is 12
+		val / 1_000_000
+	}
+}
+
+impl orml_xtokens::Trait for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type CurrencyId = CurrencyId;
+	type Currency = Currencies;
+	type XCMPMessageSender = MessageBroker;
+	type RelayChainCurrencyId = RelayChainCurrencyId;
+	type UpwardMessageSender = MessageBroker;
+	type FromRelayChainBalance = RelayToNative;
+	type ToRelayChainBalance = NativeToRelay;
+	type UpwardMessage = cumulus_upward_message::RococoUpwardMessage;
+	type ParaId = ParachainInfo;
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -829,6 +884,12 @@ construct_runtime!(
 		MarginLiquidityPools: margin_liquidity_pools::{Module, Storage, Call, Event<T>, Config<T>},
 		BaseLiquidityPoolsForSynthetic: base_liquidity_pools::<Instance2>::{Module, Storage, Call, Event<T>},
 		SyntheticLiquidityPools: synthetic_liquidity_pools::{Module, Storage, Call, Event<T>, Config},
+
+		// parachain modules
+		ParachainUpgrade: cumulus_parachain_upgrade::{Module, Call, Storage, Inherent, Event},
+		MessageBroker: cumulus_message_broker::{Module, Call, Inherent, Event<T>},
+		ParachainInfo: parachain_info::{Module, Storage, Config},
+		XTokens: orml_xtokens::{Module, Storage, Call, Event<T>},
 	}
 );
 
@@ -1022,9 +1083,8 @@ impl_runtime_apis! {
 	impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<
 		Block,
 		Balance,
-		UncheckedExtrinsic,
 	> for Runtime {
-		fn query_info(uxt: UncheckedExtrinsic, len: u32) -> pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo<Balance> {
+		fn query_info(uxt: <Block as BlockT>::Extrinsic, len: u32) -> RuntimeDispatchInfo<Balance> {
 			TransactionPayment::query_info(uxt, len)
 		}
 	}
@@ -1105,3 +1165,5 @@ impl_runtime_apis! {
 		}
 	}
 }
+
+cumulus_runtime::register_validate_block!(Block, Executive);

@@ -1,9 +1,10 @@
+use cumulus_primitives::ParaId;
 use dev_runtime::{
 	opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, Block, CurrencyId, FinancialCouncilMembershipConfig,
 	GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, IndicesConfig, MarginLiquidityPoolsConfig,
-	MarginProtocolConfig, Moment, OperatorMembershipConfig, OracleConfig, SessionConfig, Signature, StakerStatus,
-	StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SyntheticTokensConfig, SystemConfig, TokensConfig, CENTS,
-	DOLLARS, MILLICENTS, WASM_BINARY,
+	MarginProtocolConfig, Moment, OperatorMembershipConfig, OracleConfig, ParachainInfoConfig, SessionConfig,
+	Signature, StakerStatus, StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SyntheticTokensConfig,
+	SystemConfig, TokensConfig, CENTS, DOLLARS, MILLICENTS, WASM_BINARY,
 };
 use hex_literal::hex;
 use laminar_primitives::{AccumulateConfig, SwapRate, TradingPair};
@@ -39,6 +40,17 @@ pub struct Extensions {
 	pub fork_blocks: sc_client_api::ForkBlocks<Block>,
 	/// Known bad block hashes.
 	pub bad_blocks: sc_client_api::BadBlocks<Block>,
+	/// The relay chain of the Parachain.
+	pub relay_chain: Option<String>,
+	/// The id of the Parachain.
+	pub para_id: Option<u32>,
+}
+
+impl Extensions {
+	/// Try to get the extension from the given `ChainSpec`.
+	pub fn try_get(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Option<&Self> {
+		sc_chain_spec::get_extension(chain_spec.extensions())
+	}
 }
 
 /// Specialized `DevChainSpec`. This is a specialization of the general Substrate ChainSpec type.
@@ -80,7 +92,7 @@ pub fn get_oracle_keys_from_seed(seed: &str) -> (AccountId, OracleId) {
 	)
 }
 
-pub fn development_testnet_config() -> Result<DevChainSpec, String> {
+pub fn development_testnet_config(para_id: Option<ParaId>) -> Result<DevChainSpec, String> {
 	let mut properties = Map::new();
 	properties.insert("tokenSymbol".into(), "LAMI".into());
 	properties.insert("tokenDecimals".into(), 18.into());
@@ -108,6 +120,7 @@ pub fn development_testnet_config() -> Result<DevChainSpec, String> {
 					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
 				],
 				vec![get_oracle_keys_from_seed("Alice")],
+				para_id,
 			)
 		},
 		// Bootnodes
@@ -119,11 +132,15 @@ pub fn development_testnet_config() -> Result<DevChainSpec, String> {
 		// Properties
 		Some(properties),
 		// Extensions
-		Default::default(),
+		Extensions {
+			relay_chain: para_id.map(|_| "rococo".into()),
+			para_id: para_id.map(Into::into),
+			..Default::default()
+		},
 	))
 }
 
-pub fn local_testnet_config() -> Result<DevChainSpec, String> {
+pub fn local_testnet_config(para_id: Option<ParaId>) -> Result<DevChainSpec, String> {
 	let mut properties = Map::new();
 	properties.insert("tokenSymbol".into(), "LAMI".into());
 	properties.insert("tokenDecimals".into(), 18.into());
@@ -157,6 +174,7 @@ pub fn local_testnet_config() -> Result<DevChainSpec, String> {
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
 				vec![get_oracle_keys_from_seed("Alice")],
+				para_id,
 			)
 		},
 		// Bootnodes
@@ -176,7 +194,7 @@ pub fn turbulence_testnet_config() -> Result<DevChainSpec, String> {
 	DevChainSpec::from_json_bytes(&include_bytes!("../../resources/turbulence-dist.json")[..])
 }
 
-pub fn latest_turbulence_testnet_config() -> Result<DevChainSpec, String> {
+pub fn latest_turbulence_testnet_config(para_id: Option<ParaId>) -> Result<DevChainSpec, String> {
 	let mut properties = Map::new();
 	properties.insert("tokenSymbol".into(), "LAMI".into());
 	properties.insert("tokenDecimals".into(), 18.into());
@@ -184,8 +202,8 @@ pub fn latest_turbulence_testnet_config() -> Result<DevChainSpec, String> {
 	let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
 
 	Ok(DevChainSpec::from_genesis(
-		"Laminar Turbulence TC1",
-		"turbulence1",
+		"Laminar Turbulence PC1",
+		"turbulencepc1",
 		ChainType::Live,
 		// SECRET="..."
 		// ./target/debug/subkey inspect "$SECRET//laminar//root"
@@ -199,63 +217,72 @@ pub fn latest_turbulence_testnet_config() -> Result<DevChainSpec, String> {
 		// ./target/debug/subkey --sr25519 inspect "$SECRET//laminar//3//validator"
 		// ./target/debug/subkey --sr25519 inspect "$SECRET//laminar//3//babe"
 		// ./target/debug/subkey --ed25519 inspect "$SECRET//laminar//3//grandpa"
-		move || turbulence_genesis(
-			wasm_binary,
-			// Initial PoA authorities
-			vec![
-				(
-					// 5E6jm6dgDZQBFW79gd3uvTKymjqUSzAPfkvD7Exx5GvdbHZ6
-					hex!["5a055df2cbdebc8fce61a70db71fcf64c1853dca54d8c3e52b2d65cb8cf7e533"].into(),
-					hex!["5a055df2cbdebc8fce61a70db71fcf64c1853dca54d8c3e52b2d65cb8cf7e533"].into(),
-					hex!["b48963cb1572aa90e4202db400e7b5aa887b3c6aaf7e61de3a6beb14dae2c97b"].unchecked_into(),
-					hex!["f2415a6cedee17c766c7e8f696fb3499519d85a3248b05de35bc7b58d59e4149"].unchecked_into(),
-				),
-				(
-					// 5GGqathCVPRvwTTMEvURf2f16iKu4i8SccxCc6UNGDF4g447
-					hex!["ba31e4b5576a5d60b2dbdb4d4144f6478636b84313fe6f41a44e002ddc64ec6c"].into(),
-					hex!["ba31e4b5576a5d60b2dbdb4d4144f6478636b84313fe6f41a44e002ddc64ec6c"].into(),
-					hex!["293bd01494343a94520531d844953e947e4a1ff84bdae948565e49bdf3304c09"].unchecked_into(),
-					hex!["cade610afbc4ce7ca0c6972f5c774c2c4710eed431cc23ac6e5e806870a8dd02"].unchecked_into(),
-				),
-				(
-					// 5GmrbvqhDBp7jmaRB5SsiY5kfkLPXMbELm6MTVsMpbCX19tD
-					hex!["d0536fc56cac85d6b61e128becdc367e8d7652d9a95663c7e88cb6119aea966d"].into(),
-					hex!["d0536fc56cac85d6b61e128becdc367e8d7652d9a95663c7e88cb6119aea966d"].into(),
-					hex!["849c1ea65bc37705aafd4e753fde8395612e9da8d88240d27b2dfc4a2e115599"].unchecked_into(),
-					hex!["d84cdabe21cead3f88de87b63116405182cf78ef97d3d590011bc235a983447a"].unchecked_into(),
-				),
-			],
-			// Sudo account
-			// 5FySxAHYXDzgDY8BTVnbZ6dygkXJwG27pKmgCLeSRSFEG2dy
-			hex!["acee87f3026e9ef8cf334fe94bc9eb9e9e689318611eca21e5aef919e3e5bc30"].into(),
-			// Pre-funded accounts
-			vec![
+		move || {
+			turbulence_genesis(
+				wasm_binary,
+				// Initial PoA authorities
+				vec![
+					(
+						// 5E6jm6dgDZQBFW79gd3uvTKymjqUSzAPfkvD7Exx5GvdbHZ6
+						hex!["5a055df2cbdebc8fce61a70db71fcf64c1853dca54d8c3e52b2d65cb8cf7e533"].into(),
+						hex!["5a055df2cbdebc8fce61a70db71fcf64c1853dca54d8c3e52b2d65cb8cf7e533"].into(),
+						hex!["b48963cb1572aa90e4202db400e7b5aa887b3c6aaf7e61de3a6beb14dae2c97b"].unchecked_into(),
+						hex!["f2415a6cedee17c766c7e8f696fb3499519d85a3248b05de35bc7b58d59e4149"].unchecked_into(),
+					),
+					(
+						// 5GGqathCVPRvwTTMEvURf2f16iKu4i8SccxCc6UNGDF4g447
+						hex!["ba31e4b5576a5d60b2dbdb4d4144f6478636b84313fe6f41a44e002ddc64ec6c"].into(),
+						hex!["ba31e4b5576a5d60b2dbdb4d4144f6478636b84313fe6f41a44e002ddc64ec6c"].into(),
+						hex!["293bd01494343a94520531d844953e947e4a1ff84bdae948565e49bdf3304c09"].unchecked_into(),
+						hex!["cade610afbc4ce7ca0c6972f5c774c2c4710eed431cc23ac6e5e806870a8dd02"].unchecked_into(),
+					),
+					(
+						// 5GmrbvqhDBp7jmaRB5SsiY5kfkLPXMbELm6MTVsMpbCX19tD
+						hex!["d0536fc56cac85d6b61e128becdc367e8d7652d9a95663c7e88cb6119aea966d"].into(),
+						hex!["d0536fc56cac85d6b61e128becdc367e8d7652d9a95663c7e88cb6119aea966d"].into(),
+						hex!["849c1ea65bc37705aafd4e753fde8395612e9da8d88240d27b2dfc4a2e115599"].unchecked_into(),
+						hex!["d84cdabe21cead3f88de87b63116405182cf78ef97d3d590011bc235a983447a"].unchecked_into(),
+					),
+				],
+				// Sudo account
 				// 5FySxAHYXDzgDY8BTVnbZ6dygkXJwG27pKmgCLeSRSFEG2dy
 				hex!["acee87f3026e9ef8cf334fe94bc9eb9e9e689318611eca21e5aef919e3e5bc30"].into(),
-				// 5DyXntuH5dBcf2dpjTojzfV6GDypx8CyTuVFm84qB7a4BkYT
-				hex!["54865b9eff8c291658e3fbda202f4260536618c31a0056372d121a5206010d53"].into(),
-			],
-			vec![
-				(
+				// Pre-funded accounts
+				vec![
+					// 5FySxAHYXDzgDY8BTVnbZ6dygkXJwG27pKmgCLeSRSFEG2dy
+					hex!["acee87f3026e9ef8cf334fe94bc9eb9e9e689318611eca21e5aef919e3e5bc30"].into(),
+					// 5DyXntuH5dBcf2dpjTojzfV6GDypx8CyTuVFm84qB7a4BkYT
+					hex!["54865b9eff8c291658e3fbda202f4260536618c31a0056372d121a5206010d53"].into(),
+				],
+				vec![(
 					// 5DyXntuH5dBcf2dpjTojzfV6GDypx8CyTuVFm84qB7a4BkYT
 					hex!["54865b9eff8c291658e3fbda202f4260536618c31a0056372d121a5206010d53"].into(),
 					hex!["54865b9eff8c291658e3fbda202f4260536618c31a0056372d121a5206010d53"].unchecked_into(),
-				)
-			]
-		),
+				)],
+				para_id,
+			)
+		},
 		// Bootnodes
 		vec![
-			"/dns4/testnet-bootnode-1.laminar-chain.laminar.one/tcp/30333/p2p/12D3KooWNCe9dEpPhswckrX5ZHhdtZ3r5sg6CcgKfgyhw3seuwtB".parse().unwrap(),
+			"/ip4/54.254.37.221/tcp/30338/p2p/12D3KooWHz7hcTuARq57pbrfTwzPhqJ99dYmKUmPT4AcCGS5qXte"
+				.parse()
+				.unwrap(),
 		],
 		// Telemetry
-		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
-			.expect("Staging telemetry url is valid; qed")),
+		Some(
+			TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
+				.expect("Staging telemetry url is valid; qed"),
+		),
 		// Protocol ID
-		Some("turbulence1"),
+		Some("turbulencepc1"),
 		// Properties
 		Some(properties),
 		// Extensions
-		Default::default(),
+		Extensions {
+			relay_chain: para_id.map(|_| "rococo".into()),
+			para_id: para_id.map(Into::into),
+			..Default::default()
+		},
 	))
 }
 
@@ -320,6 +347,7 @@ fn dev_genesis(
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
 	oracle_session_keys: Vec<(AccountId, OracleId)>,
+	para_id: Option<ParaId>,
 ) -> GenesisConfig {
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
@@ -589,6 +617,9 @@ fn dev_genesis(
 			members: Default::default(), // initialized by OperatorMembership
 			session_keys: oracle_session_keys,
 		}),
+		parachain_info: Some(ParachainInfoConfig {
+			parachain_id: para_id.unwrap_or(5001.into()),
+		}),
 	}
 }
 
@@ -598,6 +629,7 @@ fn turbulence_genesis(
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
 	oracle_session_keys: Vec<(AccountId, OracleId)>,
+	para_id: Option<ParaId>,
 ) -> GenesisConfig {
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
@@ -870,6 +902,9 @@ fn turbulence_genesis(
 		orml_oracle: Some(OracleConfig {
 			members: Default::default(), // initialized by OperatorMembership
 			session_keys: oracle_session_keys,
+		}),
+		parachain_info: Some(ParachainInfoConfig {
+			parachain_id: para_id.unwrap_or(5001.into()),
 		}),
 	}
 }

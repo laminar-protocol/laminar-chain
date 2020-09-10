@@ -55,19 +55,19 @@ pub struct FullDeps<C, P, SC> {
 	/// Whether to deny unsafe calls
 	pub deny_unsafe: DenyUnsafe,
 	/// BABE specific dependencies.
-	pub babe: BabeDeps,
+	pub babe: Option<BabeDeps>,
 	/// GRANDPA specific dependencies.
-	pub grandpa: GrandpaDeps,
+	pub grandpa: Option<GrandpaDeps>,
 }
 
 /// Instantiate all Full RPC extensions.
-pub fn create_full<C, P, SC, UncheckedExtrinsic>(deps: FullDeps<C, P, SC>) -> RpcExtension
+pub fn create_full<C, P, SC>(deps: FullDeps<C, P, SC>) -> RpcExtension
 where
 	C: ProvideRuntimeApi<Block>,
 	C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError>,
 	C: Send + Sync + 'static,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
-	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance, UncheckedExtrinsic>,
+	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: orml_oracle_rpc::OracleRuntimeApi<Block, CurrencyId, dev_runtime::TimeStampedPrice>,
 	C::Api: margin_protocol_rpc::MarginProtocolRuntimeApi<Block, AccountId>,
 	C::Api: synthetic_protocol_rpc::SyntheticProtocolRuntimeApi<Block, AccountId>,
@@ -75,7 +75,6 @@ where
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + Sync + Send + 'static,
 	SC: SelectChain<Block> + 'static,
-	UncheckedExtrinsic: codec::Codec + Send + Sync + 'static,
 {
 	use margin_protocol_rpc::{MarginProtocol, MarginProtocolApi};
 	use orml_oracle_rpc::{Oracle, OracleApi};
@@ -94,15 +93,35 @@ where
 		babe,
 		grandpa,
 	} = deps;
-	let BabeDeps {
-		keystore,
-		babe_config,
-		shared_epoch_changes,
-	} = babe;
-	let GrandpaDeps {
-		shared_voter_state,
-		shared_authority_set,
-	} = grandpa;
+
+	if let Some(babe) = babe {
+		let BabeDeps {
+			keystore,
+			babe_config,
+			shared_epoch_changes,
+		} = babe;
+
+		io.extend_with(sc_consensus_babe_rpc::BabeApi::to_delegate(BabeRpcHandler::new(
+			client.clone(),
+			shared_epoch_changes,
+			keystore,
+			babe_config,
+			select_chain,
+			deny_unsafe,
+		)));
+	}
+
+	if let Some(grandpa) = grandpa {
+		let GrandpaDeps {
+			shared_voter_state,
+			shared_authority_set,
+		} = grandpa;
+
+		io.extend_with(GrandpaApi::to_delegate(GrandpaRpcHandler::new(
+			shared_authority_set,
+			shared_voter_state,
+		)));
+	}
 
 	io.extend_with(SystemApi::to_delegate(FullSystem::new(
 		client.clone(),
@@ -112,18 +131,6 @@ where
 	io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(
 		client.clone(),
 	)));
-	io.extend_with(sc_consensus_babe_rpc::BabeApi::to_delegate(BabeRpcHandler::new(
-		client.clone(),
-		shared_epoch_changes,
-		keystore,
-		babe_config,
-		select_chain,
-		deny_unsafe,
-	)));
-	io.extend_with(GrandpaApi::to_delegate(GrandpaRpcHandler::new(
-		shared_authority_set,
-		shared_voter_state,
-	)));
 	io.extend_with(OracleApi::to_delegate(Oracle::new(client.clone())));
 	io.extend_with(MarginProtocolApi::to_delegate(MarginProtocol::new(client.clone())));
 	io.extend_with(SyntheticProtocolApi::to_delegate(SyntheticProtocol::new(client)));
@@ -132,16 +139,15 @@ where
 }
 
 /// Instantiate all RPC extensions for light node.
-pub fn create_light<C, P, F, UncheckedExtrinsic>(deps: LightDeps<C, F, P>) -> RpcExtension
+pub fn create_light<C, P, F>(deps: LightDeps<C, F, P>) -> RpcExtension
 where
 	C: ProvideRuntimeApi<Block>,
 	C: HeaderBackend<Block>,
 	C: Send + Sync + 'static,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
-	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance, UncheckedExtrinsic>,
+	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	F: Fetcher<Block> + 'static,
 	P: TransactionPool + 'static,
-	UncheckedExtrinsic: codec::Codec + Send + Sync + 'static,
 {
 	use substrate_frame_rpc_system::{LightSystem, SystemApi};
 
