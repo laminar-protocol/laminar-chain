@@ -69,7 +69,7 @@ pub use sp_runtime::{Perbill, Percent, Permill};
 
 pub use constants::{currency::*, fee::*, time::*};
 
-use cumulus_primitives::relay_chain::Balance as RelayChainBalance;
+use cumulus_primitives::{relay_chain::Balance as RelayChainBalance, ParaId};
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -803,7 +803,7 @@ impl cumulus_message_broker::Trait for Runtime {
 	type DownwardMessageHandlers = XTokens;
 	type UpwardMessage = cumulus_upward_message::RococoUpwardMessage;
 	type ParachainId = ParachainInfo;
-	type XCMPMessage = orml_xtokens::XCMPMessage<AccountId, Balance>;
+	type XCMPMessage = orml_xtokens::XCMPTokenMessage<AccountId, Balance>;
 	type XCMPMessageHandlers = XTokens;
 }
 
@@ -842,6 +842,7 @@ impl orml_xtokens::Trait for Runtime {
 	type FromRelayChainBalance = RelayToNative;
 	type ToRelayChainBalance = NativeToRelay;
 	type UpwardMessage = cumulus_upward_message::RococoUpwardMessage;
+	type ParaId = ParachainInfo;
 }
 
 construct_runtime!(
