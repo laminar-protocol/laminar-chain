@@ -992,7 +992,7 @@ dependencies = [
 
 [[package]]
 name = "dev-runtime"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "frame-benchmarking",
  "frame-executive",
@@ -2517,7 +2517,7 @@ dependencies = [
 
 [[package]]
 name = "laminar-chain"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "cucumber_rust",
  "dev-runtime",
@@ -2537,7 +2537,7 @@ dependencies = [
 
 [[package]]
 name = "laminar-cli"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "frame-benchmarking-cli",
  "laminar-inspect",
@@ -2551,7 +2551,7 @@ dependencies = [
 
 [[package]]
 name = "laminar-inspect"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "derive_more",
  "log",
@@ -2567,7 +2567,7 @@ dependencies = [
 
 [[package]]
 name = "laminar-primitives"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "bitmask",
  "parity-scale-codec",
@@ -2580,7 +2580,7 @@ dependencies = [
 
 [[package]]
 name = "laminar-rpc"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "dev-runtime",
  "jsonrpc-core",
@@ -2609,7 +2609,7 @@ dependencies = [
 
 [[package]]
 name = "laminar-service"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "dev-runtime",
  "frame-benchmarking",
@@ -3103,7 +3103,7 @@ checksum = "3e2e65a1a2e43cfcb47a895c4c8b10d1f4a61097f9f254f183aee60cad9c651d"
 
 [[package]]
 name = "margin-protocol-rpc"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -3118,7 +3118,7 @@ dependencies = [
 
 [[package]]
 name = "margin-protocol-rpc-runtime-api"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "laminar-primitives",
  "parity-scale-codec",
@@ -3291,7 +3291,7 @@ dependencies = [
 
 [[package]]
 name = "module-base-liquidity-pools"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3312,7 +3312,7 @@ dependencies = [
 
 [[package]]
 name = "module-margin-liquidity-pools"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3335,7 +3335,7 @@ dependencies = [
 
 [[package]]
 name = "module-margin-protocol"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3357,7 +3357,7 @@ dependencies = [
 
 [[package]]
 name = "module-synthetic-liquidity-pools"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3378,7 +3378,7 @@ dependencies = [
 
 [[package]]
 name = "module-synthetic-protocol"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3399,7 +3399,7 @@ dependencies = [
 
 [[package]]
 name = "module-synthetic-tokens"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3417,7 +3417,7 @@ dependencies = [
 
 [[package]]
 name = "module-traits"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "frame-support",
  "laminar-primitives",
@@ -5210,7 +5210,7 @@ dependencies = [
 
 [[package]]
 name = "runtime-common"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "orml-oracle",
 ]
@@ -7446,7 +7446,7 @@ dependencies = [
 
 [[package]]
 name = "synthetic-protocol-rpc"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -7461,7 +7461,7 @@ dependencies = [
 
 [[package]]
 name = "synthetic-protocol-rpc-runtime-api"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "laminar-primitives",
  "parity-scale-codec",
