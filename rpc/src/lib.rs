@@ -1,8 +1,10 @@
 use std::sync::Arc;
 
-use primitives::{AccountId, Balance, Block, BlockNumber, CurrencyId, Hash, Nonce};
+pub use jsonrpc_pubsub::manager::SubscriptionManager;
+use primitives::{AccountId, Balance, Block, BlockNumber, CurrencyId, DataProviderId, Hash, Nonce};
 use sc_client_api::light::{Fetcher, RemoteBlockchain};
 use sc_consensus_babe::Epoch;
+use sc_finality_grandpa::{GrandpaJustificationStream, SharedAuthoritySet, SharedVoterState};
 pub use sc_rpc::DenyUnsafe;
 use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
@@ -39,9 +41,13 @@ pub struct BabeDeps {
 /// Extra dependencies for GRANDPA
 pub struct GrandpaDeps {
 	/// Voting round info.
-	pub shared_voter_state: sc_finality_grandpa::SharedVoterState,
+	pub shared_voter_state: SharedVoterState,
 	/// Authority set info.
-	pub shared_authority_set: sc_finality_grandpa::SharedAuthoritySet<Hash, BlockNumber>,
+	pub shared_authority_set: SharedAuthoritySet<Hash, BlockNumber>,
+	/// Receives notifications about justification events from Grandpa.
+	pub justification_stream: GrandpaJustificationStream<Block>,
+	/// Subscription manager to keep track of pubsub subscribers.
+	pub subscriptions: SubscriptionManager,
 }
 
 /// Full client dependencies.
@@ -61,21 +67,20 @@ pub struct FullDeps<C, P, SC> {
 }
 
 /// Instantiate all Full RPC extensions.
-pub fn create_full<C, P, SC, UncheckedExtrinsic>(deps: FullDeps<C, P, SC>) -> RpcExtension
+pub fn create_full<C, P, SC>(deps: FullDeps<C, P, SC>) -> RpcExtension
 where
 	C: ProvideRuntimeApi<Block>,
 	C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError>,
 	C: Send + Sync + 'static,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
-	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance, UncheckedExtrinsic>,
-	C::Api: orml_oracle_rpc::OracleRuntimeApi<Block, CurrencyId, dev_runtime::TimeStampedPrice>,
+	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
+	C::Api: orml_oracle_rpc::OracleRuntimeApi<Block, DataProviderId, CurrencyId, dev_runtime::TimeStampedPrice>,
 	C::Api: margin_protocol_rpc::MarginProtocolRuntimeApi<Block, AccountId>,
 	C::Api: synthetic_protocol_rpc::SyntheticProtocolRuntimeApi<Block, AccountId>,
 	C::Api: BabeApi<Block>,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + Sync + Send + 'static,
 	SC: SelectChain<Block> + 'static,
-	UncheckedExtrinsic: codec::Codec + Send + Sync + 'static,
 {
 	use margin_protocol_rpc::{MarginProtocol, MarginProtocolApi};
 	use orml_oracle_rpc::{Oracle, OracleApi};
@@ -102,6 +107,8 @@ where
 	let GrandpaDeps {
 		shared_voter_state,
 		shared_authority_set,
+		justification_stream,
+		subscriptions,
 	} = grandpa;
 
 	io.extend_with(SystemApi::to_delegate(FullSystem::new(
@@ -123,6 +130,8 @@ where
 	io.extend_with(GrandpaApi::to_delegate(GrandpaRpcHandler::new(
 		shared_authority_set,
 		shared_voter_state,
+		justification_stream,
+		subscriptions,
 	)));
 	io.extend_with(OracleApi::to_delegate(Oracle::new(client.clone())));
 	io.extend_with(MarginProtocolApi::to_delegate(MarginProtocol::new(client.clone())));
@@ -132,16 +141,15 @@ where
 }
 
 /// Instantiate all RPC extensions for light node.
-pub fn create_light<C, P, F, UncheckedExtrinsic>(deps: LightDeps<C, F, P>) -> RpcExtension
+pub fn create_light<C, P, F>(deps: LightDeps<C, F, P>) -> RpcExtension
 where
 	C: ProvideRuntimeApi<Block>,
 	C: HeaderBackend<Block>,
 	C: Send + Sync + 'static,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
-	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance, UncheckedExtrinsic>,
+	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	F: Fetcher<Block> + 'static,
 	P: TransactionPool + 'static,
-	UncheckedExtrinsic: codec::Codec + Send + Sync + 'static,
 {
 	use substrate_frame_rpc_system::{LightSystem, SystemApi};
 

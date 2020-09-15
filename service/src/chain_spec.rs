@@ -1,14 +1,14 @@
 use dev_runtime::{
-	opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, Block, CurrencyId, FinancialCouncilMembershipConfig,
-	GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, IndicesConfig, MarginLiquidityPoolsConfig,
-	MarginProtocolConfig, Moment, OperatorMembershipConfig, OracleConfig, SessionConfig, Signature, StakerStatus,
-	StakingConfig, SudoConfig, SyntheticLiquidityPoolsConfig, SyntheticTokensConfig, SystemConfig, TokensConfig, CENTS,
-	DOLLARS, MILLICENTS, WASM_BINARY,
+	opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, BandOracleConfig, Block, CurrencyId,
+	FinancialCouncilMembershipConfig, GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, IndicesConfig,
+	LaminarOracleConfig, MarginLiquidityPoolsConfig, MarginProtocolConfig, Moment, OperatorMembershipBandConfig,
+	OperatorMembershipLaminarConfig, SessionConfig, Signature, StakerStatus, StakingConfig, SudoConfig,
+	SyntheticLiquidityPoolsConfig, SyntheticTokensConfig, SystemConfig, TokensConfig, CENTS, DOLLARS, MILLICENTS,
+	WASM_BINARY,
 };
 use hex_literal::hex;
 use laminar_primitives::{AccumulateConfig, SwapRate, TradingPair};
 use margin_protocol::RiskThreshold;
-use runtime_common::OracleId;
 use sc_chain_spec::ChainSpecExtension;
 use sc_service;
 use sc_service::ChainType;
@@ -73,13 +73,6 @@ pub fn authority_keys_from_seed(seed: &str) -> (AccountId, AccountId, GrandpaId,
 	)
 }
 
-pub fn get_oracle_keys_from_seed(seed: &str) -> (AccountId, OracleId) {
-	(
-		get_account_id_from_seed::<sr25519::Public>(seed),
-		get_from_seed::<OracleId>(seed),
-	)
-}
-
 pub fn development_testnet_config() -> Result<DevChainSpec, String> {
 	let mut properties = Map::new();
 	properties.insert("tokenSymbol".into(), "LAMI".into());
@@ -107,7 +100,6 @@ pub fn development_testnet_config() -> Result<DevChainSpec, String> {
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
 				],
-				vec![get_oracle_keys_from_seed("Alice")],
 			)
 		},
 		// Bootnodes
@@ -156,7 +148,6 @@ pub fn local_testnet_config() -> Result<DevChainSpec, String> {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
-				vec![get_oracle_keys_from_seed("Alice")],
 			)
 		},
 		// Bootnodes
@@ -235,13 +226,6 @@ pub fn latest_turbulence_testnet_config() -> Result<DevChainSpec, String> {
 				// 5DyXntuH5dBcf2dpjTojzfV6GDypx8CyTuVFm84qB7a4BkYT
 				hex!["54865b9eff8c291658e3fbda202f4260536618c31a0056372d121a5206010d53"].into(),
 			],
-			vec![
-				(
-					// 5DyXntuH5dBcf2dpjTojzfV6GDypx8CyTuVFm84qB7a4BkYT
-					hex!["54865b9eff8c291658e3fbda202f4260536618c31a0056372d121a5206010d53"].into(),
-					hex!["54865b9eff8c291658e3fbda202f4260536618c31a0056372d121a5206010d53"].unchecked_into(),
-				)
-			]
 		),
 		// Bootnodes
 		vec![
@@ -319,7 +303,6 @@ fn dev_genesis(
 	initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId)>,
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
-	oracle_session_keys: Vec<(AccountId, OracleId)>,
 ) -> GenesisConfig {
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
@@ -357,10 +340,6 @@ fn dev_genesis(
 		}),
 		pallet_collective_Instance2: Some(Default::default()),
 		pallet_membership_Instance2: Some(FinancialCouncilMembershipConfig {
-			members: vec![root_key.clone()],
-			phantom: Default::default(),
-		}),
-		pallet_membership_Instance3: Some(OperatorMembershipConfig {
 			members: vec![root_key.clone()],
 			phantom: Default::default(),
 		}),
@@ -585,9 +564,21 @@ fn dev_genesis(
 				),
 			],
 		}),
-		orml_oracle: Some(OracleConfig {
+		orml_oracle_Instance1: Some(LaminarOracleConfig {
 			members: Default::default(), // initialized by OperatorMembership
-			session_keys: oracle_session_keys,
+			phantom: Default::default(),
+		}),
+		orml_oracle_Instance2: Some(BandOracleConfig {
+			members: Default::default(), // initialized by OperatorMembership
+			phantom: Default::default(),
+		}),
+		pallet_membership_Instance3: Some(OperatorMembershipLaminarConfig {
+			members: vec![root_key.clone()],
+			phantom: Default::default(),
+		}),
+		pallet_membership_Instance4: Some(OperatorMembershipBandConfig {
+			members: vec![root_key],
+			phantom: Default::default(),
 		}),
 	}
 }
@@ -597,7 +588,6 @@ fn turbulence_genesis(
 	initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId)>,
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
-	oracle_session_keys: Vec<(AccountId, OracleId)>,
 ) -> GenesisConfig {
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
@@ -640,10 +630,6 @@ fn turbulence_genesis(
 		pallet_collective_Instance2: Some(Default::default()),
 		pallet_membership_Instance2: Some(FinancialCouncilMembershipConfig {
 			members: vec![root_key.clone()],
-			phantom: Default::default(),
-		}),
-		pallet_membership_Instance3: Some(OperatorMembershipConfig {
-			members: endowed_accounts.clone(),
 			phantom: Default::default(),
 		}),
 		pallet_treasury: Some(Default::default()),
@@ -867,9 +853,21 @@ fn turbulence_genesis(
 				),
 			],
 		}),
-		orml_oracle: Some(OracleConfig {
+		orml_oracle_Instance1: Some(LaminarOracleConfig {
 			members: Default::default(), // initialized by OperatorMembership
-			session_keys: oracle_session_keys,
+			phantom: Default::default(),
+		}),
+		orml_oracle_Instance2: Some(BandOracleConfig {
+			members: Default::default(), // initialized by OperatorMembership
+			phantom: Default::default(),
+		}),
+		pallet_membership_Instance3: Some(OperatorMembershipLaminarConfig {
+			members: vec![root_key.clone()],
+			phantom: Default::default(),
+		}),
+		pallet_membership_Instance4: Some(OperatorMembershipBandConfig {
+			members: vec![root_key],
+			phantom: Default::default(),
 		}),
 	}
 }
