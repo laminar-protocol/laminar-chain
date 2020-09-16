@@ -7,7 +7,10 @@ use crate::{
 	CurrencyId::{self, AUSD, FEUR},
 	LiquidityPoolId, Moment, Runtime, DOLLARS,
 };
-use frame_support::{assert_ok, parameter_types, traits::OnInitialize};
+use frame_support::{
+	assert_ok, parameter_types,
+	traits::{OnFinalize, OnInitialize},
+};
 
 use margin_protocol::RiskThreshold;
 use margin_protocol_rpc_runtime_api::runtime_decl_for_MarginProtocolApi::MarginProtocolApi;
@@ -137,6 +140,8 @@ impl ExtBuilder {
 }
 
 pub fn set_oracle_price(prices: Vec<(CurrencyId, Price)>) -> DispatchResult {
+	let now = System::block_number();
+	ModuleOracle::on_finalize(now);
 	// TODO: iterate all operators and feed each of them
 	assert_ok!(ModuleOracle::feed_values(
 		<Runtime as frame_system::Trait>::Origin::root(),
