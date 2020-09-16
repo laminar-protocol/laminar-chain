@@ -30,10 +30,7 @@ type Prices = orml_traits::DefaultPriceProvider<CurrencyId, Oracle>;
 pub fn set_price(prices: sp_std::vec::Vec<(CurrencyId, Price)>) -> DispatchResult {
 	Oracle::on_finalize(0);
 	for _ in 0..MinimumCount::get() {
-		assert_ok!(Oracle::feed_values(
-			<Runtime as frame_system::Trait>::Origin::root(),
-			prices.clone()
-		));
+		Oracle::feed_values(<Runtime as frame_system::Trait>::Origin::root(), prices.clone()).map_err(|e| e.error)?;
 	}
 	Prices::get_price(CurrencyId::FEUR, CurrencyId::AUSD);
 
