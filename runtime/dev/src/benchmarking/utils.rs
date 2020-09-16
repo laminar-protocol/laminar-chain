@@ -1,4 +1,6 @@
-use crate::{AccountId, Balance, Currencies, CurrencyId, MinimumCount, Oracle, Price, Runtime, DOLLARS};
+use crate::{
+	AccountId, Balance, Currencies, CurrencyId, LaminarOracle as Oracle, MinimumCount, Price, Runtime, DOLLARS,
+};
 
 use frame_support::traits::OnFinalize;
 use orml_traits::{MultiCurrencyExtended, PriceProvider};
@@ -27,14 +29,11 @@ type Prices = orml_traits::DefaultPriceProvider<CurrencyId, Oracle>;
 
 pub fn set_price(prices: sp_std::vec::Vec<(CurrencyId, Price)>) -> DispatchResult {
 	Oracle::on_finalize(0);
-	for i in 0..MinimumCount::get() {
-		Oracle::feed_values(
+	for _ in 0..MinimumCount::get() {
+		assert_ok!(Oracle::feed_values(
 			<Runtime as frame_system::Trait>::Origin::root(),
-			prices.clone(),
-			i,
-			0,
-			Default::default(),
-		)?;
+			prices.clone()
+		));
 	}
 	Prices::get_price(CurrencyId::FEUR, CurrencyId::AUSD);
 

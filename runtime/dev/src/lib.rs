@@ -1133,19 +1133,20 @@ impl_runtime_apis! {
 			highest_range_values: Vec<u32>,
 			steps: Vec<u32>,
 			repeat: u32,
+			extra: bool,
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-			use frame_benchmarking::{Benchmarking, BenchmarkBatch};
+			use frame_benchmarking::{Benchmarking, BenchmarkBatch, TrackedStorageKey};
 			use orml_benchmarking::add_benchmark;
 
-			let whitelist: Vec<Vec<u8>> = vec![];
+			let whitelist: Vec<TrackedStorageKey> = vec![];
 			let mut batches = Vec::<BenchmarkBatch>::new();
-			let params = (&pallet, &benchmark, &lowest_range_values, &highest_range_values, &steps, repeat, &whitelist);
+			let params = (&pallet, &benchmark, &lowest_range_values, &highest_range_values, &steps, repeat, &whitelist, extra);
 
-			add_benchmark!(params, batches, b"base-liquidity-pools", benchmarking::base_liquidity_pools);
-			add_benchmark!(params, batches, b"margin-liquidity-pools", benchmarking::margin_liquidity_pools);
-			add_benchmark!(params, batches, b"synthetic-liquidity-pools", benchmarking::synthetic_liquidity_pools);
-			add_benchmark!(params, batches, b"margin-protocol", benchmarking::margin_protocol);
-			add_benchmark!(params, batches, b"synthetic-protocol", benchmarking::synthetic_protocol);
+			add_benchmark!(params, batches, base_liquidity_pools, benchmarking::base_liquidity_pools);
+			add_benchmark!(params, batches, margin_liquidity_pools, benchmarking::margin_liquidity_pools);
+			add_benchmark!(params, batches, synthetic_liquidity_pools, benchmarking::synthetic_liquidity_pools);
+			add_benchmark!(params, batches, margin_protocol, benchmarking::margin_protocol);
+			add_benchmark!(params, batches, synthetic_protocol, benchmarking::synthetic_protocol);
 
 			if batches.is_empty() { return Err("Benchmark not found for this module.".into()) }
 			Ok(batches)

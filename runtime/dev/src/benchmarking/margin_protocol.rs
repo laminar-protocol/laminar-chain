@@ -1,5 +1,8 @@
 use super::utils::{dollars, lookup_of_account, set_ausd_balance, set_price};
-use crate::{AccountId, BaseLiquidityPoolsForMargin, MarginLiquidityPools, MarginProtocol, Oracle, Price, Runtime};
+use crate::{
+	AccountId, BaseLiquidityPoolsForMargin, LaminarOracle as Oracle, MarginLiquidityPools, MarginProtocol, Price,
+	Runtime,
+};
 
 use frame_support::traits::ChangeMembers;
 use frame_system::RawOrigin;

@@ -1,6 +1,7 @@
 use super::utils::{dollars, set_ausd_balance, set_price};
 use crate::{
-	AccountId, BaseLiquidityPoolsForSynthetic, Oracle, Price, Runtime, SyntheticLiquidityPools, SyntheticProtocol,
+	AccountId, BaseLiquidityPoolsForSynthetic, LaminarOracle as Oracle, Price, Runtime, SyntheticLiquidityPools,
+	SyntheticProtocol,
 };
 
 use frame_support::traits::ChangeMembers;
