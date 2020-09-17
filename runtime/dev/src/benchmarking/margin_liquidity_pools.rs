@@ -72,7 +72,7 @@ runtime_benchmarks! {
 	}: _(RawOrigin::Root, EUR_USD, s.into())
 
 	set_accumulate_config {
-		let frequency = 10u64;
+		let frequency = 60u64;
 		let offset = 1u64;
 	}: _(RawOrigin::Root, EUR_USD, frequency, offset)
 

@@ -242,6 +242,14 @@ pub struct SwapRate {
 	pub short: FixedI128,
 }
 
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub enum DataProviderId {
+	Aggregated = 0,
+	Laminar = 1,
+	Band = 2,
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;

@@ -89,6 +89,7 @@ impl orml_currencies::Trait for Runtime {
 	type MultiCurrency = orml_tokens::Module<Runtime>;
 	type NativeCurrency = NativeCurrency;
 	type GetNativeCurrencyId = GetNativeCurrencyId;
+	type WeightInfo = ();
 }
 
 type Amount = i128;
@@ -98,6 +99,7 @@ impl orml_tokens::Trait for Runtime {
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
 	type OnReceived = ();
+	type WeightInfo = ();
 }
 
 pub struct PoolManager;

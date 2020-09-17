@@ -2,4 +2,4 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub use orml_oracle::AuthorityId as OracleId;
+pub type TimeStampedPrice = orml_oracle::TimestampedValue<primitives::Price, primitives::Moment>;

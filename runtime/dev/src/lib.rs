@@ -32,7 +32,7 @@ use sp_runtime::{
 	generic, impl_opaque_keys,
 	traits::{Extrinsic, Saturating, Verify},
 	transaction_validity::{TransactionPriority, TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, FixedPointNumber, ModuleId,
+	ApplyExtrinsicResult, DispatchResult, FixedPointNumber, ModuleId,
 };
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
@@ -41,10 +41,10 @@ use sp_version::RuntimeVersion;
 
 pub use frame_system::{Call as SystemCall, EnsureOneOf, EnsureRoot};
 use orml_currencies::BasicCurrencyAdapter;
-use orml_traits::DataProvider;
+use orml_traits::{create_median_value_data_provider, DataFeeder, DataProvider, DataProviderExtended};
 pub use primitives::{
-	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, EraIndex, Hash, LiquidityPoolId, Moment, Nonce,
-	Price, Signature,
+	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, DataProviderId, EraIndex, Hash, LiquidityPoolId,
+	Moment, Nonce, Price, Signature,
 };
 pub use sp_arithmetic::FixedI128;
 
@@ -67,6 +67,7 @@ pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Percent, Permill};
 
 pub use constants::{currency::*, fee::*, time::*};
+pub use runtime_common::TimeStampedPrice;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -326,7 +327,6 @@ impl pallet_sudo::Trait for Runtime {
 parameter_types! {
 	pub const SessionDuration: BlockNumber = EPOCH_DURATION_IN_SLOTS as _;
 	pub const StakingUnsignedPriority: TransactionPriority = TransactionPriority::max_value();
-	pub const OracleUnsignedPriority: TransactionPriority = TransactionPriority::max_value() - 1;
 	pub const MarginProtocolUnsignedPriority: TransactionPriority = TransactionPriority::max_value() - 2;
 }
 
@@ -362,9 +362,6 @@ type EnsureThreeFourthGeneralCouncilOrRoot =
 
 type EnsureHalfGeneralCouncilOrRoot =
 	EnsureOneOf<AccountId, EnsureProportionMoreThan<_1, _2, AccountId, GeneralCouncilInstance>, EnsureRoot<AccountId>>;
-
-type EnsureOneThirdGeneralCouncilOrRoot =
-	EnsureOneOf<AccountId, EnsureProportionMoreThan<_1, _3, AccountId, GeneralCouncilInstance>, EnsureRoot<AccountId>>;
 
 type GeneralCouncilMembershipInstance = pallet_membership::Instance1;
 impl pallet_membership::Trait<GeneralCouncilMembershipInstance> for Runtime {
@@ -411,16 +408,28 @@ impl pallet_membership::Trait<FinancialCouncilMembershipInstance> for Runtime {
 	type MembershipChanged = FinancialCouncil;
 }
 
-type OperatorMembershipInstance = pallet_membership::Instance3;
-impl pallet_membership::Trait<OperatorMembershipInstance> for Runtime {
+type OperatorMembershipInstanceLaminar = pallet_membership::Instance3;
+impl pallet_membership::Trait<OperatorMembershipInstanceLaminar> for Runtime {
 	type Event = Event;
-	type AddOrigin = EnsureOneThirdGeneralCouncilOrRoot;
-	type RemoveOrigin = EnsureOneThirdGeneralCouncilOrRoot;
-	type SwapOrigin = EnsureOneThirdGeneralCouncilOrRoot;
-	type ResetOrigin = EnsureOneThirdGeneralCouncilOrRoot;
-	type PrimeOrigin = EnsureHalfGeneralCouncilOrRoot;
-	type MembershipInitialized = Oracle;
-	type MembershipChanged = Oracle;
+	type AddOrigin = EnsureHalfFinancialCouncilOrRoot;
+	type RemoveOrigin = EnsureHalfFinancialCouncilOrRoot;
+	type SwapOrigin = EnsureHalfFinancialCouncilOrRoot;
+	type ResetOrigin = EnsureHalfFinancialCouncilOrRoot;
+	type PrimeOrigin = EnsureHalfFinancialCouncilOrRoot;
+	type MembershipInitialized = LaminarOracle;
+	type MembershipChanged = LaminarOracle;
+}
+
+type OperatorMembershipInstanceBand = pallet_membership::Instance4;
+impl pallet_membership::Trait<OperatorMembershipInstanceBand> for Runtime {
+	type Event = Event;
+	type AddOrigin = EnsureHalfFinancialCouncilOrRoot;
+	type RemoveOrigin = EnsureHalfFinancialCouncilOrRoot;
+	type SwapOrigin = EnsureHalfFinancialCouncilOrRoot;
+	type ResetOrigin = EnsureHalfFinancialCouncilOrRoot;
+	type PrimeOrigin = EnsureHalfFinancialCouncilOrRoot;
+	type MembershipInitialized = BandOracle;
+	type MembershipChanged = BandOracle;
 }
 
 pub struct GeneralCouncilProvider;
@@ -575,20 +584,44 @@ impl pallet_staking::Trait for Runtime {
 parameter_types! {
 	pub const MinimumCount: u32 = 1;
 	pub const ExpiresIn: Moment = 1000 * 60 * 60 * 24 * 3; // 3 days
+	pub ZeroAccountId: AccountId = AccountId::from([0u8; 32]);
 }
 
-impl orml_oracle::Trait for Runtime {
+type LaminarDataProvider = orml_oracle::Instance1;
+impl orml_oracle::Trait<LaminarDataProvider> for Runtime {
 	type Event = Event;
 	type OnNewData = ();
-	type CombineData = orml_oracle::DefaultCombineData<Runtime, MinimumCount, ExpiresIn>;
+	type CombineData = orml_oracle::DefaultCombineData<Runtime, MinimumCount, ExpiresIn, LaminarDataProvider>;
 	type Time = Timestamp;
 	type OracleKey = CurrencyId;
 	type OracleValue = Price;
-	type UnsignedPriority = OracleUnsignedPriority;
-	type AuthorityId = orml_oracle::AuthorityId;
+	type RootOperatorAccountId = ZeroAccountId;
 }
 
-pub type TimeStampedPrice = orml_oracle::TimestampedValueOf<Runtime>;
+type BandDataProvider = orml_oracle::Instance2;
+impl orml_oracle::Trait<BandDataProvider> for Runtime {
+	type Event = Event;
+	type OnNewData = ();
+	type CombineData = orml_oracle::DefaultCombineData<Runtime, MinimumCount, ExpiresIn, BandDataProvider>;
+	type Time = Timestamp;
+	type OracleKey = CurrencyId;
+	type OracleValue = Price;
+	type RootOperatorAccountId = ZeroAccountId;
+}
+
+create_median_value_data_provider!(
+	AggregatedDataProvider,
+	CurrencyId,
+	Price,
+	TimeStampedPrice,
+	[LaminarOracle, BandOracle]
+);
+// Aggregated data provider cannot feed.
+impl DataFeeder<CurrencyId, Price, AccountId> for AggregatedDataProvider {
+	fn feed_value(_: AccountId, _: CurrencyId, _: Price) -> DispatchResult {
+		Err("Not supported".into())
+	}
+}
 
 impl orml_tokens::Trait for Runtime {
 	type Event = Event;
@@ -596,6 +629,7 @@ impl orml_tokens::Trait for Runtime {
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
 	type OnReceived = ();
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -623,14 +657,15 @@ impl orml_currencies::Trait for Runtime {
 	type MultiCurrency = orml_tokens::Module<Runtime>;
 	type NativeCurrency = LaminarToken;
 	type GetNativeCurrencyId = GetLaminarTokenId;
+	type WeightInfo = ();
 }
 
-pub struct LaminarDataProvider;
-impl DataProvider<CurrencyId, Price> for LaminarDataProvider {
+pub struct WrappedLaminarDataProvider;
+impl DataProvider<CurrencyId, Price> for WrappedLaminarDataProvider {
 	fn get(currency: &CurrencyId) -> Option<Price> {
 		match currency {
 			CurrencyId::AUSD => Some(Price::saturating_from_integer(1)),
-			_ => <Oracle as DataProvider<CurrencyId, Price>>::get(currency),
+			_ => <AggregatedDataProvider as DataProvider<CurrencyId, Price>>::get(currency),
 		}
 	}
 }
@@ -712,7 +747,7 @@ impl synthetic_protocol::Trait for Runtime {
 	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type CollateralCurrency = CollateralCurrency;
 	type GetCollateralCurrencyId = GetCollateralCurrencyId;
-	type PriceProvider = orml_traits::DefaultPriceProvider<CurrencyId, LaminarDataProvider>;
+	type PriceProvider = orml_traits::DefaultPriceProvider<CurrencyId, WrappedLaminarDataProvider>;
 	type LiquidityPools = synthetic_liquidity_pools::Module<Runtime>;
 	type SyntheticProtocolLiquidityPools = synthetic_liquidity_pools::Module<Runtime>;
 }
@@ -782,7 +817,7 @@ impl margin_protocol::Trait for Runtime {
 	type Event = Event;
 	type LiquidityCurrency = LiquidityCurrency;
 	type LiquidityPools = margin_liquidity_pools::Module<Runtime>;
-	type PriceProvider = orml_traits::DefaultPriceProvider<CurrencyId, LaminarDataProvider>;
+	type PriceProvider = orml_traits::DefaultPriceProvider<CurrencyId, WrappedLaminarDataProvider>;
 	type GetTreasuryAccountId = GetTreasuryAccountId;
 	type GetTraderMaxOpenPositions = GetTraderMaxOpenPositions;
 	type GetPoolMaxOpenPositions = GetPoolMaxOpenPositions;
@@ -812,9 +847,13 @@ construct_runtime!(
 		GeneralCouncilMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
 		FinancialCouncil: pallet_collective::<Instance2>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		FinancialCouncilMembership: pallet_membership::<Instance2>::{Module, Call, Storage, Event<T>, Config<T>},
-		Oracle: orml_oracle::{Module, Storage, Call, Config<T>, Event<T>, ValidateUnsigned},
+		// oracle
+		LaminarOracle: orml_oracle::<Instance1>::{Module, Storage, Call, Config<T>, Event<T>},
+		BandOracle: orml_oracle::<Instance2>::{Module, Storage, Call, Config<T>, Event<T>},
 		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
-		OperatorMembership: pallet_membership::<Instance3>::{Module, Call, Storage, Event<T>, Config<T>},
+		OperatorMembershipLaminar: pallet_membership::<Instance3>::{Module, Call, Storage, Event<T>, Config<T>},
+		OperatorMembershipBand: pallet_membership::<Instance4>::{Module, Call, Storage, Event<T>, Config<T>},
+
 		Utility: pallet_utility::{Module, Call, Storage, Event},
 		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
 		PalletTreasury: pallet_treasury::{Module, Call, Storage, Config, Event<T>},
@@ -1022,24 +1061,32 @@ impl_runtime_apis! {
 	impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<
 		Block,
 		Balance,
-		UncheckedExtrinsic,
 	> for Runtime {
-		fn query_info(uxt: UncheckedExtrinsic, len: u32) -> pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo<Balance> {
+		fn query_info(uxt: <Block as BlockT>::Extrinsic, len: u32) -> pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo<Balance> {
 			TransactionPayment::query_info(uxt, len)
 		}
 	}
 
 	impl orml_oracle_rpc_runtime_api::OracleApi<
 		Block,
+		DataProviderId,
 		CurrencyId,
 		TimeStampedPrice,
 	> for Runtime {
-		fn get_value(key: CurrencyId) -> Option<TimeStampedPrice> {
-			Oracle::get_no_op(&key)
+		fn get_value(provider_id: DataProviderId ,key: CurrencyId) -> Option<TimeStampedPrice> {
+			match provider_id {
+				DataProviderId::Laminar => LaminarOracle::get_no_op(&key),
+				DataProviderId::Band => BandOracle::get_no_op(&key),
+				DataProviderId::Aggregated => <AggregatedDataProvider as DataProviderExtended<_, _>>::get_no_op(&key)
+			}
 		}
 
-		fn get_all_values() -> Vec<(CurrencyId, Option<TimeStampedPrice>)>{
-			Oracle::get_all_values()
+		fn get_all_values(provider_id: DataProviderId) -> Vec<(CurrencyId, Option<TimeStampedPrice>)> {
+			match provider_id {
+				DataProviderId::Laminar => LaminarOracle::get_all_values(),
+				DataProviderId::Band => BandOracle::get_all_values(),
+				DataProviderId::Aggregated => <AggregatedDataProvider as DataProviderExtended<_, _>>::get_all_values()
+			}
 		}
 	}
 
@@ -1086,19 +1133,20 @@ impl_runtime_apis! {
 			highest_range_values: Vec<u32>,
 			steps: Vec<u32>,
 			repeat: u32,
+			extra: bool,
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-			use frame_benchmarking::{Benchmarking, BenchmarkBatch};
+			use frame_benchmarking::{Benchmarking, BenchmarkBatch, TrackedStorageKey};
 			use orml_benchmarking::add_benchmark;
 
-			let whitelist: Vec<Vec<u8>> = vec![];
+			let whitelist: Vec<TrackedStorageKey> = vec![];
 			let mut batches = Vec::<BenchmarkBatch>::new();
-			let params = (&pallet, &benchmark, &lowest_range_values, &highest_range_values, &steps, repeat, &whitelist);
+			let params = (&pallet, &benchmark, &lowest_range_values, &highest_range_values, &steps, repeat, &whitelist, extra);
 
-			add_benchmark!(params, batches, b"base-liquidity-pools", benchmarking::base_liquidity_pools);
-			add_benchmark!(params, batches, b"margin-liquidity-pools", benchmarking::margin_liquidity_pools);
-			add_benchmark!(params, batches, b"synthetic-liquidity-pools", benchmarking::synthetic_liquidity_pools);
-			add_benchmark!(params, batches, b"margin-protocol", benchmarking::margin_protocol);
-			add_benchmark!(params, batches, b"synthetic-protocol", benchmarking::synthetic_protocol);
+			add_benchmark!(params, batches, base_liquidity_pools, benchmarking::base_liquidity_pools);
+			add_benchmark!(params, batches, margin_liquidity_pools, benchmarking::margin_liquidity_pools);
+			add_benchmark!(params, batches, synthetic_liquidity_pools, benchmarking::synthetic_liquidity_pools);
+			add_benchmark!(params, batches, margin_protocol, benchmarking::margin_protocol);
+			add_benchmark!(params, batches, synthetic_protocol, benchmarking::synthetic_protocol);
 
 			if batches.is_empty() { return Err("Benchmark not found for this module.".into()) }
 			Ok(batches)

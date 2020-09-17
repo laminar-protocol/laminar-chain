@@ -5,9 +5,12 @@ use super::*;
 use crate::{
 	AccountId,
 	CurrencyId::{self, AUSD, FEUR},
-	LiquidityPoolId, MinimumCount, Moment, Runtime, DOLLARS,
+	LiquidityPoolId, Moment, Runtime, DOLLARS,
 };
-use frame_support::{assert_ok, parameter_types, traits::OnFinalize, traits::OnInitialize};
+use frame_support::{
+	assert_ok, parameter_types,
+	traits::{OnFinalize, OnInitialize},
+};
 
 use margin_protocol::RiskThreshold;
 use margin_protocol_rpc_runtime_api::runtime_decl_for_MarginProtocolApi::MarginProtocolApi;
@@ -24,7 +27,7 @@ pub type PositionId = u64;
 pub type ModuleSyntheticProtocol = synthetic_protocol::Module<Runtime>;
 pub type ModuleMarginProtocol = margin_protocol::Module<Runtime>;
 pub type ModuleTokens = synthetic_tokens::Module<Runtime>;
-pub type ModuleOracle = orml_oracle::Module<Runtime>;
+pub type ModuleOracle = orml_oracle::Module<Runtime, orml_oracle::Instance1>;
 pub type OraclePriceProvider = orml_traits::DefaultPriceProvider<CurrencyId, ModuleOracle>;
 pub type MarginLiquidityPools = margin_liquidity_pools::Module<Runtime>;
 pub type SyntheticLiquidityPools = synthetic_liquidity_pools::Module<Runtime>;
@@ -100,9 +103,9 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		orml_oracle::GenesisConfig::<Runtime> {
+		orml_oracle::GenesisConfig::<Runtime, orml_oracle::Instance1> {
 			members: vec![Default::default()].into(),
-			session_keys: vec![(Default::default(), Default::default())].into(),
+			phantom: Default::default(),
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
@@ -137,17 +140,13 @@ impl ExtBuilder {
 }
 
 pub fn set_oracle_price(prices: Vec<(CurrencyId, Price)>) -> DispatchResult {
-	ModuleOracle::on_finalize(0);
-	for i in 0..MinimumCount::get() {
-		let now = System::block_number();
-		assert_ok!(ModuleOracle::feed_values(
-			<Runtime as frame_system::Trait>::Origin::root(),
-			prices.clone(),
-			i as u32,
-			now,
-			Default::default()
-		));
-	}
+	let now = System::block_number();
+	ModuleOracle::on_finalize(now);
+	// TODO: iterate all operators and feed each of them
+	assert_ok!(ModuleOracle::feed_values(
+		<Runtime as frame_system::Trait>::Origin::root(),
+		prices.clone(),
+	));
 	get_price();
 	Ok(())
 }
