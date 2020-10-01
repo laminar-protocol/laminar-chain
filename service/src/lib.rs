@@ -102,9 +102,9 @@ where
 	Executor: NativeExecutionDispatch + 'static,
 {
 	if !test {
-		// If we're using prometheus, use a registry with a prefix of `acala`.
+		// If we're using prometheus, use a registry with a prefix of `laminar`.
 		if let Some(PrometheusConfig { registry, .. }) = config.prometheus_config.as_mut() {
-			*registry = Registry::new_custom(Some("acala".into()), None)?;
+			*registry = Registry::new_custom(Some("laminar".into()), None)?;
 		}
 	}
 
