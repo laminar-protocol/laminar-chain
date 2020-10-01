@@ -52,7 +52,7 @@ impl frame_system::Trait for Runtime {
 	type MaximumBlockLength = MaximumBlockLength;
 	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
-	type ModuleToIndex = ();
+	type PalletInfo = ();
 	type AccountData = pallet_balances::AccountData<Balance>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
@@ -73,10 +73,11 @@ impl pallet_balances::Trait for Runtime {
 	type Event = Event;
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = frame_system::Module<Runtime>;
+	type MaxLocks = ();
 	type WeightInfo = ();
 }
 
-pub type NativeCurrency = orml_currencies::BasicCurrencyAdapter<Balances, Balance, Balance, Amount, BlockNumber>;
+pub type NativeCurrency = orml_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
 pub type LiquidityCurrency = orml_currencies::Currency<Runtime, GetLiquidityCurrencyId>;
 
 impl orml_currencies::Trait for Runtime {

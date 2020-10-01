@@ -320,7 +320,7 @@ fn multi_instances_have_independent_storage() {
 		assert!(System::events().iter().any(|record| record.event == event));
 
 		assert_eq!(Instance1Module::all(), vec![0]);
-		assert_eq!(Instance2Module::all(), vec![]);
+		assert_eq!(Instance2Module::all(), Vec::<u32>::new());
 		// pool id storage
 		assert_eq!(Instance1Module::next_pool_id(), 1);
 		assert_eq!(Instance2Module::next_pool_id(), 0);

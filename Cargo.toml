@@ -23,10 +23,10 @@ laminar-service = { path = "service" }
 
 [dev-dependencies]
 cucumber = { package = "cucumber_rust", version = "^0.6.0" }
-frame-support = { version = "2.0.0-rc6" }
-sp-runtime = { version = "2.0.0-rc6" }
-sp-io = { version = "2.0.0-rc6" }
-sp-arithmetic = { version = "2.0.0-rc6" }
+frame-support = { version = "2.0.0" }
+sp-runtime = { version = "2.0.0" }
+sp-io = { version = "2.0.0" }
+sp-arithmetic = { version = "2.0.0" }
 dev-runtime = { path = "runtime/dev" }
 margin-protocol = { package = "module-margin-protocol", path = "modules/margin-protocol" }
 margin-protocol-rpc-runtime-api = { path = "modules/margin-protocol/rpc/runtime-api" }
