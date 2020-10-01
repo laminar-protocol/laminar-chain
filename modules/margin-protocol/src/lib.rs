@@ -228,37 +228,37 @@ decl_event! {
 		TradingPair = TradingPair,
 		Amount = Balance
 	{
-		/// Position opened: [who, position_id, pool_id, pair, leverage, leveraged_amount, open_price]
+		/// Position opened: \[who, position_id, pool_id, pair, leverage, leveraged_amount, open_price\]
 		PositionOpened(AccountId, PositionId, LiquidityPoolId, TradingPair, Leverage, Amount, Price),
 
-		/// Position closed: [who, position_id, pool_id, close_price]
+		/// Position closed: \[who, position_id, pool_id, close_price\]
 		PositionClosed(AccountId, PositionId, LiquidityPoolId, Price),
 
-		/// Deposited: [who, pool_id, amount]
+		/// Deposited: \[who, pool_id, amount\]
 		Deposited(AccountId, LiquidityPoolId, Amount),
 
-		/// Withdrew: [who, pool_id, amount]
+		/// Withdrew: \[who, pool_id, amount\]
 		Withdrew(AccountId, LiquidityPoolId, Amount),
 
-		/// Trader margin called: [who]
+		/// Trader margin called: \[who\]
 		TraderMarginCalled(AccountId),
 
-		/// Trader became safe: [who]
+		/// Trader became safe: \[who\]
 		TraderBecameSafe(AccountId),
 
-		/// Trader stopped out: [who]
+		/// Trader stopped out: \[who\]
 		TraderStoppedOut(AccountId),
 
-		/// Liquidity pool margin called: [pool_id]
+		/// Liquidity pool margin called: \[pool_id\]
 		LiquidityPoolMarginCalled(LiquidityPoolId),
 
-		/// Liquidity pool became safe: [pool_id]
+		/// Liquidity pool became safe: \[pool_id\]
 		LiquidityPoolBecameSafe(LiquidityPoolId),
 
-		/// Liquidity pool force closed: [pool_id]
+		/// Liquidity pool force closed: \[pool_id\]
 		LiquidityPoolForceClosed(LiquidityPoolId),
 
-		/// Trading pair risk threshold set: [pair, trader_risk_threshold, liquidity_pool_enp_threshold, liquidity_pool_ell_threshold]
+		/// Trading pair risk threshold set: \[pair, trader_risk_threshold, liquidity_pool_enp_threshold, liquidity_pool_ell_threshold\]
 		TradingPairRiskThresholdSet(TradingPair, Option<RiskThreshold>, Option<RiskThreshold>, Option<RiskThreshold>),
 	}
 }
@@ -878,7 +878,7 @@ impl<T: Trait> Module<T> {
 
 		PositionsSnapshots::try_mutate(pool_id, pair, |snapshot| -> DispatchResult {
 			if position.leverage.is_long() {
-				snapshot.positions_count = snapshot.positions_count + 1;
+				snapshot.positions_count += 1;
 				snapshot.long.held = snapshot
 					.long
 					.held
@@ -890,7 +890,7 @@ impl<T: Trait> Module<T> {
 					.checked_add(&position.leveraged_debits)
 					.ok_or(Error::<T>::NumOutOfBound)?;
 			} else {
-				snapshot.positions_count = snapshot.positions_count + 1;
+				snapshot.positions_count += 1;
 				snapshot.short.held = snapshot
 					.long
 					.held
@@ -925,7 +925,7 @@ impl<T: Trait> Module<T> {
 
 		PositionsSnapshots::mutate(position.pool, position.pair, |snapshot| {
 			if position.leverage.is_long() {
-				snapshot.positions_count = snapshot.positions_count - 1;
+				snapshot.positions_count -= 1;
 				snapshot.long.held = snapshot
 					.long
 					.held
@@ -937,7 +937,7 @@ impl<T: Trait> Module<T> {
 					.checked_sub(&position.leveraged_debits)
 					.expect("pool amount can't overflow; qed");
 			} else {
-				snapshot.positions_count = snapshot.positions_count - 1;
+				snapshot.positions_count -= 1;
 				snapshot.short.held = snapshot
 					.short
 					.held
@@ -1156,7 +1156,7 @@ impl<T: Trait> Module<T> {
 			.ok_or(Error::<T>::NumOutOfBound)?;
 
 		let usd_value = Self::usd_value(position.pair.quote, accumulated_swap_rate)?;
-		return Ok(usd_value);
+		Ok(usd_value)
 	}
 
 	/// Accumulated swap of all open positions of a given trader(USD value) in a pool.
@@ -1223,7 +1223,7 @@ impl<T: Trait> Module<T> {
 	fn check_trader(who: &T::AccountId, pool_id: LiquidityPoolId, action: Action<T>) -> Result<Risk, DispatchError> {
 		let margin_level = Self::margin_level(who, pool_id)?;
 
-		let new_pair_risk_threshold = match action.clone() {
+		let new_pair_risk_threshold = match action {
 			Action::OpenPosition(p) => Self::trader_risk_threshold(p.pair).unwrap_or_default(),
 			_ => RiskThreshold::default(),
 		};
@@ -1231,9 +1231,7 @@ impl<T: Trait> Module<T> {
 		let trader_threshold = Self::risk_threshold_of_trader(who, pool_id);
 		let risk = if margin_level <= cmp::max(trader_threshold.stop_out, new_pair_risk_threshold.stop_out).into() {
 			Risk::StopOut
-		} else if margin_level
-			<= cmp::max(trader_threshold.margin_call.into(), new_pair_risk_threshold.margin_call).into()
-		{
+		} else if margin_level <= cmp::max(trader_threshold.margin_call, new_pair_risk_threshold.margin_call).into() {
 			Risk::MarginCall
 		} else {
 			Risk::None
@@ -1345,7 +1343,7 @@ impl<T: Trait> Module<T> {
 		let enp = equity
 			.checked_div(&net_position)
 			// if `net_position` is zero, ENP is max
-			.unwrap_or(FixedI128::max_value());
+			.unwrap_or_else(FixedI128::max_value);
 		let ell = equity
 			.checked_div(&longest_leg)
 			// if `longest_leg` is zero, ELL is max

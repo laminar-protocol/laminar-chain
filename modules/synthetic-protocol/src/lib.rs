@@ -48,19 +48,19 @@ decl_event! {
 	pub enum Event<T> where
 		<T as frame_system::Trait>::AccountId,
 	{
-		/// Synthetic token minted: [who, synthetic_currency_id, pool_id, collateral_amount, synthetic_amount]
+		/// Synthetic token minted: \[who, synthetic_currency_id, pool_id, collateral_amount, synthetic_amount\]
 		Minted(AccountId, CurrencyId, LiquidityPoolId, Balance, Balance),
 
-		/// Synthetic token redeemed: [who, synthetic_currency_id, pool_id, collateral_amount, synthetic_amount]
+		/// Synthetic token redeemed: \[who, synthetic_currency_id, pool_id, collateral_amount, synthetic_amount\]
 		Redeemed(AccountId, CurrencyId, LiquidityPoolId, Balance, Balance),
 
-		/// Synthetic token liquidated: [who, synthetic_currency_id, pool_id, collateral_amount, synthetic_amount]
+		/// Synthetic token liquidated: \[who, synthetic_currency_id, pool_id, collateral_amount, synthetic_amount\]
 		Liquidated(AccountId, CurrencyId, LiquidityPoolId, Balance, Balance),
 
-		/// Collateral added: [who, synthetic_currency_id, pool_id, collateral_amount]
+		/// Collateral added: \[who, synthetic_currency_id, pool_id, collateral_amount\]
 		CollateralAdded(AccountId, CurrencyId, LiquidityPoolId, Balance),
 
-		/// Collateral withdrew: [who, synthetic_currency_id, pool_id, collateral_amount]
+		/// Collateral withdrew: \[who, synthetic_currency_id, pool_id, collateral_amount\]
 		CollateralWithdrew(AccountId, CurrencyId, LiquidityPoolId, Balance),
 	}
 }

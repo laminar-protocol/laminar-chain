@@ -80,13 +80,13 @@ decl_error! {
 
 decl_event! {
 	pub enum Event {
-		/// Extreme ratio updated: [currency_id, ratio]
+		/// Extreme ratio updated: \[currency_id, ratio\]
 		ExtremeRatioUpdated(CurrencyId, Permill),
 
-		/// Liquidation ratio updated: [currency_id, ratio]
+		/// Liquidation ratio updated: \[currency_id, ratio\]
 		LiquidationRatioUpdated(CurrencyId, Permill),
 
-		/// Collateral ratio updated: [currency_id, ratio]
+		/// Collateral ratio updated: \[currency_id, ratio\]
 		CollateralRatioUpdated(CurrencyId, Permill),
 	}
 }
