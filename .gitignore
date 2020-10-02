@@ -9,3 +9,5 @@
 .idea
 
 *.wasm
+
+.cargo
