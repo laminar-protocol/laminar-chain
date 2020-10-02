@@ -55,13 +55,13 @@ runtime-common = { path = "../runtime/common" }
 laminar-primitives = { path = "../primitives" }
 laminar-rpc = { path = "../rpc" }
 
-cumulus-primitives = { git = "https://github.com/paritytech/cumulus" }
-cumulus-network = { git = "https://github.com/paritytech/cumulus" }
-cumulus-service = { git = "https://github.com/paritytech/cumulus" }
-cumulus-consensus = { git = "https://github.com/paritytech/cumulus" }
+cumulus-primitives = { git = "https://github.com/paritytech/cumulus", branch = "gav-xcmp" }
+cumulus-network = { git = "https://github.com/paritytech/cumulus", branch = "gav-xcmp" }
+cumulus-service = { git = "https://github.com/paritytech/cumulus", branch = "gav-xcmp" }
+cumulus-consensus = { git = "https://github.com/paritytech/cumulus", branch = "gav-xcmp" }
 prometheus-endpoint = { package = "substrate-prometheus-endpoint", git = "https://github.com/paritytech/substrate", branch = "rococo-branch" }
-polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "rococo-branch" }
-polkadot-collator = { git = "https://github.com/paritytech/polkadot", branch = "rococo-branch" }
+polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "gav-xcmp" }
+polkadot-collator = { git = "https://github.com/paritytech/polkadot", branch = "gav-xcmp" }
 
 [dev-dependencies]
 sc-consensus-babe = { version = "0.8.0-rc5", features = ["test-helpers"] }

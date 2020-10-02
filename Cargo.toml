@@ -137,6 +137,7 @@ members = [
 	"orml/traits",
 	"orml/utilities",
 	"orml/vesting",
+	"orml/xcm-support",
 ]
 
 # The list of dependencies below (which can be both direct and indirect dependencies) are crates

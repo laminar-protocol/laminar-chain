@@ -19,10 +19,10 @@ service = { package = "laminar-service", path = "../service", default-features =
 
 dev-runtime = { path = "../runtime/dev" }
 
-cumulus-primitives = { git = "https://github.com/paritytech/cumulus" }
-polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "rococo-branch" }
-polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "rococo-branch" }
-polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "rococo-branch" }
+cumulus-primitives = { git = "https://github.com/paritytech/cumulus", branch = "gav-xcmp" }
+polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "gav-xcmp" }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "gav-xcmp" }
+polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "gav-xcmp" }
 
 [build-dependencies]
 substrate-build-script-utils = { version = "2.0.0-rc5", default-features = false }

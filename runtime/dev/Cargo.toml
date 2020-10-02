@@ -56,6 +56,7 @@ orml-oracle-rpc-runtime-api = { path = "../../orml/oracle/rpc/runtime-api", defa
 orml-tokens = { path = "../../orml/tokens", default-features = false }
 orml-traits = { path = "../../orml/traits", default-features = false }
 orml-xtokens = { path = "../../orml/xtokens", default-features = false }
+orml-xcm-support = { path = "../../orml/xcm-support", default-features = false }
 
 base-liquidity-pools = { package = "module-base-liquidity-pools", path = "../../modules/liquidity-pools/base", default-features = false }
 margin-liquidity-pools = { package = "module-margin-liquidity-pools", path = "../../modules/liquidity-pools/margin", default-features = false }
@@ -71,16 +72,19 @@ synthetic-tokens = { package = "module-synthetic-tokens", path = "../../modules/
 runtime-common = { path = "../common", default-features = false }
 
 # Cumulus dependencies
-cumulus-message-broker = { git = "https://github.com/paritytech/cumulus", default-features = false }
-cumulus-parachain-upgrade = { git = "https://github.com/paritytech/cumulus", default-features = false }
-cumulus-primitives = { git = "https://github.com/paritytech/cumulus", default-features = false }
-cumulus-runtime = { git = "https://github.com/paritytech/cumulus", default-features = false }
-cumulus-upward-message = { git = "https://github.com/paritytech/cumulus", default-features = false }
-parachain-info = { git = "https://github.com/paritytech/cumulus", default-features = false }
+cumulus-message-broker = { git = "https://github.com/paritytech/cumulus", branch = "gav-xcmp", default-features = false }
+cumulus-parachain-upgrade = { git = "https://github.com/paritytech/cumulus", branch = "gav-xcmp", default-features = false }
+cumulus-primitives = { git = "https://github.com/paritytech/cumulus", branch = "gav-xcmp", default-features = false }
+cumulus-runtime = { git = "https://github.com/paritytech/cumulus", branch = "gav-xcmp", default-features = false }
+# cumulus-upward-message = { git = "https://github.com/paritytech/cumulus", branch = "gav-xcmp", default-features = false }
+parachain-info = { git = "https://github.com/paritytech/cumulus", branch = "gav-xcmp", default-features = false }
 
-polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "rococo-branch", default-features = false }
-
-rococo-runtime = { git = "https://github.com/paritytech/polkadot", branch = "rococo-branch", default-features = false }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "gav-xcmp", default-features = false }
+rococo-runtime = { git = "https://github.com/paritytech/polkadot", branch = "gav-xcmp", default-features = false }
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "gav-xcmp", default-features = false }
+xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "gav-xcmp", default-features = false }
+xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "gav-xcmp", default-features = false }
+pallet-xcm-handler  = { git = "https://github.com/paritytech/polkadot", branch = "gav-xcmp", default-features = false }
 
 [build-dependencies]
 wasm-builder-runner = { package = "substrate-wasm-builder-runner", version = "1.0.6" }
@@ -135,6 +139,7 @@ std = [
 	"orml-tokens/std",
 	"orml-traits/std",
 	"orml-xtokens/std",
+	"orml-xcm-support/std",
 
 	"base-liquidity-pools/std",
 	"margin-liquidity-pools/std",
@@ -153,10 +158,14 @@ std = [
 	"cumulus-parachain-upgrade/std",
 	"cumulus-primitives/std",
 	"cumulus-runtime/std",
-	"cumulus-upward-message/std",
+	# "cumulus-upward-message/std",
 	"parachain-info/std",
 	"polkadot-parachain/std",
 	"rococo-runtime/std",
+	"xcm/std",
+	"xcm-executor/std",
+	"xcm-builder/std",
+	"pallet-xcm-handler/std",
 ]
 
 runtime-benchmarks = [
@@ -175,6 +184,6 @@ runtime-benchmarks = [
 disable-runtime-api = []
 
 # Will be enabled by the `wasm-builder` when building the runtime for WASM.
-runtime-wasm = [
-	"cumulus-upward-message/runtime-wasm",
-]
+# runtime-wasm = [
+# 	"cumulus-upward-message/runtime-wasm",
+# ]
