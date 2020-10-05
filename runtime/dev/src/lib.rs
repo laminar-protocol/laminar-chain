@@ -49,8 +49,7 @@ pub use primitives::{
 pub use sp_arithmetic::FixedI128;
 
 use orml_xcm_support::{
-	CurrencyIdConverter, IsConcreteWithGeneralKey, MultiCurrencyAdapter, NativePalletAssetOr,
-	XcmHandler as HandleXcm,
+	CurrencyIdConverter, IsConcreteWithGeneralKey, MultiCurrencyAdapter, NativePalletAssetOr, XcmHandler as HandleXcm,
 };
 use polkadot_parachain::primitives::Sibling;
 use xcm::v0::{Junction, MultiLocation, NetworkId, Xcm};
@@ -838,9 +837,7 @@ impl Convert<Balance, RelayChainBalance> for NativeToRelay {
 }
 
 parameter_types! {
-	pub const AnyRelayChain: NetworkId = NetworkId::Any;
-	// TODO: if kusama, change to `KSM`
-	pub RelayChainCurrencyKey: Vec<u8> = "DOT".into();
+	pub const PolkadotRelayChain: NetworkId = NetworkId::Polkadot;
 }
 
 pub struct XcmHandlerWrapper;
@@ -862,21 +859,15 @@ impl Convert<AccountId, [u8; 32]> for AccountId32Convert {
 impl orml_xtokens::Trait for Runtime {
 	type Event = Event;
 	type Balance = Balance;
-	// type RelayChainCurrencyId = RelayChainCurrencyId;
-	type FromRelayChainBalance = RelayToNative;
 	type ToRelayChainBalance = NativeToRelay;
 	//TODO: might need to be changed to polkadot or ksm
 	type AccountId32Convert = AccountId32Convert;
-	type RelayChainCurrencyKey = RelayChainCurrencyKey;
-	type RelayChainNetworkId = AnyRelayChain;
+	type RelayChainNetworkId = PolkadotRelayChain;
 	type ParaId = ParachainInfo;
 	type XcmHandler = XcmHandlerWrapper;
 }
 
 parameter_types! {
-	pub LaminarLocation: MultiLocation = MultiLocation::X2(Junction::Parent, Junction::Parachain {
-		id: ParachainInfo::get().into(),
-	});
 	pub LaminarNetwork: NetworkId = NetworkId::Named("laminar".into());
 	pub RelayChainOrigin: Origin = cumulus_message_broker::Origin::Relay.into();
 	pub Ancestry: MultiLocation = MultiLocation::X1(Junction::Parachain {
