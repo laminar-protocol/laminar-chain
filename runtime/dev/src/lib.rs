@@ -49,7 +49,7 @@ pub use primitives::{
 pub use sp_arithmetic::FixedI128;
 
 use orml_xcm_support::{
-	GeneralKeyCurrencyIdConverter, IsConcreteWithGeneralKey, MultiCurrencyAdapter, NativePalletAssetOr,
+	CurrencyIdConverter, IsConcreteWithGeneralKey, MultiCurrencyAdapter, NativePalletAssetOr,
 	XcmHandler as HandleXcm,
 };
 use polkadot_parachain::primitives::Sibling;
@@ -882,6 +882,7 @@ parameter_types! {
 	pub Ancestry: MultiLocation = MultiLocation::X1(Junction::Parachain {
 		id: ParachainInfo::get().into(),
 	});
+	pub const RelayChainCurrencyId: CurrencyId = CurrencyId::DOT;
 }
 
 pub type LocationConverter = (
@@ -895,7 +896,7 @@ pub type LocalAssetTransactor = MultiCurrencyAdapter<
 	IsConcreteWithGeneralKey<CurrencyId>,
 	LocationConverter,
 	AccountId,
-	GeneralKeyCurrencyIdConverter<CurrencyId>,
+	CurrencyIdConverter<CurrencyId, RelayChainCurrencyId>,
 	CurrencyId,
 >;
 
