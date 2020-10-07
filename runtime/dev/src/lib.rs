@@ -884,7 +884,7 @@ pub type LocationConverter = (
 
 pub type LocalAssetTransactor = MultiCurrencyAdapter<
 	Currencies,
-	IsConcreteWithGeneralKey<CurrencyId>,
+	IsConcreteWithGeneralKey<CurrencyId, RelayToNative>,
 	LocationConverter,
 	AccountId,
 	CurrencyIdConverter<CurrencyId, RelayChainCurrencyId>,
