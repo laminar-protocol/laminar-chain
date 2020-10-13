@@ -1,6 +1,10 @@
 //! Runtime API definition for margin protocol module.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+// The `too_many_arguments` warning originates from `decl_runtime_apis` macro.
+#![allow(clippy::too_many_arguments)]
+// The `unnecessary_mut_passed` warning originates from `decl_runtime_apis` macro.
+#![allow(clippy::unnecessary_mut_passed)]
 
 use codec::{Codec, Decode, Encode};
 use laminar_primitives::LiquidityPoolId;

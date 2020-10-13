@@ -436,7 +436,7 @@ impl<T: Trait> Module<T> {
 		// pool, but better to be safe than sorry.
 		with_additional_collateral
 			.checked_sub(collateral)
-			.ok_or(Error::<T>::NegativeAdditionalCollateralAmount.into())
+			.ok_or_else(|| Error::<T>::NegativeAdditionalCollateralAmount.into())
 	}
 
 	/// Returns `collateral * (1 + ratio)`.
@@ -448,7 +448,9 @@ impl<T: Trait> Module<T> {
 		let ratio = T::SyntheticProtocolLiquidityPools::additional_collateral_ratio(pool_id, currency_id);
 		let additional = ratio * collateral;
 
-		collateral.checked_add(additional).ok_or(Error::<T>::NumOverflow.into())
+		collateral
+			.checked_add(additional)
+			.ok_or_else(|| Error::<T>::NumOverflow.into())
 	}
 
 	/// Calculate position change for a remove, if ok, return with `(collateral_position_delta,

@@ -28,7 +28,8 @@ use sp_runtime::{
 	},
 	traits::{AccountIdConversion, StaticLookup},
 	transaction_validity::{
-		InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity, ValidTransaction,
+		InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity, TransactionValidityError,
+		ValidTransaction,
 	},
 	DispatchError, DispatchResult, ModuleId, RuntimeDebug,
 };
@@ -993,7 +994,7 @@ type DoubleFixedI128Result = result::Result<(FixedI128, FixedI128), DispatchErro
 impl<T: Trait> Module<T> {
 	/// The price from oracle.
 	fn price(base: CurrencyId, quote: CurrencyId) -> PriceResult {
-		T::PriceProvider::get_price(base, quote).ok_or(Error::<T>::NoPrice.into())
+		T::PriceProvider::get_price(base, quote).ok_or_else(|| Error::<T>::NoPrice.into())
 	}
 
 	/// ask_price = price + ask_spread
@@ -1036,7 +1037,9 @@ impl<T: Trait> Module<T> {
 			let p = Self::price(currency_id, CurrencyId::AUSD)?;
 			fixed_i128_from_fixed_u128(p)
 		};
-		amount.checked_mul(&price).ok_or(Error::<T>::NumOutOfBound.into())
+		amount
+			.checked_mul(&price)
+			.ok_or_else(|| Error::<T>::NumOutOfBound.into())
 	}
 }
 
@@ -1126,7 +1129,8 @@ impl<T: Trait> Module<T> {
 			.filter(|p| p.pool == pool_id)
 			.try_fold(FixedI128::zero(), |acc, p| {
 				let unrealized = Self::unrealized_pl_of_position(&p)?;
-				acc.checked_add(&unrealized).ok_or(Error::<T>::NumOutOfBound.into())
+				acc.checked_add(&unrealized)
+					.ok_or_else(|| Error::<T>::NumOutOfBound.into())
 			})
 	}
 
@@ -1166,7 +1170,8 @@ impl<T: Trait> Module<T> {
 			.filter(|p| p.pool == pool_id)
 			.try_fold(FixedI128::zero(), |acc, p| {
 				let rate_of_p = Self::accumulated_swap_rate_of_position(&p)?;
-				acc.checked_add(&rate_of_p).ok_or(Error::<T>::NumOutOfBound.into())
+				acc.checked_add(&rate_of_p)
+					.ok_or_else(|| Error::<T>::NumOutOfBound.into())
 			})
 	}
 
@@ -1179,7 +1184,7 @@ impl<T: Trait> Module<T> {
 		let accumulated_swap_rate = Self::accumulated_swap_rate_of_trader(who, pool_id)?;
 		with_unrealized
 			.checked_add(&accumulated_swap_rate)
-			.ok_or(Error::<T>::NumOutOfBound.into())
+			.ok_or_else(|| Error::<T>::NumOutOfBound.into())
 	}
 
 	/// Free margin of a given trader in a pool.
@@ -1197,13 +1202,14 @@ impl<T: Trait> Module<T> {
 			.filter(|p| p.pool == pool_id)
 			.try_fold::<_, _, FixedI128Result>(FixedI128::zero(), |acc, p| {
 				let debits_in_usd = Self::usd_value(p.pair.quote, p.leveraged_debits.saturating_abs())?;
-				acc.checked_add(&debits_in_usd).ok_or(Error::<T>::NumOutOfBound.into())
+				acc.checked_add(&debits_in_usd)
+					.ok_or_else(|| Error::<T>::NumOutOfBound.into())
 			})?;
 
 		Ok(equity
 			.checked_div(&leveraged_debits_in_usd)
 			// if no leveraged held, margin level is max
-			.unwrap_or(FixedI128::max_value()))
+			.unwrap_or_else(FixedI128::max_value))
 	}
 
 	/// Ensure a trader is safe.
@@ -1269,7 +1275,7 @@ impl<T: Trait> Module<T> {
 
 		liquidity
 			.checked_sub(&unrealized_pl)
-			.ok_or(Error::<T>::NumOutOfBound.into())
+			.ok_or_else(|| Error::<T>::NumOutOfBound.into())
 	}
 
 	/// Returns `(net_position, longest_leg)` of a liquidity pool.
@@ -1347,7 +1353,7 @@ impl<T: Trait> Module<T> {
 		let ell = equity
 			.checked_div(&longest_leg)
 			// if `longest_leg` is zero, ELL is max
-			.unwrap_or(FixedI128::max_value());
+			.unwrap_or_else(FixedI128::max_value);
 
 		Ok((enp, ell))
 	}
@@ -1556,8 +1562,6 @@ impl<T: Trait> MarginProtocolLiquidityPoolsManager for Module<T> {
 		let (enp, ell) = Self::enp_and_ell_with_action(pool_id, Action::None)?;
 		if enp <= enp_threshold.stop_out.into() || ell <= ell_threshold.stop_out.into() {
 			return Err(Error::<T>::PoolWouldBeUnsafe.into());
-		} else if enp <= enp_threshold.margin_call.into() || ell <= ell_threshold.margin_call.into() {
-			return Err(Error::<T>::PoolWouldBeUnsafe.into());
 		}
 		Ok(())
 	}
@@ -1604,11 +1608,13 @@ impl<T: Trait> Module<T> {
 	fn get_pools() -> Vec<LiquidityPoolId> {
 		// TODO: use key iter after this gets closed https://github.com/paritytech/substrate/issues/5319
 		let mut pools: Vec<LiquidityPoolId> = <Positions<T>>::iter().map(|(_, p)| p.pool).collect();
+		#[allow(clippy::stable_sort_primitive)] // need stable sort to be deterministic
 		pools.sort();
 		pools.dedup(); // dedup works as unique for sorted vec, so we sort first
 		pools
 	}
 
+	#[allow(unused_variables)] // `block_number` is used in macros
 	fn offchain_worker(block_number: T::BlockNumber) -> Result<(), OffchainErr> {
 		// check if we are a potential validator
 		if !sp_io::offchain::is_validator() {
@@ -1748,7 +1754,8 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
 		match call {
 			Call::trader_margin_call(who, pool_id) => {
-				let trader = T::Lookup::lookup(who.clone()).expect(InvalidTransaction::Stale.into());
+				let trader = T::Lookup::lookup(who.clone())
+					.map_err(|_| TransactionValidityError::from(InvalidTransaction::Stale))?;
 				if Self::is_trader_margin_called(&trader, *pool_id) {
 					return InvalidTransaction::Stale.into();
 				}
@@ -1761,7 +1768,8 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 					.build()
 			}
 			Call::trader_become_safe(who, pool_id) => {
-				let trader = T::Lookup::lookup(who.clone()).expect(InvalidTransaction::Stale.into());
+				let trader = T::Lookup::lookup(who.clone())
+					.map_err(|_| TransactionValidityError::from(InvalidTransaction::Stale))?;
 				if !Self::is_trader_margin_called(&trader, *pool_id) {
 					return InvalidTransaction::Stale.into();
 				}
@@ -1774,7 +1782,8 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 					.build()
 			}
 			Call::trader_stop_out(who, pool_id) => {
-				let trader = T::Lookup::lookup(who.clone()).expect(InvalidTransaction::Stale.into());
+				let trader = T::Lookup::lookup(who.clone())
+					.map_err(|_| TransactionValidityError::from(InvalidTransaction::Stale))?;
 				if Self::should_stop_out_trader(&trader, *pool_id).ok() == Some(true) {
 					return ValidTransaction::with_tag_prefix("margin_protocol/trader_stop_out")
 						.priority(T::UnsignedPriority::get())

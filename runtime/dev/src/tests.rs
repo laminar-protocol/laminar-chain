@@ -145,7 +145,7 @@ pub fn set_oracle_price(prices: Vec<(CurrencyId, Price)>) -> DispatchResult {
 	// TODO: iterate all operators and feed each of them
 	assert_ok!(ModuleOracle::feed_values(
 		<Runtime as frame_system::Trait>::Origin::root(),
-		prices.clone(),
+		prices,
 	));
 	get_price();
 	Ok(())
@@ -198,7 +198,7 @@ pub fn synthetic_remove_pool(who: &AccountId) -> DispatchResult {
 
 pub fn synthetic_set_identity() -> DispatchResult {
 	let identity = IdentityInfo {
-		legal_name: "laminar".as_bytes().to_vec(),
+		legal_name: b"laminar".to_vec(),
 		display_name: vec![],
 		web: vec![],
 		email: vec![],
@@ -547,7 +547,7 @@ pub fn margin_pool_state() -> Option<MarginPoolState> {
 
 pub fn margin_set_identity() -> DispatchResult {
 	let identity = IdentityInfo {
-		legal_name: "laminar".as_bytes().to_vec(),
+		legal_name: b"laminar".to_vec(),
 		display_name: vec![],
 		web: vec![],
 		email: vec![],
