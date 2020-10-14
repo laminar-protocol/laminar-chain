@@ -546,12 +546,10 @@ impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
 
 		if adjust_swap.saturating_abs() <= max_swap {
 			adjust_swap
+		} else if adjust_swap.is_positive() {
+			max_swap
 		} else {
-			if adjust_swap.is_positive() {
-				max_swap
-			} else {
-				fixed_i128_mul_signum(max_swap, -1)
-			}
+			fixed_i128_mul_signum(max_swap, -1)
 		}
 	}
 

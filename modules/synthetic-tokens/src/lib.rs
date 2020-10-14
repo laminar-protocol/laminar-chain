@@ -215,19 +215,19 @@ impl<T: Trait> Module<T> {
 	pub fn liquidation_ratio_or_default(currency_id: CurrencyId) -> Permill {
 		Self::ratios(currency_id)
 			.liquidation
-			.unwrap_or(T::DefaultLiquidationRatio::get())
+			.unwrap_or_else(T::DefaultLiquidationRatio::get)
 	}
 
 	pub fn extreme_ratio_or_default(currency_id: CurrencyId) -> Permill {
 		Self::ratios(currency_id)
 			.extreme
-			.unwrap_or(T::DefaultExtremeRatio::get())
+			.unwrap_or_else(T::DefaultExtremeRatio::get)
 	}
 
 	pub fn collateral_ratio_or_default(currency_id: CurrencyId) -> Permill {
 		Self::ratios(currency_id)
 			.collateral
-			.unwrap_or(T::DefaultCollateralRatio::get())
+			.unwrap_or_else(T::DefaultCollateralRatio::get)
 	}
 }
 

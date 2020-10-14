@@ -10,7 +10,6 @@ use hex_literal::hex;
 use laminar_primitives::{AccumulateConfig, SwapRate, TradingPair};
 use margin_protocol::RiskThreshold;
 use sc_chain_spec::ChainSpecExtension;
-use sc_service;
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use serde::{Deserialize, Serialize};
@@ -78,7 +77,7 @@ pub fn development_testnet_config() -> Result<DevChainSpec, String> {
 	properties.insert("tokenSymbol".into(), "LAMI".into());
 	properties.insert("tokenDecimals".into(), 18.into());
 
-	let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
+	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
 
 	Ok(DevChainSpec::from_genesis(
 		// Name
@@ -120,7 +119,7 @@ pub fn local_testnet_config() -> Result<DevChainSpec, String> {
 	properties.insert("tokenSymbol".into(), "LAMI".into());
 	properties.insert("tokenDecimals".into(), 18.into());
 
-	let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
+	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
 
 	Ok(DevChainSpec::from_genesis(
 		"Local Testnet",
@@ -172,7 +171,7 @@ pub fn latest_turbulence_testnet_config() -> Result<DevChainSpec, String> {
 	properties.insert("tokenSymbol".into(), "LAMI".into());
 	properties.insert("tokenDecimals".into(), 18.into());
 
-	let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
+	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
 
 	Ok(DevChainSpec::from_genesis(
 		"Laminar Turbulence TC1",
@@ -285,10 +284,7 @@ const ETH_USD: TradingPair = TradingPair {
 };
 
 fn accumulate_config(frequency: Moment, offset: Moment) -> AccumulateConfig<Moment> {
-	AccumulateConfig {
-		frequency: frequency,
-		offset: offset,
-	}
+	AccumulateConfig { frequency, offset }
 }
 
 fn risk_threshold(margin_call_percent: u32, stop_out_percent: u32) -> RiskThreshold {
@@ -382,15 +378,15 @@ fn dev_genesis(
 			],
 		}),
 		margin_liquidity_pools: Some(MarginLiquidityPoolsConfig {
-			default_min_leveraged_amount: 1 * DOLLARS,
+			default_min_leveraged_amount: DOLLARS,
 			margin_liquidity_config: vec![
 				(
 					// TradingPair
 					EUR_USD,
 					// MaxSpread
-					1 * CENTS,
+					CENTS,
 					// Accumulates
-					accumulate_config(1 * HOURS_IN_SECONDS, 0),
+					accumulate_config(HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: FixedI128::saturating_from_rational(1, 10000),
@@ -401,9 +397,9 @@ fn dev_genesis(
 					// TradingPair
 					USD_JPY,
 					// MaxSpread
-					1 * CENTS,
+					CENTS,
 					// Accumulates
-					accumulate_config(1 * HOURS_IN_SECONDS, 0),
+					accumulate_config(HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: FixedI128::saturating_from_rational(1, 10000),
@@ -414,9 +410,9 @@ fn dev_genesis(
 					// TradingPair
 					AUD_USD,
 					// MaxSpread
-					1 * CENTS,
+					CENTS,
 					// Accumulates
-					accumulate_config(1 * HOURS_IN_SECONDS, 0),
+					accumulate_config(HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: FixedI128::saturating_from_rational(1, 10000),
@@ -427,9 +423,9 @@ fn dev_genesis(
 					// TradingPair
 					USD_CAD,
 					// MaxSpread
-					1 * CENTS,
+					CENTS,
 					// Accumulates
-					accumulate_config(1 * HOURS_IN_SECONDS, 0),
+					accumulate_config(HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: FixedI128::saturating_from_rational(1, 10000),
@@ -440,9 +436,9 @@ fn dev_genesis(
 					// TradingPair
 					USD_CHF,
 					// MaxSpread
-					1 * CENTS,
+					CENTS,
 					// Accumulates
-					accumulate_config(1 * HOURS_IN_SECONDS, 0),
+					accumulate_config(HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: FixedI128::saturating_from_rational(1, 10000),
@@ -453,9 +449,9 @@ fn dev_genesis(
 					// TradingPair
 					XAU_USD,
 					// MaxSpread
-					1 * CENTS,
+					CENTS,
 					// Accumulates
-					accumulate_config(1 * HOURS_IN_SECONDS, 0),
+					accumulate_config(HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: FixedI128::saturating_from_rational(1, 10000),
@@ -466,9 +462,9 @@ fn dev_genesis(
 					// TradingPair
 					USD_OIL,
 					// MaxSpread
-					1 * CENTS,
+					CENTS,
 					// Accumulates
-					accumulate_config(1 * HOURS_IN_SECONDS, 0),
+					accumulate_config(HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: FixedI128::saturating_from_rational(1, 10000),
@@ -481,7 +477,7 @@ fn dev_genesis(
 					// MaxSpread
 					20 * DOLLARS,
 					// Accumulates
-					accumulate_config(1 * HOURS_IN_SECONDS, 0),
+					accumulate_config(HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: FixedI128::saturating_from_rational(1, 1000),
@@ -492,9 +488,9 @@ fn dev_genesis(
 					// TradingPair
 					ETH_USD,
 					// MaxSpread
-					1 * DOLLARS,
+					DOLLARS,
 					// Accumulates
-					accumulate_config(1 * HOURS_IN_SECONDS, 0),
+					accumulate_config(HOURS_IN_SECONDS, 0),
 					// SwapRates
 					SwapRate {
 						long: FixedI128::saturating_from_rational(1, 1000),
@@ -598,7 +594,7 @@ fn turbulence_genesis(
 		pallet_balances: Some(BalancesConfig {
 			balances: initial_authorities
 				.iter()
-				.map(|x| (x.0.clone(), INITIAL_STAKING + 1 * DOLLARS)) // add bit more for tx fee
+				.map(|x| (x.0.clone(), INITIAL_STAKING + DOLLARS)) // add bit more for tx fee
 				.chain(endowed_accounts.iter().cloned().map(|k| (k, INITIAL_BALANCE)))
 				.collect(),
 		}),
@@ -671,13 +667,13 @@ fn turbulence_genesis(
 			],
 		}),
 		margin_liquidity_pools: Some(MarginLiquidityPoolsConfig {
-			default_min_leveraged_amount: 1 * DOLLARS,
+			default_min_leveraged_amount: DOLLARS,
 			margin_liquidity_config: vec![
 				(
 					// TradingPair
 					EUR_USD,
 					// MaxSpread
-					1 * CENTS,
+					CENTS,
 					// Accumulates
 					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
@@ -703,7 +699,7 @@ fn turbulence_genesis(
 					// TradingPair
 					AUD_USD,
 					// MaxSpread
-					1 * CENTS,
+					CENTS,
 					// Accumulates
 					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
@@ -716,7 +712,7 @@ fn turbulence_genesis(
 					// TradingPair
 					USD_CAD,
 					// MaxSpread
-					1 * CENTS,
+					CENTS,
 					// Accumulates
 					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
@@ -729,7 +725,7 @@ fn turbulence_genesis(
 					// TradingPair
 					USD_CHF,
 					// MaxSpread
-					1 * CENTS,
+					CENTS,
 					// Accumulates
 					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
@@ -742,7 +738,7 @@ fn turbulence_genesis(
 					// TradingPair
 					XAU_USD,
 					// MaxSpread
-					1 * DOLLARS,
+					DOLLARS,
 					// Accumulates
 					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
@@ -755,7 +751,7 @@ fn turbulence_genesis(
 					// TradingPair
 					USD_OIL,
 					// MaxSpread
-					1 * CENTS,
+					CENTS,
 					// Accumulates
 					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
@@ -781,7 +777,7 @@ fn turbulence_genesis(
 					// TradingPair
 					ETH_USD,
 					// MaxSpread
-					1 * DOLLARS,
+					DOLLARS,
 					// Accumulates
 					accumulate_config(8 * HOURS_IN_SECONDS, 0),
 					// SwapRates

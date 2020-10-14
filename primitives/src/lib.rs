@@ -1,4 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+// Suppress warning generated from bitmask! macro.
+#![allow(clippy::transmute_ptr_to_ptr)]
 
 use codec::{Decode, Encode, Error, Input};
 use sp_runtime::{

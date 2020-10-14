@@ -64,12 +64,10 @@ where
 		let at = BlockId::hash(at.unwrap_or_else(||
 			// If the block hash is not supplied assume the best block.
 			self.client.info().best_hash));
-		api.pool_state(&at, pool_id, currency_id)
-			.map_err(|e| RpcError {
-				code: ErrorCode::ServerError(Error::RuntimeError.into()),
-				message: "Unable to get pool state.".into(),
-				data: Some(format!("{:?}", e).into()),
-			})
-			.into()
+		api.pool_state(&at, pool_id, currency_id).map_err(|e| RpcError {
+			code: ErrorCode::ServerError(Error::RuntimeError.into()),
+			message: "Unable to get pool state.".into(),
+			data: Some(format!("{:?}", e).into()),
+		})
 	}
 }
