@@ -1560,7 +1560,11 @@ impl<T: Trait> MarginProtocolLiquidityPoolsManager for Module<T> {
 		let ell_threshold = Self::liquidity_pool_ell_threshold(pair).ok_or(Error::<T>::NoRiskThreshold)?;
 
 		let (enp, ell) = Self::enp_and_ell_with_action(pool_id, Action::None)?;
-		if enp <= enp_threshold.stop_out.into() || ell <= ell_threshold.stop_out.into() {
+		if enp <= enp_threshold.stop_out.into()
+			|| ell <= ell_threshold.stop_out.into()
+			|| enp <= enp_threshold.margin_call.into()
+			|| ell <= ell_threshold.margin_call.into()
+		{
 			return Err(Error::<T>::PoolWouldBeUnsafe.into());
 		}
 		Ok(())
