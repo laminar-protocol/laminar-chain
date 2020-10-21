@@ -133,6 +133,7 @@ impl Trait for Runtime {
 	type OnDisableLiquidityPool = DummyOnDisable;
 	type OnRemoveLiquidityPool = DummyOnRemove;
 	type UpdateOrigin = EnsureSignedBy<UpdateOrigin, AccountId>;
+	type WeightInfo = ();
 }
 
 impl Trait<Instance1> for Runtime {
@@ -146,6 +147,7 @@ impl Trait<Instance1> for Runtime {
 	type OnDisableLiquidityPool = DummyOnDisable;
 	type OnRemoveLiquidityPool = DummyOnRemove;
 	type UpdateOrigin = EnsureSignedBy<UpdateOrigin, AccountId>;
+	type WeightInfo = ();
 }
 pub type Instance1Module = Module<Runtime, Instance1>;
 
@@ -164,6 +166,7 @@ impl Trait<Instance2> for Runtime {
 	type OnDisableLiquidityPool = DummyOnDisable;
 	type OnRemoveLiquidityPool = DummyOnRemove;
 	type UpdateOrigin = EnsureSignedBy<UpdateOrigin, AccountId>;
+	type WeightInfo = ();
 }
 pub type Instance2Module = Module<Runtime, Instance2>;
 

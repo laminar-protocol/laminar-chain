@@ -132,6 +132,7 @@ impl module_base_liquidity_pools::Trait<SyntheticInstance> for Runtime {
 	type OnDisableLiquidityPool = ModuleLiquidityPools;
 	type OnRemoveLiquidityPool = ModuleLiquidityPools;
 	type UpdateOrigin = EnsureSignedBy<UpdateOrigin, AccountId>;
+	type WeightInfo = ();
 }
 pub type BaseLiquidityPools = module_base_liquidity_pools::Module<Runtime, SyntheticInstance>;
 
@@ -139,6 +140,7 @@ impl Trait for Runtime {
 	type Event = ();
 	type BaseLiquidityPools = module_base_liquidity_pools::Module<Runtime, SyntheticInstance>;
 	type UpdateOrigin = EnsureSignedBy<UpdateOrigin, AccountId>;
+	type WeightInfo = ();
 }
 pub type ModuleLiquidityPools = Module<Runtime>;
 

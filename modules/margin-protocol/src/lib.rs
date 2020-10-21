@@ -4,7 +4,7 @@ use codec::{Decode, Encode};
 use frame_support::{
 	debug, decl_error, decl_event, decl_module, decl_storage, ensure,
 	traits::{EnsureOrigin, Get},
-	weights::DispatchClass,
+	weights::{DispatchClass, Weight},
 	IterableStorageDoubleMap, IterableStorageMap,
 };
 use frame_system::{
@@ -42,8 +42,25 @@ use traits::{
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
+mod default_weight;
 mod mock;
 mod tests;
+
+pub trait WeightInfo {
+	fn deposit() -> Weight;
+	fn withdraw() -> Weight;
+	fn open_position() -> Weight;
+	fn open_position_with_ten_in_pool() -> Weight;
+	fn close_position() -> Weight;
+	fn close_position_with_ten_in_pool() -> Weight;
+	fn trader_margin_call() -> Weight;
+	fn trader_become_safe() -> Weight;
+	fn trader_stop_out() -> Weight;
+	fn liquidity_pool_margin_call() -> Weight;
+	fn liquidity_pool_become_safe() -> Weight;
+	fn liquidity_pool_force_close() -> Weight;
+	fn set_trading_pair_risk_threshold() -> Weight;
+}
 
 const MODULE_ID: ModuleId = ModuleId(*b"lami/mgn");
 
@@ -77,6 +94,9 @@ pub trait Trait: frame_system::Trait + SendTransactionTypes<Call<Self>> {
 	/// This is exposed so that it can be tuned for particular runtime, when
 	/// multiple pallets send unsigned transactions.
 	type UnsignedPriority: Get<TransactionPriority>;
+
+	/// Weight information for the extrinsics in this module.
+	type WeightInfo: WeightInfo;
 }
 
 pub type PositionId = u64;
@@ -363,7 +383,7 @@ decl_module! {
 		const UnsignedPriority: TransactionPriority = T::UnsignedPriority::get();
 
 		/// Open a position in `pool_id`.
-		#[weight = 20_000]
+		#[weight = T::WeightInfo::open_position()]
 		pub fn open_position(
 			origin,
 			#[compact] pool_id: LiquidityPoolId,
@@ -380,7 +400,7 @@ decl_module! {
 		}
 
 		/// Close position by id.
-		#[weight = 20_000]
+		#[weight = T::WeightInfo::close_position()]
 		pub fn close_position(origin, #[compact] position_id: PositionId, price: Price) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
@@ -390,7 +410,7 @@ decl_module! {
 		}
 
 		/// Deposit liquidity to caller's account.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::deposit()]
 		pub fn deposit(origin, #[compact] pool_id: LiquidityPoolId, #[compact] amount: Balance) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
@@ -401,7 +421,7 @@ decl_module! {
 		}
 
 		/// Withdraw liquidity from caller's account.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::withdraw()]
 		pub fn withdraw(origin, #[compact] pool_id: LiquidityPoolId, #[compact] amount: Balance) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
@@ -414,7 +434,7 @@ decl_module! {
 		/// Margin call a trader.
 		///
 		/// May only be called from none origin. Would fail if the trader is still safe.
-		#[weight = (20_000, DispatchClass::Operational)]
+		#[weight = (T::WeightInfo::trader_margin_call(), DispatchClass::Operational)]
 		pub fn trader_margin_call(
 			origin,
 			who: <T::Lookup as StaticLookup>::Source,
@@ -434,7 +454,7 @@ decl_module! {
 		/// Remove trader's margin-called status.
 		///
 		/// May only be called from none origin. Would fail if the trader is not safe yet.
-		#[weight = 20_000]
+		#[weight = T::WeightInfo::trader_become_safe()]
 		pub fn trader_become_safe(
 			origin,
 			who: <T::Lookup as StaticLookup>::Source,
@@ -454,7 +474,7 @@ decl_module! {
 		/// Stop out a trader.
 		///
 		/// May only be called from none origin. Would fail if stop out threshold not reached.
-		#[weight = (30_000, DispatchClass::Operational)]
+		#[weight = (T::WeightInfo::trader_stop_out(), DispatchClass::Operational)]
 		pub fn trader_stop_out(
 			origin,
 			who: <T::Lookup as StaticLookup>::Source,
@@ -474,7 +494,7 @@ decl_module! {
 		/// Margin call a liquidity pool.
 		///
 		/// May only be called from none origin. Would fail if the pool still safe.
-		#[weight = (20_000, DispatchClass::Operational)]
+		#[weight = (T::WeightInfo::liquidity_pool_margin_call(), DispatchClass::Operational)]
 		pub fn liquidity_pool_margin_call(origin, #[compact] pool: LiquidityPoolId) {
 			with_transaction_result(|| {
 				ensure_none(origin)?;
@@ -487,7 +507,7 @@ decl_module! {
 		/// Remove a pool's margin-called status.
 		///
 		/// May only be called from none origin. Would fail if the pool is not safe yet.
-		#[weight = 20_000]
+		#[weight = T::WeightInfo::liquidity_pool_become_safe()]
 		pub fn liquidity_pool_become_safe(origin, #[compact] pool: LiquidityPoolId) {
 			with_transaction_result(|| {
 				ensure_none(origin)?;
@@ -500,7 +520,7 @@ decl_module! {
 		/// Force close a liquidity pool.
 		///
 		/// May only be called from none origin. Would fail if pool ENP or ELL thresholds not reached.
-		#[weight = (30_000, DispatchClass::Operational)]
+		#[weight = (T::WeightInfo::liquidity_pool_force_close(), DispatchClass::Operational)]
 		pub fn liquidity_pool_force_close(origin, #[compact] pool: LiquidityPoolId) {
 			with_transaction_result(|| {
 				ensure_none(origin)?;
@@ -513,7 +533,7 @@ decl_module! {
 		/// Set risk thresholds of a trading pair.
 		///
 		/// May only be called from `UpdateOrigin`.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::set_trading_pair_risk_threshold()]
 		pub fn set_trading_pair_risk_threshold(
 			origin,
 			pair: TradingPair,

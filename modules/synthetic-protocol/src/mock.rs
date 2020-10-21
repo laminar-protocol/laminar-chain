@@ -122,6 +122,7 @@ impl module_synthetic_tokens::Trait for Runtime {
 	type DefaultCollateralRatio = DefaultCollateralRatio;
 	type SyntheticCurrencyIds = SyntheticCurrencyIds;
 	type UpdateOrigin = EnsureSignedBy<One, AccountId>;
+	type WeightInfo = ();
 }
 pub type TestSyntheticTokens = module_synthetic_tokens::Module<Runtime>;
 
@@ -238,6 +239,7 @@ impl Trait for Runtime {
 	type PriceProvider = DefaultPriceProvider<CurrencyId, MockPrices>;
 	type LiquidityPools = MockLiquidityPools;
 	type SyntheticProtocolLiquidityPools = MockLiquidityPools;
+	type WeightInfo = ();
 }
 pub type SyntheticProtocol = Module<Runtime>;
 

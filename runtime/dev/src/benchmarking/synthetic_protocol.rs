@@ -16,12 +16,9 @@ use primitives::CurrencyId::FEUR;
 use primitives::*;
 
 const SEED: u32 = 0;
-const MAX_TRADER_INDEX: u32 = 1000;
-const MAX_POOL_OWNER_INDEX: u32 = 1000;
-const MAX_DOLLARS: u32 = 1000;
 
-fn create_pool(p: u32) -> Result<AccountId, DispatchError> {
-	let owner: AccountId = account("owner", p, SEED);
+fn create_pool() -> Result<AccountId, DispatchError> {
+	let owner: AccountId = account("owner", 0, SEED);
 	BaseLiquidityPoolsForSynthetic::create_pool(RawOrigin::Signed(owner.clone()).into())?;
 
 	SyntheticLiquidityPools::set_spread(RawOrigin::Signed(owner.clone()).into(), 0, FEUR, 0, 0)?;
@@ -46,21 +43,13 @@ fn set_up_oracle() {
 runtime_benchmarks! {
 	{ Runtime, synthetic_protocol }
 
-	_ {
-		let t in 1 .. MAX_TRADER_INDEX => ();
-		let p in 1 .. MAX_POOL_OWNER_INDEX => ();
-		let d in 100 .. MAX_DOLLARS => ();
-	}
+	_ {}
 
 	mint {
-		let p in ...;
-		let t in ...;
-		let d in ...;
+		let owner = create_pool()?;
+		let trader: AccountId = account("trader", 0, SEED);
 
-		let owner = create_pool(p)?;
-		let trader: AccountId = account("trader", t, SEED);
-
-		let balance = dollars(d);
+		let balance = dollars(100u128);
 		set_ausd_balance(&trader, balance + dollars(1u128))?;
 
 		add_liquidity(&owner, balance)?;
@@ -70,14 +59,10 @@ runtime_benchmarks! {
 	}: _(RawOrigin::Signed(trader), 0, FEUR, balance, Price::saturating_from_integer(2))
 
 	redeem {
-		let p in ...;
-		let t in ...;
-		let d in ...;
+		let owner = create_pool()?;
+		let trader: AccountId = account("trader", 0, SEED);
 
-		let owner = create_pool(p)?;
-		let trader: AccountId = account("trader", t, SEED);
-
-		let balance = dollars(d);
+		let balance = dollars(100u128);
 		set_ausd_balance(&trader, balance + dollars(1u128))?;
 
 		add_liquidity(&owner, balance)?;
@@ -88,14 +73,10 @@ runtime_benchmarks! {
 	}: _(RawOrigin::Signed(trader), 0, FEUR, balance / 2, Price::zero())
 
 	liquidate {
-		let p in ...;
-		let t in ...;
-		let d in ...;
+		let owner = create_pool()?;
+		let trader: AccountId = account("trader", 0, SEED);
 
-		let owner = create_pool(p)?;
-		let trader: AccountId = account("trader", t, SEED);
-
-		let balance = dollars(d);
+		let balance = dollars(100u128);
 		set_ausd_balance(&trader, balance + dollars(1u128))?;
 
 		add_liquidity(&owner, balance)?;
@@ -108,26 +89,18 @@ runtime_benchmarks! {
 	}: _(RawOrigin::Signed(trader), 0, FEUR, balance / 2)
 
 	add_collateral {
-		let p in ...;
-		let t in ...;
-		let d in ...;
+		let _ = create_pool()?;
+		let trader: AccountId = account("trader", 0, SEED);
 
-		let _ = create_pool(p)?;
-		let trader: AccountId = account("trader", t, SEED);
-
-		let balance = dollars(d);
+		let balance = dollars(100u128);
 		set_ausd_balance(&trader, balance + dollars(1u128))?;
 	}: _(RawOrigin::Signed(trader), 0, FEUR, balance)
 
 	withdraw_collateral {
-		let p in ...;
-		let t in ...;
-		let d in ...;
+		let owner = create_pool()?;
+		let trader: AccountId = account("trader", 0, SEED);
 
-		let owner = create_pool(p)?;
-		let trader: AccountId = account("trader", t, SEED);
-
-		let balance = dollars(d);
+		let balance = dollars(100u128);
 		set_ausd_balance(&trader, balance + dollars(1u128))?;
 
 		add_liquidity(&owner, balance)?;

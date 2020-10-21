@@ -268,6 +268,7 @@ impl Trait for Runtime {
 	type GetPoolMaxOpenPositions = GetPoolMaxOpenPositions;
 	type UpdateOrigin = EnsureSignedBy<UpdateOrigin, AccountId>;
 	type UnsignedPriority = UnsignedPriority;
+	type WeightInfo = ();
 }
 pub type MarginProtocol = Module<Runtime>;
 

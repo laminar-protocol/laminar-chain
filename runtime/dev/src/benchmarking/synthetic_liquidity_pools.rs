@@ -10,12 +10,9 @@ use orml_benchmarking::runtime_benchmarks;
 use primitives::CurrencyId::*;
 
 const SEED: u32 = 0;
-const MAX_POOL_INDEX: u32 = 1000;
-const MAX_SPREAD: u32 = 1000;
-const MAX_ADDITIONAL_COLLATERAL_RATIO: u32 = 1000;
 
-fn create_pool(p: u32) -> Result<AccountId, DispatchError> {
-	let owner: AccountId = account("owner", p, SEED);
+fn create_pool() -> Result<AccountId, DispatchError> {
+	let owner: AccountId = account("owner", 0, SEED);
 	BaseLiquidityPoolsForSynthetic::create_pool(RawOrigin::Signed(owner.clone()).into())?;
 
 	Ok(owner)
@@ -24,36 +21,25 @@ fn create_pool(p: u32) -> Result<AccountId, DispatchError> {
 runtime_benchmarks! {
 	{ Runtime, synthetic_liquidity_pools }
 
-	_ {
-		let p in 1 .. MAX_POOL_INDEX => ();
-		let s in 1 .. MAX_SPREAD => ();
-		let r in 1 .. MAX_ADDITIONAL_COLLATERAL_RATIO => ();
-	}
+	_ {}
 
 	set_spread {
-		let p in ...;
-		let s in ...;
-		let owner = create_pool(p)?;
-	}: _(RawOrigin::Signed(owner), 0, FEUR, s.into(), s.into())
+		let owner = create_pool()?;
+	}: _(RawOrigin::Signed(owner), 0, FEUR, 10u128.into(), 10u128.into())
 
 	set_additional_collateral_ratio {
-		let p in ...;
-		let r in ...;
-		let owner = create_pool(p)?;
-	}: _(RawOrigin::Signed(owner), 0, FEUR, Some(Permill::from_parts(r)))
+		let owner = create_pool()?;
+	}: _(RawOrigin::Signed(owner), 0, FEUR, Some(Permill::from_parts(10)))
 
 	set_min_additional_collateral_ratio {
-		let r in ...;
-	}: _(RawOrigin::Root, Permill::from_parts(r))
+	}: _(RawOrigin::Root, Permill::from_parts(10))
 
 	set_synthetic_enabled {
-		let p in ...;
-		let owner = create_pool(p)?;
+		let owner = create_pool()?;
 	}: _(RawOrigin::Signed(owner), 0, FEUR, true)
 
 	set_max_spread {
-		let s in ...;
-	}: _(RawOrigin::Root, FEUR, s.into())
+	}: _(RawOrigin::Root, FEUR, 10u128.into())
 }
 
 #[cfg(test)]
