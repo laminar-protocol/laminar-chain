@@ -1,4 +1,4 @@
-use crate::{Permill, Runtime, CurrencyId};
+use crate::{CurrencyId, Permill, Runtime};
 
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
