@@ -553,7 +553,6 @@ pub fn margin_set_identity() -> DispatchResult {
 		email: vec![],
 		image_url: vec![],
 	};
-
 	BaseLiquidityPoolsForMargin::set_identity(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, identity)
 }
 
