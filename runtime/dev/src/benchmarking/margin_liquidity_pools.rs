@@ -1,7 +1,12 @@
 use super::utils::dollars;
-use crate::{AccountId, BaseLiquidityPoolsForMargin, MarginLiquidityPools, MarginProtocol, Runtime};
+use crate::{
+	AccountId, BaseLiquidityPoolsForMargin, MarginLiquidityPools, MarginProtocol, Origin, Runtime, StorageValue,
+	SyntheticCurrencyIds, System,
+};
 
+use frame_support::traits::OnInitialize;
 use frame_system::RawOrigin;
+use margin_liquidity_pools::ONE_MINUTE;
 use sp_runtime::{DispatchError, FixedI128, Permill};
 use sp_std::prelude::*;
 
@@ -12,18 +17,14 @@ use margin_protocol::RiskThreshold;
 use primitives::*;
 
 const SEED: u32 = 0;
-const MAX_POOL_INDEX: u32 = 1000;
-const MAX_SPREAD: u32 = 1000;
-const MAX_SWAP_RATE: u32 = 1000;
-const MAX_AMOUNT: u32 = 1000;
 
 const EUR_USD: TradingPair = TradingPair {
 	base: CurrencyId::FEUR,
 	quote: CurrencyId::AUSD,
 };
 
-fn create_pool(p: u32) -> Result<AccountId, DispatchError> {
-	let caller: AccountId = account("caller", p, SEED);
+fn create_pool() -> Result<AccountId, DispatchError> {
+	let caller: AccountId = account("caller", 0, SEED);
 	BaseLiquidityPoolsForMargin::create_pool(RawOrigin::Signed(caller.clone()).into())?;
 
 	Ok(caller)
@@ -32,44 +33,31 @@ fn create_pool(p: u32) -> Result<AccountId, DispatchError> {
 runtime_benchmarks! {
 	{ Runtime, margin_liquidity_pools }
 
-	_ {
-		let p in 1 .. MAX_POOL_INDEX => ();
-		let s in 1 .. MAX_SPREAD => ();
-		let r in 1 .. MAX_SWAP_RATE => ();
-		let a in 1 .. MAX_AMOUNT => ();
-	}
+	_ {}
 
 	set_spread {
-		let p in ...;
-		let s in ...;
-		let caller = create_pool(p)?;
-	}: _(RawOrigin::Signed(caller), 0, EUR_USD, s.into(), s.into())
+		let caller = create_pool()?;
+	}: _(RawOrigin::Signed(caller), 0, EUR_USD, 1u128.into(), 1u128.into())
 
 	set_enabled_leverages {
-		let p in ...;
-		let caller = create_pool(p)?;
+		let caller = create_pool()?;
 	}: _(RawOrigin::Signed(caller), 0, EUR_USD, Leverages::all())
 
 	set_swap_rate {
-		let p in ...;
-		let r in ...;
-		let _ = create_pool(p)?;
+		let _ = create_pool()?;
 		let swap_rate = SwapRate {
-			long: FixedI128::from_inner(r.into()),
-			short: FixedI128::from_inner(r.into()),
+			long: FixedI128::from_inner(1.into()),
+			short: FixedI128::from_inner(1.into()),
 		};
 	}: _(RawOrigin::Root, EUR_USD, swap_rate)
 
 	set_additional_swap_rate {
-		let p in ...;
-		let r in ...;
-		let caller = create_pool(p)?;
-		let rate = FixedI128::from_inner(r.into());
+		let caller = create_pool()?;
+		let rate = FixedI128::from_inner(1.into());
 	}: _(RawOrigin::Signed(caller), 0, rate)
 
 	set_max_spread {
-		let s in ...;
-	}: _(RawOrigin::Root, EUR_USD, s.into())
+	}: _(RawOrigin::Root, EUR_USD, 1u128.into())
 
 	set_accumulate_config {
 		let frequency = 60u64;
@@ -83,8 +71,7 @@ runtime_benchmarks! {
 	}: _(RawOrigin::Root, EUR_USD)
 
 	liquidity_pool_enable_trading_pair {
-		let p in ...;
-		let caller = create_pool(p)?;
+		let caller = create_pool()?;
 		let threshold = RiskThreshold {
 			margin_call: Permill::from_percent(5),
 			stop_out: Permill::from_percent(2),
@@ -100,8 +87,7 @@ runtime_benchmarks! {
 	}: _(RawOrigin::Signed(caller), 0, EUR_USD)
 
 	liquidity_pool_disable_trading_pair {
-		let p in ...;
-		let caller = create_pool(p)?;
+		let caller = create_pool()?;
 		MarginLiquidityPools::enable_trading_pair(RawOrigin::Root.into(), EUR_USD)?;
 		let threshold = RiskThreshold {
 			margin_call: Permill::from_percent(5),
@@ -122,18 +108,40 @@ runtime_benchmarks! {
 	}: _(RawOrigin::Signed(caller), 0, EUR_USD)
 
 	set_default_min_leveraged_amount {
-		let a in ...;
-	}: _(RawOrigin::Root, dollars(a))
+	}: _(RawOrigin::Root, dollars(100u128))
 
 	set_min_leveraged_amount {
-		let p in ...;
-		let a in ...;
-		let caller = create_pool(p)?;
+		let caller = create_pool()?;
 		MarginLiquidityPools::set_default_min_leveraged_amount(
 			RawOrigin::Root.into(),
-			a.into(),
+			1u128.into(),
 		)?;
-	}: _(RawOrigin::Signed(caller), 0, a.into())
+	}: _(RawOrigin::Signed(caller), 0, 10u128.into())
+
+	on_initialize {
+		let r in 0 .. SyntheticCurrencyIds::get().len().saturating_sub(1) as u32;
+		let w in 0 .. 2;
+		let currency_ids = SyntheticCurrencyIds::get();
+
+		for i in 0 .. r {
+			let currency_id = currency_ids[i as usize];
+			let pair: TradingPair = TradingPair {
+				base: currency_id,
+				quote: CurrencyId::AUSD,
+			};
+
+			if i < w {
+				MarginLiquidityPools::set_accumulate_config(Origin::root(), pair, ONE_MINUTE, 0u64)?;
+			} else {
+				// accumulate is not executed
+				MarginLiquidityPools::set_accumulate_config(Origin::root(), pair, ONE_MINUTE * 10, 0u64)?;
+			}
+		}
+		System::set_block_number(1);
+		pallet_timestamp::Now::<Runtime>::put(ONE_MINUTE * 1000); // 60_000ms
+	}: {
+		MarginLiquidityPools::on_initialize(System::block_number());
+	}
 }
 
 #[cfg(test)]
@@ -229,6 +237,13 @@ mod tests {
 	fn set_min_leveraged_amount() {
 		new_test_ext().execute_with(|| {
 			assert_ok!(test_benchmark_set_min_leveraged_amount());
+		});
+	}
+
+	#[test]
+	fn on_initialize() {
+		new_test_ext().execute_with(|| {
+			assert_ok!(test_benchmark_on_initialize());
 		});
 	}
 }

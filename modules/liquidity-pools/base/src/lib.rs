@@ -5,7 +5,7 @@ use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage, ensure,
 	storage::IterableStorageMap,
 	traits::{Currency, EnsureOrigin, Get, ReservableCurrency},
-	weights::DispatchClass,
+	weights::{DispatchClass, Weight},
 };
 use frame_system::ensure_signed;
 use orml_traits::BasicCurrency;
@@ -18,8 +18,21 @@ use sp_runtime::{
 use sp_std::{prelude::*, result};
 use traits::{BaseLiquidityPoolManager, LiquidityPools, OnDisableLiquidityPool, OnRemoveLiquidityPool};
 
+mod default_weight;
 mod mock;
 mod tests;
+
+pub trait WeightInfo {
+	fn create_pool() -> Weight;
+	fn disable_pool() -> Weight;
+	fn remove_pool() -> Weight;
+	fn deposit_liquidity() -> Weight;
+	fn withdraw_liquidity() -> Weight;
+	fn set_identity() -> Weight;
+	fn verify_identity() -> Weight;
+	fn clear_identity() -> Weight;
+	fn transfer_liquidity_pool() -> Weight;
+}
 
 type IdentityDepositBalanceOf<T, I> =
 	<<T as Trait<I>>::IdentityDepositCurrency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
@@ -56,6 +69,9 @@ pub trait Trait<I: Instance = DefaultInstance>: frame_system::Trait {
 
 	/// Required origin for updating protocol options.
 	type UpdateOrigin: EnsureOrigin<Self::Origin>;
+
+	/// Weight information for the extrinsics in this module.
+	type WeightInfo: WeightInfo;
 }
 
 /// Liquidity pool information.
@@ -170,7 +186,7 @@ decl_module! {
 		/// Create a liquidity pool.
 		///
 		/// Caller would be the owner of created pool.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::create_pool()]
 		pub fn create_pool(origin) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
@@ -183,7 +199,7 @@ decl_module! {
 		/// Disable a liquidity pool.
 		///
 		/// May only be called from the pool owner.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::disable_pool()]
 		pub fn disable_pool(origin, #[compact] pool_id: LiquidityPoolId) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
@@ -196,7 +212,7 @@ decl_module! {
 		/// Remove a liquidity pool.
 		///
 		/// May only be called from the pool owner. Pools may only be removed when there is no liability.
-		#[weight = 50_000]
+		#[weight = T::WeightInfo::remove_pool()]
 		pub fn remove_pool(origin, #[compact] pool_id: LiquidityPoolId) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
@@ -207,7 +223,7 @@ decl_module! {
 		}
 
 		/// Deposit liquidity to a pool.
-		#[weight = (10_000, DispatchClass::Operational)]
+		#[weight = (T::WeightInfo::deposit_liquidity(), DispatchClass::Operational)]
 		pub fn deposit_liquidity(origin, #[compact] pool_id: LiquidityPoolId, #[compact] amount: Balance) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
@@ -218,7 +234,7 @@ decl_module! {
 		}
 
 		/// Withdraw liquidity from a pool.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::withdraw_liquidity()]
 		pub fn withdraw_liquidity(origin, #[compact] pool_id: LiquidityPoolId, #[compact] amount: Balance) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
@@ -243,7 +259,7 @@ decl_module! {
 		/// Set identity of a liquidity pool.
 		///
 		/// May only be called from the pool owner. `IdentityDeposit` amount of balance would be reserved.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::set_identity()]
 		pub fn set_identity(origin, #[compact] pool_id: LiquidityPoolId, identity_info: IdentityInfo) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
@@ -256,7 +272,7 @@ decl_module! {
 		/// Mark the identity of a liquidity pool as verified.
 		///
 		/// May only be called from `UpdateOrigin`.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::verify_identity()]
 		pub fn verify_identity(origin, #[compact] pool_id: LiquidityPoolId) {
 			with_transaction_result(|| {
 				T::UpdateOrigin::ensure_origin(origin)?;
@@ -269,7 +285,7 @@ decl_module! {
 		/// Remove the identity info of a liquidity pool.
 		///
 		/// May only be called from the pool owner. The reserved balance would be released.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::clear_identity()]
 		pub fn clear_identity(origin, #[compact] pool_id: LiquidityPoolId) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
@@ -289,7 +305,7 @@ decl_module! {
 		/// Transfer the ownership of the liquidity pool to `to`.
 		///
 		/// May only be called from the pool owner.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::transfer_liquidity_pool()]
 		pub fn transfer_liquidity_pool(origin, #[compact] pool_id: LiquidityPoolId, to: T::AccountId) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;

@@ -135,6 +135,7 @@ impl module_base_liquidity_pools::Trait<MarginInstance> for Runtime {
 	type OnDisableLiquidityPool = ModuleLiquidityPools;
 	type OnRemoveLiquidityPool = ModuleLiquidityPools;
 	type UpdateOrigin = EnsureSignedBy<UpdateOrigin, AccountId>;
+	type WeightInfo = ();
 }
 pub type BaseLiquidityPools = module_base_liquidity_pools::Module<Runtime, MarginInstance>;
 
@@ -164,6 +165,7 @@ impl Trait for Runtime {
 	type MaxSwapRate = MaxSwap;
 	type UnixTime = Timestamp;
 	type Moment = u64;
+	type WeightInfo = ();
 }
 pub type ModuleLiquidityPools = Module<Runtime>;
 

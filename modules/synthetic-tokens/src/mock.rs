@@ -79,6 +79,7 @@ impl Trait for Runtime {
 	type DefaultLiquidationRatio = DefaultLiquidationRatio;
 	type DefaultCollateralRatio = DefaultCollateralRatio;
 	type UpdateOrigin = EnsureSignedBy<UpdateOrigin, AccountId>;
+	type WeightInfo = ();
 }
 
 pub type SyntheticTokens = Module<Runtime>;

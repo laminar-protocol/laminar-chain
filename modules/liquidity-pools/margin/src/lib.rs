@@ -1,8 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-mod mock;
-mod tests;
-
 use codec::{Decode, Encode};
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage, ensure,
@@ -18,7 +15,7 @@ use primitives::{
 };
 use sp_arithmetic::{FixedI128, FixedPointNumber};
 use sp_runtime::{
-	traits::{AtLeast32Bit, Saturating},
+	traits::{AtLeast32Bit, Saturating, Zero},
 	DispatchResult, ModuleId, RuntimeDebug,
 };
 use sp_std::{cmp::max, prelude::*, result};
@@ -29,6 +26,26 @@ use traits::{
 	LiquidityPools, MarginProtocolLiquidityPools, MarginProtocolLiquidityPoolsManager, OnDisableLiquidityPool,
 	OnRemoveLiquidityPool, OpenPositionError,
 };
+
+mod default_weight;
+mod mock;
+mod tests;
+
+pub trait WeightInfo {
+	fn set_spread() -> Weight;
+	fn set_enabled_leverages() -> Weight;
+	fn set_swap_rate() -> Weight;
+	fn set_additional_swap_rate() -> Weight;
+	fn set_max_spread() -> Weight;
+	fn set_accumulate_config() -> Weight;
+	fn enable_trading_pair() -> Weight;
+	fn disable_trading_pair() -> Weight;
+	fn liquidity_pool_enable_trading_pair() -> Weight;
+	fn liquidity_pool_disable_trading_pair() -> Weight;
+	fn set_default_min_leveraged_amount() -> Weight;
+	fn set_min_leveraged_amount() -> Weight;
+	fn on_initialize(r: u32, w: u32) -> Weight;
+}
 
 /// Trading pair option of margin liquidity pools.
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
@@ -113,6 +130,9 @@ pub trait Trait: frame_system::Trait {
 
 	/// Type used for expressing timestamp.
 	type Moment: AtLeast32Bit + Parameter + Default + Copy + From<u64>;
+
+	/// Weight information for the extrinsics in this module.
+	type WeightInfo: WeightInfo;
 }
 
 decl_storage! {
@@ -209,7 +229,7 @@ decl_module! {
 		/// Set bid and ask spread for `pair` in `pool_id`.
 		///
 		/// May only be called from the pool owner.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::set_spread()]
 		pub fn set_spread(origin, #[compact] pool_id: LiquidityPoolId, pair: TradingPair, #[compact] bid: Balance, #[compact] ask: Balance) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
@@ -222,7 +242,7 @@ decl_module! {
 		/// Set enabled leverages for `pair` in `pool_id`.
 		///
 		/// May only be called from the pool owner.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::set_enabled_leverages()]
 		pub fn set_enabled_leverages(origin, #[compact] pool_id: LiquidityPoolId, pair: TradingPair, enabled: Leverages) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
@@ -235,7 +255,7 @@ decl_module! {
 		/// Set swap rate for `pair`.
 		///
 		/// May only be called from `UpdateOrigin`.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::set_swap_rate()]
 		pub fn set_swap_rate(origin, pair: TradingPair, rate: SwapRate) {
 			with_transaction_result(|| {
 				T::UpdateOrigin::ensure_origin(origin)?;
@@ -254,7 +274,7 @@ decl_module! {
 		/// Set additional swap rate for `pool_id`.
 		///
 		/// May only be called from the pool owner.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::set_additional_swap_rate()]
 		pub fn set_additional_swap_rate(origin, #[compact] pool_id: LiquidityPoolId, rate: FixedI128) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
@@ -271,7 +291,7 @@ decl_module! {
 		/// Set maximum spread for `pair`.
 		///
 		/// May only be called from `UpdateOrigin`.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::set_max_spread()]
 		pub fn set_max_spread(origin, pair: TradingPair, #[compact] max_spread: Balance) {
 			with_transaction_result(|| {
 				T::UpdateOrigin::ensure_origin(origin)?;
@@ -284,7 +304,7 @@ decl_module! {
 		/// Set swap rate accumulation configuration.
 		///
 		/// May only be called from `UpdateOrigin`.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::set_accumulate_config()]
 		pub fn set_accumulate_config(origin, pair: TradingPair, frequency: T::Moment, offset: T::Moment) {
 			with_transaction_result(|| {
 				T::UpdateOrigin::ensure_origin(origin)?;
@@ -305,7 +325,7 @@ decl_module! {
 		/// Enable a trading pair.
 		///
 		/// May only be called from `UpdateOrigin`.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::enable_trading_pair()]
 		pub fn enable_trading_pair(origin, pair: TradingPair) {
 			with_transaction_result(|| {
 				T::UpdateOrigin::ensure_origin(origin)?;
@@ -318,7 +338,7 @@ decl_module! {
 		/// Disable a trading pair.
 		///
 		/// May only be called from `UpdateOrigin`.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::disable_trading_pair()]
 		pub fn disable_trading_pair(origin, pair: TradingPair) {
 			with_transaction_result(|| {
 				T::UpdateOrigin::ensure_origin(origin)?;
@@ -331,7 +351,7 @@ decl_module! {
 		/// Enable `pair` in `pool_id`.
 		///
 		/// May only be called from the pool owner.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::liquidity_pool_enable_trading_pair()]
 		pub fn liquidity_pool_enable_trading_pair(origin, #[compact] pool_id: LiquidityPoolId, pair: TradingPair) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
@@ -351,7 +371,7 @@ decl_module! {
 		/// Disable `pair` in `pool_id`.
 		///
 		/// May only be called from the pool owner.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::liquidity_pool_disable_trading_pair()]
 		pub fn liquidity_pool_disable_trading_pair(origin, #[compact] pool_id: LiquidityPoolId, pair: TradingPair) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
@@ -368,7 +388,7 @@ decl_module! {
 		/// Set default minimum leveraged amount to open a position.
 		///
 		/// May only be called from `UpdateOrigin`.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::set_default_min_leveraged_amount()]
 		pub fn set_default_min_leveraged_amount(origin, #[compact] amount: Balance) {
 			with_transaction_result(|| {
 				T::UpdateOrigin::ensure_origin(origin)?;
@@ -381,7 +401,7 @@ decl_module! {
 		/// Set minimum leveraged amount to open a position in `pool_id`.
 		///
 		/// May only be called from the pool owner.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::set_min_leveraged_amount()]
 		pub fn set_min_leveraged_amount(origin, #[compact] pool_id: LiquidityPoolId, #[compact] amount: Balance) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
@@ -400,21 +420,25 @@ decl_module! {
 			// Truncate seconds, keep minutes
 			let now_as_secs: T::Moment = now_as_mins * ONE_MINUTE.into();
 
+			let mut read_count = 0;
+			let mut write_count = 0;
 			<TradingPairOptions<T>>::iter().for_each(|(pair, option)| {
 				if let Some(accumulate_config) = option.accumulate_config {
+					read_count += 1;
 					let frequency_as_mins = accumulate_config.frequency / ONE_MINUTE.into();
 					let offset_as_mins = accumulate_config.offset / ONE_MINUTE.into();
 
-					if now_as_mins > 0.into() && frequency_as_mins > 0.into()
+					if now_as_mins > Zero::zero() && frequency_as_mins > Zero::zero()
 						&& now_as_mins % frequency_as_mins == offset_as_mins
 						&& <LastAccumulateTime<T>>::get() != now_as_secs
 					{
+						write_count += 1;
 						<LastAccumulateTime<T>>::set(now_as_secs);
 						Self::accumulate_rates(pair);
 					}
 				}
 			});
-			10_000
+			T::WeightInfo::on_initialize(read_count, write_count)
 		}
 	}
 }

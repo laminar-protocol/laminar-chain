@@ -4,6 +4,7 @@ use codec::{Decode, Encode};
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
 	traits::{EnsureOrigin, Get},
+	weights::Weight,
 };
 use laminar_primitives::{Balance, CurrencyId, LiquidityPoolId};
 use module_traits::BaseLiquidityPoolManager;
@@ -17,8 +18,15 @@ use sp_std::prelude::Vec;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
+mod default_weight;
 mod mock;
 mod tests;
+
+pub trait WeightInfo {
+	fn set_extreme_ratio() -> Weight;
+	fn set_liquidation_ratio() -> Weight;
+	fn set_collateral_ratio() -> Weight;
+}
 
 pub trait Trait: frame_system::Trait {
 	/// The overarching event type.
@@ -38,6 +46,9 @@ pub trait Trait: frame_system::Trait {
 
 	/// Required origin for updating protocol options.
 	type UpdateOrigin: EnsureOrigin<Self::Origin>;
+
+	/// Weight information for the extrinsics in this module.
+	type WeightInfo: WeightInfo;
 }
 
 /// Synthetic token position.
@@ -105,7 +116,7 @@ decl_module! {
 		/// Set extreme liquidation ratio.
 		///
 		/// May only be called from `UpdateOrigin`.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::set_extreme_ratio()]
 		pub fn set_extreme_ratio(origin, currency_id: CurrencyId, #[compact] ratio: Permill) {
 			with_transaction_result(|| {
 				T::UpdateOrigin::ensure_origin(origin)?;
@@ -118,7 +129,7 @@ decl_module! {
 		/// Set liquidation ratio.
 		///
 		/// May only be called from `UpdateOrigin`.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::set_liquidation_ratio()]
 		pub fn set_liquidation_ratio(origin, currency_id: CurrencyId, #[compact] ratio: Permill) {
 			with_transaction_result(|| {
 				T::UpdateOrigin::ensure_origin(origin)?;
@@ -131,7 +142,7 @@ decl_module! {
 		/// Set collateral ratio.
 		///
 		/// May only be called from `UpdateOrigin`.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::set_collateral_ratio()]
 		pub fn set_collateral_ratio(origin, currency_id: CurrencyId, #[compact] ratio: Permill) {
 			with_transaction_result(|| {
 				T::UpdateOrigin::ensure_origin(origin)?;

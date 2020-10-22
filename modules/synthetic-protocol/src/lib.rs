@@ -1,6 +1,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get, weights::DispatchClass};
+use frame_support::{
+	decl_error, decl_event, decl_module, decl_storage, ensure,
+	traits::Get,
+	weights::{DispatchClass, Weight},
+};
 use frame_system::ensure_signed;
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedSub, Saturating, Zero},
@@ -14,8 +18,17 @@ use orml_utilities::with_transaction_result;
 use laminar_primitives::{Balance, CurrencyId, LiquidityPoolId, Price};
 use module_traits::{LiquidityPools, SyntheticProtocolLiquidityPools};
 
+mod default_weight;
 mod mock;
 mod tests;
+
+pub trait WeightInfo {
+	fn mint() -> Weight;
+	fn redeem() -> Weight;
+	fn liquidate() -> Weight;
+	fn add_collateral() -> Weight;
+	fn withdraw_collateral() -> Weight;
+}
 
 pub trait Trait: module_synthetic_tokens::Trait {
 	/// The overarching event type.
@@ -38,6 +51,9 @@ pub trait Trait: module_synthetic_tokens::Trait {
 
 	/// The synthetic protocol liquidity pools.
 	type SyntheticProtocolLiquidityPools: SyntheticProtocolLiquidityPools<Self::AccountId>;
+
+	/// Weight information for the extrinsics in this module.
+	type WeightInfo: WeightInfo;
 }
 
 decl_storage! {
@@ -74,7 +90,7 @@ decl_module! {
 		const GetCollateralCurrencyId: CurrencyId = T::GetCollateralCurrencyId::get();
 
 		/// Mint synthetic tokens.
-		#[weight = 10_000]
+		#[weight = <T as Trait>::WeightInfo::mint()]
 		pub fn mint(
 			origin,
 			#[compact] pool_id: LiquidityPoolId,
@@ -91,7 +107,7 @@ decl_module! {
 		}
 
 		/// Redeem collateral.
-		#[weight = 10_000]
+		#[weight = <T as Trait>::WeightInfo::redeem()]
 		pub fn redeem(
 			origin,
 			#[compact] pool_id: LiquidityPoolId,
@@ -108,7 +124,7 @@ decl_module! {
 		}
 
 		/// Liquidite `currency_id` in `pool_id` by `synthetic_amount`.
-		#[weight = (20_000, DispatchClass::Operational)]
+		#[weight = (<T as Trait>::WeightInfo::liquidate(), DispatchClass::Operational)]
 		pub fn liquidate(
 			origin,
 			#[compact] pool_id: LiquidityPoolId,
@@ -124,7 +140,7 @@ decl_module! {
 		}
 
 		/// Add collateral to `currency_id` in `pool_id` by `collateral_amount`.
-		#[weight = (10_000, DispatchClass::Operational)]
+		#[weight = (<T as Trait>::WeightInfo::add_collateral(), DispatchClass::Operational)]
 		pub fn add_collateral(
 			origin,
 			#[compact] pool_id: LiquidityPoolId,
@@ -142,7 +158,7 @@ decl_module! {
 		/// Withdraw all available collateral.
 		///
 		/// May only be called from the pool owner.
-		#[weight = 10_000]
+		#[weight = <T as Trait>::WeightInfo::withdraw_collateral()]
 		pub fn withdraw_collateral(
 			origin,
 			#[compact] pool_id: LiquidityPoolId,

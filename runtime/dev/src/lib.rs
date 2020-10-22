@@ -12,6 +12,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 mod benchmarking;
 mod constants;
 pub mod tests;
+mod weights;
 
 use codec::Encode;
 use pallet_collective::{EnsureMembers, EnsureProportionMoreThan};
@@ -693,6 +694,7 @@ impl synthetic_tokens::Trait for Runtime {
 	type DefaultCollateralRatio = DefaultCollateralRatio;
 	type SyntheticCurrencyIds = SyntheticCurrencyIds;
 	type UpdateOrigin = EnsureHalfFinancialCouncilOrRoot;
+	type WeightInfo = weights::synthetic_tokens::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -720,6 +722,7 @@ impl base_liquidity_pools::Trait<BaseLiquidityPoolsMarginInstance> for Runtime {
 	type OnDisableLiquidityPool = MarginLiquidityPools;
 	type OnRemoveLiquidityPool = MarginLiquidityPools;
 	type UpdateOrigin = EnsureHalfFinancialCouncilOrRoot;
+	type WeightInfo = weights::base_liquidity_pools::WeightInfo<Runtime>;
 }
 
 pub type BaseLiquidityPoolsSyntheticInstance = base_liquidity_pools::Instance2;
@@ -737,6 +740,7 @@ impl base_liquidity_pools::Trait<BaseLiquidityPoolsSyntheticInstance> for Runtim
 	type OnDisableLiquidityPool = SyntheticLiquidityPools;
 	type OnRemoveLiquidityPool = SyntheticLiquidityPools;
 	type UpdateOrigin = EnsureHalfFinancialCouncilOrRoot;
+	type WeightInfo = weights::base_liquidity_pools::WeightInfo<Runtime>;
 }
 
 impl margin_liquidity_pools::Trait for Runtime {
@@ -747,12 +751,14 @@ impl margin_liquidity_pools::Trait for Runtime {
 	type MaxSwapRate = MaxSwap;
 	type UnixTime = Timestamp;
 	type Moment = Moment;
+	type WeightInfo = weights::margin_liquidity_pools::WeightInfo<Runtime>;
 }
 
 impl synthetic_liquidity_pools::Trait for Runtime {
 	type Event = Event;
 	type BaseLiquidityPools = BaseLiquidityPoolsForSynthetic;
 	type UpdateOrigin = EnsureHalfFinancialCouncilOrRoot;
+	type WeightInfo = weights::synthetic_liquidity_pools::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -767,6 +773,7 @@ impl synthetic_protocol::Trait for Runtime {
 	type PriceProvider = orml_traits::DefaultPriceProvider<CurrencyId, WrappedLaminarDataProvider>;
 	type LiquidityPools = synthetic_liquidity_pools::Module<Runtime>;
 	type SyntheticProtocolLiquidityPools = synthetic_liquidity_pools::Module<Runtime>;
+	type WeightInfo = weights::synthetic_protocol::WeightInfo<Runtime>;
 }
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
@@ -840,6 +847,7 @@ impl margin_protocol::Trait for Runtime {
 	type GetPoolMaxOpenPositions = GetPoolMaxOpenPositions;
 	type UpdateOrigin = EnsureHalfFinancialCouncilOrRoot;
 	type UnsignedPriority = MarginProtocolUnsignedPriority;
+	type WeightInfo = weights::margin_protocol::WeightInfo<Runtime>;
 }
 
 construct_runtime!(
@@ -1158,6 +1166,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, synthetic_liquidity_pools, benchmarking::synthetic_liquidity_pools);
 			add_benchmark!(params, batches, margin_protocol, benchmarking::margin_protocol);
 			add_benchmark!(params, batches, synthetic_protocol, benchmarking::synthetic_protocol);
+			add_benchmark!(params, batches, synthetic_tokens, benchmarking::synthetic_tokens);
 
 			if batches.is_empty() { return Err("Benchmark not found for this module.".into()) }
 			Ok(batches)

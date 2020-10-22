@@ -16,18 +16,14 @@ use margin_protocol::RiskThreshold;
 use primitives::*;
 
 const SEED: u32 = 0;
-const MAX_TRADER_INDEX: u32 = 1000;
-const MAX_POOL_OWNER_INDEX: u32 = 1000;
-const MAX_DOLLARS: u32 = 1000;
-const MAX_THRESHOLD: u32 = 100;
 
 const EUR_USD: TradingPair = TradingPair {
 	base: CurrencyId::FEUR,
 	quote: CurrencyId::AUSD,
 };
 
-fn create_pool(p: u32) -> Result<AccountId, DispatchError> {
-	let owner: AccountId = account("owner", p, SEED);
+fn create_pool() -> Result<AccountId, DispatchError> {
+	let owner: AccountId = account("owner", 0, SEED);
 	BaseLiquidityPoolsForMargin::create_pool(RawOrigin::Signed(owner.clone()).into())?;
 
 	let threshold = RiskThreshold {
@@ -71,37 +67,24 @@ fn set_up_oracle() {
 runtime_benchmarks! {
 	{ Runtime, margin_protocol }
 
-	_ {
-		let t in 1 .. MAX_TRADER_INDEX => ();
-		let p in 1 .. MAX_POOL_OWNER_INDEX => ();
-		let d in 100 .. MAX_DOLLARS => ();
-		let h in 1 .. MAX_THRESHOLD => ();
-	}
+	_ {}
 
 	deposit {
-		let t in ...;
-		let p in ...;
-		let d in ...;
+		let pool_owner = create_pool()?;
 
-		let pool_owner = create_pool(p)?;
-
-		let trader: AccountId = account("trader", t, SEED);
-		let balance = dollars(d);
+		let trader: AccountId = account("trader", 0, SEED);
+		let balance = dollars(100u128);
 		set_ausd_balance(&trader, balance + dollars(1u128))?;
 	}: _(RawOrigin::Signed(trader.clone()), 0, balance)
 	verify {
-		assert_eq!(MarginProtocol::balances(&trader, 0), FixedI128::saturating_from_integer(d));
+		assert_eq!(MarginProtocol::balances(&trader, 0), FixedI128::saturating_from_integer(100u128));
 	}
 
 	withdraw {
-		let t in ...;
-		let p in ...;
-		let d in ...;
+		let pool_owner = create_pool()?;
 
-		let pool_owner = create_pool(p)?;
-
-		let trader: AccountId = account("trader", t, SEED);
-		let balance = dollars(d);
+		let trader: AccountId = account("trader", 0, SEED);
+		let balance = dollars(100u128);
 		deposit_balance(&trader, balance)?;
 	}: _(RawOrigin::Signed(trader.clone()), 0, balance)
 	verify {
@@ -109,14 +92,10 @@ runtime_benchmarks! {
 	}
 
 	open_position {
-		let t in ...;
-		let p in ...;
-		let d in ...;
+		let pool_owner = create_pool()?;
 
-		let pool_owner = create_pool(p)?;
-
-		let trader: AccountId = account("trader", t, SEED);
-		let balance = dollars(d);
+		let trader: AccountId = account("trader", 0, SEED);
+		let balance = dollars(100u128);
 		deposit_balance(&trader, balance)?;
 
 		let liquidity = balance;
@@ -128,14 +107,10 @@ runtime_benchmarks! {
 
 	// `open_position` when there is already ten positions in pool
 	open_position_with_ten_in_pool {
-		let t in ...;
-		let p in ...;
-		let d in ...;
+		let pool_owner = create_pool()?;
 
-		let pool_owner = create_pool(p)?;
-
-		let trader: AccountId = account("trader", t, SEED);
-		let balance = dollars(d);
+		let trader: AccountId = account("trader", 0, SEED);
+		let balance = dollars(100u128);
 		deposit_balance(&trader, balance)?;
 
 		let liquidity = balance;
@@ -157,14 +132,10 @@ runtime_benchmarks! {
 	}: open_position(RawOrigin::Signed(trader), 0, EUR_USD, Leverage::LongTwo, balance, Price::saturating_from_integer(2))
 
 	close_position {
-		let t in ...;
-		let p in ...;
-		let d in ...;
+		let pool_owner = create_pool()?;
 
-		let pool_owner = create_pool(p)?;
-
-		let trader: AccountId = account("trader", t, SEED);
-		let balance = dollars(d);
+		let trader: AccountId = account("trader", 0, SEED);
+		let balance = dollars(100u128);
 		deposit_balance(&trader, balance)?;
 
 		let liquidity = balance;
@@ -185,14 +156,10 @@ runtime_benchmarks! {
 
 	// `close_position` when there is already ten positions in pool
 	close_position_with_ten_in_pool {
-		let t in ...;
-		let p in ...;
-		let d in ...;
+		let pool_owner = create_pool()?;
 
-		let pool_owner = create_pool(p)?;
-
-		let trader: AccountId = account("trader", t, SEED);
-		let balance = dollars(d);
+		let trader: AccountId = account("trader", 0, SEED);
+		let balance = dollars(100u128);
 		deposit_balance(&trader, balance)?;
 
 		let liquidity = balance;
@@ -214,14 +181,10 @@ runtime_benchmarks! {
 	}: close_position(RawOrigin::Signed(trader), 0, Price::zero())
 
 	trader_margin_call {
-		let t in ...;
-		let p in ...;
-		let d in ...;
+		let pool_owner = create_pool()?;
 
-		let pool_owner = create_pool(p)?;
-
-		let trader: AccountId = account("trader", t, SEED);
-		let balance = dollars(d);
+		let trader: AccountId = account("trader", 0, SEED);
+		let balance = dollars(100u128);
 		deposit_balance(&trader, balance)?;
 
 		let liquidity = balance;
@@ -246,14 +209,10 @@ runtime_benchmarks! {
 	}
 
 	trader_become_safe {
-		let t in ...;
-		let p in ...;
-		let d in ...;
+		let pool_owner = create_pool()?;
 
-		let pool_owner = create_pool(p)?;
-
-		let trader: AccountId = account("trader", t, SEED);
-		let balance = dollars(d);
+		let trader: AccountId = account("trader", 0, SEED);
+		let balance = dollars(100u128);
 		deposit_balance(&trader, balance)?;
 
 		let liquidity = balance;
@@ -287,14 +246,10 @@ runtime_benchmarks! {
 	}
 
 	trader_stop_out {
-		let t in ...;
-		let p in ...;
-		let d in ...;
+		let pool_owner = create_pool()?;
 
-		let pool_owner = create_pool(p)?;
-
-		let trader: AccountId = account("trader", t, SEED);
-		let balance = dollars(d);
+		let trader: AccountId = account("trader", 0, SEED);
+		let balance = dollars(100u128);
 		deposit_balance(&trader, balance)?;
 
 		let liquidity = balance;
@@ -320,14 +275,10 @@ runtime_benchmarks! {
 	}
 
 	liquidity_pool_margin_call {
-		let t in ...;
-		let p in ...;
-		let d in ...;
+		let pool_owner = create_pool()?;
 
-		let pool_owner = create_pool(p)?;
-
-		let trader: AccountId = account("trader", t, SEED);
-		let balance = dollars(d);
+		let trader: AccountId = account("trader", 0, SEED);
+		let balance = dollars(100u128);
 		deposit_balance(&trader, balance)?;
 
 		let liquidity = balance;
@@ -352,14 +303,10 @@ runtime_benchmarks! {
 	}
 
 	liquidity_pool_become_safe {
-		let t in ...;
-		let p in ...;
-		let d in ...;
+		let pool_owner = create_pool()?;
 
-		let pool_owner = create_pool(p)?;
-
-		let trader: AccountId = account("trader", t, SEED);
-		let balance = dollars(d);
+		let trader: AccountId = account("trader", 0, SEED);
+		let balance = dollars(100u128);
 		deposit_balance(&trader, balance)?;
 
 		let liquidity = balance;
@@ -388,14 +335,10 @@ runtime_benchmarks! {
 	}
 
 	liquidity_pool_force_close {
-		let t in ...;
-		let p in ...;
-		let d in ...;
+		let pool_owner = create_pool()?;
 
-		let pool_owner = create_pool(p)?;
-
-		let trader: AccountId = account("trader", t, SEED);
-		let balance = dollars(d);
+		let trader: AccountId = account("trader", 0, SEED);
+		let balance = dollars(100u128);
 		deposit_balance(&trader, balance)?;
 
 		let liquidity = balance;
@@ -421,18 +364,14 @@ runtime_benchmarks! {
 	}
 
 	set_trading_pair_risk_threshold {
-		let p in ...;
-		let h in ...;
-
-
-		let pool_owner: AccountId = account("owner", p, SEED);
+		let pool_owner: AccountId = account("owner", 0, SEED);
 		BaseLiquidityPoolsForMargin::create_pool(
 			RawOrigin::Signed(pool_owner.clone()).into()
 		)?;
 
 		let threshold = RiskThreshold {
-			margin_call: Permill::from_percent(h),
-			stop_out: Permill::from_percent(h),
+			margin_call: Permill::from_percent(10),
+			stop_out: Permill::from_percent(10),
 		};
 	}: _(RawOrigin::Root, EUR_USD, Some(threshold.clone()), Some(threshold.clone()), Some(threshold.clone()))
 	verify {

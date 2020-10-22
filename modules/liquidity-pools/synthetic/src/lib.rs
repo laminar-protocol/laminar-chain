@@ -1,16 +1,26 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-mod mock;
-mod tests;
-
-use codec::{Decode, Encode};
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::EnsureOrigin};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::EnsureOrigin, weights::Weight};
 use frame_system::ensure_signed;
 use orml_utilities::with_transaction_result;
 use primitives::{Balance, CurrencyId, LiquidityPoolId};
 use sp_runtime::{DispatchResult, ModuleId, Permill, RuntimeDebug};
 use sp_std::prelude::*;
 use traits::{LiquidityPools, OnDisableLiquidityPool, OnRemoveLiquidityPool, SyntheticProtocolLiquidityPools};
+
+mod default_weight;
+mod mock;
+mod tests;
+
+pub trait WeightInfo {
+	fn set_spread() -> Weight;
+	fn set_additional_collateral_ratio() -> Weight;
+	fn set_min_additional_collateral_ratio() -> Weight;
+	fn set_synthetic_enabled() -> Weight;
+	fn set_max_spread() -> Weight;
+}
+
+use codec::{Decode, Encode};
 
 /// Currency option in a pool of synthetic.
 #[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Default)]
@@ -48,6 +58,9 @@ pub trait Trait: frame_system::Trait {
 
 	/// Required origin for updating protocol options.
 	type UpdateOrigin: EnsureOrigin<Self::Origin>;
+
+	/// Weight information for the extrinsics in this module.
+	type WeightInfo: WeightInfo;
 }
 
 decl_storage! {
@@ -93,7 +106,7 @@ decl_module! {
 		/// Set bid and ask spread of `currency_id` in `pool_id`.
 		///
 		/// May only be called from the pool owner.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::set_spread()]
 		pub fn set_spread(
 			origin,
 			#[compact] pool_id: LiquidityPoolId,
@@ -112,7 +125,7 @@ decl_module! {
 		/// Set additional collateral ratio of `currency_id` in `pool_id`.
 		///
 		/// May only be called from the pool owner.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::set_additional_collateral_ratio()]
 		pub fn set_additional_collateral_ratio(
 			origin,
 			#[compact] pool_id: LiquidityPoolId,
@@ -130,7 +143,7 @@ decl_module! {
 		/// Set minimum additional collateral ratio.
 		///
 		/// May only be called from `UpdateOrigin`.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::set_min_additional_collateral_ratio()]
 		pub fn set_min_additional_collateral_ratio(origin, #[compact] ratio: Permill) {
 			with_transaction_result(|| {
 				T::UpdateOrigin::ensure_origin(origin)?;
@@ -143,7 +156,7 @@ decl_module! {
 		/// Enable or disable synthetic of `currency_id` in `pool_id`.
 		///
 		/// May only be called from the pool owner.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::set_synthetic_enabled()]
 		pub fn set_synthetic_enabled(
 			origin,
 			#[compact] pool_id: LiquidityPoolId,
@@ -161,7 +174,7 @@ decl_module! {
 		/// Set max spread of `currency_id`.
 		///
 		/// May only be called from `UpdateOrigin`.
-		#[weight = 10_000]
+		#[weight = T::WeightInfo::set_max_spread()]
 		pub fn set_max_spread(origin, currency_id: CurrencyId, #[compact] max_spread: Balance) {
 			with_transaction_result(|| {
 				T::UpdateOrigin::ensure_origin(origin)?;
