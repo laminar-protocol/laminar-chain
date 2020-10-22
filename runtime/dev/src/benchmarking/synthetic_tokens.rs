@@ -1,8 +1,7 @@
-use crate::{Permill, Runtime};
+use crate::{Permill, Runtime, CurrencyId};
 
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
-use primitives::CurrencyId;
 use sp_std::prelude::*;
 
 runtime_benchmarks! {
@@ -26,18 +25,10 @@ mod tests {
 	use frame_support::assert_ok;
 
 	fn new_test_ext() -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::default()
+		frame_system::GenesisConfig::default()
 			.build_storage::<Runtime>()
-			.unwrap();
-
-		pallet_membership::GenesisConfig::<Runtime, pallet_membership::Instance3> {
-			members: vec![AccountId::from([100u8; 32]), AccountId::from([101u8; 32])],
-			phantom: Default::default(),
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
-
-		t.into()
+			.unwrap()
+			.into()
 	}
 
 	#[test]
