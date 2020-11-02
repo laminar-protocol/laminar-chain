@@ -174,8 +174,8 @@ pub fn latest_turbulence_testnet_config() -> Result<DevChainSpec, String> {
 	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
 
 	Ok(DevChainSpec::from_genesis(
-		"Laminar Turbulence TC1",
-		"turbulence1",
+		"Laminar Turbulence TC2",
+		"turbulence2",
 		ChainType::Live,
 		// SECRET="..."
 		// ./target/debug/subkey inspect "$SECRET//laminar//root"
@@ -234,7 +234,7 @@ pub fn latest_turbulence_testnet_config() -> Result<DevChainSpec, String> {
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
 			.expect("Staging telemetry url is valid; qed")),
 		// Protocol ID
-		Some("turbulence1"),
+		Some("turbulence2"),
 		// Properties
 		Some(properties),
 		// Extensions

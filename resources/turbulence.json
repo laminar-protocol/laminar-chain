@@ -1,6 +1,6 @@
 {
-  "name": "Laminar Turbulence TC1",
-  "id": "turbulence1",
+  "name": "Laminar Turbulence TC2",
+  "id": "turbulence2",
   "chainType": "Live",
   "bootNodes": [
     "/dns4/testnet-bootnode-1.laminar-chain.laminar.one/tcp/30333/p2p/12D3KooWNCe9dEpPhswckrX5ZHhdtZ3r5sg6CcgKfgyhw3seuwtB"
@@ -11,7 +11,7 @@
       0
     ]
   ],
-  "protocolId": "turbulence1",
+  "protocolId": "turbulence2",
   "properties": {
     "tokenDecimals": 18,
     "tokenSymbol": "LAMI"
