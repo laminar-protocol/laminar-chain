@@ -14,7 +14,7 @@ check-tests: githooks
 	SKIP_WASM_BUILD= cargo check --tests --all
 
 check-debug:
-	RUSTFLAGS="-Z external-macro-backtrace" SKIP_WASM_BUILD= cargo +nightly check
+	RUSTFLAGS="-Z macro-backtrace" SKIP_WASM_BUILD= cargo +nightly check
 
 test: githooks
 	SKIP_WASM_BUILD= cargo test --all
