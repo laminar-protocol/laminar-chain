@@ -70,7 +70,7 @@ synthetic-tokens = { package = "module-synthetic-tokens", path = "../../modules/
 runtime-common = { path = "../common", default-features = false }
 
 [build-dependencies]
-wasm-builder-runner = { package = "substrate-wasm-builder-runner", version = "2.0.0" }
+substrate-wasm-builder = { version = "3.0.0" }
 
 [features]
 default = ["std"]
