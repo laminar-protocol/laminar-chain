@@ -21,7 +21,13 @@ fn create_pool() -> Result<AccountId, DispatchError> {
 	let owner: AccountId = account("owner", 0, SEED);
 	BaseLiquidityPoolsForSynthetic::create_pool(RawOrigin::Signed(owner.clone()).into())?;
 
-	SyntheticLiquidityPools::set_spread(RawOrigin::Signed(owner.clone()).into(), 0, FEUR, 0, 0)?;
+	SyntheticLiquidityPools::set_spread(
+		RawOrigin::Signed(owner.clone()).into(),
+		0,
+		FEUR,
+		Price::zero(),
+		Price::zero(),
+	)?;
 	SyntheticLiquidityPools::set_synthetic_enabled(RawOrigin::Signed(owner.clone()).into(), 0, FEUR, true)?;
 
 	Ok(owner)
