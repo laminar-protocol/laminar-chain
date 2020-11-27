@@ -114,7 +114,7 @@ fn mint_fails_if_wrong_spread_ratio_config() {
 	ExtBuilder::default()
 		.one_million_for_alice_n_mock_pool()
 		.synthetic_price_three()
-		.spread(Permill::from_percent(2))
+		.spread(Price::from_fraction(0.02))
 		.additional_collateral_ratio(Permill::from_percent(1))
 		.build()
 		.execute_with(|| {

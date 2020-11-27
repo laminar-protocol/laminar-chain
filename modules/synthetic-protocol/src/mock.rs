@@ -152,14 +152,14 @@ impl DataProvider<CurrencyId, Price> for MockPrices {
 }
 
 thread_local! {
-	static SPREAD: RefCell<Permill> = RefCell::new(Permill::zero());
+	static SPREAD: RefCell<Price> = RefCell::new(Price::zero());
 	static ADDITIONAL_COLLATERAL_RATIO: RefCell<Permill> = RefCell::new(Permill::zero());
 	static IS_ALLOWED: RefCell<bool> = RefCell::new(false);
 }
 
 pub struct MockLiquidityPools;
 impl MockLiquidityPools {
-	fn spread() -> Permill {
+	fn spread() -> Price {
 		SPREAD.with(|v| *v.borrow_mut())
 	}
 
@@ -171,7 +171,7 @@ impl MockLiquidityPools {
 		IS_ALLOWED.with(|v| *v.borrow_mut())
 	}
 
-	pub fn set_mock_spread(spread: Permill) {
+	pub fn set_mock_spread(spread: Price) {
 		SPREAD.with(|v| *v.borrow_mut() = spread);
 	}
 
@@ -212,14 +212,14 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 }
 
 impl SyntheticProtocolLiquidityPools<AccountId> for MockLiquidityPools {
-	fn bid_spread(_pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Balance> {
+	fn bid_spread(_pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Price> {
 		let price = MockPrices::prices(currency_id)?;
-		Some(Self::spread().mul_ceil(price.into_inner()))
+		Some(Self::spread().saturating_mul(price))
 	}
 
-	fn ask_spread(_pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Balance> {
+	fn ask_spread(_pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Price> {
 		let price = MockPrices::prices(currency_id)?;
-		Some(Self::spread().mul_ceil(price.into_inner()))
+		Some(Self::spread().saturating_mul(price))
 	}
 
 	fn additional_collateral_ratio(_pool_id: LiquidityPoolId, _currency_id: CurrencyId) -> Permill {
@@ -255,7 +255,7 @@ pub const ANOTHER_MOCK_POOL: LiquidityPoolId = 101;
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 	prices: Vec<(CurrencyId, Price)>,
-	spread: Permill,
+	spread: Price,
 	additional_collateral_ratio: Permill,
 	is_allowed: bool,
 }
@@ -265,8 +265,8 @@ impl Default for ExtBuilder {
 		Self {
 			endowed_accounts: vec![],
 			// collateral price set to `1` for calculation simplicity.
-			prices: vec![(CurrencyId::AUSD, FixedU128::saturating_from_rational(1, 1))],
-			spread: Permill::zero(),
+			prices: vec![(CurrencyId::AUSD, Price::saturating_from_rational(1, 1))],
+			spread: Price::zero(),
 			additional_collateral_ratio: Permill::zero(),
 			is_allowed: true,
 		}
@@ -299,13 +299,13 @@ impl ExtBuilder {
 		self.synthetic_price(Price::saturating_from_rational(3, 1))
 	}
 
-	pub fn spread(mut self, spread: Permill) -> Self {
+	pub fn spread(mut self, spread: Price) -> Self {
 		self.spread = spread;
 		self
 	}
 
 	pub fn one_percent_spread(self) -> Self {
-		self.spread(Permill::from_percent(1))
+		self.spread(Price::from_fraction(0.01))
 	}
 
 	pub fn additional_collateral_ratio(mut self, ratio: Permill) -> Self {

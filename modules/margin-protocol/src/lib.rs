@@ -19,7 +19,7 @@ use primitives::{
 };
 use sp_arithmetic::{
 	traits::{Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Saturating},
-	FixedI128, FixedPointNumber, FixedU128, Permill,
+	FixedI128, FixedPointNumber, Permill,
 };
 use sp_runtime::{
 	offchain::{
@@ -675,7 +675,7 @@ impl<T: Trait> Module<T> {
 			pair,
 			leverage,
 			leveraged_amount,
-			FixedU128::from_inner(u128_from_fixed_i128(debits_price)),
+			Price::from_inner(u128_from_fixed_i128(debits_price)),
 		));
 
 		Ok(())
@@ -754,7 +754,7 @@ impl<T: Trait> Module<T> {
 			who.clone(),
 			position_id,
 			position.pool,
-			FixedU128::from_inner(u128_from_fixed_i128(market_price)),
+			Price::from_inner(u128_from_fixed_i128(market_price)),
 		));
 
 		Ok(())
@@ -1020,9 +1020,7 @@ impl<T: Trait> Module<T> {
 	/// ask_price = price + ask_spread
 	fn ask_price(pool: LiquidityPoolId, pair: TradingPair, max: Option<Price>) -> FixedI128Result {
 		let price = Self::price(pair.base, pair.quote)?;
-		let spread = T::LiquidityPools::ask_spread(pool, pair)
-			.ok_or(Error::<T>::NoAskSpread)
-			.map(Price::from_inner)?;
+		let spread = T::LiquidityPools::ask_spread(pool, pair).ok_or(Error::<T>::NoAskSpread)?;
 		let ask_price: Price = price.saturating_add(spread);
 
 		if let Some(m) = max {
@@ -1037,9 +1035,7 @@ impl<T: Trait> Module<T> {
 	/// bid_price = price - bid_spread
 	fn bid_price(pool: LiquidityPoolId, pair: TradingPair, min: Option<Price>) -> FixedI128Result {
 		let price = Self::price(pair.base, pair.quote)?;
-		let spread = T::LiquidityPools::bid_spread(pool, pair)
-			.ok_or(Error::<T>::NoBidSpread)
-			.map(Price::from_inner)?;
+		let spread = T::LiquidityPools::bid_spread(pool, pair).ok_or(Error::<T>::NoBidSpread)?;
 		let bid_price = price.saturating_sub(spread);
 
 		if let Some(m) = min {
@@ -1427,11 +1423,11 @@ impl<T: Trait> Module<T> {
 			if position.leverage.is_long() {
 				T::LiquidityPools::bid_spread(pool, position.pair)
 					.ok_or(Error::<T>::NoBidSpread)
-					.map(fixed_i128_from_u128)?
+					.map(fixed_i128_from_fixed_u128)?
 			} else {
 				T::LiquidityPools::ask_spread(pool, position.pair)
 					.ok_or(Error::<T>::NoAskSpread)
-					.map(fixed_i128_from_u128)?
+					.map(fixed_i128_from_fixed_u128)?
 			}
 		};
 

@@ -3,7 +3,7 @@
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, traits::EnsureOrigin, weights::Weight};
 use frame_system::ensure_signed;
 use orml_utilities::with_transaction_result;
-use primitives::{Balance, CurrencyId, LiquidityPoolId};
+use primitives::{Balance, CurrencyId, LiquidityPoolId, Price};
 use sp_runtime::{DispatchResult, ModuleId, Permill, RuntimeDebug};
 use sp_std::prelude::*;
 use traits::{LiquidityPools, OnDisableLiquidityPool, OnRemoveLiquidityPool, SyntheticProtocolLiquidityPools};
@@ -28,12 +28,12 @@ pub struct SyntheticPoolCurrencyOption {
 	/// Bid spread.
 	///
 	/// DEFAULT-NOTE: `None`, pool owner must set spread.
-	pub bid_spread: Option<Balance>,
+	pub bid_spread: Option<Price>,
 
 	/// Ask spread.
 	///
 	/// DEFAULT-NOTE: `None`, pool owner must set spread.
-	pub ask_spread: Option<Balance>,
+	pub ask_spread: Option<Price>,
 
 	/// Additional collateral ratio.
 	///
@@ -72,7 +72,7 @@ decl_storage! {
 		pub MinAdditionalCollateralRatio get(fn min_additional_collateral_ratio) config(): Permill;
 
 		/// Maximum spread of a currency.
-		pub MaxSpread get(fn max_spread): map hasher(twox_64_concat) CurrencyId => Option<Balance>;
+		pub MaxSpread get(fn max_spread): map hasher(twox_64_concat) CurrencyId => Option<Price>;
 	}
 }
 
@@ -81,7 +81,7 @@ decl_event!(
 		<T as frame_system::Trait>::AccountId,
 	{
 		/// Spread set: \[who, pool_id, currency_id, bid, ask\]
-		SpreadSet(AccountId, LiquidityPoolId, CurrencyId, Balance, Balance),
+		SpreadSet(AccountId, LiquidityPoolId, CurrencyId, Price, Price),
 
 		/// Additional collateral ratio set: \[who, pool_id, currency_id, ratio\]
 		AdditionalCollateralRatioSet(AccountId, LiquidityPoolId, CurrencyId, Option<Permill>),
@@ -93,7 +93,7 @@ decl_event!(
 		SyntheticEnabledSet(AccountId, LiquidityPoolId, CurrencyId, bool),
 
 		/// Max spread updated: \[currency_id, spread\]
-		MaxSpreadUpdated(CurrencyId, Balance),
+		MaxSpreadUpdated(CurrencyId, Price),
 	}
 );
 
@@ -111,8 +111,8 @@ decl_module! {
 			origin,
 			#[compact] pool_id: LiquidityPoolId,
 			currency_id: CurrencyId,
-			#[compact] bid: Balance,
-			#[compact] ask: Balance
+			#[compact] bid: Price,
+			#[compact] ask: Price
 		) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
@@ -175,7 +175,7 @@ decl_module! {
 		///
 		/// May only be called from `UpdateOrigin`.
 		#[weight = T::WeightInfo::set_max_spread()]
-		pub fn set_max_spread(origin, currency_id: CurrencyId, #[compact] max_spread: Balance) {
+		pub fn set_max_spread(origin, currency_id: CurrencyId, #[compact] max_spread: Price) {
 			with_transaction_result(|| {
 				T::UpdateOrigin::ensure_origin(origin)?;
 				MaxSpread::insert(currency_id, max_spread);
@@ -228,11 +228,11 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 }
 
 impl<T: Trait> SyntheticProtocolLiquidityPools<T::AccountId> for Module<T> {
-	fn bid_spread(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Balance> {
+	fn bid_spread(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Price> {
 		Self::pool_currency_options(pool_id, currency_id).bid_spread
 	}
 
-	fn ask_spread(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Balance> {
+	fn ask_spread(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Price> {
 		Self::pool_currency_options(pool_id, currency_id).ask_spread
 	}
 
@@ -267,8 +267,8 @@ impl<T: Trait> Module<T> {
 		who: &T::AccountId,
 		pool_id: LiquidityPoolId,
 		currency_id: CurrencyId,
-		bid: Balance,
-		ask: Balance,
+		bid: Price,
+		ask: Price,
 	) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, who), Error::<T>::NoPermission);
 

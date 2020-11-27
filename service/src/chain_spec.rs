@@ -2,9 +2,8 @@ use dev_runtime::{
 	opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, BandOracleConfig, Block, CurrencyId,
 	FinancialCouncilMembershipConfig, GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, IndicesConfig,
 	LaminarOracleConfig, MarginLiquidityPoolsConfig, MarginProtocolConfig, Moment, OperatorMembershipBandConfig,
-	OperatorMembershipLaminarConfig, SessionConfig, Signature, StakerStatus, StakingConfig, SudoConfig,
-	SyntheticLiquidityPoolsConfig, SyntheticTokensConfig, SystemConfig, TokensConfig, CENTS, DOLLARS, MILLICENTS,
-	WASM_BINARY,
+	OperatorMembershipLaminarConfig, Price, SessionConfig, Signature, StakerStatus, StakingConfig, SudoConfig,
+	SyntheticLiquidityPoolsConfig, SyntheticTokensConfig, SystemConfig, TokensConfig, DOLLARS, WASM_BINARY,
 };
 use hex_literal::hex;
 use laminar_primitives::{AccumulateConfig, SwapRate, TradingPair};
@@ -384,7 +383,7 @@ fn dev_genesis(
 					// TradingPair
 					EUR_USD,
 					// MaxSpread
-					CENTS,
+					Price::from_fraction(0.01),
 					// Accumulates
 					accumulate_config(HOURS_IN_SECONDS, 0),
 					// SwapRates
@@ -397,7 +396,7 @@ fn dev_genesis(
 					// TradingPair
 					USD_JPY,
 					// MaxSpread
-					CENTS,
+					Price::from_fraction(0.01),
 					// Accumulates
 					accumulate_config(HOURS_IN_SECONDS, 0),
 					// SwapRates
@@ -410,7 +409,7 @@ fn dev_genesis(
 					// TradingPair
 					AUD_USD,
 					// MaxSpread
-					CENTS,
+					Price::from_fraction(0.01),
 					// Accumulates
 					accumulate_config(HOURS_IN_SECONDS, 0),
 					// SwapRates
@@ -423,7 +422,7 @@ fn dev_genesis(
 					// TradingPair
 					USD_CAD,
 					// MaxSpread
-					CENTS,
+					Price::from_fraction(0.01),
 					// Accumulates
 					accumulate_config(HOURS_IN_SECONDS, 0),
 					// SwapRates
@@ -436,7 +435,7 @@ fn dev_genesis(
 					// TradingPair
 					USD_CHF,
 					// MaxSpread
-					CENTS,
+					Price::from_fraction(0.01),
 					// Accumulates
 					accumulate_config(HOURS_IN_SECONDS, 0),
 					// SwapRates
@@ -449,7 +448,7 @@ fn dev_genesis(
 					// TradingPair
 					XAU_USD,
 					// MaxSpread
-					CENTS,
+					Price::from_fraction(0.01),
 					// Accumulates
 					accumulate_config(HOURS_IN_SECONDS, 0),
 					// SwapRates
@@ -462,7 +461,7 @@ fn dev_genesis(
 					// TradingPair
 					USD_OIL,
 					// MaxSpread
-					CENTS,
+					Price::from_fraction(0.01),
 					// Accumulates
 					accumulate_config(HOURS_IN_SECONDS, 0),
 					// SwapRates
@@ -475,7 +474,7 @@ fn dev_genesis(
 					// TradingPair
 					BTC_USD,
 					// MaxSpread
-					20 * DOLLARS,
+					Price::from_inner(20),
 					// Accumulates
 					accumulate_config(HOURS_IN_SECONDS, 0),
 					// SwapRates
@@ -488,7 +487,7 @@ fn dev_genesis(
 					// TradingPair
 					ETH_USD,
 					// MaxSpread
-					DOLLARS,
+					Price::from_inner(1),
 					// Accumulates
 					accumulate_config(HOURS_IN_SECONDS, 0),
 					// SwapRates
@@ -673,7 +672,7 @@ fn turbulence_genesis(
 					// TradingPair
 					EUR_USD,
 					// MaxSpread
-					CENTS,
+					Price::from_fraction(0.01),
 					// Accumulates
 					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
@@ -686,7 +685,7 @@ fn turbulence_genesis(
 					// TradingPair
 					USD_JPY,
 					// MaxSpread
-					100 * MILLICENTS,
+					Price::from_fraction(0.001),
 					// Accumulates
 					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
@@ -699,7 +698,7 @@ fn turbulence_genesis(
 					// TradingPair
 					AUD_USD,
 					// MaxSpread
-					CENTS,
+					Price::from_fraction(0.01),
 					// Accumulates
 					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
@@ -712,7 +711,7 @@ fn turbulence_genesis(
 					// TradingPair
 					USD_CAD,
 					// MaxSpread
-					CENTS,
+					Price::from_fraction(0.01),
 					// Accumulates
 					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
@@ -725,7 +724,7 @@ fn turbulence_genesis(
 					// TradingPair
 					USD_CHF,
 					// MaxSpread
-					CENTS,
+					Price::from_fraction(0.01),
 					// Accumulates
 					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
@@ -738,7 +737,7 @@ fn turbulence_genesis(
 					// TradingPair
 					XAU_USD,
 					// MaxSpread
-					DOLLARS,
+					Price::from_inner(1),
 					// Accumulates
 					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
@@ -751,7 +750,7 @@ fn turbulence_genesis(
 					// TradingPair
 					USD_OIL,
 					// MaxSpread
-					CENTS,
+					Price::from_fraction(0.01),
 					// Accumulates
 					accumulate_config(24 * HOURS_IN_SECONDS, 0),
 					// SwapRates
@@ -764,7 +763,7 @@ fn turbulence_genesis(
 					// TradingPair
 					BTC_USD,
 					// MaxSpread
-					20 * DOLLARS,
+					Price::from_inner(20),
 					// Accumulates
 					accumulate_config(8 * HOURS_IN_SECONDS, 0),
 					// SwapRates
@@ -777,7 +776,7 @@ fn turbulence_genesis(
 					// TradingPair
 					ETH_USD,
 					// MaxSpread
-					DOLLARS,
+					Price::from_inner(1),
 					// Accumulates
 					accumulate_config(8 * HOURS_IN_SECONDS, 0),
 					// SwapRates

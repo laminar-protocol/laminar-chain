@@ -10,8 +10,8 @@ use frame_support::{
 };
 use frame_system::ensure_signed;
 use primitives::{
-	arithmetic::fixed_i128_mul_signum, AccumulateConfig, Balance, Leverage, Leverages, LiquidityPoolId, SwapRate,
-	TradingPair,
+	arithmetic::fixed_i128_mul_signum, AccumulateConfig, Balance, Leverage, Leverages, LiquidityPoolId, Price,
+	SwapRate, TradingPair,
 };
 use sp_arithmetic::{FixedI128, FixedPointNumber};
 use sp_runtime::{
@@ -56,7 +56,7 @@ pub struct MarginTradingPairOption<Moment> {
 	pub enabled: bool,
 
 	/// The max spread. The minimum of max spread and pool's spread would be used in trading.
-	pub max_spread: Option<Balance>,
+	pub max_spread: Option<Price>,
 
 	/// Swap rate.
 	///
@@ -93,12 +93,12 @@ pub struct MarginPoolTradingPairOption {
 	/// Bid spread.
 	///
 	/// DEFAULT-NOTE: `None`, pool owner must set spread.
-	pub bid_spread: Option<Balance>,
+	pub bid_spread: Option<Price>,
 
 	/// Ask spread
 	///
 	/// DEFAULT-NOTE: `None`, pool owner must set spread.
-	pub ask_spread: Option<Balance>,
+	pub ask_spread: Option<Price>,
 
 	/// Enabled leverages.
 	///
@@ -159,7 +159,7 @@ decl_storage! {
 	}
 
 	add_extra_genesis {
-		config(margin_liquidity_config): Vec<(TradingPair, Balance, AccumulateConfig<T::Moment>, SwapRate)>;
+		config(margin_liquidity_config): Vec<(TradingPair, Price, AccumulateConfig<T::Moment>, SwapRate)>;
 
 		build(|config: &GenesisConfig<T>| {
 			config.margin_liquidity_config.iter().for_each(|(pair, max_spread, accumulate_config, swap_rate)| {
@@ -180,7 +180,7 @@ decl_event!(
 		<T as Trait>::Moment,
 	{
 		/// Spread set: \[who, pool_id, pair, bid, ask\]
-		SpreadSet(AccountId, LiquidityPoolId, TradingPair, Balance, Balance),
+		SpreadSet(AccountId, LiquidityPoolId, TradingPair, Price, Price),
 
 		/// Enabled trades set: \[who, pool_id, pair, enabled_leverages\]
 		EnabledTradesSet(AccountId, LiquidityPoolId, TradingPair, Leverages),
@@ -195,7 +195,7 @@ decl_event!(
 		AdditionalSwapRateUpdated(AccountId, LiquidityPoolId, FixedI128),
 
 		/// Max spread updated: \[pair, spread\]
-		MaxSpreadUpdated(TradingPair, Balance),
+		MaxSpreadUpdated(TradingPair, Price),
 
 		/// Accumulate set: \[pair, frequency, offset\]
 		AccumulateConfigSet(TradingPair, Moment, Moment),
@@ -230,7 +230,7 @@ decl_module! {
 		///
 		/// May only be called from the pool owner.
 		#[weight = T::WeightInfo::set_spread()]
-		pub fn set_spread(origin, #[compact] pool_id: LiquidityPoolId, pair: TradingPair, #[compact] bid: Balance, #[compact] ask: Balance) {
+		pub fn set_spread(origin, #[compact] pool_id: LiquidityPoolId, pair: TradingPair, #[compact] bid: Price, #[compact] ask: Price) {
 			with_transaction_result(|| {
 				let who = ensure_signed(origin)?;
 				Self::do_set_spread(&who, pool_id, pair, bid, ask)?;
@@ -292,7 +292,7 @@ decl_module! {
 		///
 		/// May only be called from `UpdateOrigin`.
 		#[weight = T::WeightInfo::set_max_spread()]
-		pub fn set_max_spread(origin, pair: TradingPair, #[compact] max_spread: Balance) {
+		pub fn set_max_spread(origin, pair: TradingPair, #[compact] max_spread: Price) {
 			with_transaction_result(|| {
 				T::UpdateOrigin::ensure_origin(origin)?;
 				<TradingPairOptions<T>>::mutate(&pair, |o| o.max_spread = Some(max_spread));
@@ -464,7 +464,7 @@ decl_error! {
 impl<T: Trait> Module<T> {
 	// Trading pair option
 
-	pub fn max_spread(pair: TradingPair) -> Option<Balance> {
+	pub fn max_spread(pair: TradingPair) -> Option<Price> {
 		Self::trading_pair_options(pair).max_spread
 	}
 
@@ -551,11 +551,11 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 }
 
 impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
-	fn bid_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance> {
+	fn bid_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Price> {
 		Self::pool_trading_pair_options(pool_id, pair).bid_spread
 	}
 
-	fn ask_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance> {
+	fn ask_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Price> {
 		Self::pool_trading_pair_options(pool_id, pair).ask_spread
 	}
 
@@ -614,8 +614,8 @@ impl<T: Trait> Module<T> {
 		who: &T::AccountId,
 		pool_id: LiquidityPoolId,
 		pair: TradingPair,
-		bid: Balance,
-		ask: Balance,
+		bid: Price,
+		ask: Price,
 	) -> DispatchResult {
 		ensure!(Self::is_owner(pool_id, who), Error::<T>::NoPermission);
 		PoolTradingPairOptions::mutate(pool_id, pair, |o| {

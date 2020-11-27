@@ -1,6 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use primitives::{Balance, CurrencyId, Leverage, LiquidityPoolId, TradingPair};
+use primitives::{Balance, CurrencyId, Leverage, LiquidityPoolId, Price, TradingPair};
 use sp_arithmetic::FixedI128;
 use sp_runtime::{DispatchResult, Permill, RuntimeDebug};
 use sp_std::{prelude::*, result};
@@ -39,10 +39,10 @@ pub trait BaseLiquidityPoolManager<LiquidityPoolId, Balance> {
 /// An abstraction of liquidity pools for Synthetic Protocol.
 pub trait SyntheticProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
 	/// Return bid spread of `currency_id` in `pool_id`, or `None` if not set by pool owner.
-	fn bid_spread(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Balance>;
+	fn bid_spread(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Price>;
 
 	/// Return ask spread of `currency_id` in `pool_id`, or `None` if not set by pool owner.
-	fn ask_spread(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Balance>;
+	fn ask_spread(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Price>;
 
 	/// Return additional collateral ratio of `currency_id`.
 	fn additional_collateral_ratio(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Permill;
@@ -62,10 +62,10 @@ pub enum OpenPositionError {
 /// An abstraction of liquidity pools for Margin Protocol.
 pub trait MarginProtocolLiquidityPools<AccountId>: LiquidityPools<AccountId> {
 	/// Returns bid spread of `pair` in `pool_id`, or `None` if not set by pool owner.
-	fn bid_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance>;
+	fn bid_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Price>;
 
 	/// Returns ask spread of `pair` in `pool_id`, or `None` if not set by pool owner.
-	fn ask_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance>;
+	fn ask_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Price>;
 
 	/// Returns swap rate of `pair` in `pool_id`.
 	fn swap_rate(pool_id: LiquidityPoolId, pair: TradingPair, is_long: bool) -> FixedI128;

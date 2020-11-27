@@ -159,10 +159,6 @@ pub fn dollar(amount: u128) -> u128 {
 	amount.saturating_mul(Price::accuracy())
 }
 
-pub fn cent(amount: u128) -> u128 {
-	amount.saturating_mul(Price::accuracy()) / 100
-}
-
 pub fn fixed_i128_dollar(amount: i128) -> FixedI128 {
 	FixedI128::saturating_from_integer(amount)
 }
@@ -286,7 +282,7 @@ pub fn synthetic_set_additional_collateral_ratio(currency_id: CurrencyId, permil
 	)
 }
 
-pub fn synthetic_set_spread(currency_id: CurrencyId, spread: Balance) -> DispatchResult {
+pub fn synthetic_set_spread(currency_id: CurrencyId, spread: Price) -> DispatchResult {
 	SyntheticLiquidityPools::set_spread(
 		origin_of(&POOL::get()),
 		LIQUIDITY_POOL_ID_0,
@@ -348,7 +344,7 @@ pub fn margin_withdraw_liquidity(who: &AccountId, amount: Balance) -> DispatchRe
 	BaseLiquidityPoolsForMargin::withdraw_liquidity(origin_of(who), LIQUIDITY_POOL_ID_0, amount)
 }
 
-pub fn margin_set_spread(pair: TradingPair, spread: Balance) -> DispatchResult {
+pub fn margin_set_spread(pair: TradingPair, spread: Price) -> DispatchResult {
 	MarginLiquidityPools::set_spread(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, pair, spread, spread)
 }
 
@@ -398,7 +394,7 @@ pub fn margin_set_additional_swap(rate: FixedI128) -> DispatchResult {
 	MarginLiquidityPools::set_additional_swap_rate(origin_of(&POOL::get()), LIQUIDITY_POOL_ID_0, rate)
 }
 
-pub fn margin_set_max_spread(pair: TradingPair, max_spread: Balance) -> DispatchResult {
+pub fn margin_set_max_spread(pair: TradingPair, max_spread: Price) -> DispatchResult {
 	MarginLiquidityPools::set_max_spread(<Runtime as frame_system::Trait>::Origin::root(), pair, max_spread)
 }
 

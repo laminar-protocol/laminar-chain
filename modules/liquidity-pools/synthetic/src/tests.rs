@@ -70,13 +70,13 @@ fn should_set_spread() {
 			Origin::signed(ALICE),
 			0,
 			CurrencyId::AUSD,
-			80,
-			60
+			Price::from_inner(80),
+			Price::from_inner(60)
 		));
 
 		let pool_option = SyntheticPoolCurrencyOption {
-			bid_spread: Some(80),
-			ask_spread: Some(60),
+			bid_spread: Some(Price::from_inner(80)),
+			ask_spread: Some(Price::from_inner(60)),
 			additional_collateral_ratio: None,
 			synthetic_enabled: false,
 		};
@@ -88,11 +88,11 @@ fn should_set_spread() {
 
 		assert_eq!(
 			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::bid_spread(0, CurrencyId::AUSD),
-			Some(80)
+			Some(Price::from_inner(80))
 		);
 		assert_eq!(
 			<ModuleLiquidityPools as SyntheticProtocolLiquidityPools<AccountId>>::ask_spread(0, CurrencyId::AUSD),
-			Some(60)
+			Some(Price::from_inner(60))
 		);
 	})
 }
@@ -111,19 +111,25 @@ fn should_set_max_spread() {
 			Origin::signed(ALICE),
 			0,
 			CurrencyId::AUSD,
-			100,
-			100
+			Price::from_inner(100),
+			Price::from_inner(100)
 		));
 
 		// set max spread to 30%
 		assert_ok!(ModuleLiquidityPools::set_max_spread(
 			Origin::signed(UpdateOrigin::get()),
 			CurrencyId::AUSD,
-			30
+			Price::from_inner(30)
 		));
 
 		assert_noop!(
-			ModuleLiquidityPools::set_spread(Origin::signed(ALICE), 0, CurrencyId::AUSD, 32, 28),
+			ModuleLiquidityPools::set_spread(
+				Origin::signed(ALICE),
+				0,
+				CurrencyId::AUSD,
+				Price::from_inner(32),
+				Price::from_inner(28)
+			),
 			Error::<Runtime>::SpreadTooHigh
 		);
 
@@ -131,15 +137,15 @@ fn should_set_max_spread() {
 			Origin::signed(ALICE),
 			0,
 			CurrencyId::AUSD,
-			28,
-			29
+			Price::from_inner(28),
+			Price::from_inner(29)
 		));
 
 		assert_eq!(
 			ModuleLiquidityPools::pool_currency_options(0, CurrencyId::AUSD),
 			SyntheticPoolCurrencyOption {
-				bid_spread: Some(28),
-				ask_spread: Some(29),
+				bid_spread: Some(Price::from_inner(28)),
+				ask_spread: Some(Price::from_inner(29)),
 				additional_collateral_ratio: None,
 				synthetic_enabled: false,
 			},

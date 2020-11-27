@@ -7,7 +7,7 @@ use sp_std::prelude::*;
 use frame_benchmarking::account;
 use orml_benchmarking::runtime_benchmarks;
 
-use primitives::CurrencyId::*;
+use primitives::{CurrencyId::*, Price};
 
 const SEED: u32 = 0;
 
@@ -25,7 +25,7 @@ runtime_benchmarks! {
 
 	set_spread {
 		let owner = create_pool()?;
-	}: _(RawOrigin::Signed(owner), 0, FEUR, 10u128.into(), 10u128.into())
+	}: _(RawOrigin::Signed(owner), 0, FEUR, Price::from_inner(10u128), Price::from_inner(10u128))
 
 	set_additional_collateral_ratio {
 		let owner = create_pool()?;
@@ -39,7 +39,7 @@ runtime_benchmarks! {
 	}: _(RawOrigin::Signed(owner), 0, FEUR, true)
 
 	set_max_spread {
-	}: _(RawOrigin::Root, FEUR, 10u128.into())
+	}: _(RawOrigin::Root, FEUR, Price::from_inner(10u128))
 }
 
 #[cfg(test)]

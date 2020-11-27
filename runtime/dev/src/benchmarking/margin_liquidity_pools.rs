@@ -37,7 +37,7 @@ runtime_benchmarks! {
 
 	set_spread {
 		let caller = create_pool()?;
-	}: _(RawOrigin::Signed(caller), 0, EUR_USD, 1u128.into(), 1u128.into())
+	}: _(RawOrigin::Signed(caller), 0, EUR_USD, Price::from_inner(1u128), Price::from_inner(1u128))
 
 	set_enabled_leverages {
 		let caller = create_pool()?;
@@ -57,7 +57,7 @@ runtime_benchmarks! {
 	}: _(RawOrigin::Signed(caller), 0, rate)
 
 	set_max_spread {
-	}: _(RawOrigin::Root, EUR_USD, 1u128.into())
+	}: _(RawOrigin::Root, EUR_USD, Price::from_inner(1u128))
 
 	set_accumulate_config {
 		let frequency = 60u64;
