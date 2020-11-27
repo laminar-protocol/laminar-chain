@@ -146,7 +146,7 @@ impl DataProvider<CurrencyId, Price> for MockPrices {
 }
 
 thread_local! {
-	static SPREAD: RefCell<Permill> = RefCell::new(Permill::zero());
+	static SPREAD: RefCell<Price> = RefCell::new(Price::zero());
 	static ACC_SWAP_RATES: RefCell<BTreeMap<TradingPair, FixedI128>> = RefCell::new(BTreeMap::new());
 	static LIQUIDITIES: RefCell<BTreeMap<LiquidityPoolId, Balance>> = RefCell::new(BTreeMap::new());
 }
@@ -155,11 +155,11 @@ pub const MOCK_LIQUIDITY_LOCK_ACCOUNT: u64 = 1000;
 
 pub struct MockLiquidityPools;
 impl MockLiquidityPools {
-	pub fn spread() -> Permill {
+	pub fn spread() -> Price {
 		SPREAD.with(|v| *v.borrow_mut())
 	}
 
-	pub fn set_mock_spread(spread: Permill) {
+	pub fn set_mock_spread(spread: Price) {
 		SPREAD.with(|v| *v.borrow_mut() = spread);
 	}
 
@@ -210,18 +210,18 @@ impl LiquidityPools<AccountId> for MockLiquidityPools {
 }
 
 impl MarginProtocolLiquidityPools<AccountId> for MockLiquidityPools {
-	fn bid_spread(_pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance> {
+	fn bid_spread(_pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Price> {
 		let base_price = MockPrices::prices(pair.base)?;
 		let quote_price = MockPrices::prices(pair.quote)?;
 		let price = base_price.checked_div(&quote_price).unwrap();
-		Some(Self::spread().mul_ceil(price.into_inner()))
+		Some(Self::spread().saturating_mul(price))
 	}
 
-	fn ask_spread(_pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Balance> {
+	fn ask_spread(_pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Price> {
 		let base_price = MockPrices::prices(pair.base)?;
 		let quote_price = MockPrices::prices(pair.quote)?;
 		let price = base_price.checked_div(&quote_price).unwrap();
-		Some(Self::spread().mul_ceil(price.into_inner()))
+		Some(Self::spread().saturating_mul(price))
 	}
 
 	fn swap_rate(_pool_id: LiquidityPoolId, _pair: TradingPair, _is_long: bool) -> FixedI128 {
@@ -326,7 +326,7 @@ pub fn print_bob_summary() {
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
-	spread: Permill,
+	spread: Price,
 	prices: Vec<(CurrencyId, Price)>,
 	swap_rates: Vec<(TradingPair, FixedI128)>,
 	pool_liquidities: Vec<(LiquidityPoolId, Balance)>,
@@ -337,8 +337,8 @@ impl Default for ExtBuilder {
 	fn default() -> Self {
 		Self {
 			endowed_accounts: vec![],
-			spread: Permill::from_rational_approximation(1, 1000u32),
-			prices: vec![(CurrencyId::AUSD, FixedU128::saturating_from_rational(1, 1))],
+			spread: Price::from_fraction(0.001),
+			prices: vec![(CurrencyId::AUSD, Price::saturating_from_rational(1, 1))],
 			swap_rates: vec![],
 			pool_liquidities: vec![],
 		}
@@ -360,7 +360,7 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn spread(mut self, spread: Permill) -> Self {
+	pub fn spread(mut self, spread: Price) -> Self {
 		self.spread = spread;
 		self
 	}
@@ -368,7 +368,7 @@ impl ExtBuilder {
 	/// `price`: rational(x, y)
 	pub fn price(mut self, currency_id: CurrencyId, price: (u128, u128)) -> Self {
 		self.prices
-			.push((currency_id, FixedU128::saturating_from_rational(price.0, price.1)));
+			.push((currency_id, Price::saturating_from_rational(price.0, price.1)));
 		self
 	}
 

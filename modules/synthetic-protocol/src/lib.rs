@@ -407,9 +407,7 @@ impl<T: Trait> Module<T> {
 	) -> result::Result<Price, DispatchError> {
 		let ask_spread =
 			T::SyntheticProtocolLiquidityPools::ask_spread(pool_id, currency_id).ok_or(Error::<T>::NoAskSpread)?;
-		let ask_price = price
-			.checked_add(&Price::from_inner(ask_spread))
-			.ok_or(Error::<T>::NumOverflow)?;
+		let ask_price = price.checked_add(&ask_spread).ok_or(Error::<T>::NumOverflow)?;
 
 		ensure!(ask_price <= max_price, Error::<T>::AskPriceTooHigh);
 		Ok(ask_price)
@@ -427,9 +425,7 @@ impl<T: Trait> Module<T> {
 	) -> result::Result<Price, DispatchError> {
 		let bid_spread =
 			T::SyntheticProtocolLiquidityPools::bid_spread(pool_id, currency_id).ok_or(Error::<T>::NoBidSpread)?;
-		let bid_price = price
-			.checked_sub(&Price::from_inner(bid_spread))
-			.expect("price > spread_amount; qed");
+		let bid_price = price.checked_sub(&bid_spread).expect("price > spread_amount; qed");
 
 		if let Some(min) = min_price {
 			ensure!(bid_price >= min, Error::<T>::BidPriceTooLow);

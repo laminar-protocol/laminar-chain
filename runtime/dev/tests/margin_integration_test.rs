@@ -44,10 +44,10 @@ mod tests {
 
 				assert_eq!(margin_pool_required_deposit(), fixed_i128_dollar(0));
 
-				assert_ok!(margin_set_spread(EUR_USD, cent(1)));
-				assert_ok!(margin_set_max_spread(EUR_USD, cent(2)));
-				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
-				assert_ok!(margin_set_spread(EUR_USD, cent(1)));
+				assert_ok!(margin_set_spread(EUR_USD, Price::from_fraction(0.01)));
+				assert_ok!(margin_set_max_spread(EUR_USD, Price::from_fraction(0.02)));
+				assert_ok!(margin_set_spread(EUR_USD, Price::from_fraction(0.03)));
+				assert_ok!(margin_set_spread(EUR_USD, Price::from_fraction(0.01)));
 
 				assert_ok!(margin_set_enabled_trades());
 
@@ -101,7 +101,7 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 				assert_ok!(margin_set_enabled_trades());
-				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
+				assert_ok!(margin_set_spread(EUR_USD, Price::from_fraction(0.03)));
 				assert_ok!(margin_set_accumulate(EUR_USD, 10 * ONE_MINUTE, 1 * ONE_MINUTE));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
 				assert_ok!(margin_set_default_min_leveraged_amount(dollar(1000)));
@@ -210,7 +210,7 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 				assert_ok!(margin_set_enabled_trades());
-				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
+				assert_ok!(margin_set_spread(EUR_USD, Price::from_fraction(0.03)));
 
 				assert_ok!(margin_set_accumulate(EUR_USD, 10 * ONE_MINUTE, 1 * ONE_MINUTE));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
@@ -262,7 +262,7 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 				assert_ok!(margin_set_enabled_trades());
-				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
+				assert_ok!(margin_set_spread(EUR_USD, Price::from_fraction(0.03)));
 
 				assert_ok!(margin_set_accumulate(EUR_USD, 10 * ONE_MINUTE, 1 * ONE_MINUTE));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
@@ -318,7 +318,7 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 				assert_ok!(margin_set_enabled_trades());
-				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
+				assert_ok!(margin_set_spread(EUR_USD, Price::from_fraction(0.03)));
 
 				assert_ok!(margin_set_accumulate(EUR_USD, 10 * ONE_MINUTE, 1 * ONE_MINUTE));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
@@ -448,7 +448,7 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 				assert_ok!(margin_set_enabled_trades());
-				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
+				assert_ok!(margin_set_spread(EUR_USD, Price::from_fraction(0.03)));
 
 				assert_ok!(margin_set_accumulate(EUR_USD, 10 * ONE_MINUTE, 1 * ONE_MINUTE));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
@@ -536,7 +536,7 @@ mod tests {
 				assert_eq!(collateral_balance(&BOB::get()), dollar(1000));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 				assert_ok!(margin_set_enabled_trades());
-				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
+				assert_ok!(margin_set_spread(EUR_USD, Price::from_fraction(0.03)));
 
 				assert_ok!(margin_set_accumulate(EUR_USD, 10 * ONE_MINUTE, 1 * ONE_MINUTE));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
@@ -647,8 +647,8 @@ mod tests {
 					(FJPY, Price::saturating_from_rational(5, 1))
 				]));
 				assert_ok!(margin_set_enabled_trades());
-				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
-				assert_ok!(margin_set_spread(JPY_EUR, cent(3)));
+				assert_ok!(margin_set_spread(EUR_USD, Price::from_fraction(0.03)));
+				assert_ok!(margin_set_spread(JPY_EUR, Price::from_fraction(0.03)));
 
 				assert_ok!(margin_set_accumulate(EUR_USD, 10 * ONE_MINUTE, 1 * ONE_MINUTE));
 				assert_ok!(margin_set_accumulate(JPY_EUR, 10 * ONE_MINUTE, 1 * ONE_MINUTE));
@@ -893,7 +893,7 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 				assert_ok!(margin_set_enabled_trades());
-				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
+				assert_ok!(margin_set_spread(EUR_USD, Price::from_fraction(0.03)));
 
 				assert_ok!(margin_set_accumulate(EUR_USD, 10 * ONE_MINUTE, 1 * ONE_MINUTE));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));
@@ -994,7 +994,7 @@ mod tests {
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 				assert_ok!(margin_set_enabled_trades());
-				assert_ok!(margin_set_spread(EUR_USD, cent(3)));
+				assert_ok!(margin_set_spread(EUR_USD, Price::from_fraction(0.03)));
 
 				assert_ok!(margin_set_accumulate(EUR_USD, 10 * ONE_MINUTE, 1 * ONE_MINUTE));
 				assert_ok!(margin_set_min_leveraged_amount(dollar(100)));

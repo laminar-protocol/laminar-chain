@@ -28,7 +28,7 @@ fn test_synthetic_buy_and_sell() {
 				FEUR,
 				Permill::from_percent(10)
 			));
-			assert_ok!(synthetic_set_spread(FEUR, cent(3)));
+			assert_ok!(synthetic_set_spread(FEUR, Price::from_fraction(0.03)));
 			assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 
 			assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
@@ -102,7 +102,7 @@ fn test_synthetic_buy_all_of_collateral() {
 				FEUR,
 				Permill::from_percent(100)
 			));
-			assert_ok!(synthetic_set_spread(FEUR, cent(1)));
+			assert_ok!(synthetic_set_spread(FEUR, Price::from_fraction(0.01)));
 			assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(1, 1))]));
 
 			assert_eq!(collateral_balance(&ALICE::get()), 1000);
@@ -180,7 +180,7 @@ fn test_synthetic_trader_take_profit() {
 				FEUR,
 				Permill::from_percent(10)
 			));
-			assert_ok!(synthetic_set_spread(FEUR, cent(3)));
+			assert_ok!(synthetic_set_spread(FEUR, Price::from_fraction(0.03)));
 			assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 
 			assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
@@ -248,7 +248,7 @@ fn test_synthetic_trader_stop_lost() {
 				FEUR,
 				Permill::from_percent(10)
 			));
-			assert_ok!(synthetic_set_spread(FEUR, cent(3)));
+			assert_ok!(synthetic_set_spread(FEUR, Price::from_fraction(0.03)));
 			assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 
 			assert_eq!(collateral_balance(&ALICE::get()), dollar(10_000));
@@ -317,7 +317,7 @@ fn test_synthetic_multiple_users() {
 				FEUR,
 				Permill::from_percent(10)
 			));
-			assert_ok!(synthetic_set_spread(FEUR, cent(3)));
+			assert_ok!(synthetic_set_spread(FEUR, Price::from_fraction(0.03)));
 			assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 
 			assert_eq!(collateral_balance(&POOL::get()), 0);
@@ -456,8 +456,8 @@ fn test_synthetic_multiple_users_multiple_currencies() {
 				FJPY,
 				Permill::from_percent(10)
 			));
-			assert_ok!(synthetic_set_spread(FEUR, cent(3)));
-			assert_ok!(synthetic_set_spread(FJPY, cent(4)));
+			assert_ok!(synthetic_set_spread(FEUR, Price::from_fraction(0.03)));
+			assert_ok!(synthetic_set_spread(FJPY, Price::from_fraction(0.04)));
 			assert_ok!(set_oracle_price(vec![
 				(FEUR, Price::saturating_from_rational(3, 1)),
 				(FJPY, Price::saturating_from_rational(4, 1))
@@ -607,7 +607,7 @@ fn test_synthetic_liquidate_position() {
 				FEUR,
 				Permill::from_percent(10)
 			));
-			assert_ok!(synthetic_set_spread(FEUR, cent(3)));
+			assert_ok!(synthetic_set_spread(FEUR, Price::from_fraction(0.03)));
 			assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 			assert_eq!(
 				synthetic_pool_state(FEUR),
@@ -657,7 +657,7 @@ fn test_synthetic_add_collateral() {
 				FEUR,
 				Permill::from_percent(1)
 			));
-			assert_ok!(synthetic_set_spread(FEUR, cent(3)));
+			assert_ok!(synthetic_set_spread(FEUR, Price::from_fraction(0.03)));
 			assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 			assert_eq!(
 				synthetic_pool_state(FEUR),
@@ -704,7 +704,7 @@ fn test_synthetic_liquidate_partially() {
 				FEUR,
 				Permill::from_percent(10)
 			));
-			assert_ok!(synthetic_set_spread(FEUR, cent(3)));
+			assert_ok!(synthetic_set_spread(FEUR, Price::from_fraction(0.03)));
 			assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 
 			assert_ok!(synthetic_buy(&ALICE::get(), FEUR, dollar(5000)));
@@ -761,7 +761,7 @@ fn test_synthetic_liquidate_remove() {
 				FEUR,
 				Permill::from_percent(10)
 			));
-			assert_ok!(synthetic_set_spread(FEUR, cent(3)));
+			assert_ok!(synthetic_set_spread(FEUR, Price::from_fraction(0.03)));
 			assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(3, 1))]));
 
 			assert_ok!(synthetic_buy(&ALICE::get(), FEUR, dollar(5000)));
