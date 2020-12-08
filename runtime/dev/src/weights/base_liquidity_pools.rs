@@ -2,6 +2,7 @@
 
 #![allow(unused_parens)]
 #![allow(unused_imports)]
+#![allow(clippy::unnecessary_cast)]
 
 use frame_support::weights::{constants::RocksDbWeight as DbWeight, Weight};
 
@@ -10,48 +11,48 @@ use sp_std::marker::PhantomData;
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> base_liquidity_pools::WeightInfo for WeightInfo<T> {
 	fn create_pool() -> Weight {
-		(62_760_000_u64)
-			.saturating_add(DbWeight::get().reads(5_u64))
-			.saturating_add(DbWeight::get().writes(4_u64))
+		(62_760_000 as Weight)
+			.saturating_add(DbWeight::get().reads(5 as Weight))
+			.saturating_add(DbWeight::get().writes(4 as Weight))
 	}
 	fn disable_pool() -> Weight {
-		(89_374_000_u64)
-			.saturating_add(DbWeight::get().reads(5_u64))
-			.saturating_add(DbWeight::get().writes(2_u64))
+		(89_374_000 as Weight)
+			.saturating_add(DbWeight::get().reads(5 as Weight))
+			.saturating_add(DbWeight::get().writes(2 as Weight))
 	}
 	fn remove_pool() -> Weight {
-		(143_453_000_u64)
-			.saturating_add(DbWeight::get().reads(7_u64))
-			.saturating_add(DbWeight::get().writes(4_u64))
+		(143_453_000 as Weight)
+			.saturating_add(DbWeight::get().reads(7 as Weight))
+			.saturating_add(DbWeight::get().writes(4 as Weight))
 	}
 	fn deposit_liquidity() -> Weight {
-		(166_749_000_u64)
-			.saturating_add(DbWeight::get().reads(7_u64))
-			.saturating_add(DbWeight::get().writes(5_u64))
+		(166_749_000 as Weight)
+			.saturating_add(DbWeight::get().reads(7 as Weight))
+			.saturating_add(DbWeight::get().writes(5 as Weight))
 	}
 	fn withdraw_liquidity() -> Weight {
-		(286_666_000_u64)
-			.saturating_add(DbWeight::get().reads(8_u64))
-			.saturating_add(DbWeight::get().writes(5_u64))
+		(286_666_000 as Weight)
+			.saturating_add(DbWeight::get().reads(8 as Weight))
+			.saturating_add(DbWeight::get().writes(5 as Weight))
 	}
 	fn set_identity() -> Weight {
-		(120_932_000_u64)
-			.saturating_add(DbWeight::get().reads(7_u64))
-			.saturating_add(DbWeight::get().writes(4_u64))
+		(120_932_000 as Weight)
+			.saturating_add(DbWeight::get().reads(7 as Weight))
+			.saturating_add(DbWeight::get().writes(4 as Weight))
 	}
 	fn verify_identity() -> Weight {
-		(68_936_000_u64)
-			.saturating_add(DbWeight::get().reads(5_u64))
-			.saturating_add(DbWeight::get().writes(3_u64))
+		(68_936_000 as Weight)
+			.saturating_add(DbWeight::get().reads(5 as Weight))
+			.saturating_add(DbWeight::get().writes(3 as Weight))
 	}
 	fn clear_identity() -> Weight {
-		(134_464_000_u64)
-			.saturating_add(DbWeight::get().reads(7_u64))
-			.saturating_add(DbWeight::get().writes(4_u64))
+		(134_464_000 as Weight)
+			.saturating_add(DbWeight::get().reads(7 as Weight))
+			.saturating_add(DbWeight::get().writes(4 as Weight))
 	}
 	fn transfer_liquidity_pool() -> Weight {
-		(86_430_000_u64)
-			.saturating_add(DbWeight::get().reads(6_u64))
-			.saturating_add(DbWeight::get().writes(3_u64))
+		(86_430_000 as Weight)
+			.saturating_add(DbWeight::get().reads(6 as Weight))
+			.saturating_add(DbWeight::get().writes(3 as Weight))
 	}
 }

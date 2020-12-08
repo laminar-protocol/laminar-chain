@@ -2,6 +2,7 @@
 
 #![allow(unused_parens)]
 #![allow(unused_imports)]
+#![allow(clippy::unnecessary_cast)]
 
 use frame_support::weights::{constants::RocksDbWeight as DbWeight, Weight};
 
@@ -10,72 +11,72 @@ use sp_std::marker::PhantomData;
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> margin_liquidity_pools::WeightInfo for WeightInfo<T> {
 	fn set_spread() -> Weight {
-		(86_440_000_u64)
-			.saturating_add(DbWeight::get().reads(6_u64))
-			.saturating_add(DbWeight::get().writes(3_u64))
+		(86_440_000 as Weight)
+			.saturating_add(DbWeight::get().reads(6 as Weight))
+			.saturating_add(DbWeight::get().writes(3 as Weight))
 	}
 	fn set_enabled_leverages() -> Weight {
-		(71_972_000_u64)
-			.saturating_add(DbWeight::get().reads(6_u64))
-			.saturating_add(DbWeight::get().writes(3_u64))
+		(71_972_000 as Weight)
+			.saturating_add(DbWeight::get().reads(6 as Weight))
+			.saturating_add(DbWeight::get().writes(3 as Weight))
 	}
 	fn set_swap_rate() -> Weight {
-		(63_306_000_u64)
-			.saturating_add(DbWeight::get().reads(5_u64))
-			.saturating_add(DbWeight::get().writes(3_u64))
+		(63_306_000 as Weight)
+			.saturating_add(DbWeight::get().reads(5 as Weight))
+			.saturating_add(DbWeight::get().writes(3 as Weight))
 	}
 	fn set_additional_swap_rate() -> Weight {
-		(70_844_000_u64)
-			.saturating_add(DbWeight::get().reads(6_u64))
-			.saturating_add(DbWeight::get().writes(3_u64))
+		(70_844_000 as Weight)
+			.saturating_add(DbWeight::get().reads(6 as Weight))
+			.saturating_add(DbWeight::get().writes(3 as Weight))
 	}
 	fn set_max_spread() -> Weight {
-		(63_945_000_u64)
-			.saturating_add(DbWeight::get().reads(5_u64))
-			.saturating_add(DbWeight::get().writes(3_u64))
+		(63_945_000 as Weight)
+			.saturating_add(DbWeight::get().reads(5 as Weight))
+			.saturating_add(DbWeight::get().writes(3 as Weight))
 	}
 	fn set_accumulate_config() -> Weight {
-		(64_648_000_u64)
-			.saturating_add(DbWeight::get().reads(5_u64))
-			.saturating_add(DbWeight::get().writes(3_u64))
+		(64_648_000 as Weight)
+			.saturating_add(DbWeight::get().reads(5 as Weight))
+			.saturating_add(DbWeight::get().writes(3 as Weight))
 	}
 	fn enable_trading_pair() -> Weight {
-		(62_586_000_u64)
-			.saturating_add(DbWeight::get().reads(5_u64))
-			.saturating_add(DbWeight::get().writes(3_u64))
+		(62_586_000 as Weight)
+			.saturating_add(DbWeight::get().reads(5 as Weight))
+			.saturating_add(DbWeight::get().writes(3 as Weight))
 	}
 	fn disable_trading_pair() -> Weight {
-		(65_692_000_u64)
-			.saturating_add(DbWeight::get().reads(5_u64))
-			.saturating_add(DbWeight::get().writes(3_u64))
+		(65_692_000 as Weight)
+			.saturating_add(DbWeight::get().reads(5 as Weight))
+			.saturating_add(DbWeight::get().writes(3 as Weight))
 	}
 	fn liquidity_pool_enable_trading_pair() -> Weight {
-		(167_421_000_u64)
-			.saturating_add(DbWeight::get().reads(9_u64))
-			.saturating_add(DbWeight::get().writes(3_u64))
+		(167_421_000 as Weight)
+			.saturating_add(DbWeight::get().reads(9 as Weight))
+			.saturating_add(DbWeight::get().writes(3 as Weight))
 	}
 	fn liquidity_pool_disable_trading_pair() -> Weight {
-		(125_038_000_u64)
-			.saturating_add(DbWeight::get().reads(6_u64))
-			.saturating_add(DbWeight::get().writes(3_u64))
+		(125_038_000 as Weight)
+			.saturating_add(DbWeight::get().reads(6 as Weight))
+			.saturating_add(DbWeight::get().writes(3 as Weight))
 	}
 	fn set_default_min_leveraged_amount() -> Weight {
-		(68_719_000_u64)
-			.saturating_add(DbWeight::get().reads(4_u64))
-			.saturating_add(DbWeight::get().writes(3_u64))
+		(68_719_000 as Weight)
+			.saturating_add(DbWeight::get().reads(4 as Weight))
+			.saturating_add(DbWeight::get().writes(3 as Weight))
 	}
 	fn set_min_leveraged_amount() -> Weight {
-		(119_069_000_u64)
-			.saturating_add(DbWeight::get().reads(6_u64))
-			.saturating_add(DbWeight::get().writes(3_u64))
+		(119_069_000 as Weight)
+			.saturating_add(DbWeight::get().reads(6 as Weight))
+			.saturating_add(DbWeight::get().writes(3 as Weight))
 	}
 	fn on_initialize(r: u32, w: u32) -> Weight {
-		(245_763_000_u64)
-			.saturating_add((35_620_000_u64).saturating_mul(r as Weight))
-			.saturating_add((92_617_000_u64).saturating_mul(w as Weight))
-			.saturating_add(DbWeight::get().reads(11_u64))
-			.saturating_add(DbWeight::get().reads((1_u64).saturating_mul(r as Weight)))
-			.saturating_add(DbWeight::get().reads((1_u64).saturating_mul(w as Weight)))
-			.saturating_add(DbWeight::get().writes((1_u64).saturating_mul(w as Weight)))
+		(245_763_000 as Weight)
+			.saturating_add((35_620_000 as Weight).saturating_mul(r as Weight))
+			.saturating_add((92_617_000 as Weight).saturating_mul(w as Weight))
+			.saturating_add(DbWeight::get().reads(11 as Weight))
+			.saturating_add(DbWeight::get().reads((1 as Weight).saturating_mul(r as Weight)))
+			.saturating_add(DbWeight::get().reads((1 as Weight).saturating_mul(w as Weight)))
+			.saturating_add(DbWeight::get().writes((1 as Weight).saturating_mul(w as Weight)))
 	}
 }
