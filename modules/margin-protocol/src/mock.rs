@@ -4,7 +4,7 @@
 
 use frame_support::{impl_outer_dispatch, impl_outer_event, impl_outer_origin, ord_parameter_types, parameter_types};
 use frame_system::EnsureSignedBy;
-use orml_traits::{DataProvider, DefaultPriceProvider, parameter_type_with_key};
+use orml_traits::{parameter_type_with_key, DataProvider, DefaultPriceProvider};
 use primitives::{Balance, CurrencyId, LiquidityPoolId, TradingPair};
 use sp_core::H256;
 use sp_runtime::{

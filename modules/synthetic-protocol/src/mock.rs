@@ -9,7 +9,7 @@ use sp_runtime::{testing::Header, traits::IdentityLookup, DispatchResult, Perbil
 use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
 
 use orml_currencies::Currency;
-use orml_traits::{DataProvider, DefaultPriceProvider, parameter_type_with_key};
+use orml_traits::{parameter_type_with_key, DataProvider, DefaultPriceProvider};
 
 use laminar_primitives::LiquidityPoolId;
 use module_traits::{LiquidityPools, SyntheticProtocolLiquidityPools};

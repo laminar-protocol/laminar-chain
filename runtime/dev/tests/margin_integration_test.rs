@@ -7,7 +7,7 @@ mod tests {
 		tests::*,
 		BaseLiquidityPoolsMarginInstance,
 		CurrencyId::{AUSD, FEUR, FJPY},
-		TreasuryAccount, MaxSwap, Runtime, DOLLARS,
+		MaxSwap, Runtime, TreasuryAccount, DOLLARS,
 	};
 	use frame_support::{assert_noop, assert_ok};
 
