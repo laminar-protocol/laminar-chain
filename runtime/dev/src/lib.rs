@@ -31,7 +31,7 @@ use sp_runtime::{
 	create_runtime_str,
 	curve::PiecewiseLinear,
 	generic, impl_opaque_keys,
-	traits::{Extrinsic, Saturating, Verify},
+	traits::{Extrinsic, Saturating, Verify, Zero},
 	transaction_validity::{TransactionPriority, TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, DispatchResult, FixedPointNumber, ModuleId,
 };
@@ -42,7 +42,9 @@ use sp_version::RuntimeVersion;
 
 pub use frame_system::{Call as SystemCall, EnsureOneOf, EnsureRoot};
 use orml_currencies::BasicCurrencyAdapter;
-use orml_traits::{create_median_value_data_provider, DataFeeder, DataProvider, DataProviderExtended};
+use orml_traits::{
+	create_median_value_data_provider, parameter_type_with_key, DataFeeder, DataProvider, DataProviderExtended,
+};
 pub use primitives::{
 	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, DataProviderId, EraIndex, Hash, LiquidityPoolId,
 	Moment, Nonce, Price, Signature,
@@ -139,7 +141,7 @@ parameter_types! {
 	pub const Version: RuntimeVersion = VERSION;
 }
 
-impl frame_system::Trait for Runtime {
+impl frame_system::Config for Runtime {
 	type BaseCallFilter = BaseFilter;
 	/// The identifier used to distinguish between accounts.
 	type AccountId = AccountId;
@@ -195,7 +197,7 @@ impl frame_system::Trait for Runtime {
 	type SystemWeightInfo = ();
 }
 
-impl pallet_utility::Trait for Runtime {
+impl pallet_utility::Config for Runtime {
 	type Event = Event;
 	type Call = Call;
 	type WeightInfo = ();
@@ -214,7 +216,7 @@ parameter_types! {
 	pub const MaxSignatories: u16 = 100;
 }
 
-impl pallet_multisig::Trait for Runtime {
+impl pallet_multisig::Config for Runtime {
 	type Event = Event;
 	type Call = Call;
 	type Currency = Balances;
@@ -224,7 +226,7 @@ impl pallet_multisig::Trait for Runtime {
 	type WeightInfo = ();
 }
 
-impl pallet_babe::Trait for Runtime {
+impl pallet_babe::Config for Runtime {
 	type EpochDuration = EpochDuration;
 	type ExpectedBlockTime = ExpectedBlockTime;
 	type EpochChangeTrigger = pallet_babe::ExternalTrigger;
@@ -237,7 +239,7 @@ impl pallet_babe::Trait for Runtime {
 	type WeightInfo = ();
 }
 
-impl pallet_grandpa::Trait for Runtime {
+impl pallet_grandpa::Config for Runtime {
 	type Event = Event;
 	type Call = Call;
 	type KeyOwnerProofSystem = Historical;
@@ -253,7 +255,7 @@ parameter_types! {
 	pub const IndexDeposit: Balance = DOLLARS;
 }
 
-impl pallet_indices::Trait for Runtime {
+impl pallet_indices::Config for Runtime {
 	/// The type for recording indexing into the account enumeration. If this ever overflows, there
 	/// will be problems!
 	type AccountIndex = AccountIndex;
@@ -270,7 +272,7 @@ parameter_types! {
 	pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
 }
 
-impl pallet_timestamp::Trait for Runtime {
+impl pallet_timestamp::Config for Runtime {
 	/// A timestamp: milliseconds since the unix epoch.
 	type Moment = Moment;
 	type OnTimestampSet = Babe;
@@ -282,7 +284,7 @@ parameter_types! {
 	pub const UncleGenerations: BlockNumber = 5;
 }
 
-impl pallet_authorship::Trait for Runtime {
+impl pallet_authorship::Config for Runtime {
 	type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Babe>;
 	type UncleGenerations = UncleGenerations;
 	type FilterUncle = ();
@@ -296,7 +298,7 @@ parameter_types! {
 	pub const MaxLocks: u32 = 50;
 }
 
-impl pallet_balances::Trait for Runtime {
+impl pallet_balances::Config for Runtime {
 	/// The type for recording an account's balance.
 	type Balance = Balance;
 	type DustRemoval = ();
@@ -312,14 +314,14 @@ parameter_types! {
 	pub const TransactionByteFee: Balance = 10 * MILLICENTS;
 }
 
-impl pallet_transaction_payment::Trait for Runtime {
+impl pallet_transaction_payment::Config for Runtime {
 	type OnChargeTransaction = CurrencyAdapter<Balances, ()>;
 	type TransactionByteFee = TransactionByteFee;
 	type WeightToFee = WeightToFee;
 	type FeeMultiplierUpdate = ();
 }
 
-impl pallet_sudo::Trait for Runtime {
+impl pallet_sudo::Config for Runtime {
 	type Event = Event;
 	type Call = Call;
 }
@@ -334,7 +336,7 @@ parameter_types! {
 	pub OffencesWeightSoftLimit: Weight = Perbill::from_percent(60) * MaximumBlockWeight::get();
 }
 
-impl pallet_offences::Trait for Runtime {
+impl pallet_offences::Config for Runtime {
 	type Event = Event;
 	type IdentificationTuple = pallet_session::historical::IdentificationTuple<Self>;
 	type OnOffenceHandler = Staking;
@@ -348,7 +350,7 @@ parameter_types! {
 }
 
 type GeneralCouncilInstance = pallet_collective::Instance1;
-impl pallet_collective::Trait<GeneralCouncilInstance> for Runtime {
+impl pallet_collective::Config<GeneralCouncilInstance> for Runtime {
 	type Origin = Origin;
 	type Proposal = Call;
 	type Event = Event;
@@ -366,7 +368,7 @@ type EnsureHalfGeneralCouncilOrRoot =
 	EnsureOneOf<AccountId, EnsureProportionMoreThan<_1, _2, AccountId, GeneralCouncilInstance>, EnsureRoot<AccountId>>;
 
 type GeneralCouncilMembershipInstance = pallet_membership::Instance1;
-impl pallet_membership::Trait<GeneralCouncilMembershipInstance> for Runtime {
+impl pallet_membership::Config<GeneralCouncilMembershipInstance> for Runtime {
 	type Event = Event;
 	type AddOrigin = EnsureThreeFourthGeneralCouncilOrRoot;
 	type RemoveOrigin = EnsureThreeFourthGeneralCouncilOrRoot;
@@ -383,7 +385,7 @@ parameter_types! {
 }
 
 type FinancialCouncilInstance = pallet_collective::Instance2;
-impl pallet_collective::Trait<FinancialCouncilInstance> for Runtime {
+impl pallet_collective::Config<FinancialCouncilInstance> for Runtime {
 	type Origin = Origin;
 	type Proposal = Call;
 	type Event = Event;
@@ -401,7 +403,7 @@ type EnsureHalfFinancialCouncilOrRoot = EnsureOneOf<
 >;
 
 type FinancialCouncilMembershipInstance = pallet_membership::Instance2;
-impl pallet_membership::Trait<FinancialCouncilMembershipInstance> for Runtime {
+impl pallet_membership::Config<FinancialCouncilMembershipInstance> for Runtime {
 	type Event = Event;
 	type AddOrigin = EnsureHalfFinancialCouncilOrRoot;
 	type RemoveOrigin = EnsureHalfFinancialCouncilOrRoot;
@@ -413,7 +415,7 @@ impl pallet_membership::Trait<FinancialCouncilMembershipInstance> for Runtime {
 }
 
 type OperatorMembershipInstanceLaminar = pallet_membership::Instance3;
-impl pallet_membership::Trait<OperatorMembershipInstanceLaminar> for Runtime {
+impl pallet_membership::Config<OperatorMembershipInstanceLaminar> for Runtime {
 	type Event = Event;
 	type AddOrigin = EnsureHalfFinancialCouncilOrRoot;
 	type RemoveOrigin = EnsureHalfFinancialCouncilOrRoot;
@@ -425,7 +427,7 @@ impl pallet_membership::Trait<OperatorMembershipInstanceLaminar> for Runtime {
 }
 
 type OperatorMembershipInstanceBand = pallet_membership::Instance4;
-impl pallet_membership::Trait<OperatorMembershipInstanceBand> for Runtime {
+impl pallet_membership::Config<OperatorMembershipInstanceBand> for Runtime {
 	type Event = Event;
 	type AddOrigin = EnsureHalfFinancialCouncilOrRoot;
 	type RemoveOrigin = EnsureHalfFinancialCouncilOrRoot;
@@ -477,7 +479,7 @@ parameter_types! {
 	pub const MaximumReasonLength: u32 = 16384;
 }
 
-impl pallet_treasury::Trait for Runtime {
+impl pallet_treasury::Config for Runtime {
 	type ModuleId = TreasuryModuleId;
 	type Currency = Balances;
 	type ApproveOrigin =
@@ -509,9 +511,9 @@ parameter_types! {
 	pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(17);
 }
 
-impl pallet_session::Trait for Runtime {
+impl pallet_session::Config for Runtime {
 	type Event = Event;
-	type ValidatorId = <Self as frame_system::Trait>::AccountId;
+	type ValidatorId = <Self as frame_system::Config>::AccountId;
 	type ValidatorIdOf = pallet_staking::StashOf<Self>;
 	type ShouldEndSession = Babe;
 	type SessionManager = pallet_session::historical::NoteHistoricalRoot<Self, Staking>;
@@ -522,7 +524,7 @@ impl pallet_session::Trait for Runtime {
 	type WeightInfo = ();
 }
 
-impl pallet_session::historical::Trait for Runtime {
+impl pallet_session::historical::Config for Runtime {
 	type FullIdentification = pallet_staking::Exposure<AccountId, Balance>;
 	type FullIdentificationOf = pallet_staking::ExposureOf<Runtime>;
 }
@@ -553,7 +555,7 @@ parameter_types! {
 		.saturating_sub(ExtrinsicBaseWeight::get());
 }
 
-impl pallet_staking::Trait for Runtime {
+impl pallet_staking::Config for Runtime {
 	type Currency = Balances;
 	type UnixTime = Timestamp;
 	type CurrencyToVote = U128CurrencyToVote;
@@ -586,7 +588,7 @@ parameter_types! {
 }
 
 type LaminarDataProvider = orml_oracle::Instance1;
-impl orml_oracle::Trait<LaminarDataProvider> for Runtime {
+impl orml_oracle::Config<LaminarDataProvider> for Runtime {
 	type Event = Event;
 	type OnNewData = ();
 	type CombineData = orml_oracle::DefaultCombineData<Runtime, MinimumCount, ExpiresIn, LaminarDataProvider>;
@@ -598,7 +600,7 @@ impl orml_oracle::Trait<LaminarDataProvider> for Runtime {
 }
 
 type BandDataProvider = orml_oracle::Instance2;
-impl orml_oracle::Trait<BandDataProvider> for Runtime {
+impl orml_oracle::Config<BandDataProvider> for Runtime {
 	type Event = Event;
 	type OnNewData = ();
 	type CombineData = orml_oracle::DefaultCombineData<Runtime, MinimumCount, ExpiresIn, BandDataProvider>;
@@ -623,13 +625,20 @@ impl DataFeeder<CurrencyId, Price, AccountId> for AggregatedDataProvider {
 	}
 }
 
-impl orml_tokens::Trait for Runtime {
+parameter_type_with_key! {
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		Zero::zero()
+	};
+}
+
+impl orml_tokens::Config for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
-	type OnReceived = ();
 	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = orml_tokens::TransferDust<Runtime, TreasuryAccount>;
 }
 
 parameter_types! {
@@ -652,7 +661,7 @@ parameter_types! {
 
 pub type LaminarToken = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
 
-impl orml_currencies::Trait for Runtime {
+impl orml_currencies::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = orml_tokens::Module<Runtime>;
 	type NativeCurrency = LaminarToken;
@@ -669,7 +678,7 @@ impl DataProvider<CurrencyId, Price> for WrappedLaminarDataProvider {
 		}
 	}
 }
-impl synthetic_tokens::Trait for Runtime {
+impl synthetic_tokens::Config for Runtime {
 	type Event = Event;
 	type DefaultExtremeRatio = DefaultExtremeRatio;
 	type DefaultLiquidationRatio = DefaultLiquidationRatio;
@@ -693,7 +702,7 @@ parameter_types! {
 	pub const IdentityDeposit: Balance = 10_000 * DOLLARS;
 }
 
-impl base_liquidity_pools::Trait<BaseLiquidityPoolsMarginInstance> for Runtime {
+impl base_liquidity_pools::Config<BaseLiquidityPoolsMarginInstance> for Runtime {
 	type Event = Event;
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = MarginProtocol;
@@ -711,7 +720,7 @@ pub type BaseLiquidityPoolsSyntheticInstance = base_liquidity_pools::Instance2;
 parameter_types! {
 	pub const SyntheticLiquidityPoolsModuleId: ModuleId = synthetic_liquidity_pools::MODULE_ID;
 }
-impl base_liquidity_pools::Trait<BaseLiquidityPoolsSyntheticInstance> for Runtime {
+impl base_liquidity_pools::Config<BaseLiquidityPoolsSyntheticInstance> for Runtime {
 	type Event = Event;
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = SyntheticTokens;
@@ -725,7 +734,7 @@ impl base_liquidity_pools::Trait<BaseLiquidityPoolsSyntheticInstance> for Runtim
 	type WeightInfo = weights::base_liquidity_pools::WeightInfo<Runtime>;
 }
 
-impl margin_liquidity_pools::Trait for Runtime {
+impl margin_liquidity_pools::Config for Runtime {
 	type Event = Event;
 	type BaseLiquidityPools = BaseLiquidityPoolsForMargin;
 	type PoolManager = MarginProtocol;
@@ -736,7 +745,7 @@ impl margin_liquidity_pools::Trait for Runtime {
 	type WeightInfo = weights::margin_liquidity_pools::WeightInfo<Runtime>;
 }
 
-impl synthetic_liquidity_pools::Trait for Runtime {
+impl synthetic_liquidity_pools::Config for Runtime {
 	type Event = Event;
 	type BaseLiquidityPools = BaseLiquidityPoolsForSynthetic;
 	type UpdateOrigin = EnsureHalfFinancialCouncilOrRoot;
@@ -747,7 +756,7 @@ parameter_types! {
 	pub const GetCollateralCurrencyId: CurrencyId = CurrencyId::AUSD;
 }
 type CollateralCurrency = orml_currencies::Currency<Runtime, GetCollateralCurrencyId>;
-impl synthetic_protocol::Trait for Runtime {
+impl synthetic_protocol::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type CollateralCurrency = CollateralCurrency;
@@ -816,15 +825,15 @@ where
 parameter_types! {
 	pub const GetTraderMaxOpenPositions: usize = 200;
 	pub const GetPoolMaxOpenPositions: usize = 1000;
-	pub GetTreasuryAccountId: AccountId = pallet_treasury::Module::<Runtime>::account_id();
+	pub TreasuryAccount: AccountId = pallet_treasury::Module::<Runtime>::account_id();
 }
 
-impl margin_protocol::Trait for Runtime {
+impl margin_protocol::Config for Runtime {
 	type Event = Event;
 	type LiquidityCurrency = LiquidityCurrency;
 	type LiquidityPools = margin_liquidity_pools::Module<Runtime>;
 	type PriceProvider = orml_traits::DefaultPriceProvider<CurrencyId, WrappedLaminarDataProvider>;
-	type GetTreasuryAccountId = GetTreasuryAccountId;
+	type GetTreasuryAccountId = TreasuryAccount;
 	type GetTraderMaxOpenPositions = GetTraderMaxOpenPositions;
 	type GetPoolMaxOpenPositions = GetPoolMaxOpenPositions;
 	type UpdateOrigin = EnsureHalfFinancialCouncilOrRoot;

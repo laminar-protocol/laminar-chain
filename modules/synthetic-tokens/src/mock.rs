@@ -43,7 +43,7 @@ parameter_types! {
 }
 
 type AccountId = u64;
-impl frame_system::Trait for Runtime {
+impl frame_system::Config for Runtime {
 	type Origin = Origin;
 	type Call = ();
 	type Index = u64;
@@ -72,7 +72,7 @@ impl frame_system::Trait for Runtime {
 }
 pub type System = frame_system::Module<Runtime>;
 
-impl Trait for Runtime {
+impl Config for Runtime {
 	type Event = TestEvent;
 	type SyntheticCurrencyIds = SyntheticCurrencyIds;
 	type DefaultExtremeRatio = DefaultExtremeRatio;

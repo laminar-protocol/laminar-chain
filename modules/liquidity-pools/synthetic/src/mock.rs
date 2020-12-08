@@ -7,11 +7,12 @@ use frame_system::EnsureSignedBy;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup},
+	traits::{BlakeTwo256, IdentityLookup, Zero},
 	Perbill,
 };
 
 use orml_currencies::Currency;
+use orml_traits::parameter_type_with_key;
 use primitives::{Balance, CurrencyId, LiquidityPoolId};
 use traits::BaseLiquidityPoolManager;
 
@@ -38,7 +39,7 @@ parameter_types! {
 	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
 
-impl frame_system::Trait for Runtime {
+impl frame_system::Config for Runtime {
 	type Origin = Origin;
 	type Call = ();
 	type Index = u64;
@@ -72,7 +73,7 @@ parameter_types! {
 	pub const GetLiquidityCurrencyId: CurrencyId = CurrencyId::AUSD;
 }
 
-impl pallet_balances::Trait for Runtime {
+impl pallet_balances::Config for Runtime {
 	type Balance = Balance;
 	type DustRemoval = ();
 	type Event = ();
@@ -85,7 +86,7 @@ impl pallet_balances::Trait for Runtime {
 type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
 pub type LiquidityCurrency = orml_currencies::Currency<Runtime, GetLiquidityCurrencyId>;
 
-impl orml_currencies::Trait for Runtime {
+impl orml_currencies::Config for Runtime {
 	type Event = ();
 	type MultiCurrency = orml_tokens::Module<Runtime>;
 	type NativeCurrency = NativeCurrency;
@@ -93,14 +94,25 @@ impl orml_currencies::Trait for Runtime {
 	type WeightInfo = ();
 }
 
+parameter_type_with_key! {
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		Zero::zero()
+	};
+}
+
+parameter_types! {
+	pub TreasuryAccount: AccountId = 1;
+}
+
 type Amount = i128;
-impl orml_tokens::Trait for Runtime {
+impl orml_tokens::Config for Runtime {
 	type Event = ();
 	type Balance = Balance;
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
-	type OnReceived = ();
 	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = orml_tokens::TransferDust<Runtime, TreasuryAccount>;
 }
 
 pub struct PoolManager;
@@ -121,7 +133,7 @@ parameter_types! {
 
 pub type SyntheticInstance = module_base_liquidity_pools::Instance1;
 
-impl module_base_liquidity_pools::Trait<SyntheticInstance> for Runtime {
+impl module_base_liquidity_pools::Config<SyntheticInstance> for Runtime {
 	type Event = ();
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = PoolManager;
@@ -136,7 +148,7 @@ impl module_base_liquidity_pools::Trait<SyntheticInstance> for Runtime {
 }
 pub type BaseLiquidityPools = module_base_liquidity_pools::Module<Runtime, SyntheticInstance>;
 
-impl Trait for Runtime {
+impl Config for Runtime {
 	type Event = ();
 	type BaseLiquidityPools = module_base_liquidity_pools::Module<Runtime, SyntheticInstance>;
 	type UpdateOrigin = EnsureSignedBy<UpdateOrigin, AccountId>;

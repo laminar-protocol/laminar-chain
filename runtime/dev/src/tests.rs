@@ -3,7 +3,7 @@
 use super::*;
 
 use crate::{
-	AccountId,
+	AccountId, Address,
 	CurrencyId::{self, AUSD, FEUR},
 	LiquidityPoolId, Moment, Runtime, DOLLARS,
 };
@@ -16,7 +16,6 @@ use margin_protocol::RiskThreshold;
 use margin_protocol_rpc_runtime_api::runtime_decl_for_MarginProtocolApi::MarginProtocolApi;
 use module_traits::LiquidityPools;
 use orml_traits::{BasicCurrency, MultiCurrency, PriceProvider};
-use pallet_indices::address::Address;
 use primitives::{Balance, IdentityInfo, Leverage, Leverages, Price, SwapRate, TradingPair};
 use sp_arithmetic::{FixedI128, FixedPointNumber};
 use sp_runtime::{DispatchResult, Permill};
@@ -64,8 +63,8 @@ parameter_types! {
 	pub BOB: AccountId = AccountId::from([2u8; 32]);
 }
 
-pub fn origin_of(who: &AccountId) -> <Runtime as frame_system::Trait>::Origin {
-	<Runtime as frame_system::Trait>::Origin::signed((*who).clone())
+pub fn origin_of(who: &AccountId) -> <Runtime as frame_system::Config>::Origin {
+	<Runtime as frame_system::Config>::Origin::signed((*who).clone())
 }
 
 pub struct ExtBuilder {
@@ -144,7 +143,7 @@ pub fn set_oracle_price(prices: Vec<(CurrencyId, Price)>) -> DispatchResult {
 	ModuleOracle::on_finalize(now);
 	// TODO: iterate all operators and feed each of them
 	assert_ok!(ModuleOracle::feed_values(
-		<Runtime as frame_system::Trait>::Origin::root(),
+		<Runtime as frame_system::Config>::Origin::root(),
 		prices,
 	));
 	get_price();
@@ -172,7 +171,7 @@ pub fn negative_one_percent() -> FixedI128 {
 }
 
 pub fn multi_currency_balance(who: &AccountId, currency_id: CurrencyId) -> Balance {
-	<Runtime as synthetic_protocol::Trait>::MultiCurrency::free_balance(currency_id, &who)
+	<Runtime as synthetic_protocol::Config>::MultiCurrency::free_balance(currency_id, &who)
 }
 
 pub fn native_currency_balance(who: &AccountId) -> Balance {
@@ -206,7 +205,7 @@ pub fn synthetic_set_identity() -> DispatchResult {
 
 pub fn synthetic_verify_identity() -> DispatchResult {
 	BaseLiquidityPoolsForSynthetic::verify_identity(
-		<Runtime as frame_system::Trait>::Origin::root(),
+		<Runtime as frame_system::Config>::Origin::root(),
 		LIQUIDITY_POOL_ID_0,
 	)
 }
@@ -259,16 +258,16 @@ pub fn synthetic_sell(who: &AccountId, currency_id: CurrencyId, amount: Balance)
 
 // AUSD balance
 pub fn collateral_balance(who: &AccountId) -> Balance {
-	<Runtime as synthetic_protocol::Trait>::CollateralCurrency::free_balance(&who)
+	<Runtime as synthetic_protocol::Config>::CollateralCurrency::free_balance(&who)
 }
 
 pub fn synthetic_balance() -> Balance {
-	<Runtime as synthetic_protocol::Trait>::CollateralCurrency::free_balance(&ModuleTokens::account_id())
+	<Runtime as synthetic_protocol::Config>::CollateralCurrency::free_balance(&ModuleTokens::account_id())
 }
 
 pub fn synthetic_set_min_additional_collateral_ratio(permill: Permill) -> DispatchResult {
 	SyntheticLiquidityPools::set_min_additional_collateral_ratio(
-		<Runtime as frame_system::Trait>::Origin::root(),
+		<Runtime as frame_system::Config>::Origin::root(),
 		permill,
 	)
 }
@@ -350,7 +349,7 @@ pub fn margin_set_spread(pair: TradingPair, spread: Price) -> DispatchResult {
 
 pub fn margin_set_accumulate(pair: TradingPair, frequency: Moment, offset: Moment) -> DispatchResult {
 	MarginLiquidityPools::set_accumulate_config(
-		<Runtime as frame_system::Trait>::Origin::root(),
+		<Runtime as frame_system::Config>::Origin::root(),
 		pair,
 		frequency,
 		offset,
@@ -358,11 +357,11 @@ pub fn margin_set_accumulate(pair: TradingPair, frequency: Moment, offset: Momen
 }
 
 pub fn margin_enable_trading_pair(pair: TradingPair) -> DispatchResult {
-	MarginLiquidityPools::enable_trading_pair(<Runtime as frame_system::Trait>::Origin::root(), pair)
+	MarginLiquidityPools::enable_trading_pair(<Runtime as frame_system::Config>::Origin::root(), pair)
 }
 
 pub fn margin_disable_trading_pair(pair: TradingPair) -> DispatchResult {
-	MarginLiquidityPools::disable_trading_pair(<Runtime as frame_system::Trait>::Origin::root(), pair)
+	MarginLiquidityPools::disable_trading_pair(<Runtime as frame_system::Config>::Origin::root(), pair)
 }
 
 pub fn margin_liquidity_pool_enable_trading_pair(pair: TradingPair) -> DispatchResult {
@@ -379,7 +378,7 @@ pub fn margin_set_mock_swap_rate(pair: TradingPair) -> DispatchResult {
 		short: FixedI128::reciprocal(FixedI128::saturating_from_integer(100)).unwrap(),
 	};
 
-	MarginLiquidityPools::set_swap_rate(<Runtime as frame_system::Trait>::Origin::root(), pair, mock_swap_rate)
+	MarginLiquidityPools::set_swap_rate(<Runtime as frame_system::Config>::Origin::root(), pair, mock_swap_rate)
 }
 
 pub fn margin_set_swap_rate(pair: TradingPair, long_rate: FixedI128, short_rate: FixedI128) -> DispatchResult {
@@ -387,7 +386,7 @@ pub fn margin_set_swap_rate(pair: TradingPair, long_rate: FixedI128, short_rate:
 		long: long_rate,
 		short: short_rate,
 	};
-	MarginLiquidityPools::set_swap_rate(<Runtime as frame_system::Trait>::Origin::root(), pair, swap_rate)
+	MarginLiquidityPools::set_swap_rate(<Runtime as frame_system::Config>::Origin::root(), pair, swap_rate)
 }
 
 pub fn margin_set_additional_swap(rate: FixedI128) -> DispatchResult {
@@ -395,7 +394,7 @@ pub fn margin_set_additional_swap(rate: FixedI128) -> DispatchResult {
 }
 
 pub fn margin_set_max_spread(pair: TradingPair, max_spread: Price) -> DispatchResult {
-	MarginLiquidityPools::set_max_spread(<Runtime as frame_system::Trait>::Origin::root(), pair, max_spread)
+	MarginLiquidityPools::set_max_spread(<Runtime as frame_system::Config>::Origin::root(), pair, max_spread)
 }
 
 pub fn margin_set_min_leveraged_amount(amount: Balance) -> DispatchResult {
@@ -403,7 +402,7 @@ pub fn margin_set_min_leveraged_amount(amount: Balance) -> DispatchResult {
 }
 
 pub fn margin_set_default_min_leveraged_amount(amount: Balance) -> DispatchResult {
-	MarginLiquidityPools::set_default_min_leveraged_amount(<Runtime as frame_system::Trait>::Origin::root(), amount)
+	MarginLiquidityPools::set_default_min_leveraged_amount(<Runtime as frame_system::Config>::Origin::root(), amount)
 }
 
 pub fn margin_balance(who: &AccountId) -> FixedI128 {
@@ -442,7 +441,7 @@ pub fn margin_pool_required_deposit() -> FixedI128 {
 
 pub fn margin_trader_margin_call(who: &AccountId) -> DispatchResult {
 	ModuleMarginProtocol::trader_margin_call(
-		<Runtime as frame_system::Trait>::Origin::none(),
+		<Runtime as frame_system::Config>::Origin::none(),
 		Address::from(who.clone()),
 		LIQUIDITY_POOL_ID_0,
 	)
@@ -450,7 +449,7 @@ pub fn margin_trader_margin_call(who: &AccountId) -> DispatchResult {
 
 pub fn margin_trader_become_safe(who: &AccountId) -> DispatchResult {
 	ModuleMarginProtocol::trader_become_safe(
-		<Runtime as frame_system::Trait>::Origin::none(),
+		<Runtime as frame_system::Config>::Origin::none(),
 		Address::from(who.clone()),
 		LIQUIDITY_POOL_ID_0,
 	)
@@ -458,7 +457,7 @@ pub fn margin_trader_become_safe(who: &AccountId) -> DispatchResult {
 
 pub fn margin_trader_stop_out(who: &AccountId) -> DispatchResult {
 	ModuleMarginProtocol::trader_stop_out(
-		<Runtime as frame_system::Trait>::Origin::none(),
+		<Runtime as frame_system::Config>::Origin::none(),
 		Address::from(who.clone()),
 		LIQUIDITY_POOL_ID_0,
 	)
@@ -466,21 +465,21 @@ pub fn margin_trader_stop_out(who: &AccountId) -> DispatchResult {
 
 pub fn margin_liquidity_pool_margin_call() -> DispatchResult {
 	ModuleMarginProtocol::liquidity_pool_margin_call(
-		<Runtime as frame_system::Trait>::Origin::none(),
+		<Runtime as frame_system::Config>::Origin::none(),
 		LIQUIDITY_POOL_ID_0,
 	)
 }
 
 pub fn margin_liquidity_pool_become_safe() -> DispatchResult {
 	ModuleMarginProtocol::liquidity_pool_become_safe(
-		<Runtime as frame_system::Trait>::Origin::none(),
+		<Runtime as frame_system::Config>::Origin::none(),
 		LIQUIDITY_POOL_ID_0,
 	)
 }
 
 pub fn margin_liquidity_pool_force_close() -> DispatchResult {
 	ModuleMarginProtocol::liquidity_pool_force_close(
-		<Runtime as frame_system::Trait>::Origin::none(),
+		<Runtime as frame_system::Config>::Origin::none(),
 		LIQUIDITY_POOL_ID_0,
 	)
 }
@@ -520,7 +519,7 @@ pub fn margin_set_risk_threshold(
 	ell: Option<RiskThreshold>,
 ) -> DispatchResult {
 	ModuleMarginProtocol::set_trading_pair_risk_threshold(
-		<Runtime as frame_system::Trait>::Origin::root(),
+		<Runtime as frame_system::Config>::Origin::root(),
 		pair,
 		trader,
 		enp,
@@ -529,8 +528,8 @@ pub fn margin_set_risk_threshold(
 }
 
 pub fn treasury_balance() -> Balance {
-	let account_id = GetTreasuryAccountId::get();
-	<Runtime as synthetic_protocol::Trait>::CollateralCurrency::free_balance(&account_id)
+	let account_id = TreasuryAccount::get();
+	<Runtime as synthetic_protocol::Config>::CollateralCurrency::free_balance(&account_id)
 }
 
 pub fn margin_trader_state(who: &AccountId) -> MarginTraderState {
@@ -554,7 +553,7 @@ pub fn margin_set_identity() -> DispatchResult {
 }
 
 pub fn margin_verify_identity() -> DispatchResult {
-	BaseLiquidityPoolsForMargin::verify_identity(<Runtime as frame_system::Trait>::Origin::root(), LIQUIDITY_POOL_ID_0)
+	BaseLiquidityPoolsForMargin::verify_identity(<Runtime as frame_system::Config>::Origin::root(), LIQUIDITY_POOL_ID_0)
 }
 
 pub fn margin_clear_identity() -> DispatchResult {

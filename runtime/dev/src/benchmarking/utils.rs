@@ -9,8 +9,8 @@ use sp_runtime::{
 	DispatchResult,
 };
 
-pub fn lookup_of_account(who: AccountId) -> <<Runtime as frame_system::Trait>::Lookup as StaticLookup>::Source {
-	<Runtime as frame_system::Trait>::Lookup::unlookup(who)
+pub fn lookup_of_account(who: AccountId) -> <<Runtime as frame_system::Config>::Lookup as StaticLookup>::Source {
+	<Runtime as frame_system::Config>::Lookup::unlookup(who)
 }
 
 pub fn set_balance(currency_id: CurrencyId, who: &AccountId, balance: Balance) -> DispatchResult {
@@ -30,7 +30,7 @@ type Prices = orml_traits::DefaultPriceProvider<CurrencyId, Oracle>;
 pub fn set_price(prices: sp_std::vec::Vec<(CurrencyId, Price)>) -> DispatchResult {
 	Oracle::on_finalize(0);
 	for _ in 0..MinimumCount::get() {
-		Oracle::feed_values(<Runtime as frame_system::Trait>::Origin::root(), prices.clone()).map_err(|e| e.error)?;
+		Oracle::feed_values(<Runtime as frame_system::Config>::Origin::root(), prices.clone()).map_err(|e| e.error)?;
 	}
 	Prices::get_price(CurrencyId::FEUR, CurrencyId::AUSD);
 

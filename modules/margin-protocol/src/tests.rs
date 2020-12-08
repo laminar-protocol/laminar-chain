@@ -2316,7 +2316,7 @@ fn trader_open_positions_limit() {
 				<PositionsByTrader<Runtime>>::iter_prefix(&ALICE)
 					.filter(|((p, _), _)| *p == MOCK_POOL)
 					.count(),
-				<Runtime as Trait>::GetTraderMaxOpenPositions::get()
+				<Runtime as Config>::GetTraderMaxOpenPositions::get()
 			);
 
 			// try open another position
@@ -2377,12 +2377,12 @@ fn pool_open_positions_limit() {
 				PositionsByPool::iter_prefix(MOCK_POOL)
 					.filter(|((p, _), _)| *p == EUR_USD_PAIR)
 					.count(),
-				<Runtime as Trait>::GetTraderMaxOpenPositions::get()
+				<Runtime as Config>::GetTraderMaxOpenPositions::get()
 			);
 
 			assert_eq!(
 				PositionsSnapshots::get(MOCK_POOL, EUR_USD_PAIR).positions_count as usize,
-				<Runtime as Trait>::GetTraderMaxOpenPositions::get()
+				<Runtime as Config>::GetTraderMaxOpenPositions::get()
 			);
 
 			// try open another position

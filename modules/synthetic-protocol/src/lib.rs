@@ -30,9 +30,9 @@ pub trait WeightInfo {
 	fn withdraw_collateral() -> Weight;
 }
 
-pub trait Trait: module_synthetic_tokens::Trait {
+pub trait Config: module_synthetic_tokens::Config {
 	/// The overarching event type.
-	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
 	/// The `MultiCurrency` implementation for synthetic.
 	type MultiCurrency: MultiCurrency<Self::AccountId, Balance = Balance, CurrencyId = CurrencyId>;
@@ -57,12 +57,12 @@ pub trait Trait: module_synthetic_tokens::Trait {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as SyntheticProtocol {}
+	trait Store for Module<T: Config> as SyntheticProtocol {}
 }
 
 decl_event! {
 	pub enum Event<T> where
-		<T as frame_system::Trait>::AccountId,
+		<T as frame_system::Config>::AccountId,
 	{
 		/// Synthetic token minted: \[who, synthetic_currency_id, pool_id, collateral_amount, synthetic_amount\]
 		Minted(AccountId, CurrencyId, LiquidityPoolId, Balance, Balance),
@@ -82,7 +82,7 @@ decl_event! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
@@ -90,7 +90,7 @@ decl_module! {
 		const GetCollateralCurrencyId: CurrencyId = T::GetCollateralCurrencyId::get();
 
 		/// Mint synthetic tokens.
-		#[weight = <T as Trait>::WeightInfo::mint()]
+		#[weight = <T as Config>::WeightInfo::mint()]
 		pub fn mint(
 			origin,
 			#[compact] pool_id: LiquidityPoolId,
@@ -107,7 +107,7 @@ decl_module! {
 		}
 
 		/// Redeem collateral.
-		#[weight = <T as Trait>::WeightInfo::redeem()]
+		#[weight = <T as Config>::WeightInfo::redeem()]
 		pub fn redeem(
 			origin,
 			#[compact] pool_id: LiquidityPoolId,
@@ -124,7 +124,7 @@ decl_module! {
 		}
 
 		/// Liquidite `currency_id` in `pool_id` by `synthetic_amount`.
-		#[weight = (<T as Trait>::WeightInfo::liquidate(), DispatchClass::Operational)]
+		#[weight = (<T as Config>::WeightInfo::liquidate(), DispatchClass::Operational)]
 		pub fn liquidate(
 			origin,
 			#[compact] pool_id: LiquidityPoolId,
@@ -140,7 +140,7 @@ decl_module! {
 		}
 
 		/// Add collateral to `currency_id` in `pool_id` by `collateral_amount`.
-		#[weight = (<T as Trait>::WeightInfo::add_collateral(), DispatchClass::Operational)]
+		#[weight = (<T as Config>::WeightInfo::add_collateral(), DispatchClass::Operational)]
 		pub fn add_collateral(
 			origin,
 			#[compact] pool_id: LiquidityPoolId,
@@ -158,7 +158,7 @@ decl_module! {
 		/// Withdraw all available collateral.
 		///
 		/// May only be called from the pool owner.
-		#[weight = <T as Trait>::WeightInfo::withdraw_collateral()]
+		#[weight = <T as Config>::WeightInfo::withdraw_collateral()]
 		pub fn withdraw_collateral(
 			origin,
 			#[compact] pool_id: LiquidityPoolId,
@@ -175,7 +175,7 @@ decl_module! {
 }
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		/// Insufficient liquidity in pool for minting.
 		InsufficientLiquidityInPool,
 
@@ -229,7 +229,7 @@ type SyntheticTokens<T> = module_synthetic_tokens::Module<T>;
 type BalanceResult = result::Result<Balance, DispatchError>;
 
 // Dispatchable calls implementation
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	fn do_mint(
 		who: &T::AccountId,
 		pool_id: LiquidityPoolId,
@@ -394,7 +394,7 @@ impl<T: Trait> Module<T> {
 }
 
 // Private methods
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	/// Get ask price from liquidity pool for a given currency. Would fail if price could not meet
 	/// max slippage.
 	///
@@ -577,7 +577,7 @@ impl<T: Trait> Module<T> {
 }
 
 // RPC methods.
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	/// Collateral ratio of the `currency_id` in `pool_id`.
 	///
 	/// collateral_ratio = collateral_position / (synthetic_position * price)

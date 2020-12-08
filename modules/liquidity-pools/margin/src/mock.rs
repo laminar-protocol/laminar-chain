@@ -12,6 +12,7 @@ use sp_runtime::{
 };
 
 use orml_currencies::Currency;
+use orml_traits::parameter_type_with_key;
 
 use primitives::{Balance, CurrencyId, LiquidityPoolId};
 use traits::{BaseLiquidityPoolManager, MarginProtocolLiquidityPoolsManager};
@@ -39,7 +40,7 @@ parameter_types! {
 	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
 
-impl frame_system::Trait for Runtime {
+impl frame_system::Config for Runtime {
 	type Origin = Origin;
 	type Call = ();
 	type Index = u64;
@@ -76,7 +77,7 @@ parameter_types! {
 	pub MaxSwap: FixedI128 = FixedI128::saturating_from_integer(2);
 }
 
-impl pallet_balances::Trait for Runtime {
+impl pallet_balances::Config for Runtime {
 	type Balance = Balance;
 	type DustRemoval = ();
 	type Event = ();
@@ -89,7 +90,7 @@ impl pallet_balances::Trait for Runtime {
 type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
 pub type LiquidityCurrency = orml_currencies::Currency<Runtime, GetLiquidityCurrencyId>;
 
-impl orml_currencies::Trait for Runtime {
+impl orml_currencies::Config for Runtime {
 	type Event = ();
 	type MultiCurrency = orml_tokens::Module<Runtime>;
 	type NativeCurrency = NativeCurrency;
@@ -97,14 +98,25 @@ impl orml_currencies::Trait for Runtime {
 	type WeightInfo = ();
 }
 
+parameter_type_with_key! {
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		Zero::zero()
+	};
+}
+
+parameter_types! {
+	pub TreasuryAccount: AccountId = 1;
+}
+
 type Amount = i128;
-impl orml_tokens::Trait for Runtime {
+impl orml_tokens::Config for Runtime {
 	type Event = ();
 	type Balance = Balance;
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
-	type OnReceived = ();
 	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = orml_tokens::TransferDust<Runtime, TreasuryAccount>;
 }
 
 pub struct PoolManager;
@@ -124,7 +136,7 @@ parameter_types! {
 
 pub type MarginInstance = module_base_liquidity_pools::Instance1;
 
-impl module_base_liquidity_pools::Trait<MarginInstance> for Runtime {
+impl module_base_liquidity_pools::Config<MarginInstance> for Runtime {
 	type Event = ();
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = PoolManager;
@@ -149,7 +161,7 @@ impl MarginProtocolLiquidityPoolsManager for DummyPoolManager {
 parameter_types! {
 	pub const MinimumPeriod: u64 = 5;
 }
-impl pallet_timestamp::Trait for Runtime {
+impl pallet_timestamp::Config for Runtime {
 	type Moment = u64;
 	type OnTimestampSet = ();
 	type MinimumPeriod = MinimumPeriod;
@@ -157,7 +169,7 @@ impl pallet_timestamp::Trait for Runtime {
 }
 pub type Timestamp = pallet_timestamp::Module<Runtime>;
 
-impl Trait for Runtime {
+impl Config for Runtime {
 	type Event = ();
 	type BaseLiquidityPools = module_base_liquidity_pools::Module<Runtime, MarginInstance>;
 	type PoolManager = DummyPoolManager;
