@@ -35,11 +35,11 @@ pub trait WeightInfo {
 }
 
 type IdentityDepositBalanceOf<T, I> =
-	<<T as Trait<I>>::IdentityDepositCurrency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
+	<<T as Config<I>>::IdentityDepositCurrency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
-pub trait Trait<I: Instance = DefaultInstance>: frame_system::Trait {
+pub trait Config<I: Instance = DefaultInstance>: frame_system::Config {
 	/// The overarching event type.
-	type Event: From<Event<Self, I>> + Into<<Self as frame_system::Trait>::Event>;
+	type Event: From<Event<Self, I>> + Into<<Self as frame_system::Config>::Event>;
 
 	/// The currency used for pool liquidity.
 	type LiquidityCurrency: BasicCurrency<Self::AccountId, Balance = Balance>;
@@ -89,7 +89,7 @@ impl<AccountId> Pool<AccountId> {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait<I>, I: Instance=DefaultInstance> as BaseLiquidityPools {
+	trait Store for Module<T: Config<I>, I: Instance=DefaultInstance> as BaseLiquidityPools {
 		/// Next available liquidity pool ID.
 		pub NextPoolId get(fn next_pool_id): LiquidityPoolId;
 
@@ -107,7 +107,7 @@ decl_storage! {
 
 decl_event!(
 	pub enum Event<T, I=DefaultInstance> where
-		<T as frame_system::Trait>::AccountId,
+		<T as frame_system::Config>::AccountId,
 	{
 		/// Liquidity pool created: \[who, pool_id\]
 		LiquidityPoolCreated(AccountId, LiquidityPoolId),
@@ -140,7 +140,7 @@ decl_event!(
 
 decl_error! {
 	/// Errors for the base liquidity pools module.
-	pub enum Error for Module<T: Trait<I>, I: Instance> {
+	pub enum Error for Module<T: Config<I>, I: Instance> {
 		/// Caller doesn't have permission.
 		NoPermission,
 
@@ -175,7 +175,7 @@ decl_error! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait<I>, I: Instance=DefaultInstance> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config<I>, I: Instance=DefaultInstance> for enum Call where origin: T::Origin {
 		type Error = Error<T, I>;
 
 		fn deposit_event() = default;
@@ -317,7 +317,7 @@ decl_module! {
 	}
 }
 
-impl<T: Trait<I>, I: Instance> Module<T, I> {
+impl<T: Config<I>, I: Instance> Module<T, I> {
 	pub fn account_id() -> T::AccountId {
 		T::ModuleId::get().into_account()
 	}
@@ -327,7 +327,7 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 	}
 }
 
-impl<T: Trait<I>, I: Instance> LiquidityPools<T::AccountId> for Module<T, I> {
+impl<T: Config<I>, I: Instance> LiquidityPools<T::AccountId> for Module<T, I> {
 	fn all() -> Vec<LiquidityPoolId> {
 		// TODO: optimize once `iter_first_key` is ready
 		<Pools<T, I>>::iter().map(|(pool_id, _)| pool_id).collect()
@@ -359,7 +359,7 @@ impl<T: Trait<I>, I: Instance> LiquidityPools<T::AccountId> for Module<T, I> {
 }
 
 // Storage getters and setters
-impl<T: Trait<I>, I: Instance> Module<T, I> {
+impl<T: Config<I>, I: Instance> Module<T, I> {
 	/// Balance of a liquidity pool.
 	pub fn balance(pool_id: LiquidityPoolId) -> Balance {
 		Self::pools(&pool_id).map_or(Default::default(), |pool| pool.balance)
@@ -379,7 +379,7 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 }
 
 // Dispatchable calls implementation
-impl<T: Trait<I>, I: Instance> Module<T, I> {
+impl<T: Config<I>, I: Instance> Module<T, I> {
 	fn do_create_pool(who: &T::AccountId) -> result::Result<LiquidityPoolId, Error<T, I>> {
 		let pool_id = Self::next_pool_id();
 		// increment next pool id

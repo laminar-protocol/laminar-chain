@@ -28,9 +28,9 @@ pub trait WeightInfo {
 	fn set_collateral_ratio() -> Weight;
 }
 
-pub trait Trait: frame_system::Trait {
+pub trait Config: frame_system::Config {
 	/// The overarching event type.
-	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
+	type Event: From<Event> + Into<<Self as frame_system::Config>::Event>;
 
 	/// The default extreme liquidation ratio.
 	type DefaultExtremeRatio: Get<Permill>;
@@ -76,7 +76,7 @@ pub struct SyntheticTokensRatio {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as SyntheticTokens {
+	trait Store for Module<T: Config> as SyntheticTokens {
 		/// Ratios for each currency.
 		Ratios get(fn ratios) config(): map hasher(twox_64_concat) CurrencyId => SyntheticTokensRatio;
 
@@ -86,7 +86,7 @@ decl_storage! {
 }
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {}
+	pub enum Error for Module<T: Config> {}
 }
 
 decl_event! {
@@ -103,7 +103,7 @@ decl_event! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
@@ -160,7 +160,7 @@ decl_module! {
 /// DO NOT change this in runtime upgrade without migration.
 const MODULE_ID: ModuleId = ModuleId(*b"lami/stk");
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	pub fn account_id() -> T::AccountId {
 		MODULE_ID.into_account()
 	}
@@ -222,7 +222,7 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	pub fn liquidation_ratio_or_default(currency_id: CurrencyId) -> Permill {
 		Self::ratios(currency_id)
 			.liquidation
@@ -242,7 +242,7 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> BaseLiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
+impl<T: Config> BaseLiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
 	fn can_remove(pool_id: LiquidityPoolId) -> bool {
 		T::SyntheticCurrencyIds::get()
 			.iter()

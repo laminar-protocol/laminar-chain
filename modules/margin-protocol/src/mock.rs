@@ -4,12 +4,12 @@
 
 use frame_support::{impl_outer_dispatch, impl_outer_event, impl_outer_origin, ord_parameter_types, parameter_types};
 use frame_system::EnsureSignedBy;
-use orml_traits::{DataProvider, DefaultPriceProvider};
+use orml_traits::{DataProvider, DefaultPriceProvider, parameter_type_with_key};
 use primitives::{Balance, CurrencyId, LiquidityPoolId, TradingPair};
 use sp_core::H256;
 use sp_runtime::{
 	testing::{Header, TestXt},
-	traits::IdentityLookup,
+	traits::{IdentityLookup, Zero},
 	Perbill,
 };
 use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
@@ -53,7 +53,7 @@ parameter_types! {
 
 type AccountId = u64;
 
-impl frame_system::Trait for Runtime {
+impl frame_system::Config for Runtime {
 	type Origin = Origin;
 	type Call = Call;
 	type Index = u64;
@@ -84,13 +84,24 @@ pub type System = frame_system::Module<Runtime>;
 
 type Amount = i128;
 
-impl orml_tokens::Trait for Runtime {
+parameter_type_with_key! {
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		Zero::zero()
+	};
+}
+
+parameter_types! {
+	pub TreasuryAccount: AccountId = 1;
+}
+
+impl orml_tokens::Config for Runtime {
 	type Event = TestEvent;
 	type Balance = u128;
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
-	type OnReceived = ();
 	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = orml_tokens::TransferDust<Runtime, TreasuryAccount>;
 }
 
 parameter_types! {
@@ -100,7 +111,7 @@ parameter_types! {
 	pub const IdentityDeposit: u128 = 1000;
 }
 
-impl pallet_balances::Trait for Runtime {
+impl pallet_balances::Config for Runtime {
 	type Balance = u128;
 	type DustRemoval = ();
 	type Event = TestEvent;
@@ -112,7 +123,7 @@ impl pallet_balances::Trait for Runtime {
 
 pub type NativeCurrency = orml_currencies::BasicCurrencyAdapter<Runtime, pallet_balances::Module<Runtime>, Amount, u64>;
 pub type LiquidityCurrency = orml_currencies::Currency<Runtime, GetLiquidityCurrencyId>;
-impl orml_currencies::Trait for Runtime {
+impl orml_currencies::Config for Runtime {
 	type Event = TestEvent;
 	type MultiCurrency = orml_tokens::Module<Runtime>;
 	type NativeCurrency = NativeCurrency;
@@ -258,7 +269,7 @@ parameter_types! {
 	pub const UnsignedPriority: u64 = 1 << 20;
 }
 
-impl Trait for Runtime {
+impl Config for Runtime {
 	type Event = TestEvent;
 	type LiquidityCurrency = LiquidityCurrency;
 	type LiquidityPools = MockLiquidityPools;

@@ -7,7 +7,7 @@ mod tests {
 		tests::*,
 		BaseLiquidityPoolsMarginInstance,
 		CurrencyId::{AUSD, FEUR, FJPY},
-		GetTreasuryAccountId, MaxSwap, Runtime, DOLLARS,
+		TreasuryAccount, MaxSwap, Runtime, DOLLARS,
 	};
 	use frame_support::{assert_noop, assert_ok};
 
@@ -501,14 +501,14 @@ mod tests {
 				assert_ok!(margin_liquidity_pool_become_safe());
 
 				assert_ok!(set_oracle_price(vec![(FEUR, Price::saturating_from_rational(50, 10))]));
-				assert_eq!(collateral_balance(&GetTreasuryAccountId::get()), 0);
+				assert_eq!(collateral_balance(&TreasuryAccount::get()), 0);
 				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(5000));
 				assert_ok!(margin_liquidity_pool_force_close());
 
 				assert_eq!(margin_balance(&ALICE::get()), fixed_i128_dollar(14700));
 				assert_eq!(collateral_balance(&ALICE::get()), dollar(5000));
 				assert_eq!(margin_liquidity(), 2200_000000000000000000);
-				assert_eq!(collateral_balance(&GetTreasuryAccountId::get()), 300_000000000000000000);
+				assert_eq!(collateral_balance(&TreasuryAccount::get()), 300_000000000000000000);
 			});
 	}
 

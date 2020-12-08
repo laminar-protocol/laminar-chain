@@ -64,9 +64,9 @@ pub trait WeightInfo {
 
 const MODULE_ID: ModuleId = ModuleId(*b"lami/mgn");
 
-pub trait Trait: frame_system::Trait + SendTransactionTypes<Call<Self>> {
+pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
 	/// The overarching event type.
-	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
 	/// The currency used for liquidity.
 	type LiquidityCurrency: BasicCurrency<Self::AccountId, Balance = Balance>;
@@ -103,7 +103,7 @@ pub type PositionId = u64;
 
 /// Margin protocol Position.
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq)]
-pub struct Position<T: Trait> {
+pub struct Position<T: Config> {
 	/// Owner.
 	owner: T::AccountId,
 
@@ -186,7 +186,7 @@ impl TradingPairRiskThreshold {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as MarginProtocol {
+	trait Store for Module<T: Config> as MarginProtocol {
 		/// Next available position ID.
 		NextPositionId get(fn next_position_id): PositionId;
 
@@ -244,7 +244,7 @@ decl_storage! {
 
 decl_event! {
 	pub enum Event<T> where
-		<T as frame_system::Trait>::AccountId,
+		<T as frame_system::Config>::AccountId,
 		LiquidityPoolId = LiquidityPoolId,
 		TradingPair = TradingPair,
 		Amount = Balance
@@ -285,7 +285,7 @@ decl_event! {
 }
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		/// No price from provider.
 		NoPrice,
 
@@ -360,7 +360,7 @@ decl_error! {
 	}
 }
 
-impl<T: Trait> From<OpenPositionError> for Error<T> {
+impl<T: Config> From<OpenPositionError> for Error<T> {
 	fn from(error: OpenPositionError) -> Self {
 		match error {
 			OpenPositionError::LeverageNotAllowedInPool => Error::<T>::LeverageNotAllowedInPool,
@@ -372,7 +372,7 @@ impl<T: Trait> From<OpenPositionError> for Error<T> {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
@@ -588,7 +588,7 @@ decl_module! {
 }
 
 // Storage getters
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	pub fn trader_risk_threshold(pair: TradingPair) -> Option<RiskThreshold> {
 		Self::risk_thresholds(pair).trader
 	}
@@ -603,7 +603,7 @@ impl<T: Trait> Module<T> {
 }
 
 // Dispatchable calls implementation
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	fn do_open_position(
 		who: &T::AccountId,
 		pool_id: LiquidityPoolId,
@@ -883,7 +883,7 @@ impl<T: Trait> Module<T> {
 }
 
 // Storage helpers
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	pub fn account_id() -> T::AccountId {
 		MODULE_ID.into_account()
 	}
@@ -1011,7 +1011,7 @@ type FixedI128Result = result::Result<FixedI128, DispatchError>;
 type DoubleFixedI128Result = result::Result<(FixedI128, FixedI128), DispatchError>;
 
 // Price helpers
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	/// The price from oracle.
 	fn price(base: CurrencyId, quote: CurrencyId) -> PriceResult {
 		T::PriceProvider::get_price(base, quote).ok_or_else(|| Error::<T>::NoPrice.into())
@@ -1060,7 +1060,7 @@ impl<T: Trait> Module<T> {
 }
 
 // Trader helpers
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	/// Unrealized profit and loss of a position(USD value), based on current market price.
 	///
 	/// unrealized_pl_of_position = (curr_price - open_price) * leveraged_held * to_usd_price
@@ -1264,7 +1264,7 @@ impl<T: Trait> Module<T> {
 }
 
 #[derive(Encode, Decode, Clone, RuntimeDebug, Eq, PartialEq)]
-enum Action<T: Trait> {
+enum Action<T: Config> {
 	None,
 	Withdraw(Balance),
 	OpenPosition(Position<T>),
@@ -1278,7 +1278,7 @@ enum Risk {
 }
 
 // Liquidity pool helpers
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	/// equity_of_pool = liquidity - all_unrealized_pl - all_accumulated_swap_rate
 	/// In order to optimize the algorithm, ignore all_accumulated_swap_rate
 	fn equity_of_pool(pool: LiquidityPoolId) -> FixedI128Result {
@@ -1558,7 +1558,7 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> BaseLiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
+impl<T: Config> BaseLiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> {
 	/// Returns if `pool` has liability in margin protocol.
 	fn can_remove(pool: LiquidityPoolId) -> bool {
 		PositionsSnapshots::iter_prefix(pool).fold(0, |num, (_, snapshot)| num + snapshot.positions_count) == 0
@@ -1569,7 +1569,7 @@ impl<T: Trait> BaseLiquidityPoolManager<LiquidityPoolId, Balance> for Module<T> 
 	}
 }
 
-impl<T: Trait> MarginProtocolLiquidityPoolsManager for Module<T> {
+impl<T: Config> MarginProtocolLiquidityPoolsManager for Module<T> {
 	fn ensure_can_enable_trading_pair(pool_id: LiquidityPoolId, pair: TradingPair) -> DispatchResult {
 		Self::trader_risk_threshold(pair).ok_or(Error::<T>::NoRiskThreshold)?;
 		let enp_threshold = Self::liquidity_pool_enp_threshold(pair).ok_or(Error::<T>::NoRiskThreshold)?;
@@ -1613,7 +1613,7 @@ impl sp_std::fmt::Debug for OffchainErr {
 	}
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	/// Get a list of `(trader, pool_id)`
 	fn get_traders() -> Vec<(T::AccountId, LiquidityPoolId)> {
 		// TODO: use key iter after this gets closed https://github.com/paritytech/substrate/issues/5319
@@ -1768,7 +1768,7 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
+impl<T: Config> frame_support::unsigned::ValidateUnsigned for Module<T> {
 	type Call = Call<T>;
 
 	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {

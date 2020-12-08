@@ -109,9 +109,9 @@ pub struct MarginPoolTradingPairOption {
 pub const MODULE_ID: ModuleId = ModuleId(*b"lami/mlp");
 pub const ONE_MINUTE: u64 = 60;
 
-pub trait Trait: frame_system::Trait {
+pub trait Config: frame_system::Config {
 	/// The overarching event type.
-	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
 	/// The `LiquidityPools` implementation.
 	type BaseLiquidityPools: LiquidityPools<Self::AccountId>;
@@ -136,7 +136,7 @@ pub trait Trait: frame_system::Trait {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as MarginLiquidityPools {
+	trait Store for Module<T: Config> as MarginLiquidityPools {
 		/// Trading pair options.
 		pub TradingPairOptions get(fn trading_pair_options): map hasher(twox_64_concat) TradingPair => MarginTradingPairOption<T::Moment>;
 
@@ -176,8 +176,8 @@ decl_storage! {
 
 decl_event!(
 	pub enum Event<T> where
-		<T as frame_system::Trait>::AccountId,
-		<T as Trait>::Moment,
+		<T as frame_system::Config>::AccountId,
+		<T as Config>::Moment,
 	{
 		/// Spread set: \[who, pool_id, pair, bid, ask\]
 		SpreadSet(AccountId, LiquidityPoolId, TradingPair, Price, Price),
@@ -221,7 +221,7 @@ decl_event!(
 );
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
@@ -445,7 +445,7 @@ decl_module! {
 
 decl_error! {
 	/// Errors for the margin liquidity pools module.
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		/// Caller doesn't have permission.
 		NoPermission,
 
@@ -461,7 +461,7 @@ decl_error! {
 }
 
 // Storage getters
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	// Trading pair option
 
 	pub fn max_spread(pair: TradingPair) -> Option<Price> {
@@ -520,7 +520,7 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
+impl<T: Config> LiquidityPools<T::AccountId> for Module<T> {
 	fn all() -> Vec<LiquidityPoolId> {
 		T::BaseLiquidityPools::all()
 	}
@@ -550,7 +550,7 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 	}
 }
 
-impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
+impl<T: Config> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
 	fn bid_spread(pool_id: LiquidityPoolId, pair: TradingPair) -> Option<Price> {
 		Self::pool_trading_pair_options(pool_id, pair).bid_spread
 	}
@@ -609,7 +609,7 @@ impl<T: Trait> MarginProtocolLiquidityPools<T::AccountId> for Module<T> {
 }
 
 // Dispatchable calls implementation
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	fn do_set_spread(
 		who: &T::AccountId,
 		pool_id: LiquidityPoolId,
@@ -638,7 +638,7 @@ impl<T: Trait> Module<T> {
 }
 
 // Private methods
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	fn accumulate_rates(pair: TradingPair) {
 		for pool_id in T::BaseLiquidityPools::all() {
 			let long_rate = Self::swap_rate(pool_id, pair, true);
@@ -654,13 +654,13 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> OnDisableLiquidityPool for Module<T> {
+impl<T: Config> OnDisableLiquidityPool for Module<T> {
 	fn on_disable(pool_id: LiquidityPoolId) {
 		PoolTradingPairOptions::remove_prefix(&pool_id);
 	}
 }
 
-impl<T: Trait> OnRemoveLiquidityPool for Module<T> {
+impl<T: Config> OnRemoveLiquidityPool for Module<T> {
 	fn on_remove(pool_id: LiquidityPoolId) {
 		PoolTradingPairOptions::remove_prefix(&pool_id);
 		AccumulatedSwapRates::remove_prefix(&pool_id);

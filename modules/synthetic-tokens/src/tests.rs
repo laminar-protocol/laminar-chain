@@ -117,7 +117,7 @@ fn liquidation_ratio_or_default() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_eq!(
 			SyntheticTokens::liquidation_ratio_or_default(CurrencyId::FEUR),
-			<Runtime as Trait>::DefaultLiquidationRatio::get()
+			<Runtime as Config>::DefaultLiquidationRatio::get()
 		);
 
 		let ratio = Permill::from_percent(1);
@@ -135,7 +135,7 @@ fn extreme_ratio_or_default() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_eq!(
 			SyntheticTokens::extreme_ratio_or_default(CurrencyId::FEUR),
-			<Runtime as Trait>::DefaultExtremeRatio::get()
+			<Runtime as Config>::DefaultExtremeRatio::get()
 		);
 
 		let ratio = Permill::from_percent(1);
@@ -153,7 +153,7 @@ fn collateral_ratio_or_default() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_eq!(
 			SyntheticTokens::collateral_ratio_or_default(CurrencyId::FEUR),
-			<Runtime as Trait>::DefaultCollateralRatio::get()
+			<Runtime as Config>::DefaultCollateralRatio::get()
 		);
 
 		let ratio = Permill::from_percent(1);
@@ -188,7 +188,7 @@ fn no_incentive_if_equal_or_above_liquidation_ratio() {
 		assert_eq!(
 			SyntheticTokens::incentive_ratio(
 				CurrencyId::FEUR,
-				plus_one(<Runtime as Trait>::DefaultLiquidationRatio::get().into())
+				plus_one(<Runtime as Config>::DefaultLiquidationRatio::get().into())
 			),
 			FixedU128::from_inner(0)
 		);
@@ -210,7 +210,7 @@ fn full_incentive_if_equal_or_below_extreme_ratio() {
 		assert_eq!(
 			SyntheticTokens::incentive_ratio(
 				CurrencyId::FEUR,
-				plus_one(<Runtime as Trait>::DefaultExtremeRatio::get().into())
+				plus_one(<Runtime as Config>::DefaultExtremeRatio::get().into())
 			),
 			FixedU128::saturating_from_rational(1, 1)
 		);

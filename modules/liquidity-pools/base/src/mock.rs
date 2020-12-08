@@ -7,9 +7,11 @@ use frame_system::EnsureSignedBy;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, Block as BlockT, IdentityLookup},
+	traits::{BlakeTwo256, Block as BlockT, IdentityLookup, Zero},
 	Perbill,
 };
+
+use orml_traits::parameter_type_with_key;
 
 use primitives::{Balance, CurrencyId, LiquidityPoolId};
 
@@ -32,7 +34,7 @@ parameter_types! {
 	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
 
-impl frame_system::Trait for Runtime {
+impl frame_system::Config for Runtime {
 	type Origin = Origin;
 	type Call = Call;
 	type Index = u64;
@@ -67,7 +69,7 @@ parameter_types! {
 	pub const IdentityDeposit: u128 = 1000;
 }
 
-impl pallet_balances::Trait for Runtime {
+impl pallet_balances::Config for Runtime {
 	type Balance = Balance;
 	type DustRemoval = ();
 	type Event = Event;
@@ -80,7 +82,7 @@ impl pallet_balances::Trait for Runtime {
 pub type NativeCurrency = orml_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
 pub type LiquidityCurrency = orml_currencies::Currency<Runtime, GetLiquidityCurrencyId>;
 
-impl orml_currencies::Trait for Runtime {
+impl orml_currencies::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Tokens;
 	type NativeCurrency = NativeCurrency;
@@ -88,14 +90,25 @@ impl orml_currencies::Trait for Runtime {
 	type WeightInfo = ();
 }
 
+parameter_type_with_key! {
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		Zero::zero()
+	};
+}
+
+parameter_types! {
+	pub TreasuryAccount: AccountId = 1;
+}
+
 type Amount = i128;
-impl orml_tokens::Trait for Runtime {
+impl orml_tokens::Config for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
-	type OnReceived = ();
 	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = orml_tokens::TransferDust<Runtime, TreasuryAccount>;
 }
 
 pub struct PoolManager;
@@ -122,7 +135,7 @@ parameter_types! {
 	pub const Instance1ModuleId: ModuleId = ModuleId(*b"test/lp1");
 }
 
-impl Trait for Runtime {
+impl Config for Runtime {
 	type Event = Event;
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = PoolManager;
@@ -136,7 +149,7 @@ impl Trait for Runtime {
 	type WeightInfo = ();
 }
 
-impl Trait<Instance1> for Runtime {
+impl Config<Instance1> for Runtime {
 	type Event = Event;
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = PoolManager;
@@ -155,7 +168,7 @@ parameter_types! {
 	pub const Instance2ModuleId: ModuleId = ModuleId(*b"test/lp2");
 }
 
-impl Trait<Instance2> for Runtime {
+impl Config<Instance2> for Runtime {
 	type Event = Event;
 	type LiquidityCurrency = LiquidityCurrency;
 	type PoolManager = PoolManager;

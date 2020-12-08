@@ -49,9 +49,9 @@ pub struct SyntheticPoolCurrencyOption {
 
 pub const MODULE_ID: ModuleId = ModuleId(*b"lami/slp");
 
-pub trait Trait: frame_system::Trait {
+pub trait Config: frame_system::Config {
 	/// The overarching event type.
-	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
 	/// The `LiquidityPools` implementation.
 	type BaseLiquidityPools: LiquidityPools<Self::AccountId>;
@@ -64,7 +64,7 @@ pub trait Trait: frame_system::Trait {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as SyntheticLiquidityPools {
+	trait Store for Module<T: Config> as SyntheticLiquidityPools {
 		/// Currency options in a liquidity pool.
 		pub PoolCurrencyOptions: double_map hasher(twox_64_concat) LiquidityPoolId, hasher(twox_64_concat) CurrencyId => SyntheticPoolCurrencyOption;
 
@@ -78,7 +78,7 @@ decl_storage! {
 
 decl_event!(
 	pub enum Event<T> where
-		<T as frame_system::Trait>::AccountId,
+		<T as frame_system::Config>::AccountId,
 	{
 		/// Spread set: \[who, pool_id, currency_id, bid, ask\]
 		SpreadSet(AccountId, LiquidityPoolId, CurrencyId, Price, Price),
@@ -98,7 +98,7 @@ decl_event!(
 );
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
@@ -188,7 +188,7 @@ decl_module! {
 
 decl_error! {
 	/// Errors for the synthetic liquidity pools module.
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		/// Caller doesn't have permission.
 		NoPermission,
 
@@ -197,7 +197,7 @@ decl_error! {
 	}
 }
 
-impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
+impl<T: Config> LiquidityPools<T::AccountId> for Module<T> {
 	fn all() -> Vec<LiquidityPoolId> {
 		T::BaseLiquidityPools::all()
 	}
@@ -227,7 +227,7 @@ impl<T: Trait> LiquidityPools<T::AccountId> for Module<T> {
 	}
 }
 
-impl<T: Trait> SyntheticProtocolLiquidityPools<T::AccountId> for Module<T> {
+impl<T: Config> SyntheticProtocolLiquidityPools<T::AccountId> for Module<T> {
 	fn bid_spread(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> Option<Price> {
 		Self::pool_currency_options(pool_id, currency_id).bid_spread
 	}
@@ -249,7 +249,7 @@ impl<T: Trait> SyntheticProtocolLiquidityPools<T::AccountId> for Module<T> {
 }
 
 // Storage getters.
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	/// `PoolCurrencyOptions` getter. Bid/ask spread is capped by max spread.
 	pub fn pool_currency_options(pool_id: LiquidityPoolId, currency_id: CurrencyId) -> SyntheticPoolCurrencyOption {
 		let mut option = PoolCurrencyOptions::get(pool_id, currency_id);
@@ -262,7 +262,7 @@ impl<T: Trait> Module<T> {
 }
 
 // Dispatchable calls implementation
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	fn do_set_spread(
 		who: &T::AccountId,
 		pool_id: LiquidityPoolId,
@@ -307,13 +307,13 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> OnDisableLiquidityPool for Module<T> {
+impl<T: Config> OnDisableLiquidityPool for Module<T> {
 	fn on_disable(pool_id: LiquidityPoolId) {
 		PoolCurrencyOptions::remove_prefix(&pool_id);
 	}
 }
 
-impl<T: Trait> OnRemoveLiquidityPool for Module<T> {
+impl<T: Config> OnRemoveLiquidityPool for Module<T> {
 	fn on_remove(pool_id: LiquidityPoolId) {
 		PoolCurrencyOptions::remove_prefix(&pool_id);
 	}

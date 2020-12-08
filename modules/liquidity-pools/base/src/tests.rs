@@ -7,11 +7,11 @@ use frame_support::{assert_noop, assert_ok};
 use traits::LiquidityPools;
 
 fn get_free_balance(who: &AccountId) -> Balance {
-	<Runtime as Trait>::IdentityDepositCurrency::free_balance(who)
+	<Runtime as Config>::IdentityDepositCurrency::free_balance(who)
 }
 
 fn get_reserved_balance(who: &AccountId) -> Balance {
-	<Runtime as Trait>::IdentityDepositCurrency::reserved_balance(who)
+	<Runtime as Config>::IdentityDepositCurrency::reserved_balance(who)
 }
 
 #[test]

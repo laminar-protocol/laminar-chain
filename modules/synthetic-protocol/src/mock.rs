@@ -9,7 +9,7 @@ use sp_runtime::{testing::Header, traits::IdentityLookup, DispatchResult, Perbil
 use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
 
 use orml_currencies::Currency;
-use orml_traits::{DataProvider, DefaultPriceProvider};
+use orml_traits::{DataProvider, DefaultPriceProvider, parameter_type_with_key};
 
 use laminar_primitives::LiquidityPoolId;
 use module_traits::{LiquidityPools, SyntheticProtocolLiquidityPools};
@@ -49,7 +49,7 @@ parameter_types! {
 }
 
 pub type AccountId = u32;
-impl frame_system::Trait for Runtime {
+impl frame_system::Config for Runtime {
 	type Origin = Origin;
 	type Call = ();
 	type Index = u64;
@@ -80,13 +80,20 @@ pub type System = frame_system::Module<Runtime>;
 
 type Amount = i128;
 
-impl orml_tokens::Trait for Runtime {
+parameter_type_with_key! {
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		Zero::zero()
+	};
+}
+
+impl orml_tokens::Config for Runtime {
 	type Event = TestEvent;
 	type Balance = Balance;
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
-	type OnReceived = ();
 	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = orml_tokens::TransferDust<Runtime, One>;
 }
 
 parameter_types! {
@@ -95,7 +102,7 @@ parameter_types! {
 
 type NativeCurrency = Currency<Runtime, GetNativeCurrencyId>;
 
-impl orml_currencies::Trait for Runtime {
+impl orml_currencies::Config for Runtime {
 	type Event = TestEvent;
 	type MultiCurrency = orml_tokens::Module<Runtime>;
 	type NativeCurrency = NativeCurrency;
@@ -115,7 +122,7 @@ parameter_types! {
 pub type CollateralCurrency = orml_currencies::Currency<Runtime, GetCollateralCurrencyId>;
 pub type SyntheticCurrency = orml_currencies::Currency<Runtime, GetSyntheticCurrencyId>;
 
-impl module_synthetic_tokens::Trait for Runtime {
+impl module_synthetic_tokens::Config for Runtime {
 	type Event = TestEvent;
 	type DefaultExtremeRatio = DefaultExtremeRatio;
 	type DefaultLiquidationRatio = DefaultLiquidationRatio;
@@ -231,7 +238,7 @@ impl SyntheticProtocolLiquidityPools<AccountId> for MockLiquidityPools {
 	}
 }
 
-impl Trait for Runtime {
+impl Config for Runtime {
 	type Event = TestEvent;
 	type MultiCurrency = orml_currencies::Module<Runtime>;
 	type CollateralCurrency = CollateralCurrency;
