@@ -49,6 +49,12 @@ sp-transaction-pool = { version = "2.0.0", default-features = false }
 sp-version = { version = "2.0.0", default-features = false }
 sp-application-crypto = { version = "2.0.0", default-features = false }
 
+cumulus-runtime = { git = "https://github.com/paritytech/cumulus", default-features = false }
+cumulus-parachain-upgrade = { git = "https://github.com/paritytech/cumulus", default-features = false }
+cumulus-primitives = { git = "https://github.com/paritytech/cumulus", default-features = false }
+cumulus-message-broker = { git = "https://github.com/paritytech/cumulus", default-features = false }
+parachain-info = { git = "https://github.com/paritytech/cumulus", default-features = false }
+
 orml-benchmarking = { path = "../../orml/benchmarking", default-features = false }
 orml-currencies = { path = "../../orml/currencies", default-features = false }
 orml-oracle = { path = "../../orml/oracle", default-features = false }
@@ -115,6 +121,12 @@ std = [
 	"sp-arithmetic/std",
 	"sp-transaction-pool/std",
 
+	"cumulus-runtime/std",
+	"cumulus-parachain-upgrade/std",
+	"cumulus-primitives/std",
+	"cumulus-message-broker/std",
+	"parachain-info/std",
+
 	"orml-benchmarking/std",
 	"orml-currencies/std",
 	"orml-oracle-rpc-runtime-api/std",
@@ -150,3 +162,4 @@ runtime-benchmarks = [
 # runtime without clashing with the runtime api exported functions
 # in WASM.
 disable-runtime-api = []
+standalone = []

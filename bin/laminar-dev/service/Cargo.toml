@@ -1,5 +1,5 @@
 [package]
-name = "laminar-service"
+name = "laminar-dev-service"
 version = "0.3.1"
 authors = ["Laminar Developers <hello@laminar.one>"]
 edition = "2018"
@@ -41,17 +41,17 @@ sp-transaction-pool = { version = "2.0.0" }
 sp-trie = { version = "2.0.0" }
 prometheus-endpoint = { package = "substrate-prometheus-endpoint", version = "0.8.0"}
 
-margin-protocol = { package="module-margin-protocol", path = "../modules/margin-protocol" }
-synthetic-tokens = { package="module-synthetic-tokens", path = "../modules/synthetic-tokens" }
-margin-protocol-rpc = { path = "../modules/margin-protocol/rpc" }
-orml-oracle-rpc = { path = "../orml/oracle/rpc" }
-synthetic-protocol-rpc = { path = "../modules/synthetic-protocol/rpc" }
+margin-protocol = { package="module-margin-protocol", path = "../../../modules/margin-protocol" }
+synthetic-tokens = { package="module-synthetic-tokens", path = "../../../modules/synthetic-tokens" }
+margin-protocol-rpc = { path = "../../../modules/margin-protocol/rpc" }
+orml-oracle-rpc = { path = "../../../orml/oracle/rpc" }
+synthetic-protocol-rpc = { path = "../../../modules/synthetic-protocol/rpc" }
 
-dev-runtime = { path = "../runtime/dev" }
-runtime-common = { path = "../runtime/common" }
+dev-runtime = { path = "../../../runtime/dev" }
+runtime-common = { path = "../../../runtime/common" }
 
-laminar-primitives = { path = "../primitives" }
-laminar-rpc = { path = "../rpc" }
+laminar-primitives = { path = "../../../primitives" }
+laminar-rpc = { path = "../../../rpc" }
 
 [dev-dependencies]
 sc-consensus-babe = { version = "0.8.0", features = ["test-helpers"] }

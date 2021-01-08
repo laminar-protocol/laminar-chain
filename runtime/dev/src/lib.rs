@@ -841,51 +841,83 @@ impl margin_protocol::Config for Runtime {
 	type WeightInfo = weights::margin_protocol::WeightInfo<Runtime>;
 }
 
-construct_runtime!(
-	pub enum Runtime where
-		Block = Block,
-		NodeBlock = opaque::Block,
-		UncheckedExtrinsic = UncheckedExtrinsic
-	{
-		System: frame_system::{Module, Call, Config, Storage, Event<T>},
-		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
-		Authorship: pallet_authorship::{Module, Call, Storage, Inherent},
-		Babe: pallet_babe::{Module, Call, Storage, Config, Inherent, ValidateUnsigned},
-		Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event, ValidateUnsigned},
-		Indices: pallet_indices::{Module, Call, Storage, Event<T>, Config<T>},
-		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-		TransactionPayment: pallet_transaction_payment::{Module, Storage},
-		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
-		Offences: pallet_offences::{Module, Call, Storage, Event},
-		Historical: pallet_session_historical::{Module},
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
-		GeneralCouncil: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
-		GeneralCouncilMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
-		FinancialCouncil: pallet_collective::<Instance2>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
-		FinancialCouncilMembership: pallet_membership::<Instance2>::{Module, Call, Storage, Event<T>, Config<T>},
-		// oracle
-		LaminarOracle: orml_oracle::<Instance1>::{Module, Storage, Call, Config<T>, Event<T>},
-		BandOracle: orml_oracle::<Instance2>::{Module, Storage, Call, Config<T>, Event<T>},
-		// OperatorMembership must be placed after Oracle or else will have race condition on initialization
-		OperatorMembershipLaminar: pallet_membership::<Instance3>::{Module, Call, Storage, Event<T>, Config<T>},
-		OperatorMembershipBand: pallet_membership::<Instance4>::{Module, Call, Storage, Event<T>, Config<T>},
+#[cfg(not(feature = "standalone"))]
+impl cumulus_parachain_upgrade::Config for Runtime {
+	type Event = Event;
+	type OnValidationData = ();
+}
 
-		Utility: pallet_utility::{Module, Call, Storage, Event},
-		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
-		PalletTreasury: pallet_treasury::{Module, Call, Storage, Config, Event<T>},
-		Staking: pallet_staking::{Module, Call, Config<T>, Storage, Event<T>},
-		Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
-		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
-		Currencies: orml_currencies::{Module, Call, Event<T>},
-		SyntheticTokens: synthetic_tokens::{Module, Storage, Call, Event, Config},
-		SyntheticProtocol: synthetic_protocol::{Module, Call, Event<T>},
-		MarginProtocol: margin_protocol::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
-		BaseLiquidityPoolsForMargin: base_liquidity_pools::<Instance1>::{Module, Storage, Call, Event<T>},
-		MarginLiquidityPools: margin_liquidity_pools::{Module, Storage, Call, Event<T>, Config<T>},
-		BaseLiquidityPoolsForSynthetic: base_liquidity_pools::<Instance2>::{Module, Storage, Call, Event<T>},
-		SyntheticLiquidityPools: synthetic_liquidity_pools::{Module, Storage, Call, Event<T>, Config},
+#[cfg(not(feature = "standalone"))]
+impl cumulus_message_broker::Config for Runtime {
+	type DownwardMessageHandlers = ();
+	type HrmpMessageHandlers = ();
+}
+
+#[cfg(not(feature = "standalone"))]
+impl parachain_info::Config for Runtime {}
+
+macro_rules! construct_laminar_runtime {
+	($( $modules:tt )*) => {
+		construct_runtime! {
+			pub enum Runtime where
+				Block = Block,
+				NodeBlock = opaque::Block,
+				UncheckedExtrinsic = UncheckedExtrinsic
+			{
+				System: frame_system::{Module, Call, Config, Storage, Event<T>},
+				Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
+				Authorship: pallet_authorship::{Module, Call, Storage, Inherent},
+				Babe: pallet_babe::{Module, Call, Storage, Config, Inherent, ValidateUnsigned},
+				Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event, ValidateUnsigned},
+				Indices: pallet_indices::{Module, Call, Storage, Event<T>, Config<T>},
+				Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
+				TransactionPayment: pallet_transaction_payment::{Module, Storage},
+				Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
+				Offences: pallet_offences::{Module, Call, Storage, Event},
+				Historical: pallet_session_historical::{Module},
+				RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
+				GeneralCouncil: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
+				GeneralCouncilMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
+				FinancialCouncil: pallet_collective::<Instance2>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
+				FinancialCouncilMembership: pallet_membership::<Instance2>::{Module, Call, Storage, Event<T>, Config<T>},
+				// oracle
+				LaminarOracle: orml_oracle::<Instance1>::{Module, Storage, Call, Config<T>, Event<T>},
+				BandOracle: orml_oracle::<Instance2>::{Module, Storage, Call, Config<T>, Event<T>},
+				// OperatorMembership must be placed after Oracle or else will have race condition on initialization
+				OperatorMembershipLaminar: pallet_membership::<Instance3>::{Module, Call, Storage, Event<T>, Config<T>},
+				OperatorMembershipBand: pallet_membership::<Instance4>::{Module, Call, Storage, Event<T>, Config<T>},
+
+				Utility: pallet_utility::{Module, Call, Storage, Event},
+				Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
+				PalletTreasury: pallet_treasury::{Module, Call, Storage, Config, Event<T>},
+				Staking: pallet_staking::{Module, Call, Config<T>, Storage, Event<T>},
+				Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
+				Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
+				Currencies: orml_currencies::{Module, Call, Event<T>},
+				SyntheticTokens: synthetic_tokens::{Module, Storage, Call, Event, Config},
+				SyntheticProtocol: synthetic_protocol::{Module, Call, Event<T>},
+				MarginProtocol: margin_protocol::{Module, Storage, Call, Event<T>, Config, ValidateUnsigned},
+				BaseLiquidityPoolsForMargin: base_liquidity_pools::<Instance1>::{Module, Storage, Call, Event<T>},
+				MarginLiquidityPools: margin_liquidity_pools::{Module, Storage, Call, Event<T>, Config<T>},
+				BaseLiquidityPoolsForSynthetic: base_liquidity_pools::<Instance2>::{Module, Storage, Call, Event<T>},
+				SyntheticLiquidityPools: synthetic_liquidity_pools::{Module, Storage, Call, Event<T>, Config},
+
+				$($modules)*
+			}
+		}
 	}
-);
+}
+
+#[cfg(not(feature = "standalone"))]
+construct_laminar_runtime! {
+	// Parachain
+	ParachainUpgrade: cumulus_parachain_upgrade::{Module, Call, Storage, Inherent, Event},
+	MessageBroker: cumulus_message_broker::{Module, Storage, Call, Inherent},
+	ParachainInfo: parachain_info::{Module, Storage, Config},
+}
+
+#[cfg(feature = "standalone")]
+construct_laminar_runtime! {}
 
 /// The address format for describing accounts.
 pub type Address = <Indices as StaticLookup>::Source;
@@ -998,6 +1030,10 @@ impl_runtime_apis! {
 
 		fn current_epoch_start() -> sp_consensus_babe::SlotNumber {
 			Babe::current_epoch_start()
+		}
+
+		fn current_epoch() -> sp_consensus_babe::Epoch {
+			Babe::current_epoch()
 		}
 
 		fn generate_key_ownership_proof(
@@ -1164,3 +1200,6 @@ impl_runtime_apis! {
 		}
 	}
 }
+
+#[cfg(not(feature = "standalone"))]
+cumulus_runtime::register_validate_block!(Block, Executive);
