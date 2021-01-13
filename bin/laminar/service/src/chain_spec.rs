@@ -246,7 +246,7 @@ pub fn latest_turbulence_testnet_config() -> Result<DevChainSpec, String> {
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
 			.expect("Staging telemetry url is valid; qed")),
 		// Protocol ID
-		Some("turbulence2"),
+		Some("turbulencepc1"),
 		// Properties
 		Some(properties),
 		// Extensions
