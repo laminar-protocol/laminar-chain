@@ -118,7 +118,7 @@ pub fn development_testnet_config() -> Result<DevChainSpec, String> {
 		// Extensions
 		Extensions {
 			relay_chain: "rococo".into(),
-			para_id: 5_001_u32.into(),
+			para_id: 777_u32.into(),
 		},
 	))
 }
@@ -169,7 +169,7 @@ pub fn local_testnet_config() -> Result<DevChainSpec, String> {
 		// Extensions
 		Extensions {
 			relay_chain: "rococo".into(),
-			para_id: 5_001_u32.into(),
+			para_id: 777_u32.into(),
 		},
 	))
 }
@@ -252,7 +252,7 @@ pub fn latest_turbulence_testnet_config() -> Result<DevChainSpec, String> {
 		// Extensions
 		Extensions {
 			relay_chain: "rococo".into(),
-			para_id: 5_001_u32.into(),
+			para_id: 777_u32.into(),
 		},
 	))
 }
@@ -592,7 +592,7 @@ fn dev_genesis(
 			phantom: Default::default(),
 		}),
 		parachain_info: Some(ParachainInfoConfig {
-			parachain_id: 5_001.into(),
+			parachain_id: 777.into(),
 		}),
 	}
 }
@@ -884,7 +884,7 @@ fn turbulence_genesis(
 			phantom: Default::default(),
 		}),
 		parachain_info: Some(ParachainInfoConfig {
-			parachain_id: 5_001.into(),
+			parachain_id: 777.into(),
 		}),
 	}
 }
