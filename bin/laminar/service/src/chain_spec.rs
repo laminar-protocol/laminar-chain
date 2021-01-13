@@ -161,7 +161,10 @@ pub fn local_testnet_config() -> Result<DevChainSpec, String> {
 		// Bootnodes
 		vec![],
 		// Telemetry
-		None,
+		Some(
+			TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
+				.expect("Polkadot Staging telemetry url is valid; qed"),
+		),
 		// Protocol ID
 		None,
 		// Properties
