@@ -175,7 +175,7 @@ pub fn local_testnet_config() -> Result<DevChainSpec, String> {
 }
 
 pub fn turbulence_testnet_config() -> Result<DevChainSpec, String> {
-	DevChainSpec::from_json_bytes(&include_bytes!("../../../../resources/turbulence-dist.json")[..])
+	DevChainSpec::from_json_bytes(&include_bytes!("../../../../resources/turbulence-pc-dist.json")[..])
 }
 
 pub fn latest_turbulence_testnet_config() -> Result<DevChainSpec, String> {
