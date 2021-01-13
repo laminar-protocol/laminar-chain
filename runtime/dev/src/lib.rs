@@ -31,7 +31,7 @@ use sp_runtime::{
 	create_runtime_str,
 	curve::PiecewiseLinear,
 	generic, impl_opaque_keys,
-	traits::{Extrinsic, Saturating, Verify, Zero},
+	traits::{Extrinsic, Verify, Zero},
 	transaction_validity::{TransactionPriority, TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, DispatchResult, FixedPointNumber, ModuleId,
 };
@@ -72,7 +72,7 @@ pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Percent, Permill};
 
 pub use constants::{currency::*, fee::*, time::*};
-pub use runtime_common::{TimeStampedPrice, BlockLength, BlockWeights,};
+pub use runtime_common::{TimeStampedPrice, BlockLength, BlockWeights, OffchainSolutionWeightLimit};
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -127,7 +127,6 @@ impl Filter<Call> for BaseFilter {
 	}
 }
 
-const AVERAGE_ON_INITIALIZE_WEIGHT: Perbill = Perbill::from_percent(10);
 parameter_types! {
 	pub const BlockHashCount: BlockNumber = 900; // mortal tx can be valid up to 1 hour after signing
 	pub const Version: RuntimeVersion = VERSION;
@@ -315,15 +314,11 @@ parameter_types! {
 	pub const MarginProtocolUnsignedPriority: TransactionPriority = TransactionPriority::max_value() - 2;
 }
 
-parameter_types! {
-	pub OffencesWeightSoftLimit: Weight = Perbill::from_percent(60) * MaximumBlockWeight::get();
-}
-
 impl pallet_offences::Config for Runtime {
 	type Event = Event;
 	type IdentificationTuple = pallet_session::historical::IdentificationTuple<Self>;
 	type OnOffenceHandler = Staking;
-	type WeightSoftLimit = OffencesWeightSoftLimit;
+	type WeightSoftLimit = OffchainSolutionWeightLimit;
 }
 
 parameter_types! {
@@ -469,24 +464,26 @@ impl pallet_treasury::Config for Runtime {
 		EnsureOneOf<AccountId, EnsureMembers<_4, AccountId, GeneralCouncilInstance>, EnsureRoot<AccountId>>;
 	type RejectOrigin =
 		EnsureOneOf<AccountId, EnsureMembers<_2, AccountId, GeneralCouncilInstance>, EnsureRoot<AccountId>>;
-	type Tippers = GeneralCouncilProvider;
-	type TipCountdown = TipCountdown;
-	type TipFindersFee = TipFindersFee;
-	type TipReportDepositBase = TipReportDepositBase;
-	type DataDepositPerByte = DataDepositPerByte;
 	type Event = Event;
 	type OnSlash = ();
 	type ProposalBond = ProposalBond;
 	type ProposalBondMinimum = ProposalBondMinimum;
 	type SpendPeriod = SpendPeriod;
 	type Burn = Burn;
+	type BurnDestination = ();
+	type SpendFunds = Bounties;
+	type WeightInfo = ();
+}
+
+impl pallet_bounties::Config for Runtime {
+	type Event = Event;
 	type BountyDepositBase = BountyDepositBase;
 	type BountyDepositPayoutDelay = BountyDepositPayoutDelay;
 	type BountyUpdatePeriod = BountyUpdatePeriod;
 	type BountyCuratorDeposit = BountyCuratorDeposit;
 	type BountyValueMinimum = BountyValueMinimum;
+	type DataDepositPerByte = DataDepositPerByte;
 	type MaximumReasonLength = MaximumReasonLength;
-	type BurnDestination = ();
 	type WeightInfo = ();
 }
 
@@ -533,9 +530,6 @@ parameter_types! {
 	pub const MaxIterations: u32 = 5;
 	// 0.05%. The higher the value, the more strict solution acceptance becomes.
 	pub MinSolutionScoreBump: Perbill = Perbill::from_rational_approximation(5u32, 10_000);
-	pub OffchainSolutionWeightLimit: Weight = MaximumExtrinsicWeight::get()
-		.saturating_sub(BlockExecutionWeight::get())
-		.saturating_sub(ExtrinsicBaseWeight::get());
 }
 
 impl pallet_staking::Config for Runtime {
@@ -873,6 +867,7 @@ macro_rules! construct_laminar_runtime {
 				Utility: pallet_utility::{Module, Call, Storage, Event},
 				Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
 				PalletTreasury: pallet_treasury::{Module, Call, Storage, Config, Event<T>},
+				Bounties: pallet_bounties::{Module, Call, Storage, Event<T>},
 				Staking: pallet_staking::{Module, Call, Config<T>, Storage, Event<T>},
 				Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
 				Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>},
@@ -1017,6 +1012,10 @@ impl_runtime_apis! {
 
 		fn current_epoch() -> sp_consensus_babe::Epoch {
 			Babe::current_epoch()
+		}
+
+		fn next_epoch() -> sp_consensus_babe::Epoch {
+			Babe::next_epoch()
 		}
 
 		fn generate_key_ownership_proof(

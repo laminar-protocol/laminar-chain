@@ -1,7 +1,7 @@
 // Disable the following lints
 #![allow(clippy::borrowed_box)]
 
-use crate::cli::{Cli, Subcommand};
+use crate::cli::{Cli, RelayChainCli, Subcommand};
 use codec::Encode;
 use cumulus_primitives::{genesis::generate_genesis_block, ParaId};
 use service::{chain_spec, IdentifyVariant};
@@ -63,7 +63,7 @@ impl SubstrateCli for Cli {
 
 impl SubstrateCli for RelayChainCli {
 	fn impl_name() -> String {
-		format!("{} Parachain Collator", CHAIN_NAME).into()
+		format!("Laminar Parachain Collator").into()
 	}
 
 	fn impl_version() -> String {
@@ -111,7 +111,16 @@ fn set_default_ss58_version(spec: &Box<dyn service::ChainSpec>) {
 	};
 
 	sp_core::crypto::set_default_ss58_version(ss58_version);
-};
+}
+
+fn extract_genesis_wasm(chain_spec: &Box<dyn service::ChainSpec>) -> Result<Vec<u8>> {
+	let mut storage = chain_spec.build_storage()?;
+
+	storage
+		.top
+		.remove(sp_core::storage::well_known_keys::CODE)
+		.ok_or_else(|| "Could not find wasm file in genesis state!".into())
+}
 
 pub fn run() -> sc_cli::Result<()> {
 	let cli = Cli::from_args();
@@ -138,7 +147,7 @@ pub fn run() -> sc_cli::Result<()> {
 			runner.sync_run(|config| cmd.run::<service::dev_runtime::Block, service::DevExecutor>(config))
 		}
 
-		Some(Subcommand::Key(cmd)) => cmd.run(),
+		Some(Subcommand::Key(cmd)) => cmd.run(&cli),
 		Some(Subcommand::Sign(cmd)) => cmd.run(),
 		Some(Subcommand::Verify(cmd)) => cmd.run(),
 		Some(Subcommand::Vanity(cmd)) => cmd.run(),
@@ -156,7 +165,7 @@ pub fn run() -> sc_cli::Result<()> {
 
 			runner.async_run(|mut config| {
 				let (client, _, import_queue, task_manager) =
-					service::new_chain_ops::<service::dev_runtime::RuntimeApi, service::DevExecutor>(&mut config)?;
+					service::new_chain_ops(&mut config)?;
 				Ok((cmd.run(client, import_queue), task_manager))
 			})
 		}
@@ -169,7 +178,7 @@ pub fn run() -> sc_cli::Result<()> {
 
 			runner.async_run(|mut config| {
 				let (client, _, _, task_manager) =
-					service::new_chain_ops::<service::dev_runtime::RuntimeApi, service::DevExecutor>(&mut config)?;
+					service::new_chain_ops(&mut config)?;
 				Ok((cmd.run(client, config.database), task_manager))
 			})
 		}
@@ -182,7 +191,7 @@ pub fn run() -> sc_cli::Result<()> {
 
 			runner.async_run(|mut config| {
 				let (client, _, _, task_manager) =
-					service::new_chain_ops::<service::dev_runtime::RuntimeApi, service::DevExecutor>(&mut config)?;
+					service::new_chain_ops(&mut config)?;
 				Ok((cmd.run(client, config.chain_spec), task_manager))
 			})
 		}
@@ -195,7 +204,7 @@ pub fn run() -> sc_cli::Result<()> {
 
 			runner.async_run(|mut config| {
 				let (client, _, import_queue, task_manager) =
-					service::new_chain_ops::<service::dev_runtime::RuntimeApi, service::DevExecutor>(&mut config)?;
+					service::new_chain_ops(&mut config)?;
 				Ok((cmd.run(client, import_queue), task_manager))
 			})
 		}
@@ -213,7 +222,7 @@ pub fn run() -> sc_cli::Result<()> {
 
 			runner.async_run(|mut config| {
 				let (client, backend, _, task_manager) =
-					service::new_chain_ops::<service::dev_runtime::RuntimeApi, service::DevExecutor>(&mut config)?;
+					service::new_chain_ops(&mut config)?;
 				Ok((cmd.run(client, backend), task_manager))
 			})
 		}
@@ -303,7 +312,7 @@ pub fn run() -> sc_cli::Result<()> {
 				info!("Parachain genesis state: {}", genesis_state);
 				info!("Is collating: {}", if collator { "yes" } else { "no" });
 
-				service::start_node::<service::dev_runtime::RuntimeApi, service::Executor>(
+				service::start_node::<service::dev_runtime::RuntimeApi, service::DevExecutor>(
 					config,
 					key,
 					polkadot_config,

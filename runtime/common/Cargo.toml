@@ -5,12 +5,24 @@ authors = ["Laminar Developers <hello@laminar.one>"]
 edition = "2018"
 
 [dependencies]
+static_assertions = "1.1.0"
+
+frame-support = { version = "2.0.1", default-features = false }
+frame-system = { version = "2.0.1", default-features = false }
+sp-runtime = { version = "2.0.1", default-features = false }
+
 orml-oracle = { path = "../../orml/oracle", default-features = false }
+
 primitives = { package = "laminar-primitives", path = "../../primitives", default-features = false }
 
 [features]
 default = ["std"]
 std = [
+	"frame-support/std",
+	"frame-system/std",
+	"sp-runtime/std",
+
 	"orml-oracle/std",
+
 	"primitives/std",
 ]

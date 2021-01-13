@@ -10,6 +10,9 @@ use frame_support::{
 	},
 };
 use frame_system::limits;
+use sp_runtime::Perbill;
+
+use static_assertions::const_assert;
 
 pub type TimeStampedPrice = orml_oracle::TimestampedValue<primitives::Price, primitives::Moment>;
 

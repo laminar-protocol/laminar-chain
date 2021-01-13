@@ -1,5 +1,5 @@
 use dev_runtime::{
-	opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, BandOracleConfig, Block, CurrencyId,
+	opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, BandOracleConfig, CurrencyId,
 	FinancialCouncilMembershipConfig, GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, IndicesConfig,
 	LaminarOracleConfig, MarginLiquidityPoolsConfig, MarginProtocolConfig, Moment, OperatorMembershipBandConfig,
 	OperatorMembershipLaminarConfig, ParachainInfoConfig, Price, SessionConfig, Signature, StakerStatus, StakingConfig, SudoConfig,
@@ -33,10 +33,17 @@ const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 #[derive(Default, Clone, Serialize, Deserialize, ChainSpecExtension)]
 #[serde(rename_all = "camelCase")]
 pub struct Extensions {
-	/// Block numbers with known hashes.
-	pub fork_blocks: sc_client_api::ForkBlocks<Block>,
-	/// Known bad block hashes.
-	pub bad_blocks: sc_client_api::BadBlocks<Block>,
+	/// The relay chain of the Parachain.
+	pub relay_chain: String,
+	/// The id of the Parachain.
+	pub para_id: u32,
+}
+
+impl Extensions {
+	/// Try to get the extension from the given `ChainSpec`.
+	pub fn try_get(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Option<&Self> {
+		sc_chain_spec::get_extension(chain_spec.extensions())
+	}
 }
 
 /// Specialized `DevChainSpec`. This is a specialization of the general Substrate ChainSpec type.
@@ -168,7 +175,7 @@ pub fn local_testnet_config() -> Result<DevChainSpec, String> {
 }
 
 pub fn turbulence_testnet_config() -> Result<DevChainSpec, String> {
-	DevChainSpec::from_json_bytes(&include_bytes!("../../resources/turbulence-dist.json")[..])
+	DevChainSpec::from_json_bytes(&include_bytes!("../../../../resources/turbulence-dist.json")[..])
 }
 
 pub fn latest_turbulence_testnet_config() -> Result<DevChainSpec, String> {

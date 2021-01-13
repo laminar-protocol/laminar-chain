@@ -63,8 +63,8 @@ type FullBackend = sc_service::TFullBackend<Block>;
 type FullClient<RuntimeApi, Executor> = sc_service::TFullClient<Block, RuntimeApi, Executor>;
 
 pub fn new_partial<RuntimeApi, Executor>(
-	config: &mut Configuration,
-	test: bool,
+	config: &Configuration,
+	_test: bool,
 ) -> Result<
 	PartialComponents<
 		FullClient<RuntimeApi, Executor>,
@@ -308,6 +308,6 @@ pub fn new_chain_ops(
 		import_queue,
 		task_manager,
 		..
-	} = new_partial::<Runtime, Executor>(config, false)?;
-	Ok(((Arc::new(Client::Mandala(client)), backend, import_queue, task_manager))
+	} = new_partial::<dev_runtime::RuntimeApi, DevExecutor>(config, false)?;
+	Ok((Arc::new(Client::Dev(client)), backend, import_queue, task_manager))
 }

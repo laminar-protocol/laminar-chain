@@ -1,4 +1,6 @@
-use sc_cli::{KeySubcommand, RunCmd, SignCmd, VanityCmd, VerifyCmd};
+use std::path::PathBuf;
+
+use sc_cli::{KeySubcommand, SignCmd, VanityCmd, VerifyCmd};
 use structopt::StructOpt;
 
 /// Possible subcommands of the main binary.
