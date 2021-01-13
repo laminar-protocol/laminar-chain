@@ -1,4 +1,4 @@
-use laminar_primitives::{AccountId, Balance, Block, CurrencyId, DataProviderId, Nonce, Header, Hash, BlockNumber};
+use laminar_primitives::{AccountId, Balance, Block, BlockNumber, CurrencyId, DataProviderId, Hash, Header, Nonce};
 use runtime_common::TimeStampedPrice;
 use sc_client_api::{Backend as BackendT, BlockchainEvents, KeyIterator};
 use sp_api::{CallApiAt, NumberFor, ProvideRuntimeApi};

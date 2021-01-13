@@ -2,8 +2,8 @@ use dev_runtime::{
 	opaque::SessionKeys, AccountId, BabeConfig, BalancesConfig, BandOracleConfig, CurrencyId,
 	FinancialCouncilMembershipConfig, GeneralCouncilMembershipConfig, GenesisConfig, GrandpaConfig, IndicesConfig,
 	LaminarOracleConfig, MarginLiquidityPoolsConfig, MarginProtocolConfig, Moment, OperatorMembershipBandConfig,
-	OperatorMembershipLaminarConfig, ParachainInfoConfig, Price, SessionConfig, Signature, StakerStatus, StakingConfig, SudoConfig,
-	SyntheticLiquidityPoolsConfig, SyntheticTokensConfig, SystemConfig, TokensConfig, DOLLARS, WASM_BINARY,
+	OperatorMembershipLaminarConfig, ParachainInfoConfig, Price, SessionConfig, Signature, StakerStatus, StakingConfig,
+	SudoConfig, SyntheticLiquidityPoolsConfig, SyntheticTokensConfig, SystemConfig, TokensConfig, DOLLARS, WASM_BINARY,
 };
 use hex_literal::hex;
 use laminar_primitives::{AccumulateConfig, SwapRate, TradingPair};
@@ -186,8 +186,8 @@ pub fn latest_turbulence_testnet_config() -> Result<DevChainSpec, String> {
 	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
 
 	Ok(DevChainSpec::from_genesis(
-		"Laminar Turbulence TC2",
-		"turbulence2",
+		"Laminar Turbulence PC1",
+		"turbulencepc1",
 		ChainType::Live,
 		// SECRET="..."
 		// ./target/debug/subkey inspect "$SECRET//laminar//root"

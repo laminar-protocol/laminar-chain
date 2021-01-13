@@ -72,7 +72,7 @@ pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Percent, Permill};
 
 pub use constants::{currency::*, fee::*, time::*};
-pub use runtime_common::{TimeStampedPrice, BlockLength, BlockWeights, OffchainSolutionWeightLimit};
+pub use runtime_common::{BlockLength, BlockWeights, OffchainSolutionWeightLimit, TimeStampedPrice};
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
