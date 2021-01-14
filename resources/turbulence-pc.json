@@ -5,12 +5,7 @@
   "bootNodes": [
     "/dns4/testnet-bootnode-1.laminar-chain.laminar.one/tcp/30333/p2p/12D3KooWNCe9dEpPhswckrX5ZHhdtZ3r5sg6CcgKfgyhw3seuwtB"
   ],
-  "telemetryEndpoints": [
-    [
-      "/dns/telemetry.polkadot.io/tcp/443/x-parity-wss/%2Fsubmit%2F",
-      0
-    ]
-  ],
+  "telemetryEndpoints": [],
   "protocolId": "turbulencepc1",
   "properties": {
     "tokenDecimals": 18,
