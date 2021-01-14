@@ -7,9 +7,9 @@ edition = "2018"
 [dependencies]
 static_assertions = "1.1.0"
 
-frame-support = { version = "2.0.1", default-features = false }
-frame-system = { version = "2.0.1", default-features = false }
-sp-runtime = { version = "2.0.1", default-features = false }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 
 orml-oracle = { path = "../../orml/oracle", default-features = false }
 

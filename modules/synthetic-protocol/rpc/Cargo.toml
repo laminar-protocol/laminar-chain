@@ -10,9 +10,9 @@ jsonrpc-core = "15.0.0"
 jsonrpc-core-client = "15.0.0"
 jsonrpc-derive = "15.0.0"
 
-sp-runtime = { version = "2.0.1" }
-sp-api = { version = "2.0.1" }
-sp-blockchain = { version = "2.0.1" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+sp-api = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 
 synthetic-protocol-rpc-runtime-api = { path = "runtime-api" }
 laminar-primitives = { path = "../../../primitives" }

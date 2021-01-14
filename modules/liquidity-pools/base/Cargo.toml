@@ -7,12 +7,12 @@ edition = "2018"
 [dependencies]
 serde = { version = "1.0.101", optional = true }
 codec = { package = "parity-scale-codec", version = "1.3.0", default-features = false }
-sp-runtime = { version = "2.0.1", default-features = false }
-sp-io = { version = "2.0.1", default-features = false }
-sp-std = { version = "2.0.1", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 
-frame-support = { version = "2.0.1", default-features = false }
-frame-system = { version = "2.0.1", default-features = false }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 
 orml-traits = { path = "../../../orml/traits", default-features = false }
 orml-utilities = { path = "../../../orml/utilities", default-features = false }
@@ -21,8 +21,8 @@ traits = { package = "module-traits", path = "../../traits", default-features = 
 primitives = { package = "laminar-primitives", path = "../../../primitives", default-features = false }
 
 [dev-dependencies]
-sp-core = { version = "2.0.1" }
-pallet-balances = { version = "2.0.1" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 orml-currencies = { path = "../../../orml/currencies" }
 orml-tokens = { path = "../../../orml/tokens" }
 
