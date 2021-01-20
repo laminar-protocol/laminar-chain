@@ -55,6 +55,11 @@ cumulus-parachain-upgrade = { git = "https://github.com/paritytech/cumulus", bra
 cumulus-primitives = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1", default-features = false }
 cumulus-message-broker = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1", default-features = false }
 parachain-info = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1", default-features = false }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1", default-features = false }
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1", default-features = false }
+xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1", default-features = false }
+xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1", default-features = false }
+xcm-handler = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1", default-features = false }
 
 orml-benchmarking = { path = "../../orml/benchmarking", default-features = false }
 orml-currencies = { path = "../../orml/currencies", default-features = false }
@@ -62,6 +67,8 @@ orml-oracle = { path = "../../orml/oracle", default-features = false }
 orml-oracle-rpc-runtime-api = { path = "../../orml/oracle/rpc/runtime-api", default-features = false }
 orml-tokens = { path = "../../orml/tokens", default-features = false }
 orml-traits = { path = "../../orml/traits", default-features = false }
+orml-xtokens = { path = "../../orml/xtokens", default-features = false }
+orml-xcm-support = { path = "../../orml/xcm-support", default-features = false }
 
 base-liquidity-pools = { package = "module-base-liquidity-pools", path = "../../modules/liquidity-pools/base", default-features = false }
 margin-liquidity-pools = { package = "module-margin-liquidity-pools", path = "../../modules/liquidity-pools/margin", default-features = false }
@@ -128,6 +135,11 @@ std = [
 	"cumulus-primitives/std",
 	"cumulus-message-broker/std",
 	"parachain-info/std",
+	"polkadot-parachain/std",
+	"xcm/std",
+	"xcm-executor/std",
+	"xcm-builder/std",
+	"xcm-handler/std",
 
 	"orml-benchmarking/std",
 	"orml-currencies/std",
@@ -135,6 +147,8 @@ std = [
 	"orml-oracle/std",
 	"orml-tokens/std",
 	"orml-traits/std",
+	"orml-xtokens/std",
+	"orml-xcm-support/std",
 
 	"base-liquidity-pools/std",
 	"margin-liquidity-pools/std",

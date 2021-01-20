@@ -26,7 +26,7 @@ use sp_core::{
 	crypto::KeyTypeId,
 	u32_trait::{_1, _2, _3, _4},
 };
-use sp_runtime::traits::{BlakeTwo256, Block as BlockT, NumberFor, OpaqueKeys, SaturatedConversion, StaticLookup};
+use sp_runtime::traits::{BlakeTwo256, Block as BlockT, Convert, NumberFor, OpaqueKeys, SaturatedConversion, StaticLookup};
 use sp_runtime::{
 	create_runtime_str,
 	curve::PiecewiseLinear,
@@ -35,7 +35,7 @@ use sp_runtime::{
 	transaction_validity::{TransactionPriority, TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, DispatchResult, FixedPointNumber, ModuleId,
 };
-use sp_std::prelude::*;
+use sp_std::{collections::btree_set::BTreeSet, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
@@ -52,6 +52,16 @@ pub use primitives::{
 pub use sp_arithmetic::FixedI128;
 use pallet_transaction_payment::{FeeDetails, RuntimeDispatchInfo};
 
+use cumulus_primitives::relay_chain::Balance as RelayChainBalance;
+use orml_xcm_support::{CurrencyIdConverter, IsConcreteWithGeneralKey, MultiCurrencyAdapter, NativePalletAssetOr};
+use polkadot_parachain::primitives::Sibling;
+use xcm::v0::{Junction, MultiLocation, NetworkId};
+use xcm_builder::{
+	AccountId32Aliases, LocationInverter, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
+	SiblingParachainConvertsVia, SignedAccountId32AsNative, SovereignSignedViaLocation,
+};
+use xcm_executor::{Config, XcmExecutor};
+
 use margin_protocol_rpc_runtime_api::{MarginPoolState, MarginTraderState};
 use synthetic_protocol_rpc_runtime_api::SyntheticPoolState;
 
@@ -59,7 +69,7 @@ use synthetic_protocol_rpc_runtime_api::SyntheticPoolState;
 pub use frame_support::{
 	construct_runtime, debug, parameter_types,
 	traits::{
-		Contains, ContainsLengthBound, Filter, InstanceFilter, KeyOwnerProofSystem, Randomness, U128CurrencyToVote,
+		Contains, ContainsLengthBound, Filter, Get, InstanceFilter, KeyOwnerProofSystem, Randomness, U128CurrencyToVote,
 	},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -835,6 +845,119 @@ impl cumulus_message_broker::Config for Runtime {
 #[cfg(not(feature = "standalone"))]
 impl parachain_info::Config for Runtime {}
 
+#[cfg(not(feature = "standalone"))]
+parameter_types! {
+	pub const PolkadotNetworkId: NetworkId = NetworkId::Polkadot;
+}
+
+#[cfg(not(feature = "standalone"))]
+pub struct AccountId32Convert;
+impl Convert<AccountId, [u8; 32]> for AccountId32Convert {
+	fn convert(account_id: AccountId) -> [u8; 32] {
+		account_id.into()
+	}
+}
+
+#[cfg(not(feature = "standalone"))]
+parameter_types! {
+	pub LaminarNetwork: NetworkId = NetworkId::Named("laminar".into());
+	pub RelayChainOrigin: Origin = xcm_handler::Origin::Relay.into();
+	pub Ancestry: MultiLocation = MultiLocation::X1(Junction::Parachain {
+		id: ParachainInfo::get().into(),
+	});
+	pub const RelayChainCurrencyId: CurrencyId = CurrencyId::DOT;
+}
+
+#[cfg(not(feature = "standalone"))]
+pub type LocationConverter = (
+	ParentIsDefault<AccountId>,
+	SiblingParachainConvertsVia<Sibling, AccountId>,
+	AccountId32Aliases<LaminarNetwork, AccountId>,
+);
+
+#[cfg(not(feature = "standalone"))]
+pub type LocalAssetTransactor = MultiCurrencyAdapter<
+	Currencies,
+	IsConcreteWithGeneralKey<CurrencyId, RelayToNative>,
+	LocationConverter,
+	AccountId,
+	CurrencyIdConverter<CurrencyId, RelayChainCurrencyId>,
+	CurrencyId,
+>;
+
+#[cfg(not(feature = "standalone"))]
+pub type LocalOriginConverter = (
+	SovereignSignedViaLocation<LocationConverter, Origin>,
+	RelayChainAsNative<RelayChainOrigin, Origin>,
+	SiblingParachainAsNative<xcm_handler::Origin, Origin>,
+	SignedAccountId32AsNative<LaminarNetwork, Origin>,
+);
+
+#[cfg(not(feature = "standalone"))]
+parameter_types! {
+	pub NativeOrmlTokens: BTreeSet<(Vec<u8>, MultiLocation)> = {
+		let mut t = BTreeSet::new();
+		//TODO: might need to add other assets based on orml-tokens
+		t.insert(("AUSD".into(), MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 666 })));
+		t
+	};
+}
+
+#[cfg(not(feature = "standalone"))]
+pub struct XcmConfig;
+#[cfg(not(feature = "standalone"))]
+impl Config for XcmConfig {
+	type Call = Call;
+	type XcmSender = XcmHandler;
+	type AssetTransactor = LocalAssetTransactor;
+	type OriginConverter = LocalOriginConverter;
+	//TODO: might need to add other assets based on orml-tokens
+	type IsReserve = NativePalletAssetOr<NativeOrmlTokens>;
+	type IsTeleporter = ();
+	type LocationInverter = LocationInverter<Ancestry>;
+}
+
+#[cfg(not(feature = "standalone"))]
+impl xcm_handler::Config for Runtime {
+	type Event = Event;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type UpwardMessageSender = MessageBroker;
+	type HrmpMessageSender = MessageBroker;
+}
+
+#[cfg(not(feature = "standalone"))]
+pub struct RelayToNative;
+impl Convert<RelayChainBalance, Balance> for RelayToNative {
+	fn convert(val: u128) -> Balance {
+		// native is 18
+		// relay is 12
+		val * 1_000_000
+	}
+}
+
+#[cfg(not(feature = "standalone"))]
+pub struct NativeToRelay;
+impl Convert<Balance, RelayChainBalance> for NativeToRelay {
+	fn convert(val: u128) -> Balance {
+		// native is 18
+		// relay is 12
+		val / 1_000_000
+	}
+}
+
+#[cfg(not(feature = "standalone"))]
+impl orml_xtokens::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type ToRelayChainBalance = NativeToRelay;
+	type AccountId32Convert = AccountId32Convert;
+	//TODO: change network id if kusama
+	type RelayChainNetworkId = PolkadotNetworkId;
+	type ParaId = ParachainInfo;
+	type AccountIdConverter = LocationConverter;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+}
+
 macro_rules! construct_laminar_runtime {
 	($( $modules:tt )*) => {
 		construct_runtime! {
@@ -894,6 +1017,8 @@ construct_laminar_runtime! {
 	ParachainUpgrade: cumulus_parachain_upgrade::{Module, Call, Storage, Inherent, Event},
 	MessageBroker: cumulus_message_broker::{Module, Storage, Call, Inherent},
 	ParachainInfo: parachain_info::{Module, Storage, Config},
+	XTokens: orml_xtokens::{Module, Storage, Call, Event<T>},
+	XcmHandler: xcm_handler::{Module, Call, Event<T>, Origin},
 }
 
 #[cfg(feature = "standalone")]

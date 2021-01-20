@@ -10,7 +10,7 @@ use sp_runtime::{
 };
 
 use sp_arithmetic::FixedI128;
-use sp_std::{prelude::*, vec};
+use sp_std::{prelude::*, vec, convert::{TryFrom}};
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -81,6 +81,7 @@ pub type LiquidityPoolId = u32;
 pub enum CurrencyId {
 	LAMI = 0,
 	AUSD,
+	DOT,
 	FEUR,
 	FJPY,
 	FBTC,
@@ -90,6 +91,27 @@ pub enum CurrencyId {
 	FCHF,
 	FXAU,
 	FOIL,
+}
+
+impl TryFrom<Vec<u8>> for CurrencyId {
+	type Error = ();
+	fn try_from(v: Vec<u8>) -> Result<CurrencyId, ()> {
+		match v.as_slice() {
+			b"LAMI" => Ok(CurrencyId::LAMI),
+			b"AUSD" => Ok(CurrencyId::AUSD),
+			b"DOT" => Ok(CurrencyId::DOT),
+			b"FEUR" => Ok(CurrencyId::FEUR),
+			b"FJPY" => Ok(CurrencyId::FJPY),
+			b"FBTC" => Ok(CurrencyId::FBTC),
+			b"FETH" => Ok(CurrencyId::FETH),
+			b"FAUD" => Ok(CurrencyId::FAUD),
+			b"FCAD" => Ok(CurrencyId::FCAD),
+			b"FCHF" => Ok(CurrencyId::FCHF),
+			b"FXAU" => Ok(CurrencyId::FXAU),
+			b"FOIL" => Ok(CurrencyId::FOIL),
+			_ => Err(()),
+		}
+	}
 }
 
 pub type Price = FixedU128;
