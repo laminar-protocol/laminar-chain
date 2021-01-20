@@ -50,6 +50,7 @@ pub use primitives::{
 	Moment, Nonce, Price, Signature,
 };
 pub use sp_arithmetic::FixedI128;
+use pallet_transaction_payment::{FeeDetails, RuntimeDispatchInfo};
 
 use margin_protocol_rpc_runtime_api::{MarginPoolState, MarginTraderState};
 use synthetic_protocol_rpc_runtime_api::SyntheticPoolState;
@@ -822,6 +823,7 @@ impl margin_protocol::Config for Runtime {
 impl cumulus_parachain_upgrade::Config for Runtime {
 	type Event = Event;
 	type OnValidationData = ();
+	type SelfParaId = ParachainInfo;
 }
 
 #[cfg(not(feature = "standalone"))]
@@ -1096,8 +1098,11 @@ impl_runtime_apis! {
 		Block,
 		Balance,
 	> for Runtime {
-		fn query_info(uxt: <Block as BlockT>::Extrinsic, len: u32) -> pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo<Balance> {
+		fn query_info(uxt: <Block as BlockT>::Extrinsic, len: u32) -> RuntimeDispatchInfo<Balance> {
 			TransactionPayment::query_info(uxt, len)
+		}
+		fn query_fee_details(uxt: <Block as BlockT>::Extrinsic, len: u32) -> FeeDetails<Balance> {
+			TransactionPayment::query_fee_details(uxt, len)
 		}
 	}
 
