@@ -838,8 +838,8 @@ impl cumulus_parachain_upgrade::Config for Runtime {
 
 #[cfg(not(feature = "standalone"))]
 impl cumulus_message_broker::Config for Runtime {
-	type DownwardMessageHandlers = ();
-	type HrmpMessageHandlers = ();
+	type DownwardMessageHandlers = XcmHandler;
+	type HrmpMessageHandlers = XcmHandler;
 }
 
 #[cfg(not(feature = "standalone"))]
