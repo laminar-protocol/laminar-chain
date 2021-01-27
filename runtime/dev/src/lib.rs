@@ -26,7 +26,9 @@ use sp_core::{
 	crypto::KeyTypeId,
 	u32_trait::{_1, _2, _3, _4},
 };
-use sp_runtime::traits::{BlakeTwo256, Block as BlockT, Convert, NumberFor, OpaqueKeys, SaturatedConversion, StaticLookup};
+use sp_runtime::traits::{
+	BlakeTwo256, Block as BlockT, Convert, NumberFor, OpaqueKeys, SaturatedConversion, StaticLookup,
+};
 use sp_runtime::{
 	create_runtime_str,
 	curve::PiecewiseLinear,
@@ -45,20 +47,20 @@ use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{
 	create_median_value_data_provider, parameter_type_with_key, DataFeeder, DataProvider, DataProviderExtended,
 };
+use pallet_transaction_payment::{FeeDetails, RuntimeDispatchInfo};
 pub use primitives::{
 	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, DataProviderId, EraIndex, Hash, LiquidityPoolId,
 	Moment, Nonce, Price, Signature,
 };
 pub use sp_arithmetic::FixedI128;
-use pallet_transaction_payment::{FeeDetails, RuntimeDispatchInfo};
 
-use cumulus_primitives::relay_chain::Balance as RelayChainBalance;
+use cumulus_primitives::{relay_chain::Balance as RelayChainBalance, ParaId};
 use orml_xcm_support::{CurrencyIdConverter, IsConcreteWithGeneralKey, MultiCurrencyAdapter, NativePalletAssetOr};
 use polkadot_parachain::primitives::Sibling;
 use xcm::v0::{Junction, MultiLocation, NetworkId};
 use xcm_builder::{
-	AccountId32Aliases, LocationInverter, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
-	SiblingParachainConvertsVia, SignedAccountId32AsNative, SovereignSignedViaLocation,
+	AccountId32Aliases, ChildParachainConvertsVia, LocationInverter, ParentIsDefault, RelayChainAsNative,
+	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative, SovereignSignedViaLocation,
 };
 use xcm_executor::{Config, XcmExecutor};
 
@@ -872,6 +874,7 @@ parameter_types! {
 pub type LocationConverter = (
 	ParentIsDefault<AccountId>,
 	SiblingParachainConvertsVia<Sibling, AccountId>,
+	ChildParachainConvertsVia<ParaId, AccountId>,
 	AccountId32Aliases<LaminarNetwork, AccountId>,
 );
 
@@ -898,7 +901,7 @@ parameter_types! {
 	pub NativeOrmlTokens: BTreeSet<(Vec<u8>, MultiLocation)> = {
 		let mut t = BTreeSet::new();
 		//TODO: might need to add other assets based on orml-tokens
-		t.insert(("AUSD".into(), MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 666 })));
+		t.insert(("AUSD".into(), MultiLocation::X1(Junction::Parachain { id: 666 })));
 		t
 	};
 }

@@ -320,7 +320,6 @@ kusama-runtime = { git = "https://github.com/paritytech//polkadot", branch = "ro
 polkadot-runtime-parachains = { git = "https://github.com/paritytech//polkadot", branch = "rococo-v1" }
 polkadot-node-network-protocol = { git = "https://github.com/paritytech//polkadot", branch = "rococo-v1" }
 polkadot-node-subsystem = { git = "https://github.com/paritytech//polkadot", branch = "rococo-v1" }
-polkadot-validation = { git = "https://github.com/paritytech//polkadot", branch = "rococo-v1" }
 polkadot-statement-table = { git = "https://github.com/paritytech//polkadot", branch = "rococo-v1" }
 polkadot-overseer = { git = "https://github.com/paritytech//polkadot", branch = "rococo-v1" }
 polkadot-node-primitives = { git = "https://github.com/paritytech//polkadot", branch = "rococo-v1" }

@@ -10,7 +10,7 @@ use sp_runtime::{
 };
 
 use sp_arithmetic::FixedI128;
-use sp_std::{prelude::*, vec, convert::{TryFrom}};
+use sp_std::{convert::TryFrom, prelude::*, vec};
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
