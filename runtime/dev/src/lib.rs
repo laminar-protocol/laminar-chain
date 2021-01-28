@@ -832,14 +832,10 @@ impl margin_protocol::Config for Runtime {
 }
 
 #[cfg(not(feature = "standalone"))]
-impl cumulus_parachain_upgrade::Config for Runtime {
+impl cumulus_parachain_system::Config for Runtime {
 	type Event = Event;
 	type OnValidationData = ();
-	type SelfParaId = ParachainInfo;
-}
-
-#[cfg(not(feature = "standalone"))]
-impl cumulus_message_broker::Config for Runtime {
+	type SelfParaId = parachain_info::Module<Runtime>;
 	type DownwardMessageHandlers = XcmHandler;
 	type HrmpMessageHandlers = XcmHandler;
 }
@@ -924,8 +920,8 @@ impl Config for XcmConfig {
 impl xcm_handler::Config for Runtime {
 	type Event = Event;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type UpwardMessageSender = MessageBroker;
-	type HrmpMessageSender = MessageBroker;
+	type UpwardMessageSender = ParachainSystem;
+	type HrmpMessageSender = ParachainSystem;
 }
 
 #[cfg(not(feature = "standalone"))]
@@ -1017,11 +1013,10 @@ macro_rules! construct_laminar_runtime {
 #[cfg(not(feature = "standalone"))]
 construct_laminar_runtime! {
 	// Parachain
-	ParachainUpgrade: cumulus_parachain_upgrade::{Module, Call, Storage, Inherent, Event},
-	MessageBroker: cumulus_message_broker::{Module, Storage, Call, Inherent},
+	ParachainSystem: cumulus_parachain_system::{Module, Call, Storage, Inherent, Event},
 	ParachainInfo: parachain_info::{Module, Storage, Config},
+	XcmHandler: xcm_handler::{Module, Event<T>, Origin},
 	XTokens: orml_xtokens::{Module, Storage, Call, Event<T>},
-	XcmHandler: xcm_handler::{Module, Call, Event<T>, Origin},
 }
 
 #[cfg(feature = "standalone")]
