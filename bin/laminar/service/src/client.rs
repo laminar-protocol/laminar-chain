@@ -15,7 +15,7 @@ use std::sync::Arc;
 /// A set of APIs that polkadot-like runtimes must implement.
 pub trait RuntimeApiCollection:
 	sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
-	+ sp_api::ApiExt<Block, Error = sp_blockchain::Error>
+	+ sp_api::ApiExt<Block>
 	+ sp_consensus_babe::BabeApi<Block>
 	+ sp_finality_grandpa::GrandpaApi<Block>
 	+ sp_block_builder::BlockBuilder<Block>
@@ -35,7 +35,7 @@ where
 impl<Api> RuntimeApiCollection for Api
 where
 	Api: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
-		+ sp_api::ApiExt<Block, Error = sp_blockchain::Error>
+		+ sp_api::ApiExt<Block>
 		+ sp_consensus_babe::BabeApi<Block>
 		+ sp_finality_grandpa::GrandpaApi<Block>
 		+ sp_block_builder::BlockBuilder<Block>
@@ -61,7 +61,7 @@ pub trait AbstractClient<Block, Backend>:
 	+ Sync
 	+ ProvideRuntimeApi<Block>
 	+ HeaderBackend<Block>
-	+ CallApiAt<Block, Error = sp_blockchain::Error, StateBackend = Backend::State>
+	+ CallApiAt<Block, StateBackend = Backend::State>
 where
 	Block: BlockT,
 	Backend: BackendT<Block>,
@@ -81,7 +81,7 @@ where
 		+ Sized
 		+ Send
 		+ Sync
-		+ CallApiAt<Block, Error = sp_blockchain::Error, StateBackend = Backend::State>,
+		+ CallApiAt<Block, StateBackend = Backend::State>,
 	Client::Api: RuntimeApiCollection<StateBackend = Backend::State>,
 {
 }
@@ -154,6 +154,12 @@ impl sc_client_api::BlockBackend<Block> for Client {
 	fn block_hash(&self, number: NumberFor<Block>) -> sp_blockchain::Result<Option<<Block as BlockT>::Hash>> {
 		match self {
 			Self::Dev(client) => client.block_hash(number),
+		}
+	}
+
+	fn extrinsic(&self, id: &<Block as BlockT>::Hash) -> sp_blockchain::Result<Option<<Block as BlockT>::Extrinsic>> {
+		match self {
+			Self::Dev(client) => client.extrinsic(id),
 		}
 	}
 }

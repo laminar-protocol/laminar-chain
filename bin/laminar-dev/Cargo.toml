@@ -14,7 +14,7 @@ harness = false # Allows Cucumber to print output instead of libtest
 
 [dependencies]
 futures = "0.3.4"
-parity-util-mem = { version = "0.8.0", default-features = false, features = ["jemalloc-global"] }
+parity-util-mem = { version = "0.9.0", default-features = false, features = ["jemalloc-global"] }
 laminar-dev-cli = { path = "cli" }
 laminar-dev-service = { path = "service" }
 

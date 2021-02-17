@@ -54,7 +54,7 @@ pub use primitives::{
 };
 pub use sp_arithmetic::FixedI128;
 
-use cumulus_primitives::{relay_chain::Balance as RelayChainBalance, ParaId};
+use cumulus_primitives_core::{relay_chain::Balance as RelayChainBalance, ParaId};
 use orml_xcm_support::{CurrencyIdConverter, IsConcreteWithGeneralKey, MultiCurrencyAdapter, NativePalletAssetOr};
 use polkadot_parachain::primitives::Sibling;
 use xcm::v0::{Junction, MultiLocation, NetworkId};
@@ -201,6 +201,8 @@ impl pallet_utility::Config for Runtime {
 parameter_types! {
 	pub const EpochDuration: u64 = EPOCH_DURATION_IN_SLOTS;
 	pub const ExpectedBlockTime: Moment = MILLISECS_PER_BLOCK;
+	pub const ReportLongevity: u64 =
+		BondingDuration::get() as u64 * SessionsPerEra::get() as u64 * EpochDuration::get();
 }
 
 parameter_types! {
@@ -230,7 +232,7 @@ impl pallet_babe::Config for Runtime {
 		<Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, pallet_babe::AuthorityId)>>::Proof;
 	type KeyOwnerIdentification =
 		<Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, pallet_babe::AuthorityId)>>::IdentificationTuple;
-	type HandleEquivocation = pallet_babe::EquivocationHandler<Self::KeyOwnerIdentification, Offences>;
+	type HandleEquivocation = pallet_babe::EquivocationHandler<Self::KeyOwnerIdentification, Offences, ReportLongevity>;
 	type WeightInfo = ();
 }
 
@@ -241,7 +243,7 @@ impl pallet_grandpa::Config for Runtime {
 	type KeyOwnerProof = <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, GrandpaId)>>::Proof;
 	type KeyOwnerIdentification =
 		<Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, GrandpaId)>>::IdentificationTuple;
-	type HandleEquivocation = pallet_grandpa::EquivocationHandler<Self::KeyOwnerIdentification, Offences>;
+	type HandleEquivocation = pallet_grandpa::EquivocationHandler<Self::KeyOwnerIdentification, Offences, ReportLongevity>;
 	type WeightInfo = ();
 }
 
@@ -832,7 +834,7 @@ impl margin_protocol::Config for Runtime {
 }
 
 #[cfg(not(feature = "standalone"))]
-impl cumulus_parachain_system::Config for Runtime {
+impl cumulus_pallet_parachain_system::Config for Runtime {
 	type Event = Event;
 	type OnValidationData = ();
 	type SelfParaId = parachain_info::Module<Runtime>;
@@ -859,7 +861,7 @@ impl Convert<AccountId, [u8; 32]> for AccountId32Convert {
 #[cfg(not(feature = "standalone"))]
 parameter_types! {
 	pub LaminarNetwork: NetworkId = NetworkId::Named("laminar".into());
-	pub RelayChainOrigin: Origin = xcm_handler::Origin::Relay.into();
+	pub RelayChainOrigin: Origin = cumulus_pallet_xcm_handler::Origin::Relay.into();
 	pub Ancestry: MultiLocation = MultiLocation::X1(Junction::Parachain {
 		id: ParachainInfo::get().into(),
 	});
@@ -888,7 +890,7 @@ pub type LocalAssetTransactor = MultiCurrencyAdapter<
 pub type LocalOriginConverter = (
 	SovereignSignedViaLocation<LocationConverter, Origin>,
 	RelayChainAsNative<RelayChainOrigin, Origin>,
-	SiblingParachainAsNative<xcm_handler::Origin, Origin>,
+	SiblingParachainAsNative<cumulus_pallet_xcm_handler::Origin, Origin>,
 	SignedAccountId32AsNative<LaminarNetwork, Origin>,
 );
 
@@ -917,7 +919,7 @@ impl Config for XcmConfig {
 }
 
 #[cfg(not(feature = "standalone"))]
-impl xcm_handler::Config for Runtime {
+impl cumulus_pallet_xcm_handler::Config for Runtime {
 	type Event = Event;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type UpwardMessageSender = ParachainSystem;
@@ -1013,9 +1015,9 @@ macro_rules! construct_laminar_runtime {
 #[cfg(not(feature = "standalone"))]
 construct_laminar_runtime! {
 	// Parachain
-	ParachainSystem: cumulus_parachain_system::{Module, Call, Storage, Inherent, Event},
+	ParachainSystem: cumulus_pallet_parachain_system::{Module, Call, Storage, Inherent, Event},
 	ParachainInfo: parachain_info::{Module, Storage, Config},
-	XcmHandler: xcm_handler::{Module, Event<T>, Origin},
+	XcmHandler: cumulus_pallet_xcm_handler::{Module, Event<T>, Origin},
 	XTokens: orml_xtokens::{Module, Storage, Call, Event<T>},
 }
 
@@ -1131,7 +1133,7 @@ impl_runtime_apis! {
 			}
 		}
 
-		fn current_epoch_start() -> sp_consensus_babe::SlotNumber {
+		fn current_epoch_start() -> sp_consensus_babe::Slot {
 			Babe::current_epoch_start()
 		}
 
@@ -1144,7 +1146,7 @@ impl_runtime_apis! {
 		}
 
 		fn generate_key_ownership_proof(
-			_slot_number: sp_consensus_babe::SlotNumber,
+			_slot_number: sp_consensus_babe::Slot,
 			authority_id: sp_consensus_babe::AuthorityId,
 		) -> Option<sp_consensus_babe::OpaqueKeyOwnershipProof> {
 			use codec::Encode;
@@ -1312,4 +1314,4 @@ impl_runtime_apis! {
 }
 
 #[cfg(not(feature = "standalone"))]
-cumulus_runtime::register_validate_block!(Block, Executive);
+cumulus_pallet_parachain_system::register_validate_block!(Block, Executive);
