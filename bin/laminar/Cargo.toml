@@ -1,0 +1,35 @@
+[package]
+name = "laminar"
+version = "0.3.1"
+authors = ["Laminar Developers <hello@laminar.one>"]
+edition = "2018"
+
+[[bin]]
+name = "laminar"
+path = "src/main.rs"
+
+[dependencies]
+futures = "0.3.4"
+parity-util-mem = { version = "0.9.0", default-features = false, features = ["jemalloc-global"] }
+laminar-cli = { path = "cli" }
+laminar-service = { path = "service" }
+
+#TODO: This is a workaround for issue https://github.com/bitvecto-rs/bitvec/issues/105. Remove it once fixed.
+funty = { version = "=1.1.0" }
+
+[dev-dependencies]
+cucumber = { package = "cucumber_rust", version = "^0.6.0" }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+dev-runtime = { path = "../../runtime/dev" }
+margin-protocol = { package = "module-margin-protocol", path = "../../modules/margin-protocol" }
+margin-protocol-rpc-runtime-api = { path = "../../modules/margin-protocol/rpc/runtime-api" }
+synthetic-protocol-rpc-runtime-api = { path = "../../modules/synthetic-protocol/rpc/runtime-api" }
+laminar-primitives = { path = "../../primitives" }
+
+[features]
+runtime-benchmarks = [
+	"laminar-cli/runtime-benchmarks",
+]

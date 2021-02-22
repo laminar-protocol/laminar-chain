@@ -9,7 +9,7 @@ use crate::{
 };
 use frame_support::{
 	assert_ok, parameter_types,
-	traits::{OnFinalize, OnInitialize},
+	traits::{GenesisBuild, OnFinalize, OnInitialize},
 };
 
 use margin_protocol::RiskThreshold;

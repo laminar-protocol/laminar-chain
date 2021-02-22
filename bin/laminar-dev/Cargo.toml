@@ -1,0 +1,36 @@
+[package]
+name = "laminar-dev"
+version = "0.3.1"
+authors = ["Laminar Developers <hello@laminar.one>"]
+edition = "2018"
+
+[[bin]]
+name = "laminar-dev"
+path = "src/main.rs"
+
+[[test]]
+name = "cucumber"
+harness = false # Allows Cucumber to print output instead of libtest
+
+[dependencies]
+futures = "0.3.4"
+parity-util-mem = { version = "0.9.0", default-features = false, features = ["jemalloc-global"] }
+laminar-dev-cli = { path = "cli" }
+laminar-dev-service = { path = "service" }
+
+[dev-dependencies]
+cucumber = { package = "cucumber_rust", version = "^0.6.0" }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+dev-runtime = { path = "../../runtime/dev" }
+margin-protocol = { package = "module-margin-protocol", path = "../../modules/margin-protocol" }
+margin-protocol-rpc-runtime-api = { path = "../../modules/margin-protocol/rpc/runtime-api" }
+synthetic-protocol-rpc-runtime-api = { path = "../../modules/synthetic-protocol/rpc/runtime-api" }
+laminar-primitives = { path = "../../primitives" }
+
+[features]
+runtime-benchmarks = [
+	"laminar-dev-cli/runtime-benchmarks",
+]

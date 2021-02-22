@@ -1,0 +1,30 @@
+[package]
+name = "laminar-dev-cli"
+version = "0.3.1"
+authors = ["Laminar Developers <hello@laminar.one>"]
+edition = "2018"
+
+[dependencies]
+structopt = "0.3.8"
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", optional = true }
+sc-cli = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", optional = true }
+sc-service = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", optional = true }
+frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", optional = true }
+
+inspect = { package = "laminar-inspect", path = "../../../inspect" }
+service = { package = "laminar-dev-service", path = "../service", default-features = false, optional = true }
+
+[build-dependencies]
+substrate-build-script-utils = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+
+[features]
+default = ["wasmtime", "cli"]
+wasmtime = [ "sc-cli/wasmtime" ]
+cli = [
+	"service",
+	"sp-core",
+	"sc-cli",
+	"sc-service",
+	"frame-benchmarking-cli",
+]
+runtime-benchmarks = [ "service/runtime-benchmarks" ]
