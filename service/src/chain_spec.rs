@@ -173,8 +173,8 @@ pub fn latest_turbulence_testnet_config() -> Result<DevChainSpec, String> {
 	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
 
 	Ok(DevChainSpec::from_genesis(
-		"Laminar Turbulence TC2",
-		"turbulence2",
+		"Laminar Turbulence TC3",
+		"turbulence3",
 		ChainType::Live,
 		// SECRET="..."
 		// ./target/debug/subkey inspect "$SECRET//laminar//root"
