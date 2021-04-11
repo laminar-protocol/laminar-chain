@@ -62,7 +62,7 @@ pub fn run() -> sc_cli::Result<()> {
 		};
 
 		sp_core::crypto::set_default_ss58_version(ss58_version);
-	};
+	}
 
 	match &cli.subcommand {
 		None => {
