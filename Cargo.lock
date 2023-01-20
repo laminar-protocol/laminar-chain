@@ -538,9 +538,9 @@ dependencies = [
 
 [[package]]
 name = "bumpalo"
-version = "3.4.0"
+version = "3.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e8c087f005730276d1096a652e92a8bacee2e2472bcc9715a74d2bec38b5820"
+checksum = "0d261e256854913907f67ed06efbc3338dfe6179796deefc1ff763fc1aee5535"
 
 [[package]]
 name = "byte-slice-cast"
@@ -7697,7 +7697,8 @@ dependencies = [
 [[package]]
 name = "substrate-prometheus-endpoint"
 version = "0.8.0"
-source = "git+https://github.com/paritytech/substrate.git?rev=f884296f7436916909025f8b43c4bbf3e60e4c60#f884296f7436916909025f8b43c4bbf3e60e4c60"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8d3e361741d066bfc29554b9f1bc8e4ac927eb4bd33dd8bb0486969edd8b0b5a"
 dependencies = [
  "async-std",
  "derive_more",
@@ -7711,8 +7712,7 @@ dependencies = [
 [[package]]
 name = "substrate-prometheus-endpoint"
 version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d3e361741d066bfc29554b9f1bc8e4ac927eb4bd33dd8bb0486969edd8b0b5a"
+source = "git+https://github.com/paritytech/substrate.git?rev=f884296f7436916909025f8b43c4bbf3e60e4c60#f884296f7436916909025f8b43c4bbf3e60e4c60"
 dependencies = [
  "async-std",
  "derive_more",
