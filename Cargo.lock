@@ -2219,9 +2219,9 @@ dependencies = [
 
 [[package]]
 name = "hyper"
-version = "0.12.35"
+version = "0.12.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9dbe6ed1438e1f8ad955a4701e9a944938e9519f6888d12d8558b645e247d5f6"
+checksum = "5c843caf6296fc1f93444735205af9ed4e109a539005abb2564ae1d6fad34c52"
 dependencies = [
  "bytes 0.4.12",
  "futures 0.1.30",
@@ -2564,7 +2564,7 @@ version = "15.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4fb5c4513b7b542f42da107942b7b759f27120b5cc894729f88254b28dff44b7"
 dependencies = [
- "hyper 0.12.35",
+ "hyper 0.12.36",
  "jsonrpc-core",
  "jsonrpc-server-utils",
  "log",
@@ -7697,7 +7697,8 @@ dependencies = [
 [[package]]
 name = "substrate-prometheus-endpoint"
 version = "0.8.0"
-source = "git+https://github.com/paritytech/substrate.git?rev=f884296f7436916909025f8b43c4bbf3e60e4c60#f884296f7436916909025f8b43c4bbf3e60e4c60"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8d3e361741d066bfc29554b9f1bc8e4ac927eb4bd33dd8bb0486969edd8b0b5a"
 dependencies = [
  "async-std",
  "derive_more",
@@ -7711,8 +7712,7 @@ dependencies = [
 [[package]]
 name = "substrate-prometheus-endpoint"
 version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d3e361741d066bfc29554b9f1bc8e4ac927eb4bd33dd8bb0486969edd8b0b5a"
+source = "git+https://github.com/paritytech/substrate.git?rev=f884296f7436916909025f8b43c4bbf3e60e4c60#f884296f7436916909025f8b43c4bbf3e60e4c60"
 dependencies = [
  "async-std",
  "derive_more",
